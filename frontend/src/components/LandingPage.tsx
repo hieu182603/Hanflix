@@ -691,115 +691,266 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         </div>
       </section>
 
-      {/* ── 6. FAQ ACCORDION ────────────────────────────────────────── */}
-      <section id="faq" className="py-24 px-6 md:px-12 bg-[#FFF9F5] relative">
-        <div className="max-w-3xl mx-auto">
+      {/* ── 6. FAQ & BAOBAO ASSISTANT SECTION ──────────────────────── */}
+      <section id="faq" className="py-24 px-6 md:px-12 bg-[#FFF9F5] relative overflow-hidden">
+        {/* Subtle decorative background watermark */}
+        <div className="absolute -top-10 -left-10 text-[180px] font-calligraphy text-[#B91B1C]/3 select-none pointer-events-none">
+          答
+        </div>
+
+        <div className="max-w-7xl mx-auto">
           
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8FB9A7]/15 text-[#2F6E62] text-xs font-bold uppercase tracking-wider mb-3">
-              Giải Đáp Thắc Mắc
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] text-xs font-bold uppercase tracking-wider mb-3">
+              <span>🏮</span>
+              <span>Giải Đáp Tận Tâm</span>
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-4">
               Câu Hỏi Thường Gặp
             </h2>
             <p className="text-[#5F6368] text-base">
-              Tất cả những điều bạn cần biết trước khi bắt đầu hành trình.
+              Tất cả những điều bạn cần biết trước khi bắt đầu hành trình cùng HanFlix.
             </p>
           </div>
 
-          <div className="space-y-4">
-            {FAQS.map((faq, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-[#F2E4D8] overflow-hidden shadow-xs transition-shadow"
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  aria-expanded={openFaq === i}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left gap-4 cursor-pointer"
-                >
-                  <span className="font-bold text-[#18181B] text-base hover:text-[#B91B1C] transition-colors">
-                    {faq.q}
-                  </span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+            
+            {/* FAQ Accordion List (7 cols) */}
+            <div className="lg:col-span-8 space-y-4">
+              {FAQS.map((faq, i) => {
+                const isOpen = openFaq === i;
+                const num = `0${i + 1}`;
+                return (
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0 ${
-                      openFaq === i ? 'bg-[#B91B1C] text-white' : 'bg-[#FFF9F5] text-[#18181B]'
+                    key={i}
+                    className={`bg-white/95 rounded-2xl border-2 transition-all duration-300 overflow-hidden shadow-xs ${
+                      isOpen
+                        ? 'border-[#B91B1C]/40 shadow-md ring-1 ring-[#B91B1C]/15'
+                        : 'border-[#F2E4D8] hover:border-[#E7A92F]/60'
                     }`}
                   >
-                    {openFaq === i ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
+                      aria-expanded={isOpen}
+                      className="w-full px-6 py-5 flex items-center justify-between text-left gap-4 cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="w-9 h-9 rounded-xl bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] flex items-center justify-center font-fraunces text-sm font-black shrink-0">
+                          {num}
+                        </span>
+                        <span className="font-bold text-[#18181B] text-base md:text-lg group-hover:text-[#B91B1C] transition-colors">
+                          {faq.q}
+                        </span>
+                      </div>
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 font-mono text-lg font-bold ${
+                          isOpen
+                            ? 'bg-[#B91B1C] text-white rotate-180'
+                            : 'bg-[#FFF9F5] border border-[#F2E4D8] text-[#E7A92F] group-hover:border-[#E7A92F]'
+                        }`}
+                      >
+                        {isOpen ? '−' : '+'}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="px-6 pb-6 pt-2 text-sm md:text-base text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/60 ml-13">
+                        <p>{faq.a}</p>
+                      </div>
+                    )}
                   </div>
-                </button>
-                {openFaq === i && (
-                  <div className="px-6 pb-6 text-sm text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/50 pt-4">
-                    {faq.a}
-                  </div>
-                )}
+                );
+              })}
+            </div>
+
+            {/* BaoBao Panda Assistant Help Card (4 cols) */}
+            <div className="lg:col-span-4 rounded-3xl bg-gradient-to-b from-white via-[#FFFDF9] to-[#FFF3DE] border-2 border-[#E7A92F]/40 p-7 shadow-lg relative overflow-hidden flex flex-col items-center text-center">
+              
+              {/* Decorative corner lantern */}
+              <div className="absolute top-0 right-4 animate-lantern pointer-events-none">
+                <div className="w-0.5 h-6 bg-[#8B5A2B] mx-auto" />
+                <div className="w-6 h-7 rounded-full bg-[#B91B1C] shadow-xs flex items-center justify-center text-[8px] text-[#E7A92F] font-bold">
+                  福
+                </div>
               </div>
-            ))}
+
+              {/* Avatar */}
+              <div className="relative w-24 h-24 rounded-full p-1 bg-white border-2 border-[#E7A92F] shadow-md mb-4 group">
+                <img
+                  src="/assets/panda-mascot.jpg"
+                  alt="Trợ lý Bảo Bảo"
+                  className="w-full h-full object-cover rounded-full"
+                />
+                <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#8FB9A7] border-2 border-white" title="Trực tuyến" />
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8FB9A7]/15 text-[#2F6E62] text-xs font-bold mb-2">
+                <span>Trợ Lý Đồng Hành 24/7</span>
+              </div>
+
+              <h3 className="text-xl font-bold text-[#18181B] font-fraunces mb-2">
+                Bạn Cần Tư Vấn Riêng?
+              </h3>
+
+              <p className="text-xs text-[#5F6368] leading-relaxed mb-6">
+                Chưa biết trình độ của mình ở đâu? Hãy để Gấu Trúc Bảo Bảo gợi ý lộ trình phù hợp qua 6 câu hỏi ngắn nhé!
+              </p>
+
+              <button
+                onClick={onStartSurvey}
+                className="w-full py-3.5 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs md:text-sm flex items-center justify-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer mb-3"
+              >
+                <span>Tìm Lộ Trình Của Tôi</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onViewSample(SAMPLE_LESSONS[0].id)}
+                className="w-full py-3 px-6 rounded-full border border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] font-bold text-xs transition-colors cursor-pointer"
+              >
+                Trải nghiệm bài học mẫu ngay
+              </button>
+
+              <div className="mt-6 pt-4 border-t border-[#F2E4D8] w-full flex items-center justify-center gap-4 text-[11px] font-semibold text-[#8B9097]">
+                <span className="flex items-center gap-1">✓ Miễn phí</span>
+                <span className="flex items-center gap-1">✓ 2 phút</span>
+                <span className="flex items-center gap-1">✓ Chuẩn HSK</span>
+              </div>
+
+            </div>
+
           </div>
 
         </div>
       </section>
 
-      {/* ── 7. FINAL CTA BANNER (NO PRICING) ─────────────────────────── */}
-      <section className="py-20 px-6 md:px-12 bg-white relative">
-        <div className="max-w-5xl mx-auto rounded-[40px] bg-gradient-to-br from-[#FFF9F5] via-[#FFF3DE] to-[#FDECE5] border-2 border-[#E7A92F]/40 p-8 sm:p-14 shadow-xl relative overflow-hidden text-center">
+
+      {/* ── 8. LUXURY ORIENTAL FOOTER ───────────────────────────────── */}
+      <footer className="relative bg-[#FFF9F5] border-t-2 border-[#F2E4D8] pt-16 pb-12 px-6 md:px-12 overflow-hidden">
+        
+        {/* Architectural Pagoda Eaves Silhouette Top Transition */}
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-72 h-5 flex items-center justify-center pointer-events-none">
+          <div className="w-full h-2 rounded-full bg-gradient-to-r from-transparent via-[#D7AF70]/50 to-transparent" />
+          <div className="absolute w-8 h-8 rounded-full bg-[#FFF9F5] border-2 border-[#D7AF70] flex items-center justify-center text-[#B91B1C] font-calligraphy text-xs font-bold">
+            汉
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto">
           
-          {/* Subtle oriental watermark */}
-          <div className="absolute top-0 right-10 text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
-            汉映
-          </div>
-
-          <div className="max-w-2xl mx-auto relative z-10">
-            {/* Mascot Avatar badge */}
-            <div className="w-20 h-20 rounded-full mx-auto mb-6 p-1 bg-white shadow-md border-2 border-[#E7A92F] overflow-hidden">
-              <img
-                src="/assets/panda-mascot.jpg"
-                alt="Gấu Trúc Bảo Bảo"
-                className="w-full h-full object-cover rounded-full"
-              />
-            </div>
-
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#B91B1C] font-fraunces mb-4">
-              Sẵn Sàng Nói Tiếng Trung Tự Tin?
-            </h2>
+          {/* Main Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-[#F2E4D8]">
             
-            <p className="text-base sm:text-lg text-[#5F6368] mb-8 leading-relaxed">
-              Dành 2 phút làm bài khảo sát định hướng để nhận lộ trình bài học cá nhân hóa phù hợp với mục tiêu của bạn.
-            </p>
+            {/* Col 1: Brand & Philosophy (4 cols) */}
+            <div className="lg:col-span-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#B91B1C] to-[#8F1719] flex items-center justify-center font-extrabold text-white text-xl shadow-md">
+                  <span className="font-calligraphy text-2xl leading-none">汉</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-2xl font-black text-[#B91B1C] font-fraunces">HanFlix</span>
+                  <span className="font-calligraphy text-lg text-[#E7A92F] font-bold">汉映</span>
+                </div>
+              </div>
+              
+              <p className="text-sm text-[#5F6368] leading-relaxed mb-6 max-w-sm">
+                Nền tảng học tiếng Trung qua phim ảnh và ngữ cảnh thực tế hàng đầu, kết hợp phụ đề 3 lớp thông minh và thuật toán ghi nhớ Spaced Repetition.
+              </p>
 
-            <button
-              onClick={onStartSurvey}
-              className="h-14 px-10 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-base inline-flex items-center justify-center gap-3 glow-crimson transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <span>Tìm Lộ Trình Của Tôi</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 8. FOOTER ──────────────────────────────────────────────── */}
-      <footer className="bg-[#FFF9F5] border-t border-[#F2E4D8] py-12 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#B91B1C] flex items-center justify-center font-extrabold text-white text-base">
-              <span className="font-calligraphy">汉</span>
+              <div className="flex items-center gap-3 text-xs font-bold text-[#8FB9A7]">
+                <span className="px-2.5 py-1 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30">HSK 1 - 6</span>
+                <span className="px-2.5 py-1 rounded-full bg-[#E7A92F]/15 border border-[#E7A92F]/30 text-[#B7791F]">AI Pronounce</span>
+                <span className="px-2.5 py-1 rounded-full bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C]">SRS Method</span>
+              </div>
             </div>
-            <span className="text-xl font-bold text-[#18181B] font-fraunces">HanFlix</span>
-            <span className="text-xs text-[#8FB9A7] font-medium ml-2">Học tiếng Trung qua tình huống thực tế</span>
+
+            {/* Col 2: Khóa học (2 cols) */}
+            <div className="lg:col-span-2">
+              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <span className="text-[#8FB9A7]">🎋</span>
+                <span>Khóa Học</span>
+              </h4>
+              <ul className="space-y-2.5 text-sm text-[#5F6368]">
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 1 - 2 Cơ bản</a></li>
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 3 - 4 Phim ảnh</a></li>
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 5 - 6 Chuyên sâu</a></li>
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Giao tiếp đời thường</a></li>
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Thương mại & Du lịch</a></li>
+              </ul>
+            </div>
+
+            {/* Col 3: Phương pháp (2 cols) */}
+            <div className="lg:col-span-2">
+              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <span className="text-[#8FB9A7]">🎋</span>
+                <span>Phương Pháp</span>
+              </h4>
+              <ul className="space-y-2.5 text-sm text-[#5F6368]">
+                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phụ đề 3 tầng</a></li>
+                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Tra từ 1-chạm</a></li>
+                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phản xạ cùng AI</a></li>
+                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Flashcard SRS</a></li>
+                <li><button onClick={onStartSurvey} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Khảo sát lộ trình</button></li>
+              </ul>
+            </div>
+
+            {/* Col 4: Bản tin & Nhận tài liệu (4 cols) */}
+            <div className="lg:col-span-4">
+              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <span className="text-[#B91B1C]">📬</span>
+                <span>Bản Tin Văn Hóa & Từ Vựng</span>
+              </h4>
+              <p className="text-xs text-[#5F6368] mb-4">
+                Nhận trích đoạn phim hay và 5 từ vựng đắt giá mỗi sáng thứ Hai.
+              </p>
+
+              <form onSubmit={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký nhận bản tin HanFlix!'); }} className="flex gap-2">
+                <input
+                  type="email"
+                  required
+                  placeholder="Nhập email của bạn..."
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-[#F2E4D8] text-xs outline-none focus:border-[#B91B1C] transition-colors"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 rounded-xl bg-[#E7A92F] hover:bg-[#D7AF70] text-[#18181B] text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                >
+                  Nhận tin
+                </button>
+              </form>
+
+              {/* Social Media Links */}
+              <div className="mt-6 flex items-center gap-3">
+                <span className="text-xs font-bold text-[#8B9097]">Kết nối:</span>
+                <div className="flex items-center gap-2">
+                  {['Facebook', 'YouTube', 'TikTok', 'Instagram'].map((network) => (
+                    <span
+                      key={network}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-[#F2E4D8] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/40 text-xs font-semibold cursor-pointer transition-all"
+                    >
+                      {network}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <div className="flex flex-wrap justify-center gap-6 text-sm font-semibold text-[#5F6368]">
-            <a href="#method" className="hover:text-[#B91B1C] transition-colors">Phương pháp</a>
-            <a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Bài học mẫu</a>
-            <button onClick={onSignIn} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng nhập</button>
-            <button onClick={onSignUp} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng ký</button>
+          {/* Bottom Copyright */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8B9097]">
+            <div className="flex items-center gap-2">
+              <span>© {new Date().getFullYear()} HanFlix. Tất cả bản quyền được bảo lưu.</span>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline">Lan tỏa niềm yêu thích tiếng Trung</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <button onClick={onSignIn} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng nhập</button>
+              <button onClick={onSignUp} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng ký</button>
+              <a href="#method" className="hover:text-[#B91B1C] transition-colors">Điều khoản</a>
+              <a href="#faq" className="hover:text-[#B91B1C] transition-colors">Bảo mật</a>
+            </div>
           </div>
 
-          <div className="text-xs text-[#8B9097]">
-            © {new Date().getFullYear()} HanFlix. Tất cả quyền được bảo lưu.
-          </div>
         </div>
       </footer>
 

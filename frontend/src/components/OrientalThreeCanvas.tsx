@@ -135,17 +135,16 @@ export default function OrientalThreeCanvas({ className = '', intensity = 'hero'
     }
 
     if (intensity === 'hero') {
-      // Top Right background lantern (deep)
-      lanterns.push(createLantern(8.5, 5.5, -3, 1.1, 0.4));
-      // Far right accent lantern
-      lanterns.push(createLantern(10.2, 4.0, 1.5, 0.9, 1.2));
-      // Top Left ambient lantern
-      lanterns.push(createLantern(-9.2, 5.8, -2, 0.95, 2.1));
-      // Subtle mid-left lantern
-      lanterns.push(createLantern(-10.8, 3.8, 1, 0.8, 0.9));
+      // Far Left Outer Lanterns (outside text zone)
+      lanterns.push(createLantern(-14.8, 5.8, -1.5, 1.05, 0.4));
+      lanterns.push(createLantern(-16.2, 3.6, 1.0, 0.85, 1.8));
+
+      // Far Right Outer Lanterns (outside mascot card zone)
+      lanterns.push(createLantern(14.8, 5.8, -1.5, 1.05, 1.1));
+      lanterns.push(createLantern(16.2, 3.6, 1.0, 0.85, 2.3));
     } else {
-      lanterns.push(createLantern(7.5, 4.5, -2, 0.8, 0.5));
-      lanterns.push(createLantern(-7.5, 4.5, -2, 0.8, 1.8));
+      lanterns.push(createLantern(-14.0, 5.0, -1.5, 0.85, 0.5));
+      lanterns.push(createLantern(14.0, 5.0, -1.5, 0.85, 1.8));
     }
 
     // ── 2. FALLING PETALS / GOLDEN BLOSSOMS ────────────────────────
