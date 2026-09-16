@@ -1,12 +1,11 @@
 import React from 'react';
-import { Video, Users, BarChart2, Eye, LogOut, Upload, Shield } from 'lucide-react';
+import { Video, Users, BarChart2, LogOut, Upload, Shield } from 'lucide-react';
 import { User } from '../../data/hanflixData';
 
 interface AdminShellProps {
   activeTab: 'overview' | 'videos' | 'upload' | 'users';
   onTabChange: (tab: 'overview' | 'videos' | 'upload' | 'users') => void;
   currentUser: User;
-  onSwitchToStudentView: () => void;
   onLogout: () => void;
   children: React.ReactNode;
 }
@@ -15,7 +14,6 @@ export default function AdminShell({
   activeTab,
   onTabChange,
   currentUser,
-  onSwitchToStudentView,
   onLogout,
   children
 }: AdminShellProps) {
@@ -42,13 +40,6 @@ export default function AdminShell({
         </div>
 
         <div className="flex items-center gap-4">
-          <button
-            onClick={onSwitchToStudentView}
-            className="px-3.5 py-1.5 rounded-xl bg-[#F7F7F9] border border-[#E7E7EA] hover:bg-[#E7E7EA] text-[#18181B] text-xs font-bold flex items-center gap-1.5 transition-colors"
-          >
-            <Eye className="w-4 h-4 text-[#5F6368]" />
-            <span>Xem trang học viên</span>
-          </button>
 
           <div className="flex items-center gap-2 border-l border-[#E7E7EA] pl-4">
             <img

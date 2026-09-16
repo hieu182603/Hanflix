@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { User as UserType, INITIAL_USERS } from '../../data/hanflixData';
+import { User as UserType } from '../../data/hanflixData';
+import * as auth from '../../api/auth';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserType) => void;
   onNavigateToSignup: () => void;
-  onNavigateToGuest: () => void;
 }
 
-export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNavigateToGuest }: LoginViewProps) {
+export default function LoginView({ onLoginSuccess, onNavigateToSignup }: LoginViewProps) {
   const [view, setView] = useState<'login' | 'forgot-password' | 'forgot-password-success'>('login');
   
-  const [email, setEmail] = useState('minhanh@example.test');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -20,28 +20,25 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
   
   const [forgotEmail, setForgotEmail] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setIsLoading(true);
-    setTimeout(() => {
-      const foundUser = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (!foundUser) { setErrorMsg('Email hoặc mật khẩu không chính xác.'); setIsLoading(false); return; }
-      if (foundUser.status === 'locked') { setErrorMsg('Tài khoản này đã bị tạm khóa.'); setIsLoading(false); return; }
+    try {
+      const user = await auth.login(email, password);
+      onLoginSuccess(user);
+    } catch (err) {
+      if (err instanceof auth.ApiRequestError) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      }
+    } finally {
       setIsLoading(false);
-      onLoginSuccess(foundUser);
-    }, 400);
+    }
   };
 
-  const handleQuickDemoLogin = (role: 'student' | 'admin') => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess(role === 'student' ? INITIAL_USERS[0] : INITIAL_USERS[2]);
-    }, 300);
-  };
-
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail) {
       setErrorMsg('Vui lòng nhập địa chỉ email.');
@@ -49,10 +46,18 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
     }
     setErrorMsg('');
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await auth.forgotPassword(forgotEmail);
       setView('forgot-password-success');
-    }, 600);
+    } catch (err) {
+      if (err instanceof auth.ApiRequestError) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -228,12 +233,6 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
               </button>
             </form>
 
-            <button onClick={onNavigateToGuest}
-              className="mt-3 w-full py-3.5 rounded-2xl text-sm font-semibold text-[#B0A89E] transition-all hover:bg-[#F8F5F2]"
-              style={{ border: '1.5px solid #E8E3DD' }}>
-              Vào xem ở chế độ Khách →
-            </button>
-
             <p className="text-center text-sm text-[#B0A89E] mt-8">
               Chưa có tài khoản?{' '}
               <button onClick={onNavigateToSignup} className="font-black text-[#B91B1C] hover:underline">
@@ -251,10 +250,10 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
             
             <h2 className="font-black text-[#1A0A0A] tracking-tight mb-2"
               style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.4rem' }}>
-              Quét mật khẩu
+              Quên mật khẩu
             </h2>
             <p className="text-sm text-[#9A8878] mb-8 leading-relaxed">
-              Nhập email liên kết với tài khoản của bạn và chúng tôi sẽ gửi liên kết đặt lại mật khẩu. (Mô phỏng gửi email)
+              Nhập email liên kết với tài khoản của bạn và chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
             </p>
 
             {errorMsg && (
@@ -297,7 +296,7 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
               Đã gửi liên kết!
             </h2>
             <p className="text-sm text-[#9A8878] mb-8 leading-relaxed">
-              Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến email <strong>{forgotEmail}</strong>. (Lưu ý: Đây là bản demo, email không thực sự được gửi).
+              Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến email <strong>{forgotEmail}</strong>. Vui lòng kiểm tra hộp thư (bao gồm mục Spam).
             </p>
             <button onClick={() => setView('login')}
               className="w-full py-4 rounded-2xl font-black text-[15px] tracking-wide transition-all hover:bg-[#F8F5F2]"

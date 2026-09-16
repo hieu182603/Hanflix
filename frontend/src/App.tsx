@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import HeroSection from './components/HeroSection';
@@ -29,9 +29,11 @@ import OnboardingView from './components/auth/OnboardingView';
 import VocabularyPage from './components/vocabulary/VocabularyPage';
 import FlashcardReviewView from './components/review/FlashcardReviewView';
 
+// API auth
+import * as authApi from './api/auth';
+
   import {
     VideoLesson,
-    INITIAL_USERS,
     User,
     UserProfile,
     SAMPLE_LESSONS,
@@ -41,13 +43,14 @@ import FlashcardReviewView from './components/review/FlashcardReviewView';
     SAMPLE_WORDS
   } from './data/hanflixData';
 import {
-  Sparkles, Shield, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings
+  Sparkles, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings
 } from 'lucide-react';
 
 export default function App() {
   // null = guest, populated = logged-in learner
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authView, setAuthView] = useState<'none' | 'login' | 'signup' | 'onboarding'>('none');
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // Navigation
   const [activeNav, setActiveNav] = useState<string>('feed');
@@ -75,12 +78,27 @@ export default function App() {
   );
   const [savedLessons, setSavedLessons] = useState<VideoLesson[]>([]);
 
+  // Try to restore session on mount
+  useEffect(() => {
+    authApi.restoreSession().then((user) => {
+      if (user) setCurrentUser(user);
+    }).finally(() => {
+      setIsRestoringSession(false);
+    });
+  }, []);
+
   const handleToggleSaveLesson = (lesson: VideoLesson) => {
     setSavedLessons((prev) =>
       prev.some((l) => l.id === lesson.id)
         ? prev.filter((l) => l.id !== lesson.id)
         : [lesson, ...prev]
     );
+  };
+
+  const handleLogout = async () => {
+    await authApi.logout();
+    setCurrentUser(null);
+    setAuthView('none');
   };
 
   // Admin
@@ -144,13 +162,24 @@ export default function App() {
     setAdminTab('videos');
   };
 
+  // Show loading spinner while restoring session
+  if (isRestoringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F9]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-[#B91B1C] text-white flex items-center justify-center font-black text-xl shadow-lg">H</div>
+          <div className="w-6 h-6 border-2 border-[#B91B1C] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   // Auth screens
   if (authView === 'login') {
     return (
       <LoginView
         onLoginSuccess={(user) => { setCurrentUser(user); setAuthView('none'); }}
         onNavigateToSignup={() => setAuthView('signup')}
-        onNavigateToGuest={() => { setCurrentUser(null); setAuthView('none'); }}
       />
     );
   }
@@ -183,8 +212,7 @@ export default function App() {
         activeTab={adminTab === 'processing' || adminTab === 'editor' ? 'videos' : adminTab}
         onTabChange={(tab) => setAdminTab(tab)}
         currentUser={currentUser}
-        onSwitchToStudentView={() => setCurrentUser(INITIAL_USERS[0])}
-        onLogout={() => { setCurrentUser(null); setAuthView('login'); }}
+        onLogout={handleLogout}
       >
         {adminTab === 'overview' && (
           <AdminDashboard
@@ -223,27 +251,6 @@ export default function App() {
   if (!currentUser) {
     return (
       <div className="flex flex-col min-h-screen">
-        {/* Demo banner */}
-        <div className="bg-[#252229] text-white px-4 py-2 text-xs font-medium flex items-center justify-between z-50">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-[#B91B1C] text-white text-[10px] font-bold">Bản demo</span>
-            <span className="hidden sm:inline">Chế độ Khách. Đăng nhập để lưu tiến trình học.</span>
-          </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => setCurrentUser(INITIAL_USERS[0])}
-              className="hover:text-white text-gray-300 font-bold transition-colors"
-            >
-              Học viên
-            </button>
-            <button
-              onClick={() => setCurrentUser(INITIAL_USERS[2])}
-              className="hover:text-white text-gray-300 font-bold flex items-center gap-1 transition-colors"
-            >
-              <Shield className="w-3 h-3" /> Admin
-            </button>
-          </div>
-        </div>
         <LandingPage
           onStartSurvey={() => setAuthView('onboarding')}
           onViewSample={(id) => {
@@ -288,35 +295,6 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-[#F7F7F9] text-[#18181B] flex flex-col font-sans antialiased">
-      {/* Demo role banner */}
-      <div className="bg-[#34363A] text-white px-3 py-1.5 text-xs font-semibold flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="px-2 py-0.5 rounded bg-[#B91B1C] text-white text-[10px] font-bold shrink-0">Demo</span>
-          <span className="truncate hidden sm:block">
-            {currentUser.name} ({currentUser.role})
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="hover:underline text-gray-300 text-[11px]"
-          >
-            Khách
-          </button>
-          <button
-            onClick={() => setCurrentUser(INITIAL_USERS[2])}
-            className="hover:underline text-yellow-300 font-bold flex items-center gap-1 text-[11px]"
-          >
-            <Shield className="w-3 h-3" /> Admin
-          </button>
-          <button
-            onClick={() => setAuthView('login')}
-            className="hover:underline text-gray-300 text-[11px]"
-          >
-            Đăng xuất
-          </button>
-        </div>
-      </div>
 
       {/* Sticky header */}
       <Header
@@ -328,7 +306,7 @@ export default function App() {
         onSearchSelect={(query) => handleOpenAI(`Tìm kiếm: ${query}`)}
         onOpenMenu={() => setIsSidebarOpen(true)}
         currentUser={currentUser}
-        onLogout={() => { setCurrentUser(null); setAuthView('login'); }}
+        onLogout={handleLogout}
         streakDays={userProfile.streakDays}
       />
 
@@ -402,7 +380,7 @@ export default function App() {
                   {[
                     { label: 'Họ và tên', value: currentUser.name },
                     { label: 'Email', value: currentUser.email },
-                    { label: 'Vai trò', value: 'Học viên' },
+                    { label: 'Vai trò', value: (currentUser.role as string) === 'admin' ? 'Quản trị viên' : 'Học viên' },
                     { label: 'Trạng thái', value: currentUser.status === 'active' ? 'Hoạt động' : 'Bị khóa' },
                   ].map((item) => (
                     <div key={item.label} className="flex justify-between py-3 border-b border-[#E7E7EA] last:border-0">
@@ -425,6 +403,14 @@ export default function App() {
                   className="mt-3 w-full h-11 rounded-xl border border-[#E7E7EA] text-sm font-bold text-[#5F6368] hover:bg-[#F7F7F9] transition-colors"
                 >
                   Làm lại khảo sát hướng học
+                </button>
+              </div>
+              <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA]">
+                <button
+                  onClick={handleLogout}
+                  className="w-full h-11 rounded-xl border border-red-200 text-sm font-bold text-[#B91B1C] hover:bg-red-50 transition-colors"
+                >
+                  Đăng xuất
                 </button>
               </div>
             </div>
