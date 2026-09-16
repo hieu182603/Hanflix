@@ -140,23 +140,18 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
     <div className="relative min-h-[100dvh] bg-[#FFF9F5] text-[#18181B] selection:bg-[#B91B1C] selection:text-white font-sans overflow-x-hidden">
 
       {/* ── 1. PUBLIC HEADER ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 h-20 flex items-center justify-between px-6 md:px-12 bg-[#FFF9F5]/90 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all">
-        {/* Logo & Seal mark */}
+      <header className="sticky top-0 z-50 h-20 md:h-[88px] flex items-center justify-between px-6 md:px-12 bg-[#FFF9F5]/92 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all">
+        {/* Logo */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="flex items-center gap-3 group text-left cursor-pointer"
+          className="flex items-center group text-left cursor-pointer py-1"
+          aria-label="Về đầu trang HanFlix"
         >
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#B91B1C] to-[#8F1719] flex items-center justify-center font-extrabold text-white text-xl shadow-md group-hover:scale-105 transition-transform">
-            <span className="font-calligraphy text-2xl leading-none">汉</span>
-            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#E7A92F] border-2 border-white flex items-center justify-center text-[8px] font-black text-[#18181B]">★</div>
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-black tracking-tight text-[#B91B1C] font-fraunces">HanFlix</span>
-              <span className="font-calligraphy text-base text-[#E7A92F] font-bold">汉映</span>
-            </div>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#8FB9A7]">Học Tiếng Trung Qua Phim</span>
-          </div>
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-14 sm:h-16 md:h-[72px] lg:h-[76px] w-auto max-w-[280px] sm:max-w-[320px] md:max-w-[360px] object-contain hover:scale-105 transition-transform drop-shadow-sm"
+          />
         </button>
 
         {/* Navigation */}
@@ -893,14 +888,12 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             
             {/* Col 1: Brand & Philosophy (4 cols) */}
             <div className="lg:col-span-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#B91B1C] to-[#8F1719] flex items-center justify-center font-extrabold text-white text-xl shadow-md">
-                  <span className="font-calligraphy text-2xl leading-none">汉</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-2xl font-black text-[#B91B1C] font-fraunces">HanFlix</span>
-                  <span className="font-calligraphy text-lg text-[#E7A92F] font-bold">汉映</span>
-                </div>
+              <div className="mb-6">
+                <img
+                  src="/assets/logo.png"
+                  alt="HanFlix Logo"
+                  className="h-20 sm:h-24 md:h-28 w-auto max-w-[320px] md:max-w-[380px] object-contain"
+                />
               </div>
               
               <p className="text-sm text-[#5F6368] leading-relaxed mb-6 max-w-sm">

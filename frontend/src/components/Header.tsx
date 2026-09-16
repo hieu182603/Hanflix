@@ -93,13 +93,12 @@ export default function Header({
             <Menu className="w-5 h-5" />
           </button>
         )}
-        <a href="#" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-xl bg-[#B91B1C] text-white flex items-center justify-center font-extrabold text-lg shadow-sm group-hover:bg-[#A3181A] transition-colors">
-            H
-          </div>
-          <span className="text-xl font-black tracking-tight text-[#B91B1C] font-mono hidden sm:block">
-            HANFLIX
-          </span>
+        <a href="#" className="flex items-center group py-0.5" aria-label="HanFlix Trang chủ">
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-11 sm:h-12 w-auto max-w-[210px] object-contain group-hover:scale-105 transition-transform"
+          />
         </a>
       </div>
 

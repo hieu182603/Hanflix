@@ -190,9 +190,12 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
     return (
       <div className="min-h-[100dvh] bg-[#F7F7F9] flex flex-col">
         <div className="bg-white border-b border-[#E7E7EA] px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#B91B1C] text-white flex items-center justify-center font-extrabold text-base">H</div>
-            <span className="font-black text-sm text-[#B91B1C]">HANFLIX</span>
+          <div className="flex items-center">
+            <img
+              src="/assets/logo.png"
+              alt="HanFlix Logo"
+              className="h-8 w-auto object-contain"
+            />
           </div>
         </div>
 
@@ -296,9 +299,12 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
     <div className="min-h-[100dvh] bg-[#F7F7F9] flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-[#E7E7EA] px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#B91B1C] text-white flex items-center justify-center font-extrabold text-base">H</div>
-          <span className="font-black text-sm text-[#B91B1C]">HANFLIX</span>
+        <div className="flex items-center">
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-8 w-auto object-contain"
+          />
         </div>
         {draft.step <= totalSteps && (
           <span className="text-xs font-bold text-[#8B9097]">Bước {draft.step}/{totalSteps}</span>

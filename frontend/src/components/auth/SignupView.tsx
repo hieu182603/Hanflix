@@ -70,10 +70,12 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
       <div className="flex-1 flex flex-col justify-center overflow-y-auto px-8 sm:px-12 lg:px-14 xl:px-16 py-10 bg-white">
 
         {/* Mobile logo */}
-        <div className="flex lg:hidden items-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md"
-            style={{ background: 'linear-gradient(135deg, #B91B1C, #D94040)' }}>H</div>
-          <span className="font-black text-[#B91B1C] text-lg tracking-widest">HANFLIX</span>
+        <div className="flex lg:hidden items-center mb-8">
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-10 w-auto object-contain"
+          />
         </div>
 
         <div className="max-w-[420px] w-full mx-auto lg:mx-0">
@@ -175,15 +177,12 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
           style={{ backgroundImage: 'radial-gradient(circle, #B91B1C 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
         {/* Brand */}
-        <div className="relative z-10 px-10 pt-10 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-white text-2xl shadow-lg"
-            style={{ background: 'linear-gradient(135deg, #B91B1C, #D94040)', boxShadow: '0 8px 24px rgba(185,27,28,0.35)' }}>
-            H
-          </div>
-          <div>
-            <span className="block font-black text-[#B91B1C] text-xl tracking-[0.1em] leading-none">HANFLIX</span>
-            <span className="block text-[10px] font-semibold tracking-[0.18em] uppercase text-[#B91B1C]/50">Start Your Journey</span>
-          </div>
+        <div className="relative z-10 px-10 pt-10">
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-14 md:h-16 w-auto max-w-[240px] object-contain drop-shadow-sm"
+          />
         </div>
 
         {/* Content */}
