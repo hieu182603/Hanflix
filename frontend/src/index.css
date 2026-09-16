@@ -83,6 +83,18 @@
   100% { transform: translateX(0px); }
 }
 
+@keyframes cloud-float-slow {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(24px, -10px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes cloud-float-reverse {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-22px, 8px); }
+  100% { transform: translate(0, 0); }
+}
+
 .animate-pulse-subtle {
   animation: pulse-subtle 3s infinite ease-in-out;
 }
@@ -101,8 +113,20 @@
   animation: float-gentle 4s infinite ease-in-out;
 }
 
+.animate-mascot-float {
+  animation: float-gentle 5s infinite ease-in-out;
+}
+
 .animate-cloud {
   animation: cloud-drift 8s infinite ease-in-out;
+}
+
+.animate-cloud-slow {
+  animation: cloud-float-slow 14s infinite ease-in-out;
+}
+
+.animate-cloud-reverse {
+  animation: cloud-float-reverse 16s infinite ease-in-out;
 }
 
 /* Oriental Glows */

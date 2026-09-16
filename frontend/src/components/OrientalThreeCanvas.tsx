@@ -234,7 +234,65 @@ export default function OrientalThreeCanvas({ className = '', intensity = 'hero'
     const emberPoints = new THREE.Points(emberGeo, emberMat);
     scene.add(emberPoints);
 
-    // ── 4. MOUSE PARALLAX TRACKING ────────────────────────────────
+    // ── 3.5 DYNAMIC 3D ORIENTAL DRIFTING CLOUDS ───────────────────
+    const cloudCanvas = document.createElement('canvas');
+    cloudCanvas.width = 256;
+    cloudCanvas.height = 128;
+    const cCtx = cloudCanvas.getContext('2d');
+    if (cCtx) {
+      // Draw stylized traditional Chinese cloud shape with soft gradient
+      const cGrad = cCtx.createRadialGradient(128, 64, 10, 128, 64, 100);
+      cGrad.addColorStop(0, 'rgba(255, 252, 245, 0.7)');
+      cGrad.addColorStop(0.5, 'rgba(255, 243, 230, 0.45)');
+      cGrad.addColorStop(1, 'rgba(255, 243, 230, 0)');
+      cCtx.fillStyle = cGrad;
+      cCtx.beginPath();
+      cCtx.arc(80, 75, 45, 0, Math.PI * 2);
+      cCtx.arc(128, 55, 55, 0, Math.PI * 2);
+      cCtx.arc(176, 75, 42, 0, Math.PI * 2);
+      cCtx.fill();
+    }
+    const cloudTexture = new THREE.CanvasTexture(cloudCanvas);
+
+    const cloudGroup = new THREE.Group();
+    scene.add(cloudGroup);
+
+    interface CloudData {
+      mesh: THREE.Mesh;
+      speedX: number;
+      baseY: number;
+      swaySpeed: number;
+      swayOffset: number;
+    }
+
+    const clouds: CloudData[] = [];
+    const cloudCount = intensity === 'hero' ? 8 : 4;
+    const cloudGeo = new THREE.PlaneGeometry(8.5, 4.2);
+    const cloudMat = new THREE.MeshBasicMaterial({
+      map: cloudTexture,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+
+    for (let i = 0; i < cloudCount; i++) {
+      const cMesh = new THREE.Mesh(cloudGeo, cloudMat);
+      const cx = (Math.random() - 0.5) * 38;
+      const cy = -3 + Math.random() * 9;
+      const cz = -2 - Math.random() * 6;
+      const scale = 0.8 + Math.random() * 0.7;
+      cMesh.scale.set(scale, scale, 1);
+      cMesh.position.set(cx, cy, cz);
+      cloudGroup.add(cMesh);
+
+      clouds.push({
+        mesh: cMesh,
+        speedX: 0.005 + Math.random() * 0.007,
+        baseY: cy,
+        swaySpeed: 0.4 + Math.random() * 0.6,
+        swayOffset: Math.random() * Math.PI * 2,
+      });
+    }
     let mouseX = 0;
     let mouseY = 0;
     let targetX = 0;
@@ -303,6 +361,15 @@ export default function OrientalThreeCanvas({ className = '', intensity = 'hero'
       }
       posAttr.needsUpdate = true;
 
+      // Animate 3D Drifting Clouds (horizontal drift + gentle vertical sway)
+      clouds.forEach((c) => {
+        c.mesh.position.x += c.speedX;
+        c.mesh.position.y = c.baseY + Math.sin(time * c.swaySpeed + c.swayOffset) * 0.15;
+        if (c.mesh.position.x > 22) {
+          c.mesh.position.x = -22;
+        }
+      });
+
       renderer.render(scene, camera);
     };
 
@@ -339,6 +406,9 @@ export default function OrientalThreeCanvas({ className = '', intensity = 'hero'
       emberGeo.dispose();
       emberMat.dispose();
       emberTexture.dispose();
+      cloudGeo.dispose();
+      cloudMat.dispose();
+      cloudTexture.dispose();
     };
   }, [intensity]);
 

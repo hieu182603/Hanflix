@@ -205,10 +205,10 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         <div className="absolute top-10 left-1/4 w-[500px] h-[500px] bg-[#FDECE5]/70 rounded-full blur-[120px] pointer-events-none -z-10" />
         <div className="absolute bottom-10 right-10 w-[450px] h-[450px] bg-[#FFF2DE]/70 rounded-full blur-[100px] pointer-events-none -z-10" />
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           
-          {/* Left Hero Column: Typography & CTAs (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col items-start">
+          {/* Left Hero Column: Typography & CTAs (50% width) */}
+          <div className="flex flex-col items-start">
             
             {/* Top Tag */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] text-xs font-bold tracking-wide uppercase mb-6 shadow-xs backdrop-blur-sm">
@@ -272,50 +272,75 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
           </div>
 
-          {/* Right Hero Column: BaoBao Panda Mascot & Oriental Artwork (5 cols) */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
+          {/* Right Hero Column: Liberated BaoBao Panda Floating on Clouds (50% width) */}
+          <div className="relative flex items-center justify-center min-h-[480px] lg:min-h-[540px] group">
             
-            {/* Decorative Pagoda / Cloud Frame */}
-            <div className="relative w-full max-w-[480px] aspect-square rounded-[36px] bg-gradient-to-b from-[#FFF0E6] to-[#FFF9F5] p-5 shadow-xl border border-[#F2E4D8] flex items-center justify-center overflow-hidden group">
-              
-              {/* Subtle background Chinese Watermark */}
-              <div className="absolute top-2 left-4 text-7xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
-                学
-              </div>
-              <div className="absolute bottom-4 right-4 text-8xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
-                汉
-              </div>
+            {/* Luminous Golden Sun / Halo behind the Panda */}
+            <div className="absolute inset-0 m-auto w-[380px] sm:w-[460px] h-[380px] sm:h-[460px] rounded-full bg-gradient-to-tr from-[#FFF0DE] via-[#FDECE5]/70 to-transparent blur-3xl -z-10 pointer-events-none" />
 
-              {/* Chinese Hanging Lantern Graphic */}
-              <div className="absolute top-0 right-8 animate-lantern z-20 pointer-events-none">
-                <div className="w-0.5 h-8 bg-[#8B5A2B] mx-auto" />
-                <div className="w-8 h-10 rounded-full bg-gradient-to-b from-[#E53935] to-[#B91B1C] shadow-md border border-[#E7A92F] flex items-center justify-center text-[10px] font-bold text-white">
-                  春
-                </div>
-                <div className="w-0.5 h-4 bg-[#E7A92F] mx-auto" />
-              </div>
+            {/* Floating Chinese Calligraphy Seal in Background */}
+            <div className="absolute -top-6 left-6 text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
+              学
+            </div>
+            <div className="absolute -bottom-8 right-6 text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
+              汉
+            </div>
 
-              {/* Main Mascot Image */}
+            {/* Dynamic Animated Cloud Layer 1: Back Clouds (Slow Drift) */}
+            <div className="absolute top-8 -left-8 w-44 opacity-75 animate-cloud-slow pointer-events-none">
+              <svg viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-sm">
+                <path d="M20 35C12 35 5 28 5 20C5 12 12 5 22 5C26 2 32 0 38 0C48 0 56 6 58 15C63 12 70 12 75 16C82 16 88 22 88 30C88 35 83 35 80 35Z" fill="#FFF2E2" />
+                <path d="M22 35C15 35 10 30 10 24C10 18 16 12 24 12C28 10 32 8 38 8C46 8 52 13 54 20C58 18 64 18 68 21C74 21 80 25 80 32C80 35 76 35 74 35Z" fill="#FFFFFF" fillOpacity="0.8" />
+              </svg>
+            </div>
+
+            {/* Dynamic Animated Cloud Layer 2: Right Flank Cloud */}
+            <div className="absolute top-24 -right-10 w-52 opacity-80 animate-cloud-reverse pointer-events-none">
+              <svg viewBox="0 0 120 45" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-sm">
+                <path d="M25 40C15 40 8 32 8 22C8 13 16 6 27 6C32 2 40 0 48 0C60 0 70 7 73 17C79 14 87 14 93 18C102 18 110 25 110 34C110 40 104 40 100 40Z" fill="#FFF3DE" />
+                <path d="M28 40C20 40 14 34 14 27C14 20 21 14 30 14C35 12 40 10 48 10C57 10 65 15 67 23C73 21 80 21 85 24C92 24 98 29 98 37C98 40 94 40 90 40Z" fill="#FFFFFF" fillOpacity="0.9" />
+              </svg>
+            </div>
+
+            {/* Hanging Lantern with Sway Animation */}
+            <div className="absolute top-2 right-4 animate-lantern z-20 pointer-events-none">
+              <div className="w-0.5 h-10 bg-[#8B5A2B] mx-auto" />
+              <div className="w-9 h-11 rounded-full bg-gradient-to-b from-[#E53935] to-[#B91B1C] shadow-lg border border-[#E7A92F] flex items-center justify-center text-xs font-bold text-white">
+                春
+              </div>
+              <div className="w-0.5 h-5 bg-[#E7A92F] mx-auto" />
+            </div>
+
+            {/* MAIN PANDA MASCOT (UNBOXED, FREELY SITTING ON CLOUDS) */}
+            <div className="relative z-10 w-full max-w-[460px] animate-mascot-float flex flex-col items-center">
               <img
-                src="/assets/panda-mascot.jpg"
-                alt="Gấu Trúc Bảo Bảo - Linh vật học tiếng Trung HanFlix"
-                className="relative z-10 w-full h-full object-contain rounded-2xl drop-shadow-2xl transition-transform duration-700 group-hover:scale-105"
+                src="/assets/panda-mascot-transparent.png"
+                alt="Gấu Trúc Bảo Bảo - Linh vật HanFlix"
+                className="w-full h-auto object-contain drop-shadow-[0_20px_35px_rgba(185,27,28,0.15)] group-hover:scale-105 transition-transform duration-700 select-none"
               />
 
-              {/* Floating Speech Bubble from BaoBao */}
-              <div className="absolute bottom-6 left-6 z-20 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-[#E7A92F]/40 shadow-lg flex items-center gap-2.5 animate-float">
-                <span className="text-xl">🐼</span>
-                <div>
-                  <div className="text-xs font-bold text-[#B91B1C]">Gấu Trúc Bảo Bảo</div>
-                  <div className="text-[11px] text-[#5F6368] font-medium">你好！Cùng học tiếng Trung nào!</div>
-                </div>
+              {/* Dynamic Animated Cloud Layer 3: Billowing Cloud Pedestal Under Panda's Seat */}
+              <div className="w-full -mt-16 sm:-mt-20 opacity-90 animate-cloud pointer-events-none flex justify-center">
+                <svg viewBox="0 0 260 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[85%] drop-shadow-md">
+                  <path d="M40 55C20 55 5 42 5 28C5 14 20 5 38 5C45 2 56 0 68 0C85 0 100 8 105 20C115 15 130 15 140 22C155 12 175 12 188 20C198 16 210 16 220 22C235 22 250 32 250 45C250 55 240 55 230 55Z" fill="#FFF0DB" />
+                  <path d="M45 55C30 55 18 45 18 33C18 21 30 12 45 12C52 10 60 8 70 8C84 8 96 14 100 24C110 20 122 20 130 26C144 18 160 18 172 25C182 22 192 22 200 27C214 27 228 35 228 47C228 55 220 55 210 55Z" fill="#FFFFFF" fillOpacity="0.9" />
+                </svg>
               </div>
+            </div>
 
-              {/* Eaves & Cloud Badges */}
-              <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm border border-[#8FB9A7]/40 shadow-xs flex items-center gap-1.5 text-[11px] font-bold text-[#2F6E62]">
-                <span>🏮</span>
-                <span>Khởi đầu cùng HSK 1</span>
+            {/* Floating Speech Bubble from BaoBao */}
+            <div className="absolute bottom-4 left-2 sm:left-4 z-20 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-[#E7A92F]/40 shadow-xl flex items-center gap-2.5 animate-float">
+              <span className="text-2xl">🐼</span>
+              <div>
+                <div className="text-xs font-bold text-[#B91B1C]">Gấu Trúc Bảo Bảo</div>
+                <div className="text-[11px] text-[#5F6368] font-medium">你好！Cùng học tiếng Trung nào!</div>
               </div>
+            </div>
+
+            {/* Floating Celestial Badge */}
+            <div className="absolute top-4 left-2 sm:left-6 z-20 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-[#8FB9A7]/50 shadow-md flex items-center gap-1.5 text-xs font-bold text-[#2F6E62]">
+              <span>🏮</span>
+              <span>Khởi đầu cùng HSK 1</span>
             </div>
 
           </div>
@@ -713,10 +738,10 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
             
-            {/* FAQ Accordion List (7 cols) */}
-            <div className="lg:col-span-8 space-y-4">
+            {/* FAQ Accordion List (50% width) */}
+            <div className="space-y-4 flex flex-col justify-between">
               {FAQS.map((faq, i) => {
                 const isOpen = openFaq === i;
                 const num = `0${i + 1}`;
@@ -732,18 +757,18 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                     <button
                       onClick={() => setOpenFaq(isOpen ? null : i)}
                       aria-expanded={isOpen}
-                      className="w-full px-6 py-5 flex items-center justify-between text-left gap-4 cursor-pointer group"
+                      className="w-full px-5 py-4.5 flex items-center justify-between text-left gap-3 cursor-pointer group"
                     >
-                      <div className="flex items-center gap-4">
-                        <span className="w-9 h-9 rounded-xl bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] flex items-center justify-center font-fraunces text-sm font-black shrink-0">
+                      <div className="flex items-center gap-3.5">
+                        <span className="w-8 h-8 rounded-xl bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] flex items-center justify-center font-fraunces text-xs font-black shrink-0">
                           {num}
                         </span>
-                        <span className="font-bold text-[#18181B] text-base md:text-lg group-hover:text-[#B91B1C] transition-colors">
+                        <span className="font-bold text-[#18181B] text-base group-hover:text-[#B91B1C] transition-colors leading-snug">
                           {faq.q}
                         </span>
                       </div>
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 font-mono text-lg font-bold ${
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0 font-mono text-base font-bold ${
                           isOpen
                             ? 'bg-[#B91B1C] text-white rotate-180'
                             : 'bg-[#FFF9F5] border border-[#F2E4D8] text-[#E7A92F] group-hover:border-[#E7A92F]'
@@ -753,7 +778,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                       </div>
                     </button>
                     {isOpen && (
-                      <div className="px-6 pb-6 pt-2 text-sm md:text-base text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/60 ml-13">
+                      <div className="px-5 pb-5 pt-2 text-sm text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/60 ml-11">
                         <p>{faq.a}</p>
                       </div>
                     )}
@@ -762,58 +787,62 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               })}
             </div>
 
-            {/* BaoBao Panda Assistant Help Card (4 cols) */}
-            <div className="lg:col-span-4 rounded-3xl bg-gradient-to-b from-white via-[#FFFDF9] to-[#FFF3DE] border-2 border-[#E7A92F]/40 p-7 shadow-lg relative overflow-hidden flex flex-col items-center text-center">
+            {/* BaoBao Panda Assistant Help Card (50% width, balanced height) */}
+            <div className="rounded-3xl bg-gradient-to-b from-white via-[#FFFDF9] to-[#FFF3DE] border-2 border-[#E7A92F]/40 p-8 shadow-lg relative overflow-hidden flex flex-col justify-between text-center h-full">
               
               {/* Decorative corner lantern */}
-              <div className="absolute top-0 right-4 animate-lantern pointer-events-none">
-                <div className="w-0.5 h-6 bg-[#8B5A2B] mx-auto" />
-                <div className="w-6 h-7 rounded-full bg-[#B91B1C] shadow-xs flex items-center justify-center text-[8px] text-[#E7A92F] font-bold">
+              <div className="absolute top-0 right-6 animate-lantern pointer-events-none">
+                <div className="w-0.5 h-7 bg-[#8B5A2B] mx-auto" />
+                <div className="w-7 h-8 rounded-full bg-[#B91B1C] shadow-xs flex items-center justify-center text-[9px] text-[#E7A92F] font-bold">
                   福
                 </div>
               </div>
 
-              {/* Avatar */}
-              <div className="relative w-24 h-24 rounded-full p-1 bg-white border-2 border-[#E7A92F] shadow-md mb-4 group">
-                <img
-                  src="/assets/panda-mascot.jpg"
-                  alt="Trợ lý Bảo Bảo"
-                  className="w-full h-full object-cover rounded-full"
-                />
-                <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-[#8FB9A7] border-2 border-white" title="Trực tuyến" />
+              <div>
+                {/* Avatar */}
+                <div className="relative w-28 h-28 rounded-full p-1 bg-white border-2 border-[#E7A92F] shadow-md mx-auto mb-5 group">
+                  <img
+                    src="/assets/panda-mascot-transparent.png"
+                    alt="Trợ lý Bảo Bảo"
+                    className="w-full h-full object-contain select-none"
+                  />
+                  <span className="absolute bottom-1 right-2 w-4 h-4 rounded-full bg-[#8FB9A7] border-2 border-white shadow-xs" title="Trực tuyến" />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#8FB9A7]/15 text-[#2F6E62] text-xs font-bold mb-3">
+                  <span>🏮 Trợ Lý Đồng Hành 24/7</span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-[#18181B] font-fraunces mb-2.5">
+                  Bạn Cần Tư Vấn Riêng?
+                </h3>
+
+                <p className="text-sm text-[#5F6368] leading-relaxed max-w-md mx-auto mb-6">
+                  Chưa biết trình độ của mình ở đâu? Hãy để Gấu Trúc Bảo Bảo gợi ý lộ trình phù hợp qua 6 câu hỏi ngắn nhé!
+                </p>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8FB9A7]/15 text-[#2F6E62] text-xs font-bold mb-2">
-                <span>Trợ Lý Đồng Hành 24/7</span>
-              </div>
+              <div>
+                <button
+                  onClick={onStartSurvey}
+                  className="w-full py-4 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-sm flex items-center justify-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer mb-3.5"
+                >
+                  <span>Tìm Lộ Trình Của Tôi</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
 
-              <h3 className="text-xl font-bold text-[#18181B] font-fraunces mb-2">
-                Bạn Cần Tư Vấn Riêng?
-              </h3>
+                <button
+                  onClick={() => onViewSample(SAMPLE_LESSONS[0].id)}
+                  className="w-full py-3.5 px-6 rounded-full border-2 border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] font-bold text-xs md:text-sm transition-colors cursor-pointer mb-5"
+                >
+                  Trải nghiệm bài học mẫu ngay
+                </button>
 
-              <p className="text-xs text-[#5F6368] leading-relaxed mb-6">
-                Chưa biết trình độ của mình ở đâu? Hãy để Gấu Trúc Bảo Bảo gợi ý lộ trình phù hợp qua 6 câu hỏi ngắn nhé!
-              </p>
-
-              <button
-                onClick={onStartSurvey}
-                className="w-full py-3.5 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs md:text-sm flex items-center justify-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer mb-3"
-              >
-                <span>Tìm Lộ Trình Của Tôi</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => onViewSample(SAMPLE_LESSONS[0].id)}
-                className="w-full py-3 px-6 rounded-full border border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] font-bold text-xs transition-colors cursor-pointer"
-              >
-                Trải nghiệm bài học mẫu ngay
-              </button>
-
-              <div className="mt-6 pt-4 border-t border-[#F2E4D8] w-full flex items-center justify-center gap-4 text-[11px] font-semibold text-[#8B9097]">
-                <span className="flex items-center gap-1">✓ Miễn phí</span>
-                <span className="flex items-center gap-1">✓ 2 phút</span>
-                <span className="flex items-center gap-1">✓ Chuẩn HSK</span>
+                <div className="pt-4 border-t border-[#F2E4D8] w-full flex items-center justify-center gap-6 text-xs font-semibold text-[#8B9097]">
+                  <span className="flex items-center gap-1 text-[#2F6E62]">✓ Miễn phí 100%</span>
+                  <span className="flex items-center gap-1 text-[#2F6E62]">✓ Kết quả sau 2 phút</span>
+                  <span className="flex items-center gap-1 text-[#2F6E62]">✓ Lộ trình chuẩn HSK</span>
+                </div>
               </div>
 
             </div>
