@@ -365,66 +365,70 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-stretch">
             
-            {/* Interactive Subtitle Simulation Player (Left 6 cols) */}
-            <div className="lg:col-span-6 bg-[#FFF9F5] rounded-3xl p-6 sm:p-8 border border-[#F2E4D8] shadow-lg relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#E53935]" />
-                  <div className="w-3 h-3 rounded-full bg-[#E7A92F]" />
-                  <div className="w-3 h-3 rounded-full bg-[#8FB9A7]" />
-                  <span className="text-xs font-bold text-[#5F6368] ml-2">Trình xem phụ đề thông minh</span>
+            {/* Interactive Subtitle Simulation Player (Left 50% - Expanded to match Right Height) */}
+            <div className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-8 border border-[#F2E4D8] shadow-lg relative flex flex-col justify-between h-full">
+              
+              {/* Window Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#E53935]" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#E7A92F]" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#8FB9A7]" />
+                  <span className="text-xs font-bold text-[#5F6368] ml-2">Trình xem phụ đề thông minh HanFlix</span>
                 </div>
-                <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-full border border-[#E7E7EA] text-[11px] font-bold text-[#B91B1C]">
-                  <span>HD 1080p</span>
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#8FB9A7]/15 text-[#2F6E62] px-2.5 py-1 rounded-full text-[11px] font-bold">HSK 3</span>
+                  <span className="bg-white px-2.5 py-1 rounded-full border border-[#E7E7EA] text-[11px] font-bold text-[#B91B1C]">HD 1080p</span>
                 </div>
               </div>
 
-              {/* Video Mockup Screen */}
-              <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#18181B] shadow-inner mb-6 flex flex-col justify-between p-4 group">
+              {/* Video Mockup Screen - Expanded for Rich Immersion */}
+              <div className="relative flex-1 min-h-[340px] sm:min-h-[400px] rounded-2xl overflow-hidden bg-[#18181B] shadow-inner mb-5 flex flex-col justify-between p-5 group">
                 <img
-                  src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=450&fit=crop&auto=format"
+                  src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1000&h=650&fit=crop&auto=format"
                   alt="Tình huống giao tiếp phim Trung Quốc"
-                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
                 />
 
                 {/* Top overlay controls */}
                 <div className="relative z-10 flex items-center justify-between text-white/90">
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-black/50 backdrop-blur-sm">
-                    Tình huống: Nhà hàng Bắc Kinh
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#8FB9A7] animate-ping" />
+                    Tình huống: Gọi món ở nhà hàng Bắc Kinh
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setActiveCueIndex((prev) => (prev === 0 ? 1 : 0))}
-                      className="px-2.5 py-1 rounded-md bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-colors cursor-pointer"
-                    >
-                      Đổi câu thoại mẫu
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setActiveCueIndex((prev) => (prev === 0 ? 1 : 0))}
+                    className="px-3 py-1.5 rounded-lg bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    Đổi câu thoại mẫu ↻
+                  </button>
                 </div>
 
-                {/* Subtitle Zone */}
-                <div className="relative z-10 text-center bg-black/75 backdrop-blur-md rounded-2xl p-3 border border-white/10">
-                  {/* Pinyin */}
+                {/* Center Subtitle & Interactive Vocabulary Area */}
+                <div className="relative z-10 text-center bg-black/80 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/15 shadow-2xl">
+                  
+                  {/* Pinyin Layer */}
                   {showPinyin && (
-                    <div className="text-xs sm:text-sm font-mono text-[#E7A92F] font-semibold mb-1">
+                    <div className="text-sm sm:text-base font-mono text-[#E7A92F] font-semibold mb-2 tracking-wide">
                       {activeCue.pinyin}
                     </div>
                   )}
 
-                  {/* Hanzi Interactive Tokens */}
+                  {/* Hanzi Interactive Tokens Layer */}
                   {showZh && (
-                    <div className="text-lg sm:text-2xl font-bold text-white tracking-wide flex flex-wrap items-center justify-center gap-1 font-hanzi">
+                    <div className="text-2xl sm:text-3xl font-black text-white tracking-wider flex flex-wrap items-center justify-center gap-1.5 font-hanzi my-1">
                       {activeCue.tokens.map((token, idx) => (
                         <button
                           key={idx}
                           onClick={() => setSelectedToken(token.vi ? token : null)}
-                          className={`px-1 rounded-md transition-all cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded-lg transition-all cursor-pointer ${
                             token.vi
                               ? 'hover:bg-[#B91B1C] hover:text-white underline decoration-[#E7A92F] decoration-2 underline-offset-4'
                               : 'cursor-default'
                           }`}
+                          title={token.vi ? 'Chạm để tra từ' : undefined}
                         >
                           {token.text}
                         </button>
@@ -432,60 +436,46 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                     </div>
                   )}
 
-                  {/* Vietnamese */}
+                  {/* Vietnamese Meaning Layer */}
                   {showVi && (
-                    <div className="text-xs sm:text-sm text-white/80 font-medium mt-1.5">
+                    <div className="text-xs sm:text-sm text-white/85 font-medium mt-2">
                       {activeCue.vi}
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* Subtitle Layers Toggles */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#F2E4D8]">
-                <div className="text-xs font-bold text-[#5F6368]">Hiển thị các tầng phụ đề:</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowZh(!showZh)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      showZh ? 'bg-[#B91B1C] text-white' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
-                    }`}
-                  >
-                    Hán tự
-                  </button>
-                  <button
-                    onClick={() => setShowPinyin(!showPinyin)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      showPinyin ? 'bg-[#E7A92F] text-[#18181B]' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
-                    }`}
-                  >
-                    Pinyin
-                  </button>
-                  <button
-                    onClick={() => setShowVi(!showVi)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      showVi ? 'bg-[#8FB9A7] text-white' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
-                    }`}
-                  >
-                    Tiếng Việt
-                  </button>
+                  {/* Hint */}
+                  <div className="text-[10px] text-white/50 mt-2 italic">
+                    💡 Chạm vào bất kỳ chữ Hán nào để xem nghĩa và nghe phát âm tức thì
+                  </div>
                 </div>
+
+                {/* Video Playback Scrubber simulation */}
+                <div className="relative z-10 pt-2">
+                  <div className="w-full h-1.5 rounded-full bg-white/25 overflow-hidden mb-2">
+                    <div className="w-2/5 h-full bg-[#B91B1C] rounded-full" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-white/70 font-mono">
+                    <span>01:15</span>
+                    <span>03:20</span>
+                  </div>
+                </div>
+
               </div>
 
               {/* 1-Tap Dictionary Interactive Popup Demo */}
               {selectedToken && (
-                <div className="mt-4 p-4 rounded-2xl bg-white border border-[#E7A92F] shadow-lg flex items-center justify-between animate-float">
+                <div className="mb-4 p-4 rounded-2xl bg-white border-2 border-[#E7A92F] shadow-lg flex items-center justify-between animate-float">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xl font-black text-[#B91B1C] font-hanzi">{selectedToken.text}</span>
+                      <span className="text-2xl font-black text-[#B91B1C] font-hanzi">{selectedToken.text}</span>
                       <span className="text-xs font-mono text-[#E7A92F] font-bold">[{selectedToken.pinyin}]</span>
                     </div>
-                    <div className="text-xs text-[#18181B] font-medium mt-0.5">Nghĩa: {selectedToken.vi}</div>
+                    <div className="text-xs text-[#18181B] font-semibold mt-0.5">Nghĩa: {selectedToken.vi}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => alert(`Phát âm từ: ${selectedToken.text}`)}
-                      className="p-2 rounded-full bg-[#FFF3DE] text-[#B7791F] hover:bg-[#E7A92F] hover:text-white transition-colors cursor-pointer"
+                      className="p-2.5 rounded-full bg-[#FFF3DE] text-[#B7791F] hover:bg-[#E7A92F] hover:text-white transition-colors cursor-pointer"
                       title="Nghe phát âm"
                     >
                       <Volume2 className="w-4 h-4" />
@@ -494,33 +484,65 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                       onClick={() => setSelectedToken(null)}
                       className="text-xs text-[#8B9097] hover:text-[#B91B1C] font-bold px-2 py-1 cursor-pointer"
                     >
-                      Đóng
+                      Đóng ✕
                     </button>
                   </div>
                 </div>
               )}
+
+              {/* Subtitle Layers Toggles Bottom Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#F2E4D8]">
+                <div className="text-xs font-bold text-[#5F6368]">Hiển thị các tầng phụ đề:</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowZh(!showZh)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      showZh ? 'bg-[#B91B1C] text-white shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
+                    }`}
+                  >
+                    Hán tự
+                  </button>
+                  <button
+                    onClick={() => setShowPinyin(!showPinyin)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      showPinyin ? 'bg-[#E7A92F] text-[#18181B] shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
+                    }`}
+                  >
+                    Pinyin
+                  </button>
+                  <button
+                    onClick={() => setShowVi(!showVi)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      showVi ? 'bg-[#8FB9A7] text-white shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
+                    }`}
+                  >
+                    Tiếng Việt
+                  </button>
+                </div>
+              </div>
+
             </div>
 
-            {/* Method Steps List (Right 6 cols) */}
-            <div className="lg:col-span-6 space-y-6">
+            {/* Method Steps List (Right 50% - Equal Height & Balanced Spacing) */}
+            <div className="flex flex-col justify-between h-full space-y-4">
               {METHOD_STEPS.map((step) => {
                 const IconComponent = step.icon;
                 return (
                   <div
                     key={step.n}
-                    className="p-6 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] hover:border-[#B91B1C]/40 hover:shadow-md transition-all group flex items-start gap-5"
+                    className="p-5 sm:p-6 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] hover:border-[#B91B1C]/40 hover:shadow-md transition-all group flex items-start gap-4 flex-1"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-white border border-[#F2E4D8] group-hover:bg-[#B91B1C] group-hover:text-white group-hover:border-[#B91B1C] flex flex-col items-center justify-center shrink-0 transition-all">
-                      <span className="text-base font-black text-[#8FB9A7] group-hover:text-[#FFF9F5] font-fraunces leading-none">
+                    <div className="w-13 h-13 rounded-2xl bg-white border border-[#F2E4D8] group-hover:bg-[#B91B1C] group-hover:text-white group-hover:border-[#B91B1C] flex flex-col items-center justify-center shrink-0 transition-all shadow-xs">
+                      <span className="text-sm font-black text-[#8FB9A7] group-hover:text-[#FFF9F5] font-fraunces leading-none">
                         {step.n}
                       </span>
                       <IconComponent className="w-4 h-4 text-[#B91B1C] group-hover:text-white mt-1 transition-colors" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-[#18181B] group-hover:text-[#B91B1C] transition-colors mb-2">
+                      <h3 className="text-base sm:text-lg font-bold text-[#18181B] group-hover:text-[#B91B1C] transition-colors mb-1.5">
                         {step.title}
                       </h3>
-                      <p className="text-sm text-[#5F6368] leading-relaxed">
+                      <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed">
                         {step.body}
                       </p>
                     </div>
