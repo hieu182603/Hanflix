@@ -35,8 +35,13 @@ const registerSchema = credentialsSchema.extend({
 });
 
 const forgotSchema = z.object({ email: z.string().trim().toLowerCase().email() });
-const accountTokenSchema = z.object({ token: z.string().trim().min(32).max(512) });
-const resetPasswordSchema = accountTokenSchema.extend({ password: z.string().min(8).max(128) });
+const accountTokenSchema = z.object({ token: z.string().trim().min(32).max(512) }).strict();
+const otpSchema = z.object({ email: z.string().trim().toLowerCase().email(), code: z.string().regex(/^\d{6}$/) }).strict();
+const accountProofSchema = z.union([accountTokenSchema, otpSchema]);
+const resetPasswordSchema = z.union([
+  accountTokenSchema.extend({ password: z.string().min(8).max(128) }),
+  otpSchema.extend({ password: z.string().min(8).max(128) }),
+]);
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(8).max(128),
   newPassword: z.string().min(8).max(128),
@@ -44,6 +49,10 @@ const changePasswordSchema = z.object({
   path: ['newPassword'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
 });
 const googleCredentialSchema = z.object({ credential: z.string().min(100).max(10000) });
+
+router.get('/providers', (_req, res) => {
+  res.json({ data: { googleClientId: env.GOOGLE_CLIENT_ID ?? null } });
+});
 
 function cookieOptions(): CookieOptions {
   const options: CookieOptions = {
@@ -105,8 +114,8 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
     if ((error as { code?: number }).code === 11000) throw new AppError(409, 'EMAIL_EXISTS', 'Email đã được sử dụng');
     throw error;
   }
-  const token = await accountTokenService.issue(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
-  await mailService.sendVerificationEmail({ to: user.email, name: user.name, token });
+  const proof = await accountTokenService.issueWithOtp(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
+  await mailService.sendVerificationEmail({ to: user.email, name: user.name, ...proof });
   res.status(201).json({ data: { user: publicUser(user), verificationRequired: true } });
 }));
 
@@ -132,7 +141,8 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
         .select('+googleSub +emailVerificationRequired');
       // A verified Google email may safely claim a still-unverified password signup.
       // Established accounts must authenticate before linking to prevent account takeover.
-      if (existingEmailUser?.emailVerificationRequired && !existingEmailUser.emailVerifiedAt) {
+      if (existingEmailUser?.emailVerificationRequired && !existingEmailUser.emailVerifiedAt && !existingEmailUser.googleSub) {
+        if (existingEmailUser.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
         existingEmailUser.googleSub = identity.sub;
         existingEmailUser.emailVerifiedAt = new Date();
         existingEmailUser.emailVerificationRequired = false;
@@ -151,25 +161,23 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
         throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu rồi liên kết Google.');
       }
     }
-    try {
-      if (user) {
-        // Reclaimed an unverified password signup above; no new user is needed.
-      } else {
-      user = await UserModel.create({
-        name: identity.name,
-        email: identity.email,
-        googleSub: identity.sub,
-        avatarUrl: identity.picture,
-        emailVerifiedAt: new Date(),
-        emailVerificationRequired: false,
-        role: 'user',
-      });
-      created = true;
+    if (!user) {
+      try {
+        user = await UserModel.create({
+          name: identity.name,
+          email: identity.email,
+          googleSub: identity.sub,
+          avatarUrl: identity.picture,
+          emailVerifiedAt: new Date(),
+          emailVerificationRequired: false,
+          role: 'user',
+        });
+        created = true;
+      } catch (error) {
+        if ((error as { code?: number }).code !== 11000) throw error;
+        user = await UserModel.findOne({ googleSub: identity.sub }).select('+googleSub');
+        if (!user) throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập và liên kết Google.');
       }
-    } catch (error) {
-      if ((error as { code?: number }).code !== 11000) throw error;
-      user = await UserModel.findOne({ googleSub: identity.sub }).select('+googleSub');
-      if (!user) throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập và liên kết Google.');
     }
   }
   if (user.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
@@ -254,9 +262,14 @@ router.post('/logout', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
-router.post('/verify-email', authLimiter, validate(accountTokenSchema), asyncHandler(async (req, res) => {
-  const accountToken = await accountTokenService.consume(req.body.token, 'verify_email');
-  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết xác minh không hợp lệ hoặc đã hết hạn');
+router.post('/verify-email', authLimiter, validate(accountProofSchema), asyncHandler(async (req, res) => {
+  const accountToken = req.body.token
+    ? await accountTokenService.consume(req.body.token, 'verify_email')
+    : await (async () => {
+      const user = await UserModel.findOne({ email: req.body.email });
+      return user ? accountTokenService.consumeOtp(user._id, req.body.code, 'verify_email') : null;
+    })();
+  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Mã hoặc liên kết xác minh không hợp lệ hoặc đã hết hạn');
   const user = await UserModel.findByIdAndUpdate(
     accountToken.userId,
     { $set: { emailVerifiedAt: new Date(), emailVerificationRequired: false } },
@@ -271,8 +284,8 @@ router.post('/resend-verification', authLimiter, validate(forgotSchema), asyncHa
   const user = await UserModel.findOne({ email: req.body.email }).select('+emailVerificationRequired');
   if (user?.emailVerificationRequired && !user.emailVerifiedAt && user.status === 'active') {
     try {
-      const token = await accountTokenService.issue(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
-      await mailService.sendVerificationEmail({ to: user.email, name: user.name, token });
+      const proof = await accountTokenService.issueWithOtpIfAllowed(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
+      if (proof) await mailService.sendVerificationEmail({ to: user.email, name: user.name, ...proof });
     } catch (error) {
       logger.error({ userId: user._id.toString(), error: error instanceof Error ? error.message : String(error) }, 'Verification email delivery failed');
     }
@@ -285,8 +298,8 @@ router.post('/forgot-password', authLimiter, validate(forgotSchema), asyncHandle
   const user = await UserModel.findOne({ email: req.body.email }).select('+passwordHash');
   if (user?.passwordHash && user.status === 'active') {
     try {
-      const token = await accountTokenService.issue(user._id, 'reset_password', env.PASSWORD_RESET_TTL_MINUTES);
-      await mailService.sendPasswordResetEmail({ to: user.email, name: user.name, token });
+      const proof = await accountTokenService.issueWithOtpIfAllowed(user._id, 'reset_password', env.PASSWORD_RESET_TTL_MINUTES);
+      if (proof) await mailService.sendPasswordResetEmail({ to: user.email, name: user.name, ...proof });
     } catch (error) {
       logger.error({ userId: user._id.toString(), error: error instanceof Error ? error.message : String(error) }, 'Password reset email delivery failed');
     }
@@ -295,8 +308,13 @@ router.post('/forgot-password', authLimiter, validate(forgotSchema), asyncHandle
 }));
 
 router.post('/reset-password', authLimiter, validate(resetPasswordSchema), asyncHandler(async (req, res) => {
-  const accountToken = await accountTokenService.consume(req.body.token, 'reset_password');
-  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
+  const accountToken = req.body.token
+    ? await accountTokenService.consume(req.body.token, 'reset_password')
+    : await (async () => {
+      const user = await UserModel.findOne({ email: req.body.email });
+      return user ? accountTokenService.consumeOtp(user._id, req.body.code, 'reset_password') : null;
+    })();
+  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Mã hoặc liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
   const user = await UserModel.findById(accountToken.userId).select('+passwordHash +emailVerificationRequired');
   if (!user || user.status !== 'active') throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết đặt lại mật khẩu không hợp lệ');
   user.passwordHash = await bcrypt.hash(req.body.password, 12);

@@ -11,8 +11,14 @@ interface AuthResponse {
     status: 'active' | 'locked';
     emailVerified?: boolean;
     learningProfile?: {
+      currentHsk?: number;
       currentHskSource?: string;
+      targetHsk?: number;
+      goal?: string;
+      topicIds?: string[];
+      dailyMinutes?: number;
       subtitlePreference?: string;
+      surveyVersion?: number;
     } | null;
   };
 }
@@ -30,6 +36,7 @@ interface MeResponse {
  * Convert backend user shape to frontend User type.
  */
 function toFrontendUser(u: AuthResponse['user']): User {
+  const lp = u.learningProfile;
   return {
     id: u.id,
     role: u.role,
@@ -37,7 +44,17 @@ function toFrontendUser(u: AuthResponse['user']): User {
     name: u.name,
     email: u.email,
     avatarAsset: null,
-    learningProfile: null,
+    learningProfile: lp ? {
+      hskLevel: lp.currentHsk ?? 3,
+      goal: lp.goal ?? 'daily',
+      topics: lp.topicIds ?? [],
+      dailyMinutes: lp.dailyMinutes ?? 15,
+      preferredDuration: '1-3',
+      subtitleDefaults: { zh: true, pinyin: true, vi: true },
+      defaultSpeed: 1,
+      uiLanguage: 'vi',
+      surveyVersion: lp.surveyVersion,
+    } : null,
   };
 }
 
@@ -66,6 +83,24 @@ export async function login(email: string, password: string): Promise<User> {
   });
   setAccessToken(data.accessToken);
   return toFrontendUser(data.user);
+}
+
+export async function getGoogleClientId(): Promise<string | null> {
+  const data = await apiFetch<{ googleClientId: string | null }>('/auth/providers');
+  return data.googleClientId;
+}
+
+export async function signInWithGoogle(credential: string): Promise<User> {
+  const data = await apiFetch<AuthResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+  setAccessToken(data.accessToken);
+  return toFrontendUser(data.user);
+}
+
+export async function linkGoogle(credential: string): Promise<void> {
+  await apiFetch('/auth/google/link', { method: 'POST', body: JSON.stringify({ credential }) });
 }
 
 /**
@@ -113,12 +148,20 @@ export async function verifyEmail(token: string): Promise<void> {
   await apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) });
 }
 
+export async function verifyEmailCode(email: string, code: string): Promise<void> {
+  await apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ email, code }) });
+}
+
 export async function resendVerification(email: string): Promise<void> {
   await apiFetch('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) });
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {
   await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
+}
+
+export async function resetPasswordWithCode(email: string, code: string, password: string): Promise<void> {
+  await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, password }) });
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {

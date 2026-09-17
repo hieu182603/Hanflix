@@ -79,8 +79,12 @@ router.get('/recommendations', asyncHandler(async (req, res) => {
 router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
   const [user, lessons] = await Promise.all([
     UserModel.findById(req.auth!.userId).select('learningProfile').lean(),
-    LessonModel.find({ status: 'published' }).select('titleVi hsk topicIds goalTags').limit(30).lean(),
+    LessonModel.find({ status: 'published' }).select('titleVi titleZh pinyin descriptionVi hsk topicIds goalTags durationSeconds thumbnailKey').limit(30).lean(),
   ]);
+  if (lessons.length === 0) {
+    res.json({ data: { items: [], source: 'no_published_lessons' } });
+    return;
+  }
   const result = await rerankLessonCandidates({
     profile: user?.learningProfile ?? {},
     candidates: lessons.map(lesson => ({

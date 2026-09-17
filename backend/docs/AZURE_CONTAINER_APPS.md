@@ -33,6 +33,8 @@ Create a Consumption environment and deploy the image with external ingress on t
 
 Store MongoDB, SMTP, R2, Azure Speech, Azure Translator and JWT values as Container Apps secrets. Map them to environment variables; never put credentials in the image. SMTP should normally use authenticated port 587 with STARTTLS; set `APP_PUBLIC_URL` to the public frontend origin so verification/reset links are correct.
 
+Set `GOOGLE_CLIENT_ID` to the Web OAuth client ID and add the deployed frontend origin to Google Cloud's authorized JavaScript origins. The frontend reads this public ID from `GET /api/v1/auth/providers`. Set `GEMINI_MODEL` to an API model ID such as `gemini-3.5-flash-lite`; the human-facing model display name is not valid here.
+
 The HTTP app can scale to zero. A queued job is created during upload confirmation and starts immediately while that replica is alive. If the platform stops or replaces the replica, the MongoDB stale-job recovery returns unfinished work to the queue when the app next starts. For stricter processing latency independent of HTTP traffic, use a scheduled Container Apps Job every 5 minutes or keep one worker replica running.
 
 ## Manual cloud setup

@@ -3,7 +3,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import HeroSection from './components/HeroSection';
 import AIRecommendationSection from './components/AIRecommendationSection';
-import VideoPlayerModal from './components/VideoPlayerModal';
+import { useLanguage } from './i18n';
 import AIAssistantDrawer from './components/AIAssistantDrawer';
 import PreferencesDrawer from './components/PreferencesDrawer';
 import PracticeModal from './components/PracticeModal';
@@ -11,7 +11,16 @@ import LessonsPage from './components/LessonsPage';
 import SavedPage from './components/SavedPage';
 import RoadmapPage from './components/RoadmapPage';
 import LandingPage from './components/LandingPage';
-import { ExamPrepPage, LeaderboardPage, CommunityPage, SettingsPage } from './components/ExamPrepPage';
+import { ExamPrepPage, LeaderboardPage, CommunityPage } from './components/ExamPrepPage';
+
+// Settings & Survey Modals (Requirements 2 & 3)
+import SettingsModal from './components/settings/SettingsModal';
+import LearningSurveyModal from './components/onboarding/LearningSurveyModal';
+import StreakCelebrationToast from './components/streak/StreakCelebrationToast';
+
+// YouTube-Style Watch View (Requirement 4)
+import WatchView from './components/watch/WatchView';
+import PublishedLessonView from './components/watch/PublishedLessonView';
 
 // Admin Components
 import AdminShell from './components/admin/AdminShell';
@@ -36,18 +45,18 @@ import FlashcardReviewView from './components/review/FlashcardReviewView';
 import * as authApi from './api/auth';
 import { PandaPet } from './components/panda-pet';
 
-  import {
-    VideoLesson,
-    User,
-    UserProfile,
-    SAMPLE_LESSONS,
-    Lesson,
-    SavedWord,
-    UserLearningProfile,
-    SAMPLE_WORDS
-  } from './data/hanflixData';
 import {
-  Sparkles, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings
+  VideoLesson,
+  User,
+  UserProfile,
+  SAMPLE_LESSONS,
+  Lesson,
+  SavedWord,
+  UserLearningProfile,
+  SAMPLE_WORDS
+} from './data/hanflixData';
+import {
+  Sparkles, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings, Map
 } from 'lucide-react';
 
 type AuthView = 'none' | 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
@@ -92,18 +101,41 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Navigation
+  // Navigation & Collapsible sidebar state (Requirement 1)
   const [activeNav, setActiveNav] = useState<string>('feed');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hanflix_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
 
-  // Modals / Drawers
+  const handleToggleSidebarCollapse = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hanflix_sidebar_collapsed', String(next));
+      }
+      return next;
+    });
+  };
+
+  // Modals & Drawers
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
+  const [selectedPublishedLessonId, setSelectedPublishedLessonId] = useState<string | null>(null);
   const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false);
   const [isFlashcardOpen, setIsFlashcardOpen] = useState<boolean>(false);
-  const [currentLang, setCurrentLang] = useState<string>('vi');
+  const { lang: currentLang, setLang: setCurrentLang, t } = useLanguage();
+
+  // Account Settings Modal (Requirement 2)
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // First-time Login Survey Modal (Requirement 3)
+  const [isSurveyOpen, setIsSurveyOpen] = useState<boolean>(false);
 
   // Store data
   const [lessons, setLessons] = useState<Lesson[]>(SAMPLE_LESSONS);
@@ -126,6 +158,23 @@ export default function App() {
       setIsRestoringSession(false);
     });
   }, []);
+
+  // Check first-time login for survey popup (Requirement 3)
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'user') {
+      // Server-side check: if surveyVersion is set, user has completed the survey
+      const serverSideCompleted = currentUser.learningProfile?.surveyVersion != null;
+      // Fallback: localStorage for backward compatibility
+      const localCompleted =
+        localStorage.getItem(`hanflix_survey_completed_${currentUser.id}`) ||
+        localStorage.getItem('hanflix_survey_completed_global');
+
+      if (!serverSideCompleted && !localCompleted) {
+        // Automatically open the survey popup modal on first login
+        setIsSurveyOpen(true);
+      }
+    }
+  }, [currentUser]);
 
   const handleToggleSaveLesson = (lesson: VideoLesson) => {
     setSavedLessons((prev) =>
@@ -233,6 +282,7 @@ export default function App() {
     return (
       <SignupView
         onNavigateToLogin={() => navigateAuth('login')}
+        onGoogleSuccess={(user) => { setCurrentUser(user); navigateAuth('none'); }}
       />
     );
   }
@@ -241,6 +291,10 @@ export default function App() {
     return (
       <ForgotPasswordView
         onNavigateToLogin={() => navigateAuth('login')}
+        onNavigateToResetPassword={(email) => {
+          navigateAuth('reset-password');
+          window.history.replaceState({}, '', `/auth/reset-password?email=${encodeURIComponent(email)}`);
+        }}
       />
     );
   }
@@ -250,7 +304,8 @@ export default function App() {
   }
 
   if (authView === 'reset-password') {
-    return <ResetPasswordView onNavigateToLogin={() => navigateAuth('login')} />;
+    const emailParam = new URLSearchParams(window.location.search).get('email') || '';
+    return <ResetPasswordView onNavigateToLogin={() => navigateAuth('login')} initialEmail={emailParam} />;
   }
 
   if (authView === 'onboarding') {
@@ -311,35 +366,41 @@ export default function App() {
   if (!currentUser) {
     return (
       <div className="flex flex-col min-h-screen">
-        <LandingPage
-          onStartSurvey={() => navigateAuth('onboarding')}
-          onViewSample={(id) => {
-            const lesson = SAMPLE_LESSONS.find(l => l.id === id) || SAMPLE_LESSONS[0];
-            setSelectedLesson(lesson as unknown as VideoLesson);
-          }}
-          onSignIn={() => navigateAuth('login')}
-          onSignUp={() => navigateAuth('signup')}
-        />
-        {/* Sample player for guest */}
-        <VideoPlayerModal
-          lesson={selectedLesson}
-          onClose={() => setSelectedLesson(null)}
-          onAskAI={() => navigateAuth('login')}
-          isSaved={false}
-          onToggleSave={() => navigateAuth('login')}
-          guestMode={true}
-        />
+        {selectedLesson ? (
+          <div className="p-4 md:p-6 bg-[#F7F7F9] min-h-screen">
+            <WatchView
+              lesson={selectedLesson}
+              onBack={() => setSelectedLesson(null)}
+              onSelectLesson={(l) => setSelectedLesson(l)}
+              onAskAI={() => navigateAuth('login')}
+              isSaved={false}
+              onToggleSave={() => navigateAuth('login')}
+              onStartPractice={() => navigateAuth('login')}
+              guestMode={true}
+            />
+          </div>
+        ) : (
+          <LandingPage
+            onStartSurvey={() => navigateAuth('onboarding')}
+            onViewSample={(id) => {
+              const lesson = SAMPLE_LESSONS.find(l => l.id === id) || SAMPLE_LESSONS[0];
+              setSelectedLesson(lesson as unknown as VideoLesson);
+            }}
+            onSignIn={() => navigateAuth('login')}
+            onSignUp={() => navigateAuth('signup')}
+          />
+        )}
       </div>
     );
   }
 
   // Bottom nav items for mobile (<768px)
   const bottomNavItems = [
-    { id: 'feed', label: 'Bảng tin', icon: Home },
-    { id: 'lessons', label: 'Bài học', icon: BookOpen },
-    { id: 'saved', label: 'Kho lưu', icon: Bookmark },
-    { id: 'vocabulary', label: 'Từ vựng', icon: BookMarked },
-    { id: 'settings', label: 'Cài đặt', icon: Settings },
+    { id: 'feed', label: t.nav.feed, icon: Home },
+    { id: 'lessons', label: t.nav.lessons, icon: BookOpen },
+    { id: 'saved', label: t.nav.saved, icon: Bookmark },
+    { id: 'vocabulary', label: t.nav.vocabulary, icon: BookMarked },
+    { id: 'roadmap', label: t.nav.roadmap, icon: Map },
   ];
 
   const userProfile = {
@@ -355,125 +416,123 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-[#F7F7F9] text-[#18181B] flex flex-col font-sans antialiased">
-
-      {/* Sticky header */}
+      {/* Sticky header with collapse hamburger & account settings dropdown */}
       <Header
         activeNav={activeNav}
         currentLang={currentLang}
         onLanguageChange={setCurrentLang}
-        onOpenPreferences={() => setIsPreferencesOpen(true)}
-        onOpenAI={() => handleOpenAI()}
+        onOpenPreferences={() => setIsSurveyOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onSearchSelect={(query) => handleOpenAI(`Tìm kiếm: ${query}`)}
         onOpenMenu={() => setIsSidebarOpen(true)}
+        onToggleCollapse={handleToggleSidebarCollapse}
+        isSidebarCollapsed={isSidebarCollapsed}
         currentUser={currentUser}
         onLogout={handleLogout}
         streakDays={userProfile.streakDays}
+        onOpenPractice={() => setIsPracticeOpen(true)}
+        onNavigateToLessons={() => {
+          setActiveNav('lessons');
+          setSelectedLesson(null);
+          setSelectedPublishedLessonId(null);
+        }}
       />
 
-      {/* Main layout */}
+      {/* Main layout with collapsible sidebar */}
       <div className="flex-1 flex max-w-[1920px] w-full mx-auto min-w-0">
-        {/* Sidebar (full, rail, or drawer depending on breakpoint) */}
+        {/* Sidebar: collapses to w-[72px] mini-rail or expands to w-[260px] */}
         <Sidebar
           activeNav={activeNav}
-          onNavChange={(id) => { setActiveNav(id); setIsSidebarOpen(false); }}
+          onNavChange={(id) => {
+            setActiveNav(id);
+            setSelectedLesson(null); // Return to list if navigating from watch mode
+            setSelectedPublishedLessonId(null);
+            setIsSidebarOpen(false);
+          }}
           userProfile={userProfile}
           onStartPractice={() => setIsPracticeOpen(true)}
           isDrawerOpen={isSidebarOpen}
           onCloseDrawer={() => setIsSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed || (!!selectedLesson && typeof window !== 'undefined' && window.innerWidth >= 1024)}
         />
 
-        {/* Main content */}
+        {/* Main content: YouTube Watch Stage or Dashboard Pages */}
         <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden">
-          {activeNav === 'feed' && (
+          {selectedPublishedLessonId ? (
+            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={() => setSelectedPublishedLessonId(null)} />
+          ) : selectedLesson ? (
+            /* Requirement 4: In-page YouTube-style Watch View */
+            <WatchView
+              lesson={selectedLesson}
+              onBack={() => setSelectedLesson(null)}
+              onSelectLesson={(lesson) => setSelectedLesson(lesson)}
+              onAskAI={(prompt) => handleOpenAI(prompt)}
+              isSaved={savedLessons.some((l) => l.id === selectedLesson.id)}
+              onToggleSave={handleToggleSaveLesson}
+              onStartPractice={() => setIsPracticeOpen(true)}
+              onSaveWord={(word) => {
+                setSavedWords((prev) => [
+                  {
+                    userId: currentUser?.id || 'learner',
+                    wordId: `word-${Date.now()}`,
+                    sourceRefs: [{ lessonId: selectedLesson.id, cueId: 'cue-1' }],
+                    srs: { dueAt: Date.now() + 86400000, intervalDays: 1, repetitions: 0 },
+                    savedAt: Date.now(),
+                  },
+                  ...prev,
+                ]);
+              }}
+            />
+          ) : (
             <>
-              <HeroSection onSelectLesson={setSelectedLesson} />
-              <AIRecommendationSection
-                onSelectLesson={setSelectedLesson}
-                onOpenPreferences={() => setIsPreferencesOpen(true)}
-              />
-            </>
-          )}
-          {activeNav === 'lessons' && (
-            <LessonsPage onSelectLesson={setSelectedLesson} />
-          )}
-          {activeNav === 'saved' && (
-            <SavedPage
-              onSelectLesson={setSelectedLesson}
-              savedWords={savedWords}
-              savedLessons={savedLessons}
-              onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
-              onRemoveSavedLesson={(id) => setSavedLessons(savedLessons.filter((l) => l.id !== id))}
-            />
-          )}
-          {activeNav === 'vocabulary' && (
-            <VocabularyPage
-              savedWords={savedWords}
-              onStartReviewSession={() => setIsFlashcardOpen(true)}
-              onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
-            />
-          )}
-          {activeNav === 'roadmap' && <RoadmapPage />}
-          {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setIsPracticeOpen(true)} />}
-          {activeNav === 'leaderboard' && <LeaderboardPage />}
-          {activeNav === 'community' && <CommunityPage />}
-          {activeNav === 'history' && (
-            <div className="space-y-4">
-              <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-black text-[#18181B]">Lịch sử học tập</h1>
-                  <p className="text-sm text-[#5F6368] mt-1">Các bài học gần đây của bạn.</p>
-                </div>
-              </div>
-              <div className="bg-white rounded-3xl p-8 border border-[#E7E7EA] text-center">
-                <RotateCcw className="w-10 h-10 text-[#E7E7EA] mx-auto mb-3" />
-                <h2 className="font-bold text-[#18181B] mb-1">Chưa có lịch sử học tập</h2>
-                <p className="text-sm text-[#5F6368]">Bạn chưa xem bài học nào gần đây.</p>
-              </div>
-            </div>
-          )}
-          {activeNav === 'settings' && (
-            <div className="space-y-5">
-              <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA]">
-                <h1 className="text-xl font-black text-[#18181B] mb-1">Cài đặt tài khoản</h1>
-                <p className="text-sm text-[#5F6368] mb-5">Thông tin cơ bản và tùy chọn học tập.</p>
-                <div className="space-y-3">
-                  {[
-                    { label: 'Họ và tên', value: currentUser.name },
-                    { label: 'Email', value: currentUser.email },
-                    { label: 'Vai trò', value: (currentUser.role as string) === 'admin' ? 'Quản trị viên' : 'Học viên' },
-                    { label: 'Trạng thái', value: currentUser.status === 'active' ? 'Hoạt động' : 'Bị khóa' },
-                  ].map((item) => (
-                    <div key={item.label} className="flex justify-between py-3 border-b border-[#E7E7EA] last:border-0">
-                      <span className="text-sm text-[#5F6368]">{item.label}</span>
-                      <span className="text-sm font-semibold text-[#18181B]">{item.value}</span>
+              {activeNav === 'feed' && (
+                <>
+                  <HeroSection onSelectLesson={setSelectedLesson} />
+                  <AIRecommendationSection
+                    onSelectLessonId={(id) => { setSelectedLesson(null); setSelectedPublishedLessonId(id); }}
+                    onOpenPreferences={() => setIsSurveyOpen(true)}
+                  />
+                </>
+              )}
+              {activeNav === 'lessons' && (
+                <LessonsPage onSelectLesson={setSelectedLesson} />
+              )}
+              {activeNav === 'saved' && (
+                <SavedPage
+                  onSelectLesson={setSelectedLesson}
+                  savedWords={savedWords}
+                  savedLessons={savedLessons}
+                  onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
+                  onRemoveSavedLesson={(id) => setSavedLessons(savedLessons.filter((l) => l.id !== id))}
+                />
+              )}
+              {activeNav === 'vocabulary' && (
+                <VocabularyPage
+                  savedWords={savedWords}
+                  onStartReviewSession={() => setIsFlashcardOpen(true)}
+                  onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
+                />
+              )}
+              {activeNav === 'roadmap' && <RoadmapPage />}
+              {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setIsPracticeOpen(true)} />}
+              {activeNav === 'leaderboard' && <LeaderboardPage />}
+              {activeNav === 'community' && <CommunityPage />}
+              {activeNav === 'history' && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] flex items-center justify-between">
+                    <div>
+                      <h1 className="text-xl font-black text-[#18181B]">Lịch sử học tập</h1>
+                      <p className="text-sm text-[#5F6368] mt-1">Các bài học gần đây của bạn.</p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="bg-white rounded-3xl p-8 border border-[#E7E7EA] text-center">
+                    <RotateCcw className="w-10 h-10 text-[#E7E7EA] mx-auto mb-3" />
+                    <h2 className="font-bold text-[#18181B] mb-1">Chưa có lịch sử học tập</h2>
+                    <p className="text-sm text-[#5F6368]">Bạn chưa xem bài học nào gần đây.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA]">
-                <h2 className="font-bold text-[#18181B] mb-4">Tùy chọn học tập</h2>
-                <button
-                  onClick={() => setIsPreferencesOpen(true)}
-                  className="w-full h-11 rounded-xl border border-[#E7E7EA] text-sm font-bold text-[#5F6368] hover:bg-[#F7F7F9] transition-colors"
-                >
-                  Cập nhật mục tiêu và sở thích
-                </button>
-                <button
-                  onClick={() => navigateAuth('onboarding')}
-                  className="mt-3 w-full h-11 rounded-xl border border-[#E7E7EA] text-sm font-bold text-[#5F6368] hover:bg-[#F7F7F9] transition-colors"
-                >
-                  Làm lại khảo sát hướng học
-                </button>
-              </div>
-              <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA]">
-                <button
-                  onClick={handleLogout}
-                  className="w-full h-11 rounded-xl border border-red-200 text-sm font-bold text-[#B91B1C] hover:bg-red-50 transition-colors"
-                >
-                  Đăng xuất
-                </button>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </main>
       </div>
@@ -485,14 +544,17 @@ export default function App() {
       >
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeNav === item.id;
+          const isActive = activeNav === item.id && !selectedLesson;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveNav(item.id)}
+              onClick={() => {
+                setActiveNav(item.id);
+                setSelectedLesson(null);
+              }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-bold transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-bold transition-colors cursor-pointer ${
                 isActive ? 'text-[#B91B1C]' : 'text-[#8B9097]'
               }`}
             >
@@ -503,15 +565,26 @@ export default function App() {
         })}
       </nav>
 
-      {/* Modals & Drawers */}
-      <VideoPlayerModal
-        lesson={selectedLesson}
-        onClose={() => setSelectedLesson(null)}
-        onAskAI={(prompt) => { setSelectedLesson(null); handleOpenAI(prompt); }}
-        isSaved={selectedLesson ? savedLessons.some((l) => l.id === selectedLesson.id) : false}
-        onToggleSave={handleToggleSaveLesson}
+      {/* Requirement 2: Account Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentUser={currentUser}
+        userProfile={userProfile}
+        onSavePreferences={handleSavePreferences}
+        onOpenSurvey={() => setIsSurveyOpen(true)}
       />
 
+      {/* Requirement 3: First-time Login Survey Modal */}
+      <LearningSurveyModal
+        isOpen={isSurveyOpen}
+        onClose={() => setIsSurveyOpen(false)}
+        userProfile={userProfile}
+        onSavePreferences={handleSavePreferences}
+        currentUser={currentUser}
+      />
+
+      {/* AI Assistant Drawer */}
       <AIAssistantDrawer
         isOpen={isAIOpen}
         onClose={() => setIsAIOpen(false)}
@@ -519,6 +592,7 @@ export default function App() {
         currentUser={currentUser}
       />
 
+      {/* Preferences Drawer */}
       <PreferencesDrawer
         isOpen={isPreferencesOpen}
         onClose={() => setIsPreferencesOpen(false)}
@@ -526,14 +600,19 @@ export default function App() {
         onSavePreferences={handleSavePreferences}
       />
 
+      {/* Practice Modal */}
       <PracticeModal isOpen={isPracticeOpen} onClose={() => setIsPracticeOpen(false)} />
 
+      {/* Flashcard Review */}
       {isFlashcardOpen && (
         <FlashcardReviewView onClose={() => setIsFlashcardOpen(false)} />
       )}
 
       {/* Interactive AI Pet & Assistant - ONLY displayed when learner is logged in */}
       {currentUser && <PandaPet onOpenAI={() => handleOpenAI()} />}
+
+      {/* Global Streak Celebration Animated Toast */}
+      <StreakCelebrationToast />
     </div>
   );
 }

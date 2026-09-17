@@ -9,7 +9,7 @@ import { LessonModel } from '../models/lesson.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
 import { WordModel } from '../models/word.model.js';
-import { explainChineseInContext } from '../services/gemini.js';
+import { answerLearningQuestion, explainChineseInContext } from '../services/gemini.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
@@ -20,6 +20,14 @@ const explainSchema = z.object({
   wordId: z.string().refine(Types.ObjectId.isValid),
   question: z.string().trim().min(1).max(500).optional(),
 });
+
+const askSchema = z.object({ question: z.string().trim().min(1).max(500) });
+
+router.post('/ask', requireAuth, aiLimiter, validate(askSchema), asyncHandler(async (req, res) => {
+  const learner = await UserModel.findById(req.auth!.userId).select('learningProfile').lean();
+  const answer = await answerLearningQuestion({ question: req.body.question, profile: learner?.learningProfile ?? {} });
+  res.json({ data: answer });
+}));
 
 router.post('/explain', requireAuth, aiLimiter, validate(explainSchema), asyncHandler(async (req, res) => {
   const [lesson, word, learner] = await Promise.all([

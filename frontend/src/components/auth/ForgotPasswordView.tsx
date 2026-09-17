@@ -5,9 +5,10 @@ import AuthLayout from './AuthLayout';
 
 interface ForgotPasswordViewProps {
   onNavigateToLogin: () => void;
+  onNavigateToResetPassword: (email: string) => void;
 }
 
-export default function ForgotPasswordView({ onNavigateToLogin }: ForgotPasswordViewProps) {
+export default function ForgotPasswordView({ onNavigateToLogin, onNavigateToResetPassword }: ForgotPasswordViewProps) {
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +24,7 @@ export default function ForgotPasswordView({ onNavigateToLogin }: ForgotPassword
     setIsLoading(true);
     try {
       await auth.forgotPassword(email);
-      setIsSuccess(true);
+      onNavigateToResetPassword(email);
     } catch (err) {
       if (err instanceof auth.ApiRequestError) {
         setErrorMsg(err.message);
@@ -153,11 +154,15 @@ export default function ForgotPasswordView({ onNavigateToLogin }: ForgotPassword
         className="font-display font-black text-neutral-900 tracking-tight mb-2 sm:mb-3 auth-heading"
         style={{ fontSize: 'clamp(1.85rem, 2.6vw, 2.4rem)' }}
       >
-        Đã gửi liên kết!
+        Kiểm tra email của bạn
       </h2>
       <p className="text-[14px] sm:text-[15px] text-neutral-600 mb-6 sm:mb-8 leading-relaxed auth-subtitle">
-        Nếu email thuộc tài khoản HanFlix, chúng tôi đã gửi liên kết đặt lại mật khẩu đến <strong>{email}</strong>.
+        Nếu email thuộc tài khoản HanFlix, chúng tôi đã gửi mã OTP 6 số và liên kết đặt lại mật khẩu đến <strong>{email}</strong>.
       </p>
+      <button type="button" onClick={() => onNavigateToResetPassword(email)}
+        className="w-full h-11 sm:h-12 mb-3 rounded-full font-bold text-white bg-[#E50914] hover:bg-[#CC0813]">
+        Nhập mã OTP
+      </button>
       <button
         onClick={onNavigateToLogin}
         className="w-full h-11 sm:h-12 rounded-full font-bold text-[14px] sm:text-[15px] transition-all bg-[#EEF2F6] hover:bg-[#E3E8EE] text-neutral-800 cursor-pointer auth-btn-secondary"

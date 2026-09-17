@@ -7,6 +7,7 @@ let app: Express;
 let UserModel: typeof import('../models/user.model.js').UserModel;
 let RefreshSessionModel: typeof import('../models/refresh-session.model.js').RefreshSessionModel;
 let googleIdentityService: typeof import('../services/google-identity.js').googleIdentityService;
+let accountTokenService: typeof import('../services/account-token.js').accountTokenService;
 let signAccessToken: typeof import('../services/jwt.js').signAccessToken;
 
 beforeAll(async () => {
@@ -19,6 +20,7 @@ beforeAll(async () => {
   ({ UserModel } = await import('../models/user.model.js'));
   ({ RefreshSessionModel } = await import('../models/refresh-session.model.js'));
   ({ googleIdentityService } = await import('../services/google-identity.js'));
+  ({ accountTokenService } = await import('../services/account-token.js'));
   ({ signAccessToken } = await import('../services/jwt.js'));
 });
 
@@ -68,6 +70,39 @@ describe('POST /api/v1/auth/google/link', () => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('POST /api/v1/auth/google', () => {
+  it('exposes the public Google client ID needed by the browser', async () => {
+    const response = await request(app).get('/api/v1/auth/providers');
+    expect(response.status).toBe(200);
+    expect(response.body.data.googleClientId).toBe('hanflix-web-client-id');
+    expect(Object.keys(response.body.data)).toEqual(['googleClientId']);
+  });
+
+  it('lets a verified Google identity claim its still-unverified password signup', async () => {
+    const userId = new Types.ObjectId();
+    const user = {
+      _id: userId, name: 'Learner', email: 'learner@example.com', role: 'user', status: 'active',
+      emailVerificationRequired: true, emailVerifiedAt: undefined as Date | undefined,
+      googleSub: undefined as string | undefined, avatarUrl: undefined as string | undefined,
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(googleIdentityService, 'verify').mockResolvedValue({
+      sub: 'google-verified', email: 'learner@example.com', name: 'Learner',
+    });
+    vi.spyOn(UserModel, 'findOne').mockImplementation((query) => ({
+      select: () => Promise.resolve('googleSub' in query ? null : user),
+    } as never));
+    vi.spyOn(UserModel, 'exists').mockResolvedValue({ _id: userId } as never);
+    vi.spyOn(accountTokenService, 'invalidate').mockResolvedValue(undefined);
+    vi.spyOn(RefreshSessionModel, 'create').mockResolvedValue({} as never);
+
+    const response = await request(app).post('/api/v1/auth/google').send({ credential: 'x'.repeat(120) });
+    expect(response.status).toBe(200);
+    expect(response.body.data.user.emailVerified).toBe(true);
+    expect(user.googleSub).toBe('google-verified');
+    expect(user.save).toHaveBeenCalledOnce();
+    expect(accountTokenService.invalidate).toHaveBeenCalledWith(userId, 'verify_email');
+  });
+
   it('registers a new verified Google user and returns the existing auth contract', async () => {
     const userId = new Types.ObjectId();
     vi.spyOn(googleIdentityService, 'verify').mockResolvedValue({

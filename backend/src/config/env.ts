@@ -47,7 +47,7 @@ const envSchema = z.object({
   R2_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(604800).default(3600),
   MAX_VIDEO_BYTES: z.coerce.number().int().positive().default(104857600),
   GEMINI_API_KEY: optionalString,
-  GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+  GEMINI_MODEL: z.string().trim().regex(/^gemini-[a-z0-9.-]+$/, 'Use a Gemini API model ID, for example gemini-3.5-flash-lite').default('gemini-3.5-flash-lite'),
   GEMINI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(15000),
   AZURE_TRANSLATOR_KEY: optionalString,
   AZURE_TRANSLATOR_REGION: optionalString,

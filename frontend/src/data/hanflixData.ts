@@ -7,6 +7,7 @@ export interface UserLearningProfile {
   subtitleDefaults: { zh: boolean; pinyin: boolean; vi: boolean };
   defaultSpeed: number;
   uiLanguage: string;
+  surveyVersion?: number; // Set when onboarding survey is completed
 }
 
 export interface User {
@@ -28,6 +29,7 @@ export interface UserProfile {
   streakDays: number;
   targetGoal: string;
   interests: string[];
+  subtitleMode?: 'all' | 'zh-pinyin' | 'zh';
 }
 
 export interface Topic {

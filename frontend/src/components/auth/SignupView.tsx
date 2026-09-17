@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Video, GitBranch, Mic, ChevronRight, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Video, GitBranch, Mic, ChevronRight, CheckCircle2, X, ShieldCheck, RefreshCw } from 'lucide-react';
 import * as auth from '../../api/auth';
 import AuthLayout from './AuthLayout';
-import GoogleIcon from './GoogleIcon';
+import GoogleSignInButton from './GoogleSignInButton';
 import AuthDivider from './AuthDivider';
+import OtpInput from './OtpInput';
+import type { User as UserType } from '../../data/hanflixData';
 
 interface SignupViewProps {
   onNavigateToLogin: () => void;
+  onGoogleSuccess: (user: UserType) => void;
 }
 
-export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
+export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: SignupViewProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +22,17 @@ export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(60);
+
+  useEffect(() => {
+    if (registeredEmail && resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [registeredEmail, resendCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +64,37 @@ export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
     }
   };
 
-  const handleGoogleSignup = () => {
-    console.log("Google signup clicked");
+  const handleVerifyCode = async (event?: React.FormEvent) => {
+    if (event) event.preventDefault();
+    if (resendCooldown === 0) {
+      setVerificationMessage('Mã OTP đã hết hạn sau 1 phút và đã bị hủy. Vui lòng bấm "Gửi lại mã" để nhận mã mới.');
+      return;
+    }
+    setVerificationMessage('');
+    setIsLoading(true);
+    try {
+      await auth.verifyEmailCode(registeredEmail, verificationCode);
+      setVerified(true);
+    } catch (error) {
+      setVerificationMessage(error instanceof auth.ApiRequestError ? error.message : 'Không thể xác minh email lúc này.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setVerificationMessage('');
+    setVerificationCode('');
+    setIsLoading(true);
+    try {
+      await auth.resendVerification(registeredEmail);
+      setVerificationMessage('Mã OTP mới đã được gửi đến email (hiệu lực trong 1 phút).');
+      setResendCooldown(60);
+    } catch (error) {
+      setVerificationMessage(error instanceof auth.ApiRequestError ? error.message : 'Không thể gửi lại mã lúc này.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const visualPanel = (
@@ -161,21 +204,7 @@ export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
     </div>
   );
 
-  const formPanel = registeredEmail ? (
-    <div className="w-full text-center">
-      <div className="w-16 h-16 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#2E7D32] mx-auto mb-6">
-        <CheckCircle2 className="w-8 h-8" />
-      </div>
-      <h2 className="font-display font-black text-neutral-900 tracking-tight text-3xl mb-3">Kiểm tra email</h2>
-      <p className="text-sm text-neutral-600 leading-relaxed mb-7">
-        HanFlix đã gửi liên kết xác minh đến <strong>{registeredEmail}</strong>. Xác minh email trước khi đăng nhập.
-      </p>
-      <button type="button" onClick={onNavigateToLogin}
-        className="w-full h-12 rounded-full bg-[#E50914] hover:bg-[#CC0813] text-white font-bold transition-colors">
-        Đi đến đăng nhập
-      </button>
-    </div>
-  ) : (
+  const formPanel = (
     <div className="w-full">
       <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-neutral-700 mb-1 sm:mb-2 font-display">
         CHÀO MỪNG TRỞ LẠI
@@ -299,14 +328,9 @@ export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
 
           <AuthDivider />
 
-          <button
-            type="button"
-            onClick={handleGoogleSignup}
-            className="w-full h-11 sm:h-12 rounded-full bg-[#EEF2F6] hover:bg-[#E3E8EE] text-neutral-800 font-bold text-[14px] sm:text-[15px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer auth-btn-secondary"
-          >
-            <GoogleIcon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-            <span>Đăng ký với Google</span>
-          </button>
+          <GoogleSignInButton action="signup_with"
+            onCredential={async credential => onGoogleSuccess(await auth.signInWithGoogle(credential))}
+            onError={setErrorMsg} />
         </div>
       </form>
 
@@ -319,5 +343,141 @@ export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
     </div>
   );
 
-  return <AuthLayout visualPanel={visualPanel} formPanel={formPanel} reverse={true} />;
+  return (
+    <>
+      <AuthLayout visualPanel={visualPanel} formPanel={formPanel} reverse={true} />
+
+      {/* OTP Modal Popup */}
+      {registeredEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-[460px] bg-white rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] border border-neutral-100 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            {verified ? (
+              <div className="w-full py-4 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#2E7D32] mb-5 shadow-sm">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="font-display font-black text-neutral-900 tracking-tight text-2xl mb-2">
+                  Xác minh thành công!
+                </h3>
+                <p className="text-sm text-neutral-600 leading-relaxed mb-6">
+                  Tài khoản của bạn đã được kích hoạt. Hãy đăng nhập để bắt đầu hành trình học HSK cùng HanFlix.
+                </p>
+                <button
+                  type="button"
+                  onClick={onNavigateToLogin}
+                  className="w-full h-12 rounded-full bg-[#E50914] hover:bg-[#CC0813] text-white font-bold transition-all shadow-[0_8px_20px_rgba(229,9,20,0.25)] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Đăng nhập ngay</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-full">
+                {/* Close button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegisteredEmail('');
+                    setVerificationCode('');
+                    setVerificationMessage('');
+                  }}
+                  className="absolute right-4 top-4 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-500 hover:text-neutral-800 transition-colors cursor-pointer"
+                  aria-label="Đóng popup"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                {/* Header Icon */}
+                <div className="w-14 h-14 rounded-2xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck className="w-7 h-7" />
+                </div>
+
+                <h3 className="font-display font-black text-neutral-900 tracking-tight text-2xl mb-1.5">
+                  Xác thực tài khoản
+                </h3>
+                <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed mb-2">
+                  Vui lòng nhập mã OTP 6 số đã được gửi đến:
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-800 text-xs font-semibold mb-6 max-w-full truncate">
+                  <Mail className="w-3.5 h-3.5 text-[#E50914] shrink-0" />
+                  <span className="truncate">{registeredEmail}</span>
+                </div>
+
+                {/* Countdown / Expiry status */}
+                <div className="mb-4">
+                  {resendCooldown > 0 ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                      <span>Mã OTP tự động hủy sau: <strong>{resendCooldown}s</strong></span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-[#E50914] text-xs font-semibold">
+                      <span>Mã OTP đã hết hạn sau 1 phút và bị hủy. Vui lòng bấm gửi lại mã!</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 6-box OTP Input */}
+                <div className="mb-5">
+                  <OtpInput
+                    value={verificationCode}
+                    onChange={(val) => {
+                      setVerificationCode(val);
+                      if (verificationMessage) setVerificationMessage('');
+                    }}
+                    length={6}
+                    disabled={isLoading || resendCooldown === 0}
+                    autoFocus={true}
+                  />
+                </div>
+
+                {/* Error/Status message */}
+                {verificationMessage && (
+                  <div className="mb-4 p-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 bg-[#FFF0F0] border border-[#F5CACA] text-[#E50914]">
+                    <span>{verificationMessage}</span>
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <button
+                  type="button"
+                  onClick={() => handleVerifyCode()}
+                  disabled={isLoading || verificationCode.length !== 6 || resendCooldown === 0}
+                  className="w-full h-12 rounded-full bg-[#E50914] hover:bg-[#CC0813] text-white font-bold transition-all shadow-[0_8px_20px_rgba(229,9,20,0.25)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer mb-4"
+                >
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Xác minh tài khoản</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                {/* Resend button */}
+                <div className="flex items-center justify-center gap-1 text-xs sm:text-sm text-neutral-600">
+                  <span>Chưa nhận được mã?</span>
+                  <button
+                    type="button"
+                    disabled={isLoading || resendCooldown > 0}
+                    onClick={handleResend}
+                    className="font-bold text-[#E50914] hover:underline disabled:opacity-50 disabled:no-underline cursor-pointer disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    {resendCooldown > 0 ? (
+                      `Gửi lại sau (${resendCooldown}s)`
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Gửi lại mã</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
