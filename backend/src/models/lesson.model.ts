@@ -23,6 +23,18 @@ const lessonSchema = new Schema({
     default: 'draft',
     index: true,
   },
+  processingStatus: {
+    type: String,
+    enum: ['UPLOADED', 'QUEUED', 'PROCESSING', 'READY', 'FAILED'],
+    index: true,
+  },
+  processingProgress: { type: Number, min: 0, max: 100, default: 0 },
+  processingStep: {
+    type: String,
+    enum: ['UPLOADING', 'QUEUED', 'EXTRACTING_AUDIO', 'TRANSCRIBING', 'GENERATING_PINYIN', 'TRANSLATING', 'SAVING', 'COMPLETED', 'FAILED'],
+  },
+  processingError: { type: String, maxlength: 1000 },
+  sourceLanguage: { type: String, trim: true, default: 'zh-CN' },
   media: { type: mediaSchema },
   thumbnailKey: { type: String, trim: true },
   activeSubtitleRevision: { type: Number, min: 1 },

@@ -9,11 +9,17 @@ interface AuthResponse {
     email: string;
     role: 'user' | 'admin';
     status: 'active' | 'locked';
+    emailVerified?: boolean;
     learningProfile?: {
       currentHskSource?: string;
       subtitlePreference?: string;
     } | null;
   };
+}
+
+interface RegistrationResponse {
+  user: AuthResponse['user'];
+  verificationRequired: boolean;
 }
 
 interface MeResponse {
@@ -42,13 +48,12 @@ export async function register(
   name: string,
   email: string,
   password: string,
-): Promise<User> {
-  const data = await apiFetch<AuthResponse>('/auth/register', {
+): Promise<{ user: User; verificationRequired: boolean }> {
+  const data = await apiFetch<RegistrationResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
   });
-  setAccessToken(data.accessToken);
-  return toFrontendUser(data.user);
+  return { user: toFrontendUser(data.user), verificationRequired: data.verificationRequired };
 }
 
 /**
@@ -102,6 +107,26 @@ export async function forgotPassword(email: string): Promise<void> {
     method: 'POST',
     body: JSON.stringify({ email }),
   });
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await apiFetch('/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) });
+}
+
+export async function resendVerification(email: string): Promise<void> {
+  await apiFetch('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await apiFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const data = await apiFetch<{ accessToken: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  setAccessToken(data.accessToken);
 }
 
 export { ApiRequestError };

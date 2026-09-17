@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Bot, User, ChevronDown, Mic, Paperclip } from 'lucide-react';
 import { QUICK_AI_PROMPTS } from '../data/hanflixData';
+import { usePandaPet } from './panda-pet';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -49,7 +50,8 @@ function TypingIndicator() {
 }
 
 export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, currentUser }: AIAssistantDrawerProps) {
-  const greeting = `Chào ${currentUser?.name?.split(' ').pop() || 'bạn'}! 👋 Tôi là trợ lý AI HanFlix. Bạn đang ở HSK ${currentUser?.learningProfile?.hskLevel || 3} (${currentUser?.learningProfile?.goal || 'Kinh doanh & Du lịch'}) — hãy hỏi tôi bất cứ điều gì về từ vựng, ngữ pháp hay luyện tập nhé!`;
+  const panda = usePandaPet();
+  const greeting = `Chào ${currentUser?.name?.split(' ').pop() || 'bạn'}! 👋 Tôi là Panda AI. Bạn đang ở HSK ${currentUser?.learningProfile?.hskLevel || 3} (${currentUser?.learningProfile?.goal || 'Kinh doanh & Du lịch'}) — hãy hỏi tôi bất cứ điều gì về từ vựng, ngữ pháp hay bài học nhé!`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -106,6 +108,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
     setMessages((prev) => [...prev, userMsg]);
     if (!textToSend) setInputText('');
     setIsTyping(true);
+    panda?.handlePandaAIEvent({ type: 'thinking' });
 
     setTimeout(() => {
       let aiResponseText = '';
@@ -130,6 +133,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
       };
       setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
+      panda?.handlePandaAIEvent({ type: 'completed' });
     }, 1200 + Math.random() * 400);
   };
 
@@ -183,7 +187,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-black text-white text-[15px] tracking-tight leading-none mb-0.5">
-                  Trợ lý AI HanFlix
+                  Trợ lý Panda AI
                 </h3>
                 <p className="text-white/70 text-[11px] font-medium">
                   {currentUser?.name || 'Học viên'} · HSK {currentUser?.learningProfile?.hskLevel || 3} · {currentUser?.learningProfile?.goal || 'Kinh doanh & Du lịch'}

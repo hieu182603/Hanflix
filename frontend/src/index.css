@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&family=Ma+Shan+Zheng&display=swap');
 @import 'tailwindcss';
 
+.hanflix-ai-fab { right: 224px; }
+@media (max-width: 1024px) { .hanflix-ai-fab { right: 188px; } }
+@media (max-width: 600px) { .hanflix-ai-fab { right: 148px; } }
+
 @layer base {
   :root {
     --brand-primary: #B91B1C;
@@ -28,6 +32,10 @@
 }
 
 /* Typography utilities */
+.font-display {
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
 .font-fraunces {
   font-family: 'Fraunces', serif;
 }
@@ -144,4 +152,150 @@
 
 .glow-card {
   box-shadow: 0 4px 20px -2px rgba(231, 169, 47, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* ==========================================================================
+   Auth Responsive Layout System
+   ========================================================================== */
+
+
+.auth-page {
+  min-height: 100dvh;
+  width: 100%;
+  background-color: #ffffff;
+}
+
+@media (min-width: 1024px) {
+  .auth-page {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.auth-visual-panel {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.auth-visual-inner {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden !important;
+}
+
+/* Height-based responsive rules for Laptops & short displays */
+.auth-pedestal-top {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, #FFFFFF 0%, #FFF5EE 40%, #FCDBC9 75%, #F5BCA0 100%);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(200, 80, 30, 0.22),
+    0 10px 20px rgba(180, 60, 20, 0.18);
+}
+
+.auth-pedestal-base {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 30%, #FFEFE6 0%, #F7C5AF 45%, #E99272 100%);
+  box-shadow: 
+    inset 0 1px 3px rgba(255, 255, 255, 0.8),
+    0 20px 42px rgba(160, 50, 20, 0.28);
+}
+
+@media (min-width: 1024px) and (max-height: 850px) {
+  .auth-visual-inner {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+  .auth-form-container {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+  .auth-heading {
+    margin-bottom: 0.5rem !important;
+  }
+  .auth-recovery-img {
+    max-height: clamp(250px, 38vh, 390px) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 760px) {
+  .auth-visual-inner {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+  .auth-form-container {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+  .auth-heading {
+    margin-bottom: 0.375rem !important;
+    font-size: clamp(1.75rem, 2.3vw, 2.1rem) !important;
+  }
+  .auth-subtitle {
+    margin-bottom: 0.5rem !important;
+    font-size: 0.8125rem !important;
+  }
+  .auth-input-field {
+    height: 2.75rem !important; /* 44px */
+    font-size: 0.875rem !important;
+  }
+  .auth-btn-primary, .auth-btn-secondary {
+    height: 2.75rem !important; /* 44px */
+    font-size: 0.875rem !important;
+  }
+  .auth-field-gap {
+    gap: 0.5rem !important;
+  }
+  .auth-card-compact {
+    padding: 0.4rem 0.75rem !important;
+    border-radius: 0.875rem !important;
+  }
+  .auth-recovery-img {
+    max-height: clamp(200px, 30vh, 280px) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 680px) {
+  .auth-visual-inner {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+  .auth-form-container {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  .auth-heading {
+    margin-bottom: 0.375rem !important;
+    font-size: 1.65rem !important;
+  }
+  .auth-subtitle {
+    margin-bottom: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+  .auth-input-field {
+    height: 2.5rem !important; /* 40px */
+  }
+  .auth-btn-primary, .auth-btn-secondary {
+    height: 2.625rem !important;
+  }
+  .auth-field-gap {
+    gap: 0.375rem !important;
+  }
+  .auth-footer-link {
+    margin-top: 0.5rem !important;
+  }
+  .auth-recovery-img {
+    max-height: clamp(135px, 20vh, 180px) !important;
+  }
 }

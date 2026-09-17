@@ -1,38 +1,40 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
-import { User as UserType } from '../../data/hanflixData';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Video, GitBranch, Mic, ChevronRight, CheckCircle2 } from 'lucide-react';
 import * as auth from '../../api/auth';
+import AuthLayout from './AuthLayout';
+import GoogleIcon from './GoogleIcon';
+import AuthDivider from './AuthDivider';
 
 interface SignupViewProps {
-  onSignupSuccess: (newUser: UserType) => void;
   onNavigateToLogin: () => void;
 }
 
-const PERKS = [
-  'Thiết lập trình độ HSK mong muốn',
-  'Flashcards SRS đồng bộ tự động',
-  'Không giới hạn bài học tương tác',
-  'Trợ lý AI cá nhân hóa theo bạn',
-];
-
-export default function SignupView({ onSignupSuccess, onNavigateToLogin }: SignupViewProps) {
+export default function SignupView({ onNavigateToLogin }: SignupViewProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (password !== confirmPassword) { setErrorMsg('Mật khẩu xác nhận không trùng khớp.'); return; }
-    if (password.length < 8) { setErrorMsg('Mật khẩu phải chứa ít nhất 8 ký tự.'); return; }
+    if (password !== confirmPassword) {
+      setErrorMsg('Mật khẩu xác nhận không trùng khớp.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMsg('Mật khẩu phải chứa ít nhất 8 ký tự.');
+      return;
+    }
     setIsLoading(true);
     try {
-      const user = await auth.register(name.trim(), email.trim(), password);
-      onSignupSuccess(user);
+      const result = await auth.register(name.trim(), email.trim(), password);
+      if (result.verificationRequired) setRegisteredEmail(result.user.email);
     } catch (err) {
       if (err instanceof auth.ApiRequestError) {
         if (err.code === 'EMAIL_EXISTS') {
@@ -48,194 +50,274 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
     }
   };
 
-  return (
-    <div className="min-h-screen w-full flex" style={{ fontFamily: "'Inter', sans-serif", background: '#fff' }}>
-      <style>{`
-        .bright-input {
-          background: #fff;
-          border: 1.5px solid #E8E3DD;
-          color: #1a1a1a;
-          transition: all 0.18s;
-          font-size: 14px;
-        }
-        .bright-input::placeholder { color: #B0A89E; }
-        .bright-input:focus {
-          outline: none;
-          border-color: #B91B1C;
-          box-shadow: 0 0 0 4px rgba(185,27,28,0.09);
-        }
-      `}</style>
+  const handleGoogleSignup = () => {
+    console.log("Google signup clicked");
+  };
 
-      {/* ── LEFT: Form ── */}
-      <div className="flex-1 flex flex-col justify-center overflow-y-auto px-8 sm:px-12 lg:px-14 xl:px-16 py-10 bg-white">
+  const visualPanel = (
+    <div className="flex flex-col justify-between h-full">
+      {/* Hero Headline */}
+      <h1
+        className="font-display font-black leading-[1.12] tracking-tight text-[#18181B] mb-3 sm:mb-4 xl:mb-6 auth-heading"
+        style={{ fontSize: 'clamp(1.85rem, 3vw, 2.8rem)' }}
+      >
+        Hành Trình <span className="text-[#E50914]">HSK</span><br />
+        Của Bạn Bắt Đầu
+      </h1>
 
-        {/* Mobile logo */}
-        <div className="flex lg:hidden items-center mb-8">
-          <img
-            src="/assets/logo.png"
-            alt="HanFlix Logo"
-            className="h-10 w-auto object-contain"
-          />
-        </div>
-
-        <div className="max-w-[420px] w-full mx-auto lg:mx-0">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-[#B91B1C]/60 mb-2">Bắt đầu miễn phí</p>
-          <h2 className="font-black text-[#1A0A0A] tracking-tight mb-1"
-            style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: '2.4rem' }}>
-            Tạo tài khoản
-          </h2>
-          <p className="text-sm text-[#9A8878] mb-7">Chinh phục tiếng Trung qua video tình huống đời thực</p>
-
-          {/* Error */}
-          {errorMsg && (
-            <div className="mb-5 p-3.5 rounded-2xl text-sm font-semibold flex items-center gap-2"
-              style={{ background: '#FFF0F0', border: '1.5px solid #F5CACA', color: '#B91B1C' }}>
-              <div className="w-2 h-2 rounded-full bg-[#B91B1C] shrink-0" />
-              {errorMsg}
+      {/* 2x2 Grid of 4 Feature Cards (No feedback/testimonial) */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:gap-3.5 my-auto">
+        {/* Card 1: 5,000+ Video bài học */}
+        <div className="rounded-[18px] sm:rounded-[22px] bg-white p-3 sm:p-3.5 xl:p-4 shadow-[0_20px_40px_rgba(180,60,20,0.12),0_2px_8px_rgba(0,0,0,0.04)] border border-white flex flex-col justify-between auth-card-compact">
+          <div>
+            <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mb-1.5 sm:mb-2">
+              <Video className="w-4 h-4 xl:w-4.5 xl:h-4.5 stroke-[2]" />
             </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[#9A8878] mb-2">Họ và tên</label>
-              <div className="relative">
-                <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#C0B4AC]" />
-                <input type="text" required placeholder="VD: Nguyễn Văn A" value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="bright-input w-full pl-11 pr-4 py-3.5 rounded-2xl" />
-              </div>
+            <div className="text-[13px] xl:text-[14px] font-bold text-neutral-900 leading-tight mb-1.5 font-display">
+              5,000+ Video Bài Học
             </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[#9A8878] mb-2">Email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#C0B4AC]" />
-                <input type="email" required placeholder="email@example.com" value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="bright-input w-full pl-11 pr-4 py-3.5 rounded-2xl" />
-              </div>
-            </div>
-
-            {/* Passwords */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-[#9A8878] mb-2">Mật khẩu</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#C0B4AC]" />
-                  <input type={showPassword ? 'text' : 'password'} required placeholder="Ít nhất 8 ký tự"
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    className="bright-input w-full pl-11 pr-10 py-3.5 rounded-2xl" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#C0B4AC] hover:text-[#7A6060] transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold tracking-widest uppercase text-[#9A8878] mb-2">Xác nhận</label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#C0B4AC]" />
-                  <input type={showPassword ? 'text' : 'password'} required placeholder="Nhập lại"
-                    value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                    className="bright-input w-full pl-11 pr-4 py-3.5 rounded-2xl" />
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" disabled={isLoading}
-              className="w-full py-4 rounded-2xl text-white font-black text-[15px] tracking-wide transition-all hover:scale-[1.02] active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
-              style={{ background: 'linear-gradient(135deg, #B91B1C 0%, #D94040 100%)', boxShadow: '0 6px 24px rgba(185,27,28,0.35)' }}>
-              {isLoading
-                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <><span>Tạo tài khoản & Bắt đầu học</span><ArrowRight className="w-5 h-5" /></>}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-[#B0A89E] mt-7">
-            Đã có tài khoản?{' '}
-            <button onClick={onNavigateToLogin} className="font-black text-[#B91B1C] hover:underline">
-              Đăng nhập ngay
-            </button>
-          </p>
-        </div>
-      </div>
-
-      {/* ── RIGHT: Visual Panel ── */}
-      <div className="hidden lg:flex w-[46%] xl:w-[48%] relative flex-col overflow-hidden"
-        style={{ background: 'linear-gradient(145deg, #FFF0F0 0%, #FFE8E8 40%, #FFF5ED 100%)' }}>
-
-        {/* Decorative circles */}
-        <div className="absolute top-[-80px] right-[-60px] w-[300px] h-[300px] rounded-full opacity-35"
-          style={{ background: 'radial-gradient(circle, #B91B1C 0%, transparent 70%)' }} />
-        <div className="absolute bottom-[-60px] left-[-50px] w-[260px] h-[260px] rounded-full opacity-20"
-          style={{ background: 'radial-gradient(circle, #FF8C42 0%, transparent 70%)' }} />
-
-        {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage: 'radial-gradient(circle, #B91B1C 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-        {/* Brand */}
-        <div className="relative z-10 px-10 pt-10">
-          <img
-            src="/assets/logo.png"
-            alt="HanFlix Logo"
-            className="h-14 md:h-16 w-auto max-w-[240px] object-contain drop-shadow-sm"
-          />
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center px-10 xl:px-14 py-10">
-          <span className="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full mb-6 w-fit"
-            style={{ background: 'rgba(185,27,28,0.1)', border: '1.5px solid rgba(185,27,28,0.2)', color: '#B91B1C' }}>
-            <Sparkles className="w-3 h-3" /> Miễn phí khởi đầu 100%
-          </span>
-
-          <h1 className="font-black leading-[1.07] tracking-tight text-[#1A0A0A] mb-6"
-            style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 'clamp(2.4rem, 3.5vw, 3.2rem)' }}>
-            Hành Trình<br />
-            <span className="text-[#B91B1C]">HSK</span> Của<br />
-            Bạn Bắt Đầu
-          </h1>
-
-          <div className="space-y-3.5 mb-10">
-            {PERKS.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-black text-xs text-white"
-                  style={{ background: 'linear-gradient(135deg, #B91B1C, #D94040)', boxShadow: '0 3px 10px rgba(185,27,28,0.3)' }}>
-                  ✓
-                </div>
-                <span className="text-sm font-medium text-[#5A3A3A]">{item}</span>
-              </div>
-            ))}
           </div>
-
-          {/* Testimonial card */}
-          <div className="rounded-2xl p-5 shadow-sm" style={{ background: '#fff', border: '1.5px solid #F0E8E8' }}>
-            <div className="flex gap-0.5 mb-3">
-              {[...Array(5)].map((_, i) => (
-                <span key={i} className="text-sm text-[#B91B1C]">★</span>
-              ))}
-            </div>
-            <p className="text-sm text-[#7A6060] leading-relaxed italic mb-4">
-              "Sau 3 tháng dùng HanFlix, mình vượt qua HSK 4 lần đầu. Học qua video tình huống giúp nhớ từ vựng cực lâu!"
-            </p>
-            <div className="flex items-center gap-3">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces"
-                className="w-9 h-9 rounded-full object-cover" alt="Học viên" />
-              <div>
-                <div className="text-xs font-bold text-[#3A1A1A]">Nguyễn Minh Anh</div>
-                <div className="text-[10px] text-[#B0A89E]">HSK 4 · Hà Nội</div>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-1 pt-1">
+            <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
+              Giao tiếp
+            </span>
+            <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
+              Du lịch
+            </span>
+            <span className="text-[10px] font-medium bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-md">
+              Công sở
+            </span>
           </div>
         </div>
 
-        <div className="relative z-10 px-10 pb-8 text-xs text-[#C0B4AC]">
-          © {new Date().getFullYear()} HanFlix · Học tự nhiên — Nhớ lâu dài
+        {/* Card 2: Lộ trình HSK 1-6 */}
+        <div className="rounded-[18px] sm:rounded-[22px] bg-white p-3 sm:p-3.5 xl:p-4 shadow-[0_20px_40px_rgba(180,60,20,0.12),0_2px_8px_rgba(0,0,0,0.04)] border border-white flex flex-col justify-between auth-card-compact">
+          <div>
+            <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mb-1.5 sm:mb-2">
+              <GitBranch className="w-4 h-4 xl:w-4.5 xl:h-4.5 stroke-[2]" />
+            </div>
+            <div className="text-[13px] xl:text-[14px] font-bold text-neutral-900 leading-tight mb-0.5 font-display">
+              Lộ Trình HSK 1-6
+            </div>
+            <div className="text-[11px] text-neutral-400 font-medium mb-1.5">
+              Milestone chuẩn
+            </div>
+          </div>
+          <div className="flex items-center gap-1 pt-0.5">
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-[#E50914] text-white text-[10px] font-bold flex items-center justify-center">1</div>
+            <div className="h-0.5 w-2 bg-[#E50914]" />
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-[#E50914] text-white text-[10px] font-bold flex items-center justify-center">2</div>
+            <div className="h-0.5 w-2 bg-neutral-200" />
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-neutral-100 text-neutral-400 text-[10px] font-bold flex items-center justify-center">3</div>
+            <div className="h-0.5 w-2 bg-neutral-200" />
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-neutral-100 text-neutral-400 text-[10px] font-bold flex items-center justify-center">4</div>
+          </div>
+        </div>
+
+        {/* Card 3: Phụ đề Pinyin thông minh */}
+        <div className="rounded-[18px] sm:rounded-[22px] bg-white p-3 sm:p-3.5 xl:p-4 shadow-[0_20px_40px_rgba(180,60,20,0.12),0_2px_8px_rgba(0,0,0,0.04)] border border-white flex flex-col justify-between auth-card-compact">
+          <div>
+            <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mb-1.5 sm:mb-2 font-serif-sc font-bold text-base xl:text-lg">
+              字
+            </div>
+            <div className="text-[13px] xl:text-[14px] font-bold text-neutral-900 leading-tight mb-1.5 font-display">
+              Phụ Đề Pinyin Thông Minh
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-1.5 rounded-lg bg-neutral-50 text-[11px] text-neutral-600 border border-neutral-100">
+            <span className="font-serif-sc font-bold text-neutral-900">字</span>
+            <span className="truncate mx-1">Interactive subtitle</span>
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+          </div>
+        </div>
+
+        {/* Card 4: Trợ lý AI luyện nói */}
+        <div className="rounded-[18px] sm:rounded-[22px] bg-white p-3 sm:p-3.5 xl:p-4 shadow-[0_20px_40px_rgba(180,60,20,0.12),0_2px_8px_rgba(0,0,0,0.04)] border border-white flex flex-col justify-between auth-card-compact">
+          <div>
+            <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mb-1.5 sm:mb-2 font-black text-xs">
+              AI
+            </div>
+            <div className="text-[13px] xl:text-[14px] font-bold text-neutral-900 leading-tight mb-1.5 font-display">
+              Trợ Lý AI Luyện Nói
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-neutral-50 border border-neutral-100">
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-[#E50914] text-white flex items-center justify-center shrink-0">
+              <Mic className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            </div>
+            {/* Audio wave bars */}
+            <div className="flex items-center gap-0.5 flex-1 justify-center">
+              <span className="w-0.5 h-2 bg-[#E50914] rounded-full" />
+              <span className="w-0.5 h-3.5 bg-[#E50914] rounded-full" />
+              <span className="w-0.5 h-1.5 bg-neutral-300 rounded-full" />
+              <span className="w-0.5 h-3 bg-[#E50914] rounded-full" />
+              <span className="w-0.5 h-4.5 bg-[#E50914] rounded-full" />
+              <span className="w-0.5 h-2 bg-neutral-300 rounded-full" />
+              <span className="w-0.5 h-3 bg-[#E50914] rounded-full" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
+
+  const formPanel = registeredEmail ? (
+    <div className="w-full text-center">
+      <div className="w-16 h-16 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#2E7D32] mx-auto mb-6">
+        <CheckCircle2 className="w-8 h-8" />
+      </div>
+      <h2 className="font-display font-black text-neutral-900 tracking-tight text-3xl mb-3">Kiểm tra email</h2>
+      <p className="text-sm text-neutral-600 leading-relaxed mb-7">
+        HanFlix đã gửi liên kết xác minh đến <strong>{registeredEmail}</strong>. Xác minh email trước khi đăng nhập.
+      </p>
+      <button type="button" onClick={onNavigateToLogin}
+        className="w-full h-12 rounded-full bg-[#E50914] hover:bg-[#CC0813] text-white font-bold transition-colors">
+        Đi đến đăng nhập
+      </button>
+    </div>
+  ) : (
+    <div className="w-full">
+      <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-neutral-700 mb-1 sm:mb-2 font-display">
+        CHÀO MỪNG TRỞ LẠI
+      </p>
+      <h2
+        className="font-display font-black text-neutral-900 tracking-tight mb-3 sm:mb-5 auth-heading"
+        style={{ fontSize: 'clamp(1.85rem, 2.6vw, 2.4rem)' }}
+      >
+        Tạo tài khoản mới
+      </h2>
+
+      {/* Error Message */}
+      {errorMsg && (
+        <div className="mb-4 p-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 bg-[#FFF0F0] border border-[#F5CACA] text-[#E50914]">
+          <div className="w-2 h-2 rounded-full bg-[#E50914] shrink-0" />
+          {errorMsg}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3 auth-field-gap">
+        {/* Name */}
+        <div>
+          <label htmlFor="signup-name" className="block text-[12px] sm:text-[13px] font-bold text-neutral-800 mb-0.5 sm:mb-1 font-display">Họ và tên</label>
+          <div className="relative">
+            <User className="w-4.5 h-4.5 sm:w-5 sm:h-5 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-neutral-400 stroke-[1.8]" />
+            <input
+              id="signup-name"
+              type="text"
+              required
+              placeholder="Họ và tên"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-4 sm:pl-12 sm:pr-4 rounded-xl bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#E50914] focus:ring-4 focus:ring-[#E50914]/10 text-[15px] sm:text-[14px] transition-all shadow-sm auth-input-field"
+            />
+          </div>
+        </div>
+
+        {/* Email */}
+        <div>
+          <label htmlFor="signup-email" className="block text-[12px] sm:text-[13px] font-bold text-neutral-800 mb-0.5 sm:mb-1 font-display">Email</label>
+          <div className="relative">
+            <Mail className="w-4.5 h-4.5 sm:w-5 sm:h-5 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-neutral-400 stroke-[1.8]" />
+            <input
+              id="signup-email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-4 sm:pl-12 sm:pr-4 rounded-xl bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#E50914] focus:ring-4 focus:ring-[#E50914]/10 text-[15px] sm:text-[14px] transition-all shadow-sm auth-input-field"
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div>
+          <label htmlFor="signup-password" className="block text-[12px] sm:text-[13px] font-bold text-neutral-800 mb-0.5 sm:mb-1 font-display">Mật khẩu</label>
+          <div className="relative">
+            <Lock className="w-4.5 h-4.5 sm:w-5 sm:h-5 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-neutral-400 stroke-[1.8]" />
+            <input
+              id="signup-password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-11 sm:pl-12 sm:pr-12 rounded-xl bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#E50914] focus:ring-4 focus:ring-[#E50914]/10 text-[15px] sm:text-[14px] transition-all shadow-sm auth-input-field"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" /> : <Eye className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label htmlFor="signup-confirm-password" className="block text-[12px] sm:text-[13px] font-bold text-neutral-800 mb-0.5 sm:mb-1 font-display">Xác nhận mật khẩu</label>
+          <div className="relative">
+            <Lock className="w-4.5 h-4.5 sm:w-5 sm:h-5 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-neutral-400 stroke-[1.8]" />
+            <input
+              id="signup-confirm-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              required
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-11 sm:pl-12 sm:pr-12 rounded-xl bg-white border border-neutral-300 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-[#E50914] focus:ring-4 focus:ring-[#E50914]/10 text-[15px] sm:text-[14px] transition-all shadow-sm auth-input-field"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" /> : <Eye className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="pt-1.5 sm:pt-2">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-11 sm:h-12 rounded-full text-white font-bold text-[14px] sm:text-[15px] bg-[#E50914] hover:bg-[#CC0813] active:scale-[0.99] disabled:opacity-60 transition-all flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(229,9,20,0.25)] cursor-pointer auth-btn-primary"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <span>Tạo tài khoản</span>
+                <ArrowRight className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              </>
+            )}
+          </button>
+
+          <AuthDivider />
+
+          <button
+            type="button"
+            onClick={handleGoogleSignup}
+            className="w-full h-11 sm:h-12 rounded-full bg-[#EEF2F6] hover:bg-[#E3E8EE] text-neutral-800 font-bold text-[14px] sm:text-[15px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 cursor-pointer auth-btn-secondary"
+          >
+            <GoogleIcon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+            <span>Đăng ký với Google</span>
+          </button>
+        </div>
+      </form>
+
+      <p className="text-center text-[13px] sm:text-[14px] text-neutral-600 mt-3 sm:mt-5 auth-footer-link">
+        Đã có tài khoản?{' '}
+        <button onClick={onNavigateToLogin} className="font-semibold text-neutral-900 hover:underline cursor-pointer">
+          Đăng nhập ngay
+        </button>
+      </p>
+    </div>
+  );
+
+  return <AuthLayout visualPanel={visualPanel} formPanel={formPanel} reverse={true} />;
 }

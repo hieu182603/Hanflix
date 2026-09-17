@@ -12,7 +12,11 @@ import { ProcessingJobModel } from '../models/processing-job.model.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
-import { confirmR2Object, createVideoUploadUrl } from '../services/r2.js';
+import { confirmR2Object, createVideoDownloadUrl, createVideoUploadUrl } from '../services/r2.js';
+import { addVideoProcessingJob, retryVideoProcessingJob } from '../queue/video.queue.js';
+import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js';
+import { withProcessingCompatibility } from '../services/lesson-presentation.js';
+import { pinyinService } from '../services/pinyin.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
@@ -39,10 +43,66 @@ const presignSchema = z.object({
 const confirmSchema = z.object({ lessonId: z.string().refine(Types.ObjectId.isValid), objectKey: z.string().min(1).max(500) });
 const userIdSchema = z.object({ userId: z.string().refine(Types.ObjectId.isValid) });
 const statusSchema = z.object({ status: z.enum(['active', 'locked']) });
+const cueInput = z.object({
+  cueId: z.string().min(1).max(100),
+  startMs: z.number().int().nonnegative(),
+  endMs: z.number().int().positive(),
+  zh: z.string().trim().min(1).max(1000),
+  pinyin: z.string().trim().min(1).max(2000).optional(),
+  vi: z.string().trim().min(1).max(2000),
+}).refine(cue => cue.endMs > cue.startMs, { message: 'endMs phải lớn hơn startMs' });
+const subtitleDraftSchema = z.object({ cues: z.array(cueInput).min(1).max(500) }).superRefine((value, context) => {
+  const ids = new Set<string>();
+  value.cues.forEach((cue, index) => {
+    if (ids.has(cue.cueId)) context.addIssue({ code: 'custom', path: ['cues', index, 'cueId'], message: 'cueId bị trùng' });
+    ids.add(cue.cueId);
+  });
+});
+const quizQuestionInput = z.object({
+  questionId: z.string().trim().min(1).max(100),
+  type: z.enum(['multiple_choice', 'fill_blank']),
+  prompt: z.string().trim().min(1).max(1000),
+  cueId: z.string().trim().max(100).optional(),
+  options: z.array(z.object({ optionId: z.string().min(1).max(100), text: z.string().trim().min(1).max(500) })).max(6).default([]),
+  correctOptionId: z.string().max(100).optional(),
+  acceptedAnswers: z.array(z.string().trim().min(1).max(500)).max(10).optional(),
+  explanationVi: z.string().trim().min(1).max(2000),
+}).superRefine((question, context) => {
+  const optionIds = new Set<string>();
+  question.options.forEach((option, index) => {
+    if (optionIds.has(option.optionId)) context.addIssue({ code: 'custom', path: ['options', index, 'optionId'], message: 'optionId bị trùng' });
+    optionIds.add(option.optionId);
+  });
+  if (question.type === 'multiple_choice' && (!question.correctOptionId ||
+    !question.options.some(option => option.optionId === question.correctOptionId))) {
+    context.addIssue({ code: 'custom', path: ['correctOptionId'], message: 'Đáp án đúng phải nằm trong options' });
+  }
+  if (question.type === 'fill_blank' && !question.acceptedAnswers?.length) {
+    context.addIssue({ code: 'custom', path: ['acceptedAnswers'], message: 'Cần ít nhất một đáp án chấp nhận' });
+  }
+});
+const quizDraftSchema = z.object({ questions: z.array(quizQuestionInput).min(1).max(20) }).superRefine((value, context) => {
+  const questionIds = new Set<string>();
+  value.questions.forEach((question, index) => {
+    if (questionIds.has(question.questionId)) context.addIssue({ code: 'custom', path: ['questions', index, 'questionId'], message: 'questionId bị trùng' });
+    questionIds.add(question.questionId);
+  });
+});
 
 router.post('/lessons', validate(lessonInput), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.create({ ...req.body, createdBy: req.auth!.userId, status: 'draft' });
   res.status(201).json({ data: lesson });
+}));
+
+router.get('/lessons', asyncHandler(async (_req, res) => {
+  const items = await LessonModel.find().select('-media.objectKey').sort({ createdAt: -1 }).limit(100).lean();
+  res.json({ data: { items: items.map(item => withProcessingCompatibility(item)) } });
+}));
+
+router.get('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findById(req.params.lessonId).select('-media.objectKey').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  res.json({ data: withProcessingCompatibility(lesson) });
 }));
 
 router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(lessonInput.partial()), asyncHandler(async (req, res) => {
@@ -63,6 +123,10 @@ router.post('/uploads/presign', uploadLimiter, validate(presignSchema), asyncHan
   const objectKey = `videos/${lesson._id}/${randomUUID()}.${extension}`;
   const signed = await createVideoUploadUrl(objectKey, req.body.contentType);
   lesson.status = 'uploading';
+  lesson.processingStatus = 'UPLOADED';
+  lesson.processingStep = 'UPLOADING';
+  lesson.processingProgress = 0;
+  lesson.processingError = undefined;
   await lesson.save();
   res.json({ data: { ...signed, requiredHeaders: { 'Content-Type': req.body.contentType }, maxBytes: env.MAX_VIDEO_BYTES } });
 }));
@@ -82,27 +146,107 @@ router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHan
     etag: object.etag,
   };
   lesson.status = 'processing';
+  lesson.processingStatus = 'QUEUED';
+  lesson.processingStep = 'QUEUED';
+  lesson.processingProgress = 5;
+  lesson.processingError = undefined;
   await lesson.save();
-  const job = await ProcessingJobModel.create({ lessonId: lesson._id, status: 'queued', stage: 'inspect_media' });
+  const job = await addVideoProcessingJob({
+    lessonId: lesson._id.toString(),
+    objectKey: req.body.objectKey,
+  });
+  wakeVideoProcessingWorker();
+
   res.json({ data: { lessonId: lesson._id, status: lesson.status, processingJobId: job._id, media: { sizeBytes: object.sizeBytes, contentType: object.contentType } } });
 }));
 
 router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
-  const job = await ProcessingJobModel.findOne({ lessonId: req.params.lessonId }).sort({ createdAt: -1 }).lean();
+  const [job, lesson] = await Promise.all([
+    ProcessingJobModel.findOne({ lessonId: req.params.lessonId }).sort({ createdAt: -1 }).lean(),
+    LessonModel.findById(req.params.lessonId).select('status processingStatus processingProgress processingStep processingError').lean(),
+  ]);
   if (!job) throw new AppError(404, 'PROCESSING_JOB_NOT_FOUND', 'Không tìm thấy tiến trình xử lý');
-  res.json({ data: job });
+  res.json({ data: { ...job, video: lesson } });
 }));
 
-router.post('/lessons/:lessonId/processing/retry', uploadLimiter, validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
-  const job = await ProcessingJobModel.findOneAndUpdate(
-    { lessonId: req.params.lessonId, status: 'failed' },
-    { $set: { status: 'queued', lockedAt: null, lockedBy: null, errorCode: null, errorMessage: null }, $inc: { attempts: 1 } },
-    { new: true },
-  );
-  if (!job) throw new AppError(409, 'PROCESSING_NOT_RETRYABLE', 'Tiến trình không ở trạng thái có thể thử lại');
-  await LessonModel.updateOne({ _id: req.params.lessonId }, { $set: { status: 'processing' } });
-  res.json({ data: job });
+router.get('/lessons/:lessonId/review', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findById(req.params.lessonId).select('status titleVi durationSeconds').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  const [subtitle, quiz] = await Promise.all([
+    SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).lean(),
+    QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
+      .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').lean(),
+  ]);
+  res.json({ data: { lesson, subtitle, quiz } });
 }));
+
+router.get('/lessons/:lessonId/media', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findById(req.params.lessonId).select('status media thumbnailKey').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (!lesson.media?.objectKey) throw new AppError(404, 'MEDIA_NOT_FOUND', 'Bài học chưa có video');
+  const [url, thumbnailUrl] = await Promise.all([
+    createVideoDownloadUrl(lesson.media.objectKey),
+    lesson.thumbnailKey ? createVideoDownloadUrl(lesson.thumbnailKey) : Promise.resolve(null),
+  ]);
+  res.json({ data: {
+    lessonId: lesson._id,
+    status: lesson.status,
+    media: { url, mimeType: lesson.media.mimeType, sizeBytes: lesson.media.sizeBytes },
+    thumbnailUrl,
+  } });
+}));
+
+router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), validate(subtitleDraftSchema), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).select('durationSeconds').lean();
+  if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để duyệt');
+  const track = await SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 });
+  if (!track) throw new AppError(404, 'SUBTITLES_NOT_FOUND', 'Không tìm thấy phụ đề nháp');
+  const previous = new Map(track.cues.map(cue => [cue.cueId, cue]));
+  const cues = (req.body as z.infer<typeof subtitleDraftSchema>).cues.map(cue => {
+    if (cue.endMs > lesson.durationSeconds * 1000) throw new AppError(422, 'INVALID_CUE_TIME', 'Phụ đề vượt thời lượng video');
+    const old = previous.get(cue.cueId);
+    return {
+      ...cue,
+      pinyin: cue.pinyin || pinyinService.convert(cue.zh),
+      tokens: old?.zh === cue.zh ? old.tokens : pinyinService.tokenize(cue.zh).map(token => ({ text: token.text, wordId: null })),
+    };
+  });
+  track.set('cues', cues);
+  await track.save();
+  res.json({ data: track });
+}));
+
+router.put('/lessons/:lessonId/quiz', validate(lessonIdSchema, 'params'), validate(quizDraftSchema), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).select('_id').lean();
+  if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để duyệt');
+  const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
+    .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi');
+  if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập nháp');
+  quiz.set('questions', (req.body as z.infer<typeof quizDraftSchema>).questions.map(question => ({
+    ...question,
+    relatedWordIds: [],
+  })));
+  await quiz.save();
+  res.json({ data: quiz });
+}));
+
+const retryProcessing = asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'failed', 'media.objectKey': { $exists: true } });
+  if (!lesson?.media?.objectKey) throw new AppError(409, 'PROCESSING_NOT_RETRYABLE', 'Video không ở trạng thái có thể thử lại');
+  const job = await retryVideoProcessingJob(lesson._id.toString(), lesson.media.objectKey);
+  if (!job) throw new AppError(409, 'PROCESSING_NOT_RETRYABLE', 'Không tìm thấy tiến trình lỗi để thử lại');
+  lesson.status = 'processing';
+  lesson.processingStatus = 'QUEUED';
+  lesson.processingStep = 'QUEUED';
+  lesson.processingProgress = 0;
+  lesson.processingError = undefined;
+  await lesson.save();
+  wakeVideoProcessingWorker();
+  res.json({ data: job });
+});
+
+router.post('/lessons/:lessonId/processing/retry', uploadLimiter, validate(lessonIdSchema, 'params'), retryProcessing);
+router.post('/videos/:lessonId/retry-processing', uploadLimiter, validate(lessonIdSchema, 'params'), retryProcessing);
 
 router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
   const session = await mongoose.startSession();
@@ -122,6 +266,9 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
       subtitle.reviewedBy = req.auth!.userId;
       quiz.status = 'published';
       lesson.status = 'published';
+      lesson.processingStatus = 'READY';
+      lesson.processingStep = 'COMPLETED';
+      lesson.processingProgress = 100;
       lesson.activeSubtitleRevision = subtitle.revision;
       lesson.activeQuizRevision = quiz.revision;
       lesson.publishedAt = new Date();

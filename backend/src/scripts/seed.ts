@@ -37,7 +37,10 @@ async function run() {
   const admin = await UserModel.findOneAndUpdate(
     { email: env.SEED_ADMIN_EMAIL },
     {
-      $set: { name: 'HanFlix Admin', role: 'admin', status: 'active', passwordHash: adminPasswordHash },
+      $set: {
+        name: 'HanFlix Admin', role: 'admin', status: 'active', passwordHash: adminPasswordHash,
+        emailVerifiedAt: new Date(), emailVerificationRequired: false,
+      },
       $setOnInsert: { learningProfile: { currentHskSource: 'unknown', subtitlePreference: 'all' } },
     },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
