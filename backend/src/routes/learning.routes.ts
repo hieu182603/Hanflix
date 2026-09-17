@@ -85,21 +85,59 @@ router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
     res.json({ data: { items: [], source: 'no_published_lessons' } });
     return;
   }
-  const result = await rerankLessonCandidates({
-    profile: user?.learningProfile ?? {},
-    candidates: lessons.map(lesson => ({
-      lessonId: lesson._id.toString(),
-      titleVi: lesson.titleVi,
-      hsk: lesson.hsk,
-      topicIds: lesson.topicIds,
-      goalTags: lesson.goalTags,
-    })),
-  });
+  let resultItems: { lessonId: string; reasonVi: string }[] = [];
+  try {
+    const result = await rerankLessonCandidates({
+      profile: user?.learningProfile ?? {},
+      candidates: lessons.map(lesson => ({
+        lessonId: lesson._id.toString(),
+        titleVi: lesson.titleVi,
+        hsk: lesson.hsk,
+        topicIds: lesson.topicIds,
+        goalTags: lesson.goalTags,
+      })),
+    });
+    resultItems = result.items;
+  } catch {
+    // Graceful fallback below
+  }
+
   const lessonMap = new Map(lessons.map(lesson => [lesson._id.toString(), lesson]));
+  const validAiItems = resultItems
+    .map(item => ({ lesson: lessonMap.get(item.lessonId), reasonVi: item.reasonVi }))
+    .filter(item => item.lesson != null);
+
+  if (validAiItems.length > 0) {
+    res.json({
+      data: {
+        items: validAiItems,
+        source: 'gemini_validated_rerank',
+      },
+    });
+    return;
+  }
+
+  // Deterministic profile-aware fallback
+  const userHsk = user?.learningProfile?.currentHsk || 3;
+  const userTopics = user?.learningProfile?.topicIds || [];
+  const sorted = [...lessons]
+    .sort((a, b) => {
+      const aHskDiff = Math.abs(a.hsk - userHsk);
+      const bHskDiff = Math.abs(b.hsk - userHsk);
+      if (aHskDiff !== bHskDiff) return aHskDiff - bHskDiff;
+      const aTopicMatch = a.topicIds?.some(t => userTopics.includes(t)) ? 1 : 0;
+      const bTopicMatch = b.topicIds?.some(t => userTopics.includes(t)) ? 1 : 0;
+      return bTopicMatch - aTopicMatch;
+    })
+    .slice(0, 8);
+
   res.json({
     data: {
-      items: result.items.map(item => ({ lesson: lessonMap.get(item.lessonId), reasonVi: item.reasonVi })),
-      source: 'gemini_validated_rerank',
+      items: sorted.map(lesson => ({
+        lesson,
+        reasonVi: `Phù hợp với trình độ HSK ${lesson.hsk} và chủ đề học tập của bạn`,
+      })),
+      source: 'profile_deterministic_fallback',
     },
   });
 }));

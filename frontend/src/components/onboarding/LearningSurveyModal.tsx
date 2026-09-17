@@ -214,7 +214,7 @@ export default function LearningSurveyModal({
     if (currentUser?.id) {
       localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
     }
-    localStorage.setItem('hanflix_survey_completed_global', 'true');
+    localStorage.removeItem('hanflix_survey_completed_global');
     onClose();
   };
 
@@ -230,7 +230,7 @@ export default function LearningSurveyModal({
     if (currentUser?.id) {
       localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
     }
-    localStorage.setItem('hanflix_survey_completed_global', 'true');
+    localStorage.removeItem('hanflix_survey_completed_global');
     onClose();
   };
 

@@ -97,10 +97,11 @@ export async function rerankLessonCandidates(input: {
   });
   const response = await Promise.race([request, timeout]);
   const parsed = recommendationSchema.safeParse(extractJson(response.text ?? ''));
-  if (!parsed.success || parsed.data.items.some(item => !allowedIds.has(item.lessonId))) {
-    throw new AppError(502, 'AI_INVALID_RESPONSE', 'Gemini trả về lessonId không hợp lệ');
+  if (!parsed.success) {
+    return { items: [] };
   }
-  return { items: [...new Map(parsed.data.items.map(item => [item.lessonId, item])).values()] };
+  const validItems = parsed.data.items.filter(item => allowedIds.has(item.lessonId));
+  return { items: [...new Map(validItems.map(item => [item.lessonId, item])).values()] };
 }
 
 export async function answerLearningQuestion(input: { question: string; profile: unknown }): Promise<z.infer<typeof answerSchema>> {
