@@ -16,7 +16,7 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
-  Flame,
+  BookOpenCheck,
   GraduationCap,
   Layers,
   Copy,
@@ -377,7 +377,7 @@ export default function WatchView({
                   onClick={onStartPractice}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F7F7F9] text-[#18181B] border border-[#E7E7EA] hover:bg-[#ECECED] text-xs font-bold transition-all cursor-pointer"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#B91B1C]" />
+                  <BookOpenCheck className="w-3.5 h-3.5 text-[#B91B1C]" />
                   <span className="hidden sm:inline">{t.watch.practice}</span>
                 </button>
 

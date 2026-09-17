@@ -1,6 +1,6 @@
 import { Router, type CookieOptions, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
-import type { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
@@ -49,6 +49,9 @@ const changePasswordSchema = z.object({
   path: ['newPassword'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
 });
 const googleCredentialSchema = z.object({ credential: z.string().min(100).max(10000) });
+const sessionIdSchema = z.object({ sessionId: z.string().refine(Types.ObjectId.isValid, 'sessionId không hợp lệ') });
+const setPasswordSchema = googleCredentialSchema.extend({ password: z.string().min(8).max(128) });
+const unlinkGoogleSchema = z.object({ currentPassword: z.string().min(8).max(128) });
 
 router.get('/providers', (_req, res) => {
   res.json({ data: { googleClientId: env.GOOGLE_CLIENT_ID ?? null } });
@@ -214,6 +217,33 @@ router.post('/google/link', requireAuth, authLimiter, validate(googleCredentialS
   res.json({ data: { user: publicUser(user), googleLinked: true } });
 }));
 
+router.post('/password/set', requireAuth, authLimiter, validate(setPasswordSchema), asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.auth!.userId).select('+passwordHash +googleSub');
+  if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
+  if (user.passwordHash) throw new AppError(409, 'PASSWORD_ALREADY_SET', 'Tài khoản đã có mật khẩu');
+  if (!user.googleSub) throw new AppError(409, 'GOOGLE_REAUTH_REQUIRED', 'Tài khoản chưa liên kết Google');
+  const identity = await googleIdentityService.verify(req.body.credential);
+  if (identity.sub !== user.googleSub || identity.email !== user.email) {
+    throw new AppError(403, 'GOOGLE_REAUTH_MISMATCH', 'Google reauthentication không khớp tài khoản hiện tại');
+  }
+  user.passwordHash = await bcrypt.hash(req.body.password, 12);
+  await user.save();
+  res.json({ data: { passwordSet: true } });
+}));
+
+router.post('/google/unlink', requireAuth, authLimiter, validate(unlinkGoogleSchema), asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.auth!.userId).select('+passwordHash +googleSub');
+  if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
+  if (!user.googleSub) throw new AppError(409, 'GOOGLE_NOT_LINKED', 'Tài khoản chưa liên kết Google');
+  if (!user.passwordHash) throw new AppError(409, 'PASSWORD_REQUIRED_BEFORE_UNLINK', 'Hãy đặt mật khẩu trước khi hủy liên kết Google');
+  if (!await bcrypt.compare(req.body.currentPassword, user.passwordHash)) {
+    throw new AppError(401, 'INVALID_CURRENT_PASSWORD', 'Mật khẩu hiện tại không đúng');
+  }
+  user.googleSub = undefined;
+  await user.save();
+  res.json({ data: { googleLinked: false } });
+}));
+
 router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
   const token = req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
   if (!token) throw new AppError(401, 'REFRESH_REQUIRED', 'Không tìm thấy phiên làm mới');
@@ -223,7 +253,7 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
   const session = await RefreshSessionModel.findOneAndUpdate(
     { jti: claims.jti, tokenHash: hashToken(token), revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } },
     { $set: { revokedAt: new Date() } },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!session) throw new AppError(401, 'REFRESH_REUSED', 'Phiên làm mới đã hết hạn hoặc đã được sử dụng');
 
@@ -246,6 +276,32 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
   });
   res.cookie(env.REFRESH_COOKIE_NAME, replacement, cookieOptions());
   res.json({ data: { accessToken: signAccessToken(user._id.toString(), user.role) } });
+}));
+
+router.get('/sessions', requireAuth, asyncHandler(async (req, res) => {
+  const sessions = await RefreshSessionModel.find({ userId: req.auth!.userId })
+    .select('expiresAt revokedAt replacedByJti userAgent ip createdAt updatedAt')
+    .sort({ createdAt: -1 }).limit(50).lean();
+  const now = Date.now();
+  res.json({ data: { items: sessions.map(session => ({
+    id: session._id,
+    userAgent: session.userAgent ?? null,
+    ip: session.ip ?? null,
+    createdAt: session.createdAt,
+    lastRotatedAt: session.updatedAt,
+    expiresAt: session.expiresAt,
+    status: session.revokedAt ? 'revoked' : session.expiresAt.valueOf() <= now ? 'expired' : 'active',
+  })) } });
+}));
+
+router.delete('/sessions/:sessionId', requireAuth, validate(sessionIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const session = await RefreshSessionModel.findOneAndUpdate(
+    { _id: req.params.sessionId, userId: req.auth!.userId },
+    { $set: { revokedAt: new Date() } },
+    { returnDocument: 'after' },
+  ).select('_id revokedAt');
+  if (!session) throw new AppError(404, 'SESSION_NOT_FOUND', 'Không tìm thấy phiên đăng nhập');
+  res.json({ data: { id: session._id, revoked: true } });
 }));
 
 router.post('/logout', asyncHandler(async (req, res) => {
@@ -273,7 +329,7 @@ router.post('/verify-email', authLimiter, validate(accountProofSchema), asyncHan
   const user = await UserModel.findByIdAndUpdate(
     accountToken.userId,
     { $set: { emailVerifiedAt: new Date(), emailVerificationRequired: false } },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!user) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết xác minh không hợp lệ');
   res.json({ data: { verified: true, user: publicUser(user) } });

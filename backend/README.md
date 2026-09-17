@@ -13,6 +13,8 @@ Express 5 + TypeScript API for learning Chinese through short videos. MongoDB At
 - FFmpeg audio extraction, Azure Speech phrase timestamps, deterministic Pinyin and Azure Vietnamese translation.
 - Draft subtitle/quiz review gate before publication.
 - Learner catalog, playback progress, idempotent quiz grading, vocabulary/SRS, dashboard and recommendations.
+- UTC daily learning activity, reversible lesson hide/restore, upload cancellation and admin queue inspection.
+- User session listing/revocation, Google unlink protection and Google-only password setup with reauthentication.
 - Lightweight liveness, readiness and Prometheus metrics.
 
 ## Local development
@@ -74,20 +76,21 @@ Use [.env.example](./.env.example). Required production groups:
 - Gemini: optional for explanation and AI reranking; not used for transcription or translation.
 
 Never expose backend secrets to the frontend or commit `.env`. The Google Web client ID is public and is returned by `GET /auth/providers`.
+`R2_ENDPOINT` and `AZURE_SPEECH_ENDPOINT` may be left blank; the backend derives their canonical regional endpoints. Placeholder endpoints and partially configured provider groups are rejected. In production, secure cookies, HTTPS origins, provider credentials and `METRICS_TOKEN` are enforced at startup.
 
 ## API surface
 
 | Area | Routes |
 |---|---|
 | Health | `GET /health`, `GET /api/v1/health`, `GET /metrics` |
-| Auth | `POST /auth/register`, `/verify-email`, `/resend-verification`, `/login`, `/google`, `/google/link`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`, `/change-password`; `GET /auth/me`, `/auth/providers` |
+| Auth | `POST /auth/register`, `/verify-email`, `/resend-verification`, `/login`, `/google`, `/google/link`, `/google/unlink`, `/password/set`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`, `/change-password`; `GET /auth/me`, `/auth/providers`, `/auth/sessions`; `DELETE /auth/sessions/:sessionId` |
 | Profile | `GET /profile`, `PUT /profile/learning` |
 | Catalog | `GET /lessons`, `/lessons/:id`, `/lessons/:id/subtitles`, `/lessons/:id/quiz` |
 | Learning | `GET/PATCH /lessons/:id/progress`, `POST /lessons/:id/attempts` |
 | Vocabulary | `GET/POST /vocabulary`, `GET /vocabulary/due`, `DELETE /vocabulary/:wordId`, `POST /vocabulary/:wordId/review` |
-| Dashboard | `GET /learning/dashboard`, `/learning/recommendations`; `POST /learning/recommendations/ai` |
+| Dashboard | `GET /learning/dashboard`, `/learning/activity`, `/learning/recommendations`; `POST /learning/recommendations/ai` |
 | Gemini | `POST /ai/explain` |
-| Admin | lesson create/list/detail/update/publish, draft review/update, private media preview, R2 presign/confirm, processing status/retry, user list/status |
+| Admin | lesson create/list/detail/update/publish/hide/restore, draft review/update, private media preview, R2 presign/confirm/cancel, processing status/retry/queue list, user list/status |
 
 Existing routes remain compatible. The alias `POST /admin/videos/:lessonId/retry-processing` is also available. Admin lesson responses expose `processingStatus`, `processingProgress`, `processingStep` and `processingError` without leaking provider-specific details.
 
@@ -109,6 +112,7 @@ Before enabling Google login in production, verify MongoDB has built the unique 
 4. The upload sequence is create lesson → presign → browser PUT with exact `Content-Type` → confirm.
 
 Keep `R2_PUBLIC_BASE_URL` unset when media must remain private; download and admin-preview URLs will then be short-lived signed URLs.
+Browser upload also requires a bucket CORS rule allowing the exact frontend origins, `PUT` and the `Content-Type` header. A valid S3 token does not by itself configure CORS.
 
 ## Azure setup
 
@@ -125,9 +129,10 @@ External provider failures never create sample subtitles. The job records an err
 npm run typecheck
 npm test
 npm run build
+npm run db:indexes
 ```
 
-Automated Speech tests mock Azure. Live R2/Speech/Translator checks require staging credentials and a real video.
+Automated Speech tests mock Azure. Before launch, run a staging video through presign, browser upload, confirmation, processing, review and publish. Provider checks must use disposable objects and remove them after verification.
 
 ## Docker and Azure Container Apps
 

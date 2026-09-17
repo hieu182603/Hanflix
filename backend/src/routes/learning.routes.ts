@@ -1,16 +1,66 @@
 import { Router } from 'express';
+import { z } from 'zod';
+import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
+import { validate } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProgressModel } from '../models/progress.model.js';
 import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
 import { SavedWordModel } from '../models/saved-word.model.js';
+import { StudyActivityModel } from '../models/study-activity.model.js';
 import { UserModel } from '../models/user.model.js';
 import { rerankLessonCandidates } from '../services/gemini.js';
+import { enumerateUtcDateKeys, parseUtcDateKey, toUtcDateKey } from '../services/study-activity.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
 router.use(requireAuth);
+
+const activityQuerySchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from phải có dạng YYYY-MM-DD').optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'to phải có dạng YYYY-MM-DD').optional(),
+});
+
+router.get('/activity', validate(activityQuerySchema, 'query'), asyncHandler(async (req, res) => {
+  const query = req.query as unknown as z.infer<typeof activityQuerySchema>;
+  const to = query.to ?? toUtcDateKey();
+  const toDate = parseUtcDateKey(to);
+  const defaultFrom = new Date(toDate);
+  defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 29);
+  const from = query.from ?? toUtcDateKey(defaultFrom);
+  let dateKeys: string[];
+  try {
+    dateKeys = enumerateUtcDateKeys(from, to);
+  } catch {
+    throw new AppError(422, 'INVALID_ACTIVITY_RANGE', 'Khoảng thời gian hoạt động không hợp lệ');
+  }
+  if (dateKeys.length > 366) throw new AppError(422, 'ACTIVITY_RANGE_TOO_LARGE', 'Chỉ được xem tối đa 366 ngày');
+
+  const records = await StudyActivityModel.find({
+    userId: req.auth!.userId,
+    dateKey: { $gte: from, $lte: to },
+  }).sort({ dateKey: 1 }).lean();
+  const recordMap = new Map(records.map(record => [record.dateKey, record]));
+  const days = dateKeys.map(dateKey => {
+    const record = recordMap.get(dateKey);
+    return {
+      date: dateKey,
+      activeStudySeconds: record?.activeStudySeconds ?? 0,
+      progressUpdates: record?.progressUpdates ?? 0,
+      quizAttempts: record?.quizAttempts ?? 0,
+      completedLessons: record?.completedLessons ?? 0,
+    };
+  });
+  const totals = days.reduce((sum, day) => ({
+    activeStudySeconds: sum.activeStudySeconds + day.activeStudySeconds,
+    progressUpdates: sum.progressUpdates + day.progressUpdates,
+    quizAttempts: sum.quizAttempts + day.quizAttempts,
+    completedLessons: sum.completedLessons + day.completedLessons,
+  }), { activeStudySeconds: 0, progressUpdates: 0, quizAttempts: 0, completedLessons: 0 });
+
+  res.json({ data: { from, to, timezone: 'UTC', days, totals } });
+}));
 
 router.get('/dashboard', asyncHandler(async (req, res) => {
   const now = new Date();

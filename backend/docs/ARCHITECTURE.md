@@ -45,11 +45,14 @@ For the student MVP the API starts the worker in the same container (`VIDEO_WORK
 - `words`, `savedwords`: canonical vocabulary and SRS state.
 - `quizzes`, `quizattempts`: revisioned quizzes and idempotent attempts.
 - `progresses`: watched ranges, completion and scores.
+- `studyactivities`: per-user UTC daily active seconds, progress updates, quiz attempts and completion counters.
 
 ## Health
 
 - `GET /health`: lightweight process liveness; no external calls.
 - `GET /api/v1/health`: readiness summary for MongoDB and MongoDB-backed queue counts.
+
+`GET /metrics` accepts `Authorization: Bearer <METRICS_TOKEN>` whenever the token is configured. Production configuration requires the token; the platform should additionally restrict the route at ingress or network level.
 
 ## Deployment choice
 

@@ -12,7 +12,7 @@ import { ProcessingJobModel } from '../models/processing-job.model.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
-import { confirmR2Object, createVideoDownloadUrl, createVideoUploadUrl } from '../services/r2.js';
+import { confirmR2Object, createVideoDownloadUrl, createVideoUploadUrl, deleteR2Object } from '../services/r2.js';
 import { addVideoProcessingJob, retryVideoProcessingJob } from '../queue/video.queue.js';
 import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
@@ -43,6 +43,11 @@ const presignSchema = z.object({
 const confirmSchema = z.object({ lessonId: z.string().refine(Types.ObjectId.isValid), objectKey: z.string().min(1).max(500) });
 const userIdSchema = z.object({ userId: z.string().refine(Types.ObjectId.isValid) });
 const statusSchema = z.object({ status: z.enum(['active', 'locked']) });
+const processingListSchema = z.object({
+  status: z.enum(['queued', 'running', 'failed', 'completed']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
 const cueInput = z.object({
   cueId: z.string().min(1).max(100),
   startMs: z.number().int().nonnegative(),
@@ -109,7 +114,7 @@ router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(
   const lesson = await LessonModel.findOneAndUpdate(
     { _id: req.params.lessonId, status: { $in: ['draft', 'ready_for_review', 'failed'] } },
     { $set: req.body },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   );
   if (!lesson) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Bài học không ở trạng thái có thể sửa');
   res.json({ data: lesson });
@@ -127,14 +132,18 @@ router.post('/uploads/presign', uploadLimiter, validate(presignSchema), asyncHan
   lesson.processingStep = 'UPLOADING';
   lesson.processingProgress = 0;
   lesson.processingError = undefined;
+  lesson.pendingUploadObjectKey = objectKey;
   await lesson.save();
   res.json({ data: { ...signed, requiredHeaders: { 'Content-Type': req.body.contentType }, maxBytes: env.MAX_VIDEO_BYTES } });
 }));
 
 router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findOne({ _id: req.body.lessonId, createdBy: req.auth!.userId, status: 'uploading' });
+  const lesson = await LessonModel.findOne({ _id: req.body.lessonId, createdBy: req.auth!.userId, status: 'uploading' })
+    .select('+pendingUploadObjectKey');
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy video đang tải lên');
-  if (!req.body.objectKey.startsWith(`videos/${lesson._id}/`)) throw new AppError(422, 'INVALID_OBJECT_KEY', 'Đường dẫn R2 không thuộc bài học');
+  if (!lesson.pendingUploadObjectKey || req.body.objectKey !== lesson.pendingUploadObjectKey) {
+    throw new AppError(422, 'INVALID_OBJECT_KEY', 'Đường dẫn R2 không khớp phiên tải lên');
+  }
   const object = await confirmR2Object(req.body.objectKey);
   if (!['video/mp4', 'video/webm'].includes(object.contentType ?? '') || object.sizeBytes > env.MAX_VIDEO_BYTES) {
     throw new AppError(422, 'INVALID_UPLOADED_VIDEO', 'Object R2 không đúng định dạng hoặc dung lượng');
@@ -150,6 +159,7 @@ router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHan
   lesson.processingStep = 'QUEUED';
   lesson.processingProgress = 5;
   lesson.processingError = undefined;
+  lesson.pendingUploadObjectKey = undefined;
   await lesson.save();
   const job = await addVideoProcessingJob({
     lessonId: lesson._id.toString(),
@@ -160,6 +170,24 @@ router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHan
   res.json({ data: { lessonId: lesson._id, status: lesson.status, processingJobId: job._id, media: { sizeBytes: object.sizeBytes, contentType: object.contentType } } });
 }));
 
+router.post('/lessons/:lessonId/upload/cancel', uploadLimiter, validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({
+    _id: req.params.lessonId,
+    createdBy: req.auth!.userId,
+    status: 'uploading',
+  }).select('+pendingUploadObjectKey');
+  if (!lesson) throw new AppError(409, 'UPLOAD_NOT_CANCELLABLE', 'Bài học không có phiên tải lên để hủy');
+  if (lesson.pendingUploadObjectKey) await deleteR2Object(lesson.pendingUploadObjectKey);
+  lesson.status = 'draft';
+  lesson.processingProgress = 0;
+  lesson.processingError = undefined;
+  lesson.pendingUploadObjectKey = undefined;
+  lesson.set('processingStatus', undefined);
+  lesson.set('processingStep', undefined);
+  await lesson.save();
+  res.json({ data: { lessonId: lesson._id, status: lesson.status } });
+}));
+
 router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
   const [job, lesson] = await Promise.all([
     ProcessingJobModel.findOne({ lessonId: req.params.lessonId }).sort({ createdAt: -1 }).lean(),
@@ -167,6 +195,17 @@ router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), 
   ]);
   if (!job) throw new AppError(404, 'PROCESSING_JOB_NOT_FOUND', 'Không tìm thấy tiến trình xử lý');
   res.json({ data: { ...job, video: lesson } });
+}));
+
+router.get('/processing-jobs', validate(processingListSchema, 'query'), asyncHandler(async (req, res) => {
+  const { status, page, limit } = req.query as unknown as z.infer<typeof processingListSchema>;
+  const filter = status ? { status } : {};
+  const [items, total] = await Promise.all([
+    ProcessingJobModel.find(filter).select('-objectKey -activeKey -lockedBy').sort({ createdAt: -1 })
+      .skip((page - 1) * limit).limit(limit).lean(),
+    ProcessingJobModel.countDocuments(filter),
+  ]);
+  res.json({ data: { items, page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
 router.get('/lessons/:lessonId/review', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
@@ -281,6 +320,26 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
   res.json({ data: publishedLesson });
 }));
 
+router.post('/lessons/:lessonId/hide', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOneAndUpdate(
+    { _id: req.params.lessonId, status: 'published' },
+    { $set: { status: 'hidden', hiddenAt: new Date(), hiddenBy: req.auth!.userId } },
+    { returnDocument: 'after', runValidators: true },
+  ).select('-media.objectKey');
+  if (!lesson) throw new AppError(409, 'LESSON_NOT_PUBLISHED', 'Chỉ có thể ẩn bài học đang xuất bản');
+  res.json({ data: withProcessingCompatibility(lesson.toObject()) });
+}));
+
+router.post('/lessons/:lessonId/restore', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOneAndUpdate(
+    { _id: req.params.lessonId, status: 'hidden' },
+    { $set: { status: 'published' }, $unset: { hiddenAt: 1, hiddenBy: 1 } },
+    { returnDocument: 'after', runValidators: true },
+  ).select('-media.objectKey');
+  if (!lesson) throw new AppError(409, 'LESSON_NOT_HIDDEN', 'Chỉ có thể khôi phục bài học đang bị ẩn');
+  res.json({ data: withProcessingCompatibility(lesson.toObject()) });
+}));
+
 router.get('/users', asyncHandler(async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
   const filter = q ? { $text: { $search: q } } : {};
@@ -290,7 +349,7 @@ router.get('/users', asyncHandler(async (req, res) => {
 
 router.patch('/users/:userId/status', validate(userIdSchema, 'params'), validate(statusSchema), asyncHandler(async (req, res) => {
   if (req.params.userId === req.auth!.userId.toString()) throw new AppError(422, 'CANNOT_LOCK_SELF', 'Không thể khóa tài khoản đang đăng nhập');
-  const user = await UserModel.findOneAndUpdate({ _id: req.params.userId, role: 'user' }, { $set: { status: req.body.status } }, { new: true })
+  const user = await UserModel.findOneAndUpdate({ _id: req.params.userId, role: 'user' }, { $set: { status: req.body.status } }, { returnDocument: 'after' })
     .select('name email role status');
   if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy người học');
   res.json({ data: user });

@@ -29,7 +29,7 @@ export class AzureSpeechToTextService implements SpeechToTextService {
     const url = `${endpoint}/speechtotext/transcriptions:transcribe?api-version=${encodeURIComponent(env.AZURE_SPEECH_API_VERSION)}`;
     let lastError: unknown;
 
-    for (let attempt = 1; attempt <= env.VIDEO_PROCESSING_MAX_RETRIES; attempt += 1) {
+    for (let attempt = 1; attempt <= env.AZURE_PROVIDER_MAX_RETRIES; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), env.VIDEO_PROCESSING_TIMEOUT_MINUTES * 60_000);
       try {
@@ -46,7 +46,7 @@ export class AzureSpeechToTextService implements SpeechToTextService {
         if (!response.ok) {
           const message = typeof body === 'object' && body && 'message' in body ? String(body.message) : `HTTP ${response.status}`;
           const transient = response.status === 408 || response.status === 429 || response.status >= 500;
-          if (!transient || attempt === env.VIDEO_PROCESSING_MAX_RETRIES) {
+          if (!transient || attempt === env.AZURE_PROVIDER_MAX_RETRIES) {
             throw new AppError(502, 'FAILED_TRANSCRIPTION', `Azure Speech thất bại: ${message}`);
           }
           lastError = new Error(message);
@@ -65,7 +65,7 @@ export class AzureSpeechToTextService implements SpeechToTextService {
       } catch (error) {
         if (error instanceof AppError) throw error;
         lastError = error;
-        if (attempt === env.VIDEO_PROCESSING_MAX_RETRIES) break;
+        if (attempt === env.AZURE_PROVIDER_MAX_RETRIES) break;
       } finally {
         clearTimeout(timeout);
       }

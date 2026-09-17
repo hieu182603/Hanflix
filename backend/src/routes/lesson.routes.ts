@@ -10,6 +10,8 @@ import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { createVideoDownloadUrl } from '../services/r2.js';
+import { logger } from '../services/logger.js';
+import { recordStudyActivity, type StudyActivityIncrement } from '../services/study-activity.js';
 import { mergeWatchedRanges, watchedCoverage } from '../services/watched-ranges.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
@@ -44,6 +46,14 @@ type AttemptInput = z.infer<typeof attemptSchema>;
 
 function normalizeAnswer(value: string): string {
   return value.trim().toLocaleLowerCase('vi').replace(/[.,!?;:，。！？；：]/g, '').replace(/\s+/g, ' ');
+}
+
+async function recordActivitySafely(userId: Types.ObjectId, increment: StudyActivityIncrement) {
+  try {
+    await recordStudyActivity(userId, increment);
+  } catch (error) {
+    logger.warn({ userId, error: error instanceof Error ? error.message : String(error) }, '[StudyActivity] write failed');
+  }
 }
 
 router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => {
@@ -131,8 +141,13 @@ router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), v
       },
       $inc: { activeStudySeconds: req.body.activeStudyDeltaSeconds },
     },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+    { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
   );
+  await recordActivitySafely(req.auth!.userId, {
+    activeStudySeconds: req.body.activeStudyDeltaSeconds,
+    progressUpdates: 1,
+    completedLessons: completed && !existing?.completed ? 1 : 0,
+  });
   res.json({ data: { progress, coverage: watchedCoverage(ranges, lesson.durationSeconds) } });
 }));
 
@@ -182,6 +197,7 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
     { $max: { bestQuizScore: score }, $setOnInsert: { lastPositionSeconds: 0, watchedRanges: [], activeStudySeconds: 0 } },
     { upsert: true },
   );
+  await recordActivitySafely(req.auth!.userId, { quizAttempts: 1 });
   res.status(201).json({ data: { attemptId: attempt._id, score, correctCount, totalCount: quiz.questions.length, answers: graded } });
 }));
 

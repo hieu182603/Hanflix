@@ -19,7 +19,7 @@ async function main() {
         learningProfile: { currentHsk: 3, goal: 'daily', topics: ['food', 'daily'] },
       },
     },
-    { new: true, upsert: true },
+    { returnDocument: 'after', upsert: true },
   );
   console.log(`Learner test account ready: ${user.email}`);
 }

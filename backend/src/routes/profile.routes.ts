@@ -32,7 +32,7 @@ router.put('/learning', validate(profileSchema), asyncHandler(async (req, res) =
   const user = await UserModel.findByIdAndUpdate(
     req.auth!.userId,
     { $set: { learningProfile: req.body } },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   ).select('learningProfile');
   if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy tài khoản');
   res.json({ data: { learningProfile: user.learningProfile } });

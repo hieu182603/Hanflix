@@ -43,7 +43,7 @@ async function run() {
       },
       $setOnInsert: { learningProfile: { currentHskSource: 'unknown', subtitlePreference: 'all' } },
     },
-    { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+    { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
   );
 
   for (const item of fixture.words) {

@@ -34,7 +34,7 @@ describe('AccountTokenService', () => {
         expiresAt: { $gt: expect.any(Date) },
       }),
       { $set: { usedAt: expect.any(Date) } },
-      { new: true },
+      { returnDocument: 'after' },
     );
   });
 
@@ -67,7 +67,7 @@ describe('AccountTokenService', () => {
     expect(await service.consumeOtp(userId, proof.code === '000000' ? '999999' : '000000', 'verify_email')).toBeNull();
     expect(failedAttempt).toHaveBeenCalledWith(expect.objectContaining({ _id: record._id, otpAttempts: { $lt: 5 } }), { $inc: { otpAttempts: 1 } });
     expect(await service.consumeOtp(userId, proof.code, 'verify_email')).toEqual(record);
-    expect(consume).toHaveBeenCalledWith(expect.objectContaining({ _id: record._id, usedAt: { $exists: false } }), { $set: { usedAt: expect.any(Date) } }, { new: true });
+    expect(consume).toHaveBeenCalledWith(expect.objectContaining({ _id: record._id, usedAt: { $exists: false } }), { $set: { usedAt: expect.any(Date) } }, { returnDocument: 'after' });
   });
 
   it('rejects and cancels OTP if it has expired after 1 minute', async () => {

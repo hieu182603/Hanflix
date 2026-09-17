@@ -36,10 +36,13 @@ const lessonSchema = new Schema({
   processingError: { type: String, maxlength: 1000 },
   sourceLanguage: { type: String, trim: true, default: 'zh-CN' },
   media: { type: mediaSchema },
+  pendingUploadObjectKey: { type: String, trim: true, select: false },
   thumbnailKey: { type: String, trim: true },
   activeSubtitleRevision: { type: Number, min: 1 },
   activeQuizRevision: { type: Number, min: 1 },
   publishedAt: { type: Date, index: true },
+  hiddenAt: { type: Date },
+  hiddenBy: { type: Schema.Types.ObjectId, ref: 'User' },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, versionKey: false });
 
