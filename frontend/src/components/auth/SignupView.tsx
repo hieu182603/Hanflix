@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../../data/hanflixData';
+import * as auth from '../../api/auth';
 
 interface SignupViewProps {
   onSignupSuccess: (newUser: UserType) => void;
   onNavigateToLogin: () => void;
 }
-
-const HSK_DESC: Record<number, string> = {
-  1: 'Sơ cấp', 2: 'Cơ bản', 3: 'Trung cấp', 4: 'Khá', 5: 'Cao cấp', 6: 'Thành thạo'
-};
 
 const PERKS = [
   'Thiết lập trình độ HSK mong muốn',
@@ -23,35 +20,32 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [targetHsk, setTargetHsk] = useState<number>(3);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     if (password !== confirmPassword) { setErrorMsg('Mật khẩu xác nhận không trùng khớp.'); return; }
-    if (password.length < 6) { setErrorMsg('Mật khẩu phải chứa ít nhất 6 ký tự.'); return; }
+    if (password.length < 8) { setErrorMsg('Mật khẩu phải chứa ít nhất 8 ký tự.'); return; }
     setIsLoading(true);
-    setTimeout(() => {
-      const newUser: UserType = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        status: 'active',
-        name: name.trim(),
-        email: email.trim(),
-        avatarAsset: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces',
-        learningProfile: {
-          hskLevel: targetHsk, goal: 'business',
-          topics: ['food', 'travel', 'office'], dailyMinutes: 15,
-          preferredDuration: '1-3', subtitleDefaults: { zh: true, pinyin: true, vi: true },
-          defaultSpeed: 1, uiLanguage: 'vi'
+    try {
+      const user = await auth.register(name.trim(), email.trim(), password);
+      onSignupSuccess(user);
+    } catch (err) {
+      if (err instanceof auth.ApiRequestError) {
+        if (err.code === 'EMAIL_EXISTS') {
+          setErrorMsg('Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.');
+        } else {
+          setErrorMsg(err.message);
         }
-      };
+      } else {
+        setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      }
+    } finally {
       setIsLoading(false);
-      onSignupSuccess(newUser);
-    }, 400);
+    }
   };
 
   return (
@@ -128,7 +122,7 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
                 <label className="block text-xs font-bold tracking-widest uppercase text-[#9A8878] mb-2">Mật khẩu</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#C0B4AC]" />
-                  <input type={showPassword ? 'text' : 'password'} required placeholder="Ít nhất 6 ký tự"
+                  <input type={showPassword ? 'text' : 'password'} required placeholder="Ít nhất 8 ký tự"
                     value={password} onChange={e => setPassword(e.target.value)}
                     className="bright-input w-full pl-11 pr-10 py-3.5 rounded-2xl" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -240,7 +234,7 @@ export default function SignupView({ onSignupSuccess, onNavigateToLogin }: Signu
         </div>
 
         <div className="relative z-10 px-10 pb-8 text-xs text-[#C0B4AC]">
-          © 2026 HanFlix · Học tự nhiên — Nhớ lâu dài
+          © {new Date().getFullYear()} HanFlix · Học tự nhiên — Nhớ lâu dài
         </div>
       </div>
     </div>
