@@ -544,7 +544,15 @@ export default function App() {
               )}
               {activeNav === 'roadmap' && <RoadmapPage />}
               {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setIsPracticeOpen(true)} />}
-              {activeNav === 'leaderboard' && <LeaderboardPage />}
+              {activeNav === 'leaderboard' && (
+                <LeaderboardPage
+                  onStartPractice={() => setIsPracticeOpen(true)}
+                  onSelectLesson={() => {
+                    const l = SAMPLE_LESSONS[0];
+                    setSelectedLesson(l as unknown as VideoLesson);
+                  }}
+                />
+              )}
               {activeNav === 'community' && <CommunityPage />}
               {activeNav === 'history' && (
                 <div className="space-y-4">
