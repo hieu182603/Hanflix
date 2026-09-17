@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import type { Express } from 'express';
 
@@ -64,6 +65,55 @@ describe('POST /api/v1/auth/google/link', () => {
       .send({ credential: 'x'.repeat(120) });
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('GOOGLE_EMAIL_MISMATCH');
+  });
+});
+
+describe('Google credential lifecycle', () => {
+  it('lets a Google-only account set a password after matching Google reauthentication', async () => {
+    const userId = new Types.ObjectId();
+    const user = {
+      _id: userId, email: 'google-only@example.com', role: 'user', status: 'active',
+      googleSub: 'google-only', passwordHash: undefined as string | undefined,
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(UserModel, 'findById').mockReturnValue({
+      select: (projection: string) => projection === '+passwordHash +googleSub'
+        ? Promise.resolve(user)
+        : { lean: () => Promise.resolve({ _id: userId, role: 'user', status: 'active' }) },
+    } as never);
+    vi.spyOn(googleIdentityService, 'verify').mockResolvedValue({
+      sub: 'google-only', email: 'google-only@example.com', name: 'Learner',
+    });
+
+    const response = await request(app).post('/api/v1/auth/password/set')
+      .set('Authorization', `Bearer ${signAccessToken(userId.toString(), 'user')}`)
+      .send({ credential: 'x'.repeat(120), password: 'NewPassword123!' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.passwordSet).toBe(true);
+    expect(await bcrypt.compare('NewPassword123!', user.passwordHash!)).toBe(true);
+  });
+
+  it('only unlinks Google after password reauthentication', async () => {
+    const userId = new Types.ObjectId();
+    const user = {
+      _id: userId, email: 'linked@example.com', role: 'user', status: 'active', googleSub: 'linked-google',
+      passwordHash: await bcrypt.hash('CurrentPassword123!', 4),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(UserModel, 'findById').mockReturnValue({
+      select: (projection: string) => projection === '+passwordHash +googleSub'
+        ? Promise.resolve(user)
+        : { lean: () => Promise.resolve({ _id: userId, role: 'user', status: 'active' }) },
+    } as never);
+
+    const response = await request(app).post('/api/v1/auth/google/unlink')
+      .set('Authorization', `Bearer ${signAccessToken(userId.toString(), 'user')}`)
+      .send({ currentPassword: 'CurrentPassword123!' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.googleLinked).toBe(false);
+    expect(user.googleSub).toBeUndefined();
   });
 });
 

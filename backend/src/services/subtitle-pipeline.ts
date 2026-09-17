@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { Types } from 'mongoose';
+import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
@@ -45,6 +46,20 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
   };
 
   const audioPath = path.join(path.dirname(videoLocalPath), 'speech.wav');
+  let heartbeatInFlight = false;
+  const heartbeat = setInterval(() => {
+    if (heartbeatInFlight) return;
+    heartbeatInFlight = true;
+    void ProcessingJobModel.updateOne(
+      { _id: processingJobId, status: 'running' },
+      { $set: { heartbeatAt: new Date() } },
+    ).catch(error => {
+      logger.warn({ videoId: lessonId, jobId: processingJobId, error: error instanceof Error ? error.message : String(error) }, '[VideoProcessing] heartbeat failed');
+    }).finally(() => {
+      heartbeatInFlight = false;
+    });
+  }, Math.min(30_000, Math.max(5_000, env.VIDEO_PROCESSING_POLL_MS * 2)));
+  heartbeat.unref();
   try {
     await updateStage('inspect_media', 10);
     let metadata;
@@ -93,7 +108,7 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
               examples: [{ zh: cue.zh, pinyin: cue.pinyin, vi: cue.vi }],
             },
           },
-          { upsert: true, new: true },
+          { upsert: true, returnDocument: 'after' },
         );
         token.wordId = word._id;
       }
@@ -116,12 +131,12 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
       SubtitleTrackModel.findOneAndUpdate(
         { lessonId: lesson._id, revision: 1 },
         { $set: { lessonId: lesson._id, revision: 1, status: 'draft', cues: finalCues, generatedBy: 'pipeline' } },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       ),
       QuizModel.findOneAndUpdate(
         { lessonId: lesson._id, revision: 1 },
         { $set: { lessonId: lesson._id, revision: 1, status: 'draft', questions } },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       ),
     ]);
 
@@ -143,6 +158,7 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
       }),
     ]);
   } finally {
+    clearInterval(heartbeat);
     await fs.unlink(audioPath).catch(() => undefined);
   }
 }

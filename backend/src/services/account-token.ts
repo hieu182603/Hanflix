@@ -57,7 +57,7 @@ export class AccountTokenService {
         expiresAt: { $gt: new Date() },
       },
       { $set: { usedAt: new Date() } },
-      { new: true },
+      { returnDocument: 'after' },
     );
   }
 
@@ -84,7 +84,7 @@ export class AccountTokenService {
     return AccountTokenModel.findOneAndUpdate(
       { _id: record._id, usedAt: { $exists: false }, expiresAt: { $gt: now }, otpAttempts: { $lt: 5 } },
       { $set: { usedAt: now } },
-      { new: true },
+      { returnDocument: 'after' },
     );
   }
 

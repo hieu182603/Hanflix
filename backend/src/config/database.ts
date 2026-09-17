@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
 
-export async function connectDatabase(): Promise<void> {
+export async function connectDatabase(options: { strictServerApi?: boolean } = {}): Promise<void> {
   mongoose.set('strictQuery', true);
   await mongoose.connect(env.MONGODB_URI, {
     dbName: env.MONGODB_DB_NAME,
@@ -10,7 +10,7 @@ export async function connectDatabase(): Promise<void> {
     serverSelectionTimeoutMS: 7000,
     serverApi: {
       version: mongoose.mongo.ServerApiVersion.v1,
-      strict: true,
+      strict: options.strictServerApi ?? true,
       deprecationErrors: true,
     },
   });

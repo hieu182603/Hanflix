@@ -1,4 +1,5 @@
 import express from 'express';
+import { timingSafeEqual } from 'node:crypto';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -44,6 +45,15 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/metrics', async (_req, res) => {
+  if (env.METRICS_TOKEN) {
+    const supplied = _req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+    const expectedBuffer = Buffer.from(env.METRICS_TOKEN);
+    const suppliedBuffer = Buffer.from(supplied);
+    if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+      res.status(401).json({ error: { code: 'METRICS_AUTH_REQUIRED', message: 'Metrics authentication required' } });
+      return;
+    }
+  }
   try {
     const { contentType, metrics } = await getPrometheusMetrics();
     res.setHeader('Content-Type', contentType);
