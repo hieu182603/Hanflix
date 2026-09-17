@@ -30,13 +30,13 @@ Production DNS should configure SPF, DKIM and DMARC according to the selected pr
 
 ## API flow
 
-- `POST /api/v1/auth/register`: creates an unverified password account and sends a verification link. It intentionally does not issue login tokens.
-- `POST /api/v1/auth/verify-email`: consumes `{ token }` once and verifies the account.
-- `POST /api/v1/auth/resend-verification`: accepts `{ email }` and always returns a generic accepted response.
-- `POST /api/v1/auth/forgot-password`: accepts `{ email }`, returns a generic response, and sends a reset link only for an eligible password account.
-- `POST /api/v1/auth/reset-password`: consumes `{ token, password }`, updates the password and revokes all old refresh sessions.
+- `POST /api/v1/auth/register`: creates an unverified password account and sends a six-digit OTP plus a verification link. It does not issue login tokens.
+- `POST /api/v1/auth/verify-email`: accepts either `{ token }` from the link or `{ email, code }` from the OTP form.
+- `POST /api/v1/auth/resend-verification`: accepts `{ email }` and always returns a generic accepted response. A recent issue suppresses a new email for 60 seconds.
+- `POST /api/v1/auth/forgot-password`: accepts `{ email }`, returns a generic response, and sends a six-digit OTP plus reset link only for an eligible password account. A recent issue suppresses a new email for 60 seconds.
+- `POST /api/v1/auth/reset-password`: accepts `{ token, password }` or `{ email, code, password }`, updates the password and revokes all old refresh sessions.
 - `POST /api/v1/auth/change-password`: authenticated `{ currentPassword, newPassword }`; revokes old refresh sessions and returns a replacement access/refresh session.
 
 Google ID tokens contain a Google-verified email, so Google-created accounts are marked verified. Linking Google to an existing account requires the same email and also verifies it.
 
-Raw verification/reset tokens are never stored. MongoDB stores SHA-256 hashes in `accounttokens`; tokens are single-use and have a TTL index. Existing users created before this feature keep working because only accounts explicitly marked `emailVerificationRequired: true` are blocked.
+Raw verification/reset tokens and OTP codes are never stored. MongoDB stores SHA-256 hashes of link tokens and HMAC-SHA-256 hashes of six-digit codes in `accounttokens`. Both methods consume the same single-use record. OTP verification allows at most five wrong attempts per issued code; tokens have a TTL index. Existing users created before this feature keep working because only accounts explicitly marked `emailVerificationRequired: true` are blocked.

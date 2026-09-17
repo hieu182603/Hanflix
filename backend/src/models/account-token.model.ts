@@ -4,6 +4,9 @@ const accountTokenSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   purpose: { type: String, enum: ['verify_email', 'reset_password'], required: true, index: true },
   tokenHash: { type: String, required: true, unique: true, select: false },
+  otpHash: { type: String, select: false },
+  otpAttempts: { type: Number, default: 0 },
+  otpExpiresAt: { type: Date },
   expiresAt: { type: Date, required: true },
   usedAt: { type: Date },
 }, { timestamps: true, versionKey: false });

@@ -6,13 +6,14 @@ This list is based on the current Express routes and frontend API usage. Keep `/
 
 - `POST /auth/google`: verify Google ID token, register or sign in, issue normal HanFlix tokens.
 - `POST /auth/google/link`: link a verified Google subject to an authenticated existing account with matching email.
+- `GET /auth/providers`: expose the public Google Web client ID to the browser without duplicating configuration.
 - `GET /admin/lessons/:id/review`: fetch subtitle and quiz drafts for review.
 - `PUT /admin/lessons/:id/subtitles`: edit draft cues before publish.
 - `PUT /admin/lessons/:id/quiz`: edit draft questions and answer keys before publish.
 - `GET /admin/lessons/:id/media`: get a playback URL without exposing object keys. Keep `R2_PUBLIC_BASE_URL` unset for signed private URLs.
 - `GET /lessons/:id/progress`: resume a published lesson and read coverage/completion/quiz score.
-- `POST /auth/verify-email` and `/auth/resend-verification`: one-time email verification for password registrations.
-- `POST /auth/forgot-password` and `/auth/reset-password`: generic recovery request plus single-use reset token.
+- `POST /auth/verify-email` and `/auth/resend-verification`: one-time email verification by link or six-digit OTP.
+- `POST /auth/forgot-password` and `/auth/reset-password`: generic recovery request plus single-use link or six-digit OTP.
 - `POST /auth/change-password`: authenticated password change, old-session revocation and replacement session.
 
 ## P0 — Complete the core learning flow
@@ -58,5 +59,5 @@ Recommended MVP behavior: offer the quiz after playback as a soft gate; keep the
 
 1. Complete P0 and add route/integration tests for hidden lessons, activity aggregation and progress resume.
 2. Complete P1 on a staging R2/MongoDB environment with a real 1–5 minute video and an admin review pass.
-3. Complete account/session APIs, frontend verification/reset-password pages, Google button wiring and `GOOGLE_LINK_REQUIRED` handling.
+3. Complete remaining account/session APIs and validate Google sign-in, OTP delivery and reset against real staging accounts.
 4. Complete production operations after email provider, privacy and retention policies are chosen.

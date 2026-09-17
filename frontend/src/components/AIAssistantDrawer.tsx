@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Bot, User, ChevronDown, Mic, Paperclip } from 'lucide-react';
 import { QUICK_AI_PROMPTS } from '../data/hanflixData';
 import { usePandaPet } from './panda-pet';
+import { askPanda } from '../api/learning';
+import { ApiRequestError } from '../api/client';
 
 interface AIAssistantDrawerProps {
   isOpen: boolean;
@@ -51,7 +53,7 @@ function TypingIndicator() {
 
 export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, currentUser }: AIAssistantDrawerProps) {
   const panda = usePandaPet();
-  const greeting = `Chào ${currentUser?.name?.split(' ').pop() || 'bạn'}! 👋 Tôi là Panda AI. Bạn đang ở HSK ${currentUser?.learningProfile?.hskLevel || 3} (${currentUser?.learningProfile?.goal || 'Kinh doanh & Du lịch'}) — hãy hỏi tôi bất cứ điều gì về từ vựng, ngữ pháp hay bài học nhé!`;
+  const greeting = `Chào ${currentUser?.name?.split(' ').pop() || 'bạn'}! 👋 Tôi là Panda AI. Hãy hỏi về từ vựng, ngữ pháp hoặc cách dùng tiếng Trung nhé!`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -95,9 +97,9 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
     setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 120);
   };
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const query = (textToSend ?? inputText).trim();
-    if (!query) return;
+    if (!query || isTyping) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -110,31 +112,23 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
     setIsTyping(true);
     panda?.handlePandaAIEvent({ type: 'thinking' });
 
-    setTimeout(() => {
-      let aiResponseText = '';
-      if (query.includes('ngữ pháp') || query.includes('Giải thích') || query.includes('grammar')) {
-        aiResponseText =
-          'Cấu trúc "请 + 动词 + 一下" (Qǐng… yíxià) mang nghĩa lịch sự: "Xin vui lòng làm gì đó một chút".\n\n• 请等一下 — Xin chờ một chút\n• 请看一下 — Xin mời xem qua\n\nRất hữu ích khi dùng ở nhà hàng hoặc khách sạn! 🍜';
-      } else if (query.includes('câu') || query.includes('Ví dụ') || query.includes('mẫu')) {
-        aiResponseText =
-          'Dưới đây là 3 câu luyện tập HSK 3 chủ đề Nhà hàng:\n\n1. 我要一份微辣的宫保鸡丁。\n   → Tôi muốn một phần gà Cung Bảo cay nhẹ.\n\n2. 请问服务员，洗手间在哪里？\n   → Xin hỏi, nhà vệ sinh ở đâu?\n\n3. 我们可以微信支付吗？\n   → Chúng tôi có thể thanh toán WeChat không?';
-      } else if (query.includes('phát âm') || query.includes('Phát âm')) {
-        aiResponseText =
-          'Âm "qǐng" (请) — thanh 3, uốn lưỡi nhẹ, bật hơi.\nÂm "cài" (菜) — thanh 4, bật hơi mạnh hơn.\n\nMẹo: Thanh 3 thường "xuống rồi lên" như giọng nghi ngờ trong tiếng Việt. 🎵';
-      } else {
-        aiResponseText = `Đã ghi nhận: "${query}".\n\nTheo lộ trình HSK 3 của bạn, tôi khuyên xem tiếp bài "Đặt phòng khách sạn" — bạn sẽ tích lũy được 5 mẫu câu Du lịch thực dụng ngay! 🗺️`;
-      }
-
+    try {
+      const aiResponseText = await askPanda(query);
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
         text: aiResponseText,
         time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       };
-      setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
       panda?.handlePandaAIEvent({ type: 'completed' });
-    }, 1200 + Math.random() * 400);
+    } catch (error) {
+      const message = error instanceof ApiRequestError ? error.message : 'Không thể kết nối Panda AI lúc này. Vui lòng thử lại.';
+      setMessages(prev => [...prev, { id: `${Date.now()}-error`, sender: 'ai', text: message, time: 'Vừa xong' }]);
+      panda?.handlePandaAIEvent({ type: 'error' });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -190,7 +184,7 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
                   Trợ lý Panda AI
                 </h3>
                 <p className="text-white/70 text-[11px] font-medium">
-                  {currentUser?.name || 'Học viên'} · HSK {currentUser?.learningProfile?.hskLevel || 3} · {currentUser?.learningProfile?.goal || 'Kinh doanh & Du lịch'}
+                  {currentUser?.name || 'Học viên'} · Trợ giảng tiếng Trung
                 </p>
               </div>
 

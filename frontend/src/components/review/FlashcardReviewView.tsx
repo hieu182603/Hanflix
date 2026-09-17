@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Volume2, Check, Sparkles } from 'lucide-react';
 import { SAMPLE_WORDS, Word } from '../../data/hanflixData';
+import { recordLearningActivity } from '../../lib/streak';
 
 interface FlashcardReviewViewProps {
   onClose: () => void;
@@ -24,6 +25,7 @@ export default function FlashcardReviewView({ onClose }: FlashcardReviewViewProp
 
   const handleRating = (label: string) => {
     setIsFlipped(false);
+    recordLearningActivity('review');
     if (currentIndex < total - 1) {
       setCurrentStep(currentIndex + 1);
     } else {

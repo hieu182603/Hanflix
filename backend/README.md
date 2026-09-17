@@ -73,14 +73,14 @@ Use [.env.example](./.env.example). Required production groups:
 - Processing: mode, maximum retries, timeout and poll interval.
 - Gemini: optional for explanation and AI reranking; not used for transcription or translation.
 
-Never expose backend environment values to the frontend or commit `.env`.
+Never expose backend secrets to the frontend or commit `.env`. The Google Web client ID is public and is returned by `GET /auth/providers`.
 
 ## API surface
 
 | Area | Routes |
 |---|---|
 | Health | `GET /health`, `GET /api/v1/health`, `GET /metrics` |
-| Auth | `POST /auth/register`, `/verify-email`, `/resend-verification`, `/login`, `/google`, `/google/link`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`, `/change-password`; `GET /auth/me` |
+| Auth | `POST /auth/register`, `/verify-email`, `/resend-verification`, `/login`, `/google`, `/google/link`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`, `/change-password`; `GET /auth/me`, `/auth/providers` |
 | Profile | `GET /profile`, `PUT /profile/learning` |
 | Catalog | `GET /lessons`, `/lessons/:id`, `/lessons/:id/subtitles`, `/lessons/:id/quiz` |
 | Learning | `GET/PATCH /lessons/:id/progress`, `POST /lessons/:id/attempts` |
@@ -91,9 +91,9 @@ Never expose backend environment values to the frontend or commit `.env`.
 
 Existing routes remain compatible. The alias `POST /admin/videos/:lessonId/retry-processing` is also available. Admin lesson responses expose `processingStatus`, `processingProgress`, `processingStep` and `processingError` without leaking provider-specific details.
 
-Google Identity Services on the frontend should send its ID token as `{ "credential": "..." }` to `POST /api/v1/auth/google`. New Google users are registered automatically with role `user`; existing Google users receive the same `{ accessToken, user }` response as password login. If the email already belongs to a password account, the API returns `GOOGLE_LINK_REQUIRED`: sign in with password first, then send a fresh Google ID token to `POST /api/v1/auth/google/link` with the HanFlix access token. The server never auto-links by email alone. The Google OAuth client ID is public but must be configured on both frontend and backend; no Google client secret is needed for ID-token verification.
+Google Identity Services on the frontend sends its ID token as `{ "credential": "..." }` to `POST /api/v1/auth/google`. New Google users are registered automatically with role `user`; existing linked users receive the same `{ accessToken, user }` response as password login. A verified Google email can claim a still-unverified password signup. For an established password account, the API returns `GOOGLE_LINK_REQUIRED`: sign in with password, open Account Settings > Security and link Google with a fresh ID token. Configure the Web OAuth client ID in backend `GOOGLE_CLIENT_ID`; the frontend fetches it from `GET /auth/providers`. Add the frontend origin to Google Cloud's authorized JavaScript origins. No Google client secret is needed for ID-token verification.
 
-Password registration now returns `{ user, verificationRequired: true }` and does not create a session until the email is verified. Forgot-password responses are deliberately generic to avoid revealing whether an email exists. See [email auth setup](./docs/EMAIL_AUTH.md) for SMTP variables, endpoint contracts and Azure secret configuration.
+Password registration returns `{ user, verificationRequired: true }` and does not create a session until the email is verified by OTP or link. Forgot-password responses are deliberately generic to avoid revealing whether an email exists. See [email auth setup](./docs/EMAIL_AUTH.md) for SMTP variables, endpoint contracts and Azure secret configuration. Gemini explanation and recommendation reranking use the configured `GEMINI_MODEL` API ID; the current tested choice is `gemini-3.5-flash-lite`.
 
 Admin draft review: `GET /api/v1/admin/lessons/:lessonId/review` returns the current subtitle and quiz drafts, including answer keys. `PUT /api/v1/admin/lessons/:lessonId/subtitles` accepts `{ cues: [...] }`; `PUT /api/v1/admin/lessons/:lessonId/quiz` accepts `{ questions: [...] }`. Only admins can call these routes, and edits are blocked after publish. When Chinese cue text changes, token-to-word references are cleared for that cue to prevent stale lookups; the remaining vocabulary mapping can be curated in a later API phase.
 
@@ -142,7 +142,7 @@ The remaining API work is prioritized in [API roadmap](./docs/API_ROADMAP.md).
 
 ## Remaining production work
 
-- Configure a real email/reset-token provider before claiming delivered password reset email.
+- Test OTP and reset delivery against a real inbox before launch; SMTP connection verification alone does not prove delivery.
 - Run integration tests against disposable MongoDB and R2 staging resources.
 - Add backup/retention policies and restrict `/metrics` at the platform/network layer.
 - For strict background latency when the HTTP app is scaled to zero, schedule the worker as a Container Apps Job or run one standalone worker replica.

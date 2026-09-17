@@ -5,7 +5,7 @@ import { User as UserType } from '../../data/hanflixData';
 import * as auth from '../../api/auth';
 import AuthLayout from './AuthLayout';
 import AuthDivider from './AuthDivider';
-import GoogleIcon from './GoogleIcon';
+import GoogleSignInButton from './GoogleSignInButton';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserType) => void;
@@ -19,11 +19,13 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [canResendVerification, setCanResendVerification] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setCanResendVerification(false);
     setIsLoading(true);
     try {
       const user = await auth.login(email, password);
@@ -31,6 +33,7 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
     } catch (err) {
       if (err instanceof auth.ApiRequestError) {
         setErrorMsg(err.message);
+        setCanResendVerification(err.code === 'EMAIL_NOT_VERIFIED');
       } else {
         setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
       }
@@ -39,8 +42,14 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
     }
   };
 
-  const handleGoogleLogin = () => {
-    console.log("Google login clicked");
+  const resendVerification = async () => {
+    try {
+      await auth.resendVerification(email);
+      setErrorMsg('Nếu tài khoản đang chờ xác minh, mã OTP mới đã được gửi. Vui lòng kiểm tra email.');
+      setCanResendVerification(false);
+    } catch (error) {
+      setErrorMsg(error instanceof auth.ApiRequestError ? error.message : 'Không thể gửi lại mã lúc này.');
+    }
   };
 
   const visualPanel = (
@@ -187,6 +196,8 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
           {errorMsg}
         </div>
       )}
+      {canResendVerification && <button type="button" onClick={resendVerification}
+        className="mb-3 text-sm font-semibold text-[#E50914] hover:underline">Gửi lại mã xác minh</button>}
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5 auth-field-gap">
         {/* Email */}
@@ -277,14 +288,9 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
 
           <AuthDivider />
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full h-11 sm:h-12 rounded-full bg-[#EEF2F6] hover:bg-[#E3E8EE] text-neutral-800 font-bold text-[14px] sm:text-[15px] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 sm:gap-3 cursor-pointer auth-btn-secondary"
-          >
-            <GoogleIcon className="w-5 h-5" />
-            <span>Đăng nhập với Google</span>
-          </button>
+          <GoogleSignInButton action="signin_with"
+            onCredential={async credential => onLoginSuccess(await auth.signInWithGoogle(credential))}
+            onError={setErrorMsg} />
         </div>
       </form>
 

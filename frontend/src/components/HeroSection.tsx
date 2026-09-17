@@ -1,12 +1,14 @@
 import React from 'react';
 import { Play, Eye, Clock, Sparkles } from 'lucide-react';
 import { VideoLesson, HERO_LESSON, RIGHT_RAIL_LESSON } from '../data/hanflixData';
+import { useLanguage } from '../i18n';
 
 interface HeroSectionProps {
   onSelectLesson: (lesson: VideoLesson) => void;
 }
 
 export default function HeroSection({ onSelectLesson }: HeroSectionProps) {
+  const { t } = useLanguage();
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
       {/* Main Hero Media Card (~73% width = 8.8/12 = 9 cols) */}
@@ -52,17 +54,17 @@ export default function HeroSection({ onSelectLesson }: HeroSectionProps) {
 
           {/* Action Row */}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-            <button className="h-11 px-6 rounded-full bg-white text-[#18181B] font-bold text-sm flex items-center gap-2.5 hover:bg-[#FDF1F1] hover:text-[#B91B1C] transition-colors shadow-sm group-hover:scale-102">
+            <button className="h-11 px-6 rounded-full bg-white text-[#18181B] font-bold text-sm flex items-center gap-2.5 hover:bg-[#FDF1F1] hover:text-[#B91B1C] transition-colors shadow-sm group-hover:scale-102 cursor-pointer">
               <div className="w-6 h-6 rounded-full bg-[#B91B1C] text-white flex items-center justify-center">
                 <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
               </div>
-              <span>Học ngay</span>
+              <span>{t.feed.watchNow}</span>
             </button>
 
             <div className="flex items-center gap-4 text-xs font-medium text-gray-300">
               <span className="flex items-center gap-1.5">
                 <Eye className="w-4 h-4 text-gray-400" />
-                <span>{HERO_LESSON.viewCount} lượt xem</span>
+                <span>{HERO_LESSON.viewCount} {t.watch.views}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-gray-400" />

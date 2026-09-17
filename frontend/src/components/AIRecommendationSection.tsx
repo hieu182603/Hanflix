@@ -1,43 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sparkles, SlidersHorizontal, RefreshCw, Filter } from 'lucide-react';
-import VideoCard from './VideoCard';
-import { VideoLesson, RECOMMENDATION_LESSONS } from '../data/hanflixData';
+import { getAiRecommendations, type PublishedLesson } from '../api/learning';
+import { ApiRequestError } from '../api/client';
+import { useLanguage } from '../i18n';
 
 interface AIRecommendationSectionProps {
-  onSelectLesson: (lesson: VideoLesson) => void;
+  onSelectLessonId: (id: string) => void;
   onOpenPreferences: () => void;
 }
 
 export default function AIRecommendationSection({
-  onSelectLesson,
+  onSelectLessonId,
   onOpenPreferences
 }: AIRecommendationSectionProps) {
-  const [lessons, setLessons] = useState<VideoLesson[]>(RECOMMENDATION_LESSONS);
+  const { t } = useLanguage();
+  const [lessons, setLessons] = useState<Array<{ lesson: PublishedLesson; reasonVi: string }>>([]);
   const [activeChip, setActiveChip] = useState<string>('all');
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
+  const [error, setError] = useState('');
 
-  const filterChips = [
-    { id: 'all', label: 'Tất cả' },
-    { id: 'HSK 3', label: 'HSK 3', isLevel: true },
-    { id: 'Kinh doanh', label: 'Mục tiêu: Kinh doanh' },
-    { id: 'Du lịch', label: 'Du lịch' },
-    { id: 'Ẩm thực', label: 'Ẩm thực' },
-  ];
-
-  const handleRefresh = () => {
+  const loadRecommendations = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      // Shuffle recommendation order for demo feel
-      const shuffled = [...lessons].sort(() => Math.random() - 0.5);
-      setLessons(shuffled);
+    setError('');
+    try {
+      setLessons(await getAiRecommendations());
+    } catch (requestError) {
+      setLessons([]);
+      setError(requestError instanceof ApiRequestError ? requestError.message : 'Không thể tải gợi ý lúc này.');
+    } finally {
       setIsRefreshing(false);
-    }, 400);
+    }
   };
 
-  const filteredLessons = lessons.filter((lesson) => {
+  useEffect(() => { void loadRecommendations(); }, []);
+
+  const filterChips = [
+    { id: 'all', label: t.feed.filterAll },
+    { id: 'HSK 3', label: t.feed.filterHsk3, isLevel: true },
+    { id: 'business', label: t.feed.filterBusiness },
+    { id: 'travel', label: t.feed.filterTravel },
+    { id: 'food', label: t.feed.filterFood },
+  ];
+
+  const filteredLessons = lessons.filter(({ lesson }) => {
     if (activeChip === 'all') return true;
-    if (activeChip === 'HSK 3') return lesson.hskLevel === 'HSK 3';
-    return lesson.category === activeChip || lesson.tags.includes(activeChip);
+    if (activeChip === 'HSK 3') return lesson.hsk === 3;
+    return lesson.topicIds.includes(activeChip);
   });
 
   return (
@@ -51,14 +59,14 @@ export default function AIRecommendationSection({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="text-xl md:text-2xl font-extrabold text-[#18181B] tracking-tight">
-                AI gợi ý cho bạn
+                {t.feed.recommendedForYou}
               </h2>
               <span className="px-3 py-0.5 rounded-full bg-[#34363A] text-white text-xs font-semibold">
-                Theo hồ sơ học
+                {t.feed.basedOnProfile}
               </span>
             </div>
             <p className="text-xs md:text-sm text-[#5F6368] mt-1">
-              Gợi ý theo trình độ HSK 3, mục tiêu tiếng Trung kinh doanh, sở thích du lịch, ẩm thực.
+              Bài học đã xuất bản, được xếp theo trình độ, sở thích và mục tiêu học tập của bạn.
             </p>
           </div>
         </div>
@@ -67,14 +75,14 @@ export default function AIRecommendationSection({
         <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
           <button
             onClick={onOpenPreferences}
-            className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] hover:border-[#D1D5DB] text-[#18181B] text-xs md:text-sm font-semibold flex items-center gap-2 transition-all shadow-2xs"
+            className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] hover:border-[#D1D5DB] text-[#18181B] text-xs md:text-sm font-semibold flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4 text-[#5F6368]" />
-            <span>Sở thích</span>
+            <span>{t.feed.preferences}</span>
           </button>
 
           <button
-            onClick={handleRefresh}
+            onClick={() => void loadRecommendations()}
             disabled={isRefreshing}
             className="w-10 h-10 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] hover:border-[#D1D5DB] text-[#5F6368] hover:text-[#18181B] flex items-center justify-center transition-all shadow-2xs active:scale-95"
             title="Làm mới gợi ý"
@@ -108,9 +116,20 @@ export default function AIRecommendationSection({
       </div>
 
       {/* Video Lesson Grid (4 cols >= 1366px, 3 cols 1024-1365px, 2 cols tablet, 1 col mobile) */}
+      {error && <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-800" role="alert">{error}</div>}
+      {!error && !isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Chưa có bài học đã xuất bản để gợi ý.</p>}
+      {!error && isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Đang tìm bài học phù hợp…</p>}
+      {!error && lessons.length > 0 && filteredLessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Không có bài học phù hợp với bộ lọc này.</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-2">
-        {filteredLessons.map((lesson) => (
-          <VideoCard key={lesson.id} lesson={lesson} onSelect={onSelectLesson} />
+        {!error && filteredLessons.map(({ lesson, reasonVi }) => (
+          <button key={lesson._id} type="button" onClick={() => onSelectLessonId(lesson._id)}
+            className="text-left bg-white rounded-2xl border border-[#E7E7EA] p-5 hover:border-[#B91B1C] hover:shadow-md transition-all">
+            <span className="inline-block rounded-md bg-[#34363A] text-white text-xs font-bold px-2 py-1 mb-3">HSK {lesson.hsk}</span>
+            <h3 className="font-bold text-[#18181B] leading-snug">{lesson.titleVi}</h3>
+            {lesson.titleZh && <p className="text-sm text-neutral-500 mt-1">{lesson.titleZh} {lesson.pinyin && `· ${lesson.pinyin}`}</p>}
+            <p className="text-xs text-neutral-600 mt-3">{reasonVi}</p>
+            <p className="text-xs text-[#B91B1C] font-semibold mt-3">Xem bài học · {Math.ceil(lesson.durationSeconds / 60)} phút</p>
+          </button>
         ))}
       </div>
     </section>

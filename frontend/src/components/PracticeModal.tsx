@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Zap, Volume2, CheckCircle2, XCircle, RotateCcw, Sparkles, ArrowRight, BookOpen } from 'lucide-react';
+import { recordLearningActivity } from '../lib/streak';
 
 interface PracticeModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export default function PracticeModal({ isOpen, onClose }: PracticeModalProps) {
     newAnswers[currentStep] = idx;
     setAnswers(newAnswers);
     setSelectedAnswer(idx);
+    recordLearningActivity('practice');
   };
 
   const handleNext = () => {
