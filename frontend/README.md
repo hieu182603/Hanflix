@@ -40,5 +40,9 @@ src/
   main.tsx        Điểm khởi động React
 ```
 
+## Panda AI Pet
+
+Panda tương tác được tích hợp một lần trong ứng dụng học viên. Xem hướng dẫn xử lý asset, state API và trang kiểm thử tại [docs/panda-pet.md](./docs/panda-pet.md). Chạy `pnpm dev` rồi mở `/dev/panda` để kiểm tra từng trạng thái.
+
 Hiện tại phần giao diện dùng dữ liệu demo trong `src/data/hanflixData.ts`. Khi nối
 backend, dùng `import.meta.env.VITE_API_BASE_URL` làm URL gốc cho API.

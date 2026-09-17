@@ -14,6 +14,12 @@ beforeAll(async () => {
 });
 
 describe('application shell', () => {
+  it('exposes a lightweight liveness endpoint', async () => {
+    const response = await request(app).get('/health');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ok' });
+  });
+
   it('exposes the versioned API root', async () => {
     const response = await request(app).get('/api/v1');
     expect(response.status).toBe(200);

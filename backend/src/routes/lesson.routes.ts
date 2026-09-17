@@ -12,6 +12,7 @@ import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { createVideoDownloadUrl } from '../services/r2.js';
 import { mergeWatchedRanges, watchedCoverage } from '../services/watched-ranges.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 
 const router = Router();
 
@@ -61,14 +62,14 @@ router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => 
       .lean(),
     LessonModel.countDocuments(filter),
   ]);
-  res.json({ data: { items, page, limit, total, pages: Math.ceil(total / limit) } });
+  res.json({ data: { items: items.map(item => withProcessingCompatibility(item)), page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
 router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   const mediaUrl = lesson.media?.objectKey ? await createVideoDownloadUrl(lesson.media.objectKey) : null;
-  res.json({ data: { ...lesson, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null } });
+  res.json({ data: withProcessingCompatibility({ ...lesson, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });
 }));
 
 router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
@@ -89,6 +90,23 @@ router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (
   const quiz = await QuizModel.findOne({ lessonId: lesson._id, revision: lesson.activeQuizRevision, status: 'published' }).lean();
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài luyện tập');
   res.json({ data: quiz });
+}));
+
+router.get('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('durationSeconds').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  const progress = await ProgressModel.findOne({ userId: req.auth!.userId, lessonId: lesson._id })
+    .select('lastPositionSeconds watchedRanges activeStudySeconds completed completedAt bestQuizScore').lean();
+  const watchedRanges = progress?.watchedRanges ?? [];
+  res.json({ data: {
+    lastPositionSeconds: progress?.lastPositionSeconds ?? 0,
+    watchedRanges,
+    coverage: watchedCoverage(watchedRanges, lesson.durationSeconds),
+    activeStudySeconds: progress?.activeStudySeconds ?? 0,
+    completed: progress?.completed ?? false,
+    completedAt: progress?.completedAt ?? null,
+    bestQuizScore: progress?.bestQuizScore ?? null,
+  } });
 }));
 
 router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), validate(progressSchema), asyncHandler(async (req, res) => {

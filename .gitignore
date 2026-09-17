@@ -44,3 +44,8 @@ Thumbs.db
 tmp/
 *.tsbuildinfo
 .vite/
+
+# AI Agent Skills & Config
+.agents/
+.claude/
+skills-lock.json

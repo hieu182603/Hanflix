@@ -9,6 +9,10 @@ import { authLimiter } from '../middleware/rate-limits.js';
 import { validate } from '../middleware/validate.js';
 import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { UserModel } from '../models/user.model.js';
+import { accountTokenService } from '../services/account-token.js';
+import { googleIdentityService } from '../services/google-identity.js';
+import { logger } from '../services/logger.js';
+import { mailService } from '../services/mailer.js';
 import {
   hashToken,
   newJti,
@@ -31,6 +35,15 @@ const registerSchema = credentialsSchema.extend({
 });
 
 const forgotSchema = z.object({ email: z.string().trim().toLowerCase().email() });
+const accountTokenSchema = z.object({ token: z.string().trim().min(32).max(512) });
+const resetPasswordSchema = accountTokenSchema.extend({ password: z.string().min(8).max(128) });
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(128),
+  newPassword: z.string().min(8).max(128),
+}).refine(value => value.currentPassword !== value.newPassword, {
+  path: ['newPassword'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+});
+const googleCredentialSchema = z.object({ credential: z.string().min(100).max(10000) });
 
 function cookieOptions(): CookieOptions {
   const options: CookieOptions = {
@@ -59,33 +72,138 @@ async function issueSession(user: { _id: Types.ObjectId; role: 'user' | 'admin' 
   return signAccessToken(user._id.toString(), user.role);
 }
 
-function publicUser(user: { _id: unknown; name: string; email: string; role: string; status: string; learningProfile?: unknown }) {
+function publicUser(user: {
+  _id: unknown; name: string; email: string; role: string; status: string; learningProfile?: unknown;
+  emailVerifiedAt?: Date | null; emailVerificationRequired?: boolean;
+}) {
   return {
     id: String(user._id),
     name: user.name,
     email: user.email,
     role: user.role,
     status: user.status,
+    emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequired),
     learningProfile: user.learningProfile,
   };
 }
 
 router.post('/register', authLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
+  mailService.assertConfigured();
   const exists = await UserModel.exists({ email: req.body.email });
   if (exists) throw new AppError(409, 'EMAIL_EXISTS', 'Email đã được sử dụng');
   const passwordHash = await bcrypt.hash(req.body.password, 12);
-  const user = await UserModel.create({ name: req.body.name, email: req.body.email, passwordHash, role: 'user' });
-  const accessToken = await issueSession(user, req, res);
-  res.status(201).json({ data: { accessToken, user: publicUser(user) } });
+  let user;
+  try {
+    user = await UserModel.create({
+      name: req.body.name,
+      email: req.body.email,
+      passwordHash,
+      role: 'user',
+      emailVerificationRequired: true,
+    });
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) throw new AppError(409, 'EMAIL_EXISTS', 'Email đã được sử dụng');
+    throw error;
+  }
+  const token = await accountTokenService.issue(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
+  await mailService.sendVerificationEmail({ to: user.email, name: user.name, token });
+  res.status(201).json({ data: { user: publicUser(user), verificationRequired: true } });
 }));
 
 router.post('/login', authLimiter, validate(credentialsSchema), asyncHandler(async (req, res) => {
-  const user = await UserModel.findOne({ email: req.body.email }).select('+passwordHash');
-  const passwordMatches = user ? await bcrypt.compare(req.body.password, user.passwordHash) : false;
+  const user = await UserModel.findOne({ email: req.body.email }).select('+passwordHash +emailVerificationRequired');
+  const passwordMatches = user?.passwordHash ? await bcrypt.compare(req.body.password, user.passwordHash) : false;
   if (!user || !passwordMatches) throw new AppError(401, 'INVALID_CREDENTIALS', 'Email hoặc mật khẩu không đúng');
   if (user.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
+  if (user.emailVerificationRequired && !user.emailVerifiedAt) {
+    throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Hãy xác minh email trước khi đăng nhập');
+  }
   const accessToken = await issueSession(user, req, res);
   res.json({ data: { accessToken, user: publicUser(user) } });
+}));
+
+router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandler(async (req, res) => {
+  const identity = await googleIdentityService.verify(req.body.credential);
+  let user = await UserModel.findOne({ googleSub: identity.sub }).select('+googleSub');
+  let created = false;
+  if (!user) {
+    if (await UserModel.exists({ email: identity.email })) {
+      const existingEmailUser = await UserModel.findOne({ email: identity.email })
+        .select('+googleSub +emailVerificationRequired');
+      // A verified Google email may safely claim a still-unverified password signup.
+      // Established accounts must authenticate before linking to prevent account takeover.
+      if (existingEmailUser?.emailVerificationRequired && !existingEmailUser.emailVerifiedAt) {
+        existingEmailUser.googleSub = identity.sub;
+        existingEmailUser.emailVerifiedAt = new Date();
+        existingEmailUser.emailVerificationRequired = false;
+        existingEmailUser.avatarUrl ??= identity.picture;
+        try {
+          await existingEmailUser.save();
+          await accountTokenService.invalidate(existingEmailUser._id, 'verify_email');
+          user = existingEmailUser;
+        } catch (error) {
+          if ((error as { code?: number }).code === 11000) {
+            throw new AppError(409, 'GOOGLE_ALREADY_LINKED', 'Tài khoản Google đã liên kết với người dùng khác');
+          }
+          throw error;
+        }
+      } else {
+        throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu rồi liên kết Google.');
+      }
+    }
+    try {
+      if (user) {
+        // Reclaimed an unverified password signup above; no new user is needed.
+      } else {
+      user = await UserModel.create({
+        name: identity.name,
+        email: identity.email,
+        googleSub: identity.sub,
+        avatarUrl: identity.picture,
+        emailVerifiedAt: new Date(),
+        emailVerificationRequired: false,
+        role: 'user',
+      });
+      created = true;
+      }
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      user = await UserModel.findOne({ googleSub: identity.sub }).select('+googleSub');
+      if (!user) throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập và liên kết Google.');
+    }
+  }
+  if (user.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
+  if (!created && !user.emailVerifiedAt) {
+    user.emailVerifiedAt = new Date();
+    user.emailVerificationRequired = false;
+    await user.save();
+  }
+  const accessToken = await issueSession(user, req, res);
+  res.status(created ? 201 : 200).json({ data: { accessToken, user: publicUser(user) } });
+}));
+
+router.post('/google/link', requireAuth, authLimiter, validate(googleCredentialSchema), asyncHandler(async (req, res) => {
+  const identity = await googleIdentityService.verify(req.body.credential);
+  const user = await UserModel.findById(req.auth!.userId).select('+googleSub');
+  if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
+  if (user.email !== identity.email) {
+    throw new AppError(409, 'GOOGLE_EMAIL_MISMATCH', 'Email Google phải khớp email tài khoản hiện tại');
+  }
+  if (user.googleSub && user.googleSub !== identity.sub) {
+    throw new AppError(409, 'GOOGLE_ALREADY_LINKED', 'Tài khoản đã liên kết với Google khác');
+  }
+  try {
+    user.googleSub = identity.sub;
+    user.emailVerifiedAt ??= new Date();
+    user.emailVerificationRequired = false;
+    await user.save();
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) {
+      throw new AppError(409, 'GOOGLE_ALREADY_LINKED', 'Tài khoản Google đã liên kết với người dùng khác');
+    }
+    throw error;
+  }
+  res.json({ data: { user: publicUser(user), googleLinked: true } });
 }));
 
 router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
@@ -101,8 +219,11 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
   );
   if (!session) throw new AppError(401, 'REFRESH_REUSED', 'Phiên làm mới đã hết hạn hoặc đã được sử dụng');
 
-  const user = await UserModel.findById(claims.sub);
+  const user = await UserModel.findById(claims.sub).select('+emailVerificationRequired');
   if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
+  if (user.emailVerificationRequired && !user.emailVerifiedAt) {
+    throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Hãy xác minh email trước khi tiếp tục');
+  }
   const replacementJti = newJti();
   const replacement = signRefreshToken(user._id.toString(), user.role, replacementJti);
   session.replacedByJti = replacementJti;
@@ -133,9 +254,77 @@ router.post('/logout', asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
-router.post('/forgot-password', authLimiter, validate(forgotSchema), asyncHandler(async (_req, res) => {
-  // Email delivery is intentionally not claimed until a provider and reset-token store are configured.
-  res.status(202).json({ data: { accepted: true, delivery: 'not_configured' } });
+router.post('/verify-email', authLimiter, validate(accountTokenSchema), asyncHandler(async (req, res) => {
+  const accountToken = await accountTokenService.consume(req.body.token, 'verify_email');
+  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết xác minh không hợp lệ hoặc đã hết hạn');
+  const user = await UserModel.findByIdAndUpdate(
+    accountToken.userId,
+    { $set: { emailVerifiedAt: new Date(), emailVerificationRequired: false } },
+    { new: true },
+  );
+  if (!user) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết xác minh không hợp lệ');
+  res.json({ data: { verified: true, user: publicUser(user) } });
+}));
+
+router.post('/resend-verification', authLimiter, validate(forgotSchema), asyncHandler(async (req, res) => {
+  mailService.assertConfigured();
+  const user = await UserModel.findOne({ email: req.body.email }).select('+emailVerificationRequired');
+  if (user?.emailVerificationRequired && !user.emailVerifiedAt && user.status === 'active') {
+    try {
+      const token = await accountTokenService.issue(user._id, 'verify_email', env.EMAIL_VERIFICATION_TTL_MINUTES);
+      await mailService.sendVerificationEmail({ to: user.email, name: user.name, token });
+    } catch (error) {
+      logger.error({ userId: user._id.toString(), error: error instanceof Error ? error.message : String(error) }, 'Verification email delivery failed');
+    }
+  }
+  res.status(202).json({ data: { accepted: true } });
+}));
+
+router.post('/forgot-password', authLimiter, validate(forgotSchema), asyncHandler(async (req, res) => {
+  mailService.assertConfigured();
+  const user = await UserModel.findOne({ email: req.body.email }).select('+passwordHash');
+  if (user?.passwordHash && user.status === 'active') {
+    try {
+      const token = await accountTokenService.issue(user._id, 'reset_password', env.PASSWORD_RESET_TTL_MINUTES);
+      await mailService.sendPasswordResetEmail({ to: user.email, name: user.name, token });
+    } catch (error) {
+      logger.error({ userId: user._id.toString(), error: error instanceof Error ? error.message : String(error) }, 'Password reset email delivery failed');
+    }
+  }
+  res.status(202).json({ data: { accepted: true } });
+}));
+
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), asyncHandler(async (req, res) => {
+  const accountToken = await accountTokenService.consume(req.body.token, 'reset_password');
+  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
+  const user = await UserModel.findById(accountToken.userId).select('+passwordHash +emailVerificationRequired');
+  if (!user || user.status !== 'active') throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết đặt lại mật khẩu không hợp lệ');
+  user.passwordHash = await bcrypt.hash(req.body.password, 12);
+  user.emailVerifiedAt ??= new Date();
+  user.emailVerificationRequired = false;
+  await user.save();
+  await Promise.all([
+    RefreshSessionModel.updateMany({ userId: user._id, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } }),
+    accountTokenService.invalidate(user._id, 'reset_password'),
+  ]);
+  res.json({ data: { passwordReset: true } });
+}));
+
+router.post('/change-password', requireAuth, authLimiter, validate(changePasswordSchema), asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.auth!.userId).select('+passwordHash');
+  if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
+  if (!user.passwordHash) throw new AppError(409, 'PASSWORD_NOT_SET', 'Tài khoản chưa có mật khẩu');
+  if (!await bcrypt.compare(req.body.currentPassword, user.passwordHash)) {
+    throw new AppError(401, 'INVALID_CURRENT_PASSWORD', 'Mật khẩu hiện tại không đúng');
+  }
+  user.passwordHash = await bcrypt.hash(req.body.newPassword, 12);
+  await user.save();
+  await RefreshSessionModel.updateMany(
+    { userId: user._id, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
+  const accessToken = await issueSession(user, req, res);
+  res.json({ data: { changed: true, accessToken } });
 }));
 
 router.get('/me', requireAuth, asyncHandler(async (req, res) => {

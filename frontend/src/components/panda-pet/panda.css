@@ -1,0 +1,142 @@
+.panda-pet-layer {
+  --panda-scale: 0.40;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .panda-pet-layer {
+    --panda-scale: 0.34;
+  }
+}
+
+@media (max-width: 600px) {
+  .panda-pet-layer {
+    --panda-scale: 0.28;
+  }
+}
+
+.panda-pet-button {
+  position: absolute;
+  display: block;
+  width: calc(256px * var(--panda-scale));
+  height: calc(256px * var(--panda-scale));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: visible;
+}
+
+.panda-pet-button[data-dragging='true'] { cursor: grabbing; }
+.panda-pet-button:focus-visible { outline: 3px solid #2873cf; outline-offset: 2px; border-radius: 16px; }
+.panda-sprite {
+  display: block;
+  width: 256px;
+  height: 256px;
+  background-image: var(--panda-image);
+  background-position: 0 0;
+  background-repeat: repeat-x;
+  background-size: auto 256px;
+  transform: scale(var(--panda-scale));
+  transform-origin: top left;
+  pointer-events: none;
+  animation: panda-sprite-frames var(--panda-duration) steps(var(--panda-frames), end) var(--panda-iterations);
+  animation-fill-mode: both;
+  will-change: background-position;
+}
+
+.panda-sprite[data-animation='error'] { animation: none; }
+.panda-sprite[data-paused='true'] { animation-play-state: paused; }
+
+@keyframes panda-sprite-frames {
+  from { background-position: 0 0; }
+  to { background-position: var(--panda-travel) 0; }
+}
+
+.panda-bubble {
+  position: fixed;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: 16px 38px 16px 17px;
+  border: 1px solid #e9e2da;
+  border-radius: 16px;
+  background: #fffdfa;
+  color: #343640;
+  box-shadow: 0 12px 34px rgb(32 29 40 / 13%);
+  font: 400 13px/1.5 Inter, system-ui, sans-serif;
+  pointer-events: auto;
+  animation: panda-bubble-in 160ms ease-out both;
+}
+
+.panda-bubble p { margin: 0; }
+.panda-bubble .panda-bubble-title { margin-bottom: 3px; font-weight: 800; color: #242835; }
+.panda-bubble-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #69707e;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.panda-bubble-close:hover, .panda-bubble-close:focus-visible { background: #f2f1ef; }
+
+@keyframes panda-bubble-in {
+  from { opacity: 0; transform: translateY(5px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panda-sprite, .panda-bubble { animation: none !important; }
+}
+
+.panda-playground {
+  min-height: 100dvh;
+  padding: clamp(24px, 6vw, 72px);
+  background: #faf8f4;
+  color: #252735;
+  font-family: Inter, system-ui, sans-serif;
+}
+.panda-playground-panel { max-width: 710px; }
+.panda-playground-back { color: #aa292b; font-size: 13px; font-weight: 700; text-decoration: none; }
+.panda-playground-eyebrow { margin: 36px 0 8px; color: #aa292b; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.panda-playground h1 { margin: 0; font-size: clamp(32px, 5vw, 54px); letter-spacing: -.05em; }
+.panda-playground p { max-width: 560px; line-height: 1.6; }
+.panda-playground-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 26px 0 16px; }
+.panda-playground-controls button, .panda-playground-flow {
+  min-height: 42px;
+  padding: 8px 15px;
+  border: 1px solid #ded8d1;
+  border-radius: 11px;
+  background: white;
+  color: #333744;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.panda-playground-controls button[aria-pressed='true'] { border-color: #aa292b; background: #fdf0ef; color: #a3181a; }
+.panda-playground-flow { border-color: #aa292b; background: #aa292b; color: white; }
+.panda-playground-flow:disabled { opacity: .6; cursor: wait; }
+.panda-playground-debug { display: grid; gap: 0; max-width: 500px; margin-top: 30px; border: 1px solid #e9e2da; border-radius: 14px; overflow: hidden; background: white; }
+.panda-playground-debug div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 15px; border-bottom: 1px solid #f0ece7; font-size: 13px; }
+.panda-playground-debug div:last-child { border-bottom: 0; }
+.panda-playground-debug dt { color: #757885; }
+.panda-playground-debug dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+
+@media (max-width: 600px) {
+  .panda-playground { padding-bottom: 220px; }
+  .panda-playground-debug div { font-size: 12px; }
+}

@@ -26,11 +26,15 @@ import AdminUserList from './components/admin/AdminUserList';
 import LoginView from './components/auth/LoginView';
 import SignupView from './components/auth/SignupView';
 import OnboardingView from './components/auth/OnboardingView';
+import ForgotPasswordView from './components/auth/ForgotPasswordView';
+import VerifyEmailView from './components/auth/VerifyEmailView';
+import ResetPasswordView from './components/auth/ResetPasswordView';
 import VocabularyPage from './components/vocabulary/VocabularyPage';
 import FlashcardReviewView from './components/review/FlashcardReviewView';
 
 // API auth
 import * as authApi from './api/auth';
+import { PandaPet } from './components/panda-pet';
 
   import {
     VideoLesson,
@@ -46,11 +50,47 @@ import {
   Sparkles, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings
 } from 'lucide-react';
 
+type AuthView = 'none' | 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
+
+const getInitialAuthView = (): AuthView => {
+  if (typeof window === 'undefined') return 'none';
+  const path = window.location.pathname.toLowerCase();
+  if (path.includes('/login')) return 'login';
+  if (path.includes('/signup') || path.includes('/register')) return 'signup';
+  if (path.includes('/forgot')) return 'forgot-password';
+  if (path.includes('/verify-email')) return 'verify-email';
+  if (path.includes('/reset-password')) return 'reset-password';
+  if (path.includes('/onboarding')) return 'onboarding';
+  return 'none';
+};
+
 export default function App() {
   // null = guest, populated = logged-in learner
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authView, setAuthView] = useState<'none' | 'login' | 'signup' | 'onboarding'>('none');
+  const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+
+  const navigateAuth = (view: AuthView) => {
+    setAuthView(view);
+    const targetPath =
+      view === 'login' ? '/auth/login' :
+      view === 'signup' ? '/auth/signup' :
+      view === 'forgot-password' ? '/auth/forgot-password' :
+      view === 'verify-email' ? '/auth/verify-email' :
+      view === 'reset-password' ? '/auth/reset-password' :
+      view === 'onboarding' ? '/onboarding' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setAuthView(getInitialAuthView());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Navigation
   const [activeNav, setActiveNav] = useState<string>('feed');
@@ -98,7 +138,7 @@ export default function App() {
   const handleLogout = async () => {
     await authApi.logout();
     setCurrentUser(null);
-    setAuthView('none');
+    navigateAuth('none');
   };
 
   // Admin
@@ -107,8 +147,12 @@ export default function App() {
   const [processingUploadData, setProcessingUploadData] = useState<any>(null);
 
   const handleOpenAI = (prompt?: string) => {
-    if (prompt) setAiPrompt(prompt);
-    setIsAIOpen(true);
+    if (prompt) {
+      setAiPrompt(prompt);
+      setIsAIOpen(true);
+    } else {
+      setIsAIOpen((prev) => !prev);
+    }
   };
 
   const handleSavePreferences = (updated: Partial<UserProfile>) => {
@@ -178,8 +222,9 @@ export default function App() {
   if (authView === 'login') {
     return (
       <LoginView
-        onLoginSuccess={(user) => { setCurrentUser(user); setAuthView('none'); }}
-        onNavigateToSignup={() => setAuthView('signup')}
+        onLoginSuccess={(user) => { setCurrentUser(user); navigateAuth('none'); }}
+        onNavigateToSignup={() => navigateAuth('signup')}
+        onNavigateToForgotPassword={() => navigateAuth('forgot-password')}
       />
     );
   }
@@ -187,10 +232,25 @@ export default function App() {
   if (authView === 'signup') {
     return (
       <SignupView
-        onSignupSuccess={(newUser) => { setCurrentUser(newUser); setAuthView('onboarding'); }}
-        onNavigateToLogin={() => setAuthView('login')}
+        onNavigateToLogin={() => navigateAuth('login')}
       />
     );
+  }
+
+  if (authView === 'forgot-password') {
+    return (
+      <ForgotPasswordView
+        onNavigateToLogin={() => navigateAuth('login')}
+      />
+    );
+  }
+
+  if (authView === 'verify-email') {
+    return <VerifyEmailView onNavigateToLogin={() => navigateAuth('login')} />;
+  }
+
+  if (authView === 'reset-password') {
+    return <ResetPasswordView onNavigateToLogin={() => navigateAuth('login')} />;
   }
 
   if (authView === 'onboarding') {
@@ -198,9 +258,9 @@ export default function App() {
       <OnboardingView
         onCompleteOnboarding={(profile: UserLearningProfile) => {
           if (currentUser) setCurrentUser({ ...currentUser, learningProfile: profile });
-          setAuthView('none');
+          navigateAuth('none');
         }}
-        onSkip={() => setAuthView('none')}
+        onSkip={() => navigateAuth('none')}
       />
     );
   }
@@ -252,21 +312,21 @@ export default function App() {
     return (
       <div className="flex flex-col min-h-screen">
         <LandingPage
-          onStartSurvey={() => setAuthView('onboarding')}
+          onStartSurvey={() => navigateAuth('onboarding')}
           onViewSample={(id) => {
             const lesson = SAMPLE_LESSONS.find(l => l.id === id) || SAMPLE_LESSONS[0];
             setSelectedLesson(lesson as unknown as VideoLesson);
           }}
-          onSignIn={() => setAuthView('login')}
-          onSignUp={() => setAuthView('signup')}
+          onSignIn={() => navigateAuth('login')}
+          onSignUp={() => navigateAuth('signup')}
         />
         {/* Sample player for guest */}
         <VideoPlayerModal
           lesson={selectedLesson}
           onClose={() => setSelectedLesson(null)}
-          onAskAI={() => setAuthView('login')}
+          onAskAI={() => navigateAuth('login')}
           isSaved={false}
-          onToggleSave={() => setAuthView('login')}
+          onToggleSave={() => navigateAuth('login')}
           guestMode={true}
         />
       </div>
@@ -399,7 +459,7 @@ export default function App() {
                   Cập nhật mục tiêu và sở thích
                 </button>
                 <button
-                  onClick={() => setAuthView('onboarding')}
+                  onClick={() => navigateAuth('onboarding')}
                   className="mt-3 w-full h-11 rounded-xl border border-[#E7E7EA] text-sm font-bold text-[#5F6368] hover:bg-[#F7F7F9] transition-colors"
                 >
                   Làm lại khảo sát hướng học
@@ -443,16 +503,6 @@ export default function App() {
         })}
       </nav>
 
-      {/* AI FAB — above bottom nav on mobile, bottom-right on desktop */}
-      <button
-        onClick={() => handleOpenAI()}
-        className="fixed bottom-[72px] md:bottom-6 right-4 md:right-6 z-40 h-12 px-5 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-extrabold text-sm flex items-center gap-2 shadow-[0_8px_24px_rgba(185,27,28,0.32)] transition-all hover:scale-105 active:scale-95 group"
-        aria-label="Mở trợ lý AI"
-      >
-        <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" style={{ fill: 'white' }} />
-        <span>Hỏi AI</span>
-      </button>
-
       {/* Modals & Drawers */}
       <VideoPlayerModal
         lesson={selectedLesson}
@@ -481,6 +531,9 @@ export default function App() {
       {isFlashcardOpen && (
         <FlashcardReviewView onClose={() => setIsFlashcardOpen(false)} />
       )}
+
+      {/* Interactive AI Pet & Assistant - ONLY displayed when learner is logged in */}
+      {currentUser && <PandaPet onOpenAI={() => handleOpenAI()} />}
     </div>
   );
 }

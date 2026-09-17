@@ -29,10 +29,11 @@ export default function AdminShell({
       {/* Top Header */}
       <header className="h-[68px] bg-white border-b border-[#E7E7EA] px-6 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#B91B1C] text-white flex items-center justify-center font-extrabold text-lg">
-            H
-          </div>
-          <span className="font-black text-xl text-[#B91B1C]">HANFLIX</span>
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-11 w-auto max-w-[200px] object-contain"
+          />
           <span className="px-2.5 py-0.5 rounded-md bg-[#34363A] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1">
             <Shield className="w-3 h-3" />
             <span>Quản trị</span>

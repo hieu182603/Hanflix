@@ -8,19 +8,28 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "format": "oxfmt --write .",
+    "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "test:e2e": "playwright test",
     "check": "pnpm typecheck && pnpm build"
   },
   "packageManager": "pnpm@10.34.3",
   "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-query": "^5.103.1",
     "@types/three": "^0.186.0",
+    "framer-motion": "^13.4.0",
     "lucide-react": "^1.46.0",
+    "page-mascot": "^0.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.186.0"
+    "react-hook-form": "^7.88.0",
+    "three": "^0.186.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",

@@ -11,3 +11,5 @@ vite.config.*.timestamp-*
 logs/
 *.log
 .tmp-*
+test-results/
+playwright-report/

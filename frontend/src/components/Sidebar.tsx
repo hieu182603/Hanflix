@@ -86,7 +86,11 @@ export default function Sidebar({
       {/* Drawer close button (drawer mode only) */}
       {isDrawerOpen && onCloseDrawer && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7E7EA] shrink-0">
-          <span className="font-black text-base text-[#B91B1C]">Menu</span>
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-7 w-auto object-contain"
+          />
           <button
             onClick={onCloseDrawer}
             aria-label="Đóng menu"

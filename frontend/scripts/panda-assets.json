@@ -1,0 +1,16 @@
+{
+  "source": "public/assets/pet.png",
+  "rows": 3,
+  "columns": 4,
+  "contentHeightRatio": 0.86,
+  "frameSize": 256,
+  "actions": {
+    "idle": { "cell": 0, "contentHeightRatio": 0.93, "frames": 8, "fps": 6, "loop": true, "motion": "breathe" },
+    "thinking": { "cell": 4, "frames": 6, "fps": 5, "loop": true, "motion": "think" },
+    "working": { "cell": 5, "frames": 8, "fps": 8, "loop": true, "motion": "type" },
+    "searching": { "cell": 6, "frames": 6, "fps": 6, "loop": true, "motion": "search" },
+    "success": { "cell": 7, "frames": 8, "fps": 8, "loop": false, "motion": "celebrate" },
+    "sleeping": { "cell": 9, "contentHeightRatio": 0.78, "frames": 6, "fps": 3, "loop": true, "motion": "sleep" },
+    "error": { "cell": 8, "contentHeightRatio": 0.78, "frames": 1, "fps": 1, "loop": false, "motion": "still" }
+  }
+}

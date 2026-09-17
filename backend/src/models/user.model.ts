@@ -23,7 +23,10 @@ const learningProfileSchema = new Schema({
 const userSchema = new Schema({
   name: { type: String, required: true, trim: true, maxlength: 80 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-  passwordHash: { type: String, required: true, select: false },
+  passwordHash: { type: String, select: false },
+  googleSub: { type: String, unique: true, sparse: true, select: false },
+  emailVerifiedAt: { type: Date },
+  emailVerificationRequired: { type: Boolean, default: false, select: false },
   role: { type: String, enum: ['user', 'admin'], default: 'user', index: true },
   status: { type: String, enum: ['active', 'locked'], default: 'active', index: true },
   avatarUrl: { type: String, trim: true },
