@@ -11,6 +11,7 @@ import '../models/saved-word.model.js';
 import '../models/study-activity.model.js';
 import '../models/subtitle-track.model.js';
 import '../models/user.model.js';
+import '../models/vocabulary.model.js';
 import '../models/word.model.js';
 
 async function main() {

@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { recordLearningActivity } from '../lib/streak';
+import { usePandaPet } from './panda-pet';
 
 interface PracticeModalProps {
   isOpen: boolean;
@@ -248,6 +249,7 @@ export default function PracticeModal({
   onClose,
   initialMode = 'quiz',
 }: PracticeModalProps) {
+  const panda = usePandaPet();
   // Mode selection: Quizlet Learn (trắc nghiệm) vs Quizlet Flashcards (thẻ ghi nhớ 3D)
   const [activeTab, setActiveTab] = useState<'quiz' | 'flashcards'>(initialMode);
 
@@ -309,14 +311,16 @@ export default function PracticeModal({
 
       if (idx === currentQ.correctIndex) {
         setStreakCount((prev) => prev + 1);
+        panda?.triggerReaction('success', 2500);
       } else {
         setStreakCount(0);
+        panda?.triggerReaction('error', 2500);
       }
 
       // Automatically trigger streak learning activity
       recordLearningActivity('practice');
     },
-    [selectedAnswer, answers, currentStep, currentQ, playAudio]
+    [selectedAnswer, answers, currentStep, currentQ, playAudio, panda]
   );
 
   const handleNextQuestion = useCallback(() => {
@@ -325,8 +329,9 @@ export default function PracticeModal({
       setSelectedAnswer(answers[currentStep + 1]);
     } else {
       setShowResult(true);
+      panda?.triggerReaction('success', 3200);
     }
-  }, [currentStep, answers]);
+  }, [currentStep, answers, panda]);
 
   const handleRetryQuiz = () => {
     setCurrentStep(0);
@@ -339,7 +344,8 @@ export default function PracticeModal({
   // Flashcard controls
   const handleFlipCard = useCallback(() => {
     setIsFlipped((prev) => !prev);
-  }, []);
+    panda?.triggerReaction('thinking', 1500);
+  }, [panda]);
 
   const handleNextCard = useCallback(() => {
     setIsFlipped(false);

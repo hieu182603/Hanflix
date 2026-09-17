@@ -1,14 +1,23 @@
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffprobeInstaller from '@ffprobe-installer/ffprobe';
+import { accessSync, constants } from 'node:fs';
 import { AppError } from '../errors/app-error.js';
 
-if (ffmpegInstaller?.path) {
-  ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+function executableOrSystem(installerPath: string | undefined, systemCommand: string) {
+  if (installerPath) {
+    try {
+      accessSync(installerPath, constants.X_OK);
+      return installerPath;
+    } catch {
+      // Some Linux npm binary packages are readable but not executable by the non-root runtime user.
+    }
+  }
+  return systemCommand;
 }
-if (ffprobeInstaller?.path) {
-  ffmpeg.setFfprobePath(ffprobeInstaller.path);
-}
+
+ffmpeg.setFfmpegPath(executableOrSystem(ffmpegInstaller?.path, 'ffmpeg'));
+ffmpeg.setFfprobePath(executableOrSystem(ffprobeInstaller?.path, 'ffprobe'));
 
 export interface MediaMetadata {
   durationSeconds: number;

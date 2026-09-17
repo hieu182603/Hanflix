@@ -108,11 +108,12 @@ Before enabling Google login in production, verify MongoDB has built the unique 
 
 1. Create one private bucket and an S3 API token scoped to that bucket.
 2. Set R2 environment values only on the backend.
-3. Apply [config/r2-cors.example.json](./config/r2-cors.example.json) with the real admin frontend origin.
+3. In Cloudflare R2 bucket Settings > CORS Policy, apply [config/r2-cors.example.json](./config/r2-cors.example.json) after replacing the example production origin with the exact deployed frontend origin. Preserve any existing CORS rules the bucket still needs.
 4. The upload sequence is create lesson → presign → browser PUT with exact `Content-Type` → confirm.
 
 Keep `R2_PUBLIC_BASE_URL` unset when media must remain private; download and admin-preview URLs will then be short-lived signed URLs.
 Browser upload also requires a bucket CORS rule allowing the exact frontend origins, `PUT` and the `Content-Type` header. A valid S3 token does not by itself configure CORS.
+Run `npm run r2:cors:verify` to check preflight for every `APP_ORIGINS` entry; it does not upload an object. Then perform one real browser PUT and confirmation, since a passing preflight alone does not prove the browser flow.
 
 ## Azure setup
 

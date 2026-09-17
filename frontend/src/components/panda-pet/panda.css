@@ -2,7 +2,7 @@
   --panda-scale: 0.40;
   position: fixed;
   inset: 0;
-  z-index: 45;
+  z-index: 55;
   pointer-events: none;
 }
 
@@ -33,9 +33,13 @@
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   overflow: visible;
+  transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), top 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
 }
 
-.panda-pet-button[data-dragging='true'] { cursor: grabbing; }
+.panda-pet-button[data-dragging='true'] {
+  cursor: grabbing;
+  transition: none;
+}
 .panda-pet-button:focus-visible { outline: 3px solid #2873cf; outline-offset: 2px; border-radius: 16px; }
 .panda-sprite {
   display: block;

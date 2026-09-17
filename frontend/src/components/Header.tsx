@@ -13,6 +13,7 @@ import {
 import NotificationsDropdown from './notifications/NotificationsDropdown';
 import StreakDropdown from './streak/StreakDropdown';
 import { useLanguage, Language } from '../i18n';
+import { usePandaPet } from './panda-pet';
 
 interface HeaderProps {
   onSearchSelect?: (query: string) => void;
@@ -53,6 +54,7 @@ export default function Header({
   onNavigateToLessons,
 }: HeaderProps) {
   const { lang, setLang, t } = useLanguage();
+  const panda = usePandaPet();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showLangMenu, setShowLanguageMenu] = useState(false);
@@ -99,6 +101,20 @@ export default function Header({
     { code: 'zh', label: '中文 (简体)', flag: '🇨🇳' },
   ];
 
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (val.trim()) {
+      panda?.triggerReaction('searching', 3500);
+    } else {
+      panda?.setPandaState('idle');
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    panda?.setPandaState('idle');
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full h-[68px] bg-white border-b border-[#E7E7EA] pr-4 md:pr-7 flex items-center justify-between shadow-xs">
       {/* Left: Hamburger (aligned with 72px sidebar rail center) + Brand Logo */}
@@ -119,13 +135,14 @@ export default function Header({
             <Menu className="w-5 h-5" />
           </button>
         </div>
-        <a href="#" className="flex items-center group py-0.5 ml-1" aria-label="HanFlix Trang chủ">
-          <img
-            src="/assets/logo.png"
-            alt="HanFlix Logo"
-            className="h-10 sm:h-11 w-auto max-w-[200px] object-contain group-hover:scale-105 transition-transform"
-          />
-        </a>
+        <div className="flex items-center gap-2 cursor-pointer select-none">
+          <span className="font-extrabold text-xl tracking-tight text-[#18181B]">
+            Han<span className="text-[#B91B1C]">Flix</span>
+          </span>
+          <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
+            HSK 3
+          </span>
+        </div>
       </div>
 
       {/* Middle: Search bar */}
@@ -142,13 +159,16 @@ export default function Header({
             type="text"
             placeholder={t.header.searchPlaceholder}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onFocus={() => {
+              setIsSearchFocused(true);
+              if (searchQuery.trim()) panda?.triggerReaction('searching', 3500);
+            }}
             className="w-full text-sm text-[#18181B] bg-transparent outline-none placeholder:text-[#8B9097]"
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={handleClearSearch}
               className="p-1 text-[#8B9097] hover:text-[#18181B] rounded-full hover:bg-gray-200"
             >
               <X className="w-3.5 h-3.5" />
@@ -169,6 +189,7 @@ export default function Header({
                   onClick={() => {
                     setSearchQuery(item.title);
                     setIsSearchFocused(false);
+                    panda?.triggerReaction('success', 2000);
                     if (onSearchSelect) onSearchSelect(item.title);
                   }}
                   className="w-full text-left px-4 py-2.5 hover:bg-[#FDF1F1] flex items-center justify-between group transition-colors cursor-pointer"
