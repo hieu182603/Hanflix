@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../i18n';
 import { getStreakState } from '../../lib/streak';
+import BurningFlame from './BurningFlame';
 
 interface StreakDropdownProps {
   initialStreakDays?: number;
@@ -91,33 +92,13 @@ export default function StreakDropdown({
         aria-label={t.streak.title}
       >
         <div className="relative flex items-center justify-center">
-          {/* Flame Icon with Animated Pulse */}
-          <motion.div
-            animate={{
-              scale: isCompletedToday ? [1, 1.15, 1] : [1, 1.08, 1],
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: isCompletedToday ? 2 : 1.5,
-              ease: 'easeInOut',
-            }}
-          >
-            <Flame
-              className={`w-4 h-4 ${
-                isCompletedToday
-                  ? 'text-[#D97706] fill-[#F59E0B]'
-                  : 'text-[#F59E0B] fill-[#FBBF24]'
-              }`}
-            />
-          </motion.div>
+          {/* Realistic Animated Burning Flame with Embers */}
+          <BurningFlame size={24} showSparks={true} intensity="high" />
 
-          {/* Status Indicator Dot */}
-          {isCompletedToday ? (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#10B981] rounded-full ring-2 ring-white" />
-          ) : (
-            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+          {/* Status Indicator: Subtle emerald badge if completed */}
+          {isCompletedToday && (
+            <span className="absolute -bottom-0.5 -right-1 w-2.5 h-2.5 bg-[#10B981] rounded-full ring-1.5 ring-white flex items-center justify-center shadow-xs">
+              <Check className="w-1.5 h-1.5 text-white stroke-[3.5]" />
             </span>
           )}
         </div>
@@ -149,26 +130,15 @@ export default function StreakDropdown({
 
               <div className="flex items-start justify-between relative z-10">
                 <div className="flex items-center gap-3.5">
-                  {/* Glowing Animated Flame Badge */}
-                  <motion.div
-                    animate={{
-                      scale: [1, 1.08, 1],
-                      rotate: [0, -2, 2, 0],
-                    }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 2.8,
-                      ease: 'easeInOut',
-                    }}
-                    className="relative w-13 h-13 rounded-2xl bg-gradient-to-br from-[#F59E0B] via-[#EA580C] to-[#DC2626] text-white flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0"
-                  >
-                    <Flame className="w-7 h-7 fill-white text-white drop-shadow-xs" />
+                  {/* Glowing Animated Flame Badge with BurningFlame */}
+                  <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A]/60 border border-amber-200/90 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                    <BurningFlame size={44} showSparks={true} intensity="high" />
                     {isCompletedToday && (
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#10B981] border-2 border-white flex items-center justify-center shadow-xs">
                         <Check className="w-3 h-3 text-white stroke-[3]" />
                       </div>
                     )}
-                  </motion.div>
+                  </div>
 
                   <div>
                     <div className="flex items-baseline gap-1.5">
@@ -241,7 +211,7 @@ export default function StreakDropdown({
 
                       <motion.div
                         whileHover={{ scale: 1.08 }}
-                        className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                        className={`relative w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center transition-all ${
                           day.completed
                             ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white shadow-xs'
                             : day.isToday
@@ -250,7 +220,7 @@ export default function StreakDropdown({
                         }`}
                       >
                         {day.completed ? (
-                          <Flame className="w-4 h-4 fill-white text-white drop-shadow-xs" />
+                          <BurningFlame size={28} showSparks={false} intensity="high" />
                         ) : day.isToday ? (
                           <Zap className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
                         ) : (
@@ -300,76 +270,53 @@ export default function StreakDropdown({
                 </div>
               </div>
 
-              {/* 3. Automatic Streak Interaction Card (Replaces manual button and removed stat/freeze boxes) */}
-              <div
-                className={`rounded-2xl p-4 border transition-all ${
-                  isCompletedToday
-                    ? 'bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border-emerald-200/70 text-emerald-950'
-                    : 'bg-gradient-to-br from-amber-50/90 to-orange-50/60 border-amber-200/80 text-amber-950'
-                }`}
-              >
-                {isCompletedToday ? (
+              {/* 3. Automatic Streak Interaction Card (Only displayed if NOT completed today) */}
+              {!isCompletedToday && (
+                <div className="rounded-2xl p-4 border bg-gradient-to-br from-amber-50/90 to-orange-50/60 border-amber-200/80 text-amber-950 transition-all space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-4.5 h-4.5" />
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                      <Flame className="w-4.5 h-4.5 fill-amber-500 text-amber-600" />
                     </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-black text-emerald-900">
-                        Đã tự động cộng chuỗi hôm nay!
+                    <div>
+                      <h4 className="text-xs font-black text-amber-900">
+                        Tự động cộng chuỗi khi tương tác
                       </h4>
-                      <p className="text-[11px] text-emerald-700 leading-relaxed">
-                        Hệ thống đã ghi nhận tương tác của bạn. Tiếp tục quay lại học vào ngày mai để chuỗi tăng lên{' '}
-                        <strong className="font-mono text-emerald-800">{streakCount + 1} ngày</strong>!
+                      <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">
+                        Không cần bấm thủ công! Khi bạn bắt đầu xem video bài học hoặc làm bài ôn tập, chuỗi streak sẽ tự động kích hoạt ngay.
                       </p>
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                        <Flame className="w-4.5 h-4.5 fill-amber-500 text-amber-600" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black text-amber-900">
-                          Tự động cộng chuỗi khi tương tác
-                        </h4>
-                        <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">
-                          Không cần bấm thủ công! Khi bạn bắt đầu xem video bài học hoặc làm bài ôn tập, chuỗi streak sẽ tự động kích hoạt ngay.
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Quick Interaction Buttons */}
-                    <div className="flex items-center gap-2 pt-0.5">
+                  {/* Quick Interaction Buttons */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        if (onNavigateToLessons) onNavigateToLessons();
+                      }}
+                      className="flex-1 h-8.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-white" />
+                      <span>Xem video ngay</span>
+                    </button>
+
+                    {onOpenPractice && (
                       <button
                         type="button"
                         onClick={() => {
                           setIsOpen(false);
-                          if (onNavigateToLessons) onNavigateToLessons();
+                          onOpenPractice();
                         }}
-                        className="flex-1 h-8.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        className="flex-1 h-8.5 px-3 rounded-xl bg-white border border-amber-200 hover:bg-amber-100/60 text-amber-900 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
-                        <Play className="w-3.5 h-3.5 fill-white" />
-                        <span>Xem video ngay</span>
+                        <span>Luyện tập nhanh</span>
+                        <ArrowRight className="w-3 h-3 text-amber-600" />
                       </button>
-
-                      {onOpenPractice && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsOpen(false);
-                            onOpenPractice();
-                          }}
-                          className="flex-1 h-8.5 px-3 rounded-xl bg-white border border-amber-200 hover:bg-amber-100/60 text-amber-900 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                        >
-                          <span>Luyện tập nhanh</span>
-                          <ArrowRight className="w-3 h-3 text-amber-600" />
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
