@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Sparkles, X, CheckCircle2, Play, BookOpen } from 'lucide-react';
 import type { LearningActivityType } from '../../lib/streak';
+import BurningFlame from './BurningFlame';
 
 interface StreakEventDetail {
   streakCount: number;
@@ -74,25 +75,14 @@ export default function StreakCelebrationToast() {
 
             {/* Content Row */}
             <div className="relative z-10 flex items-start gap-3.5">
-              {/* Flame Badge with Perpetual Breathing */}
-              <motion.div
-                animate={{
-                  scale: [1, 1.14, 1],
-                  rotate: [0, -3, 3, 0],
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2.4,
-                  ease: 'easeInOut',
-                }}
-                className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F59E0B] via-[#EA580C] to-[#DC2626] text-white flex items-center justify-center shadow-lg shadow-orange-500/35 shrink-0"
-              >
-                <Flame className="w-7 h-7 fill-white text-white drop-shadow-sm" />
+              {/* Burning Flame Badge with Rising Embers */}
+              <div className="relative w-13 h-13 rounded-2xl bg-gradient-to-br from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A]/70 border border-amber-200/90 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                <BurningFlame size={38} intensity="high" showSparks={true} />
                 <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border border-white" />
                 </span>
-              </motion.div>
+              </div>
 
               {/* Text Info */}
               <div className="flex-1 min-w-0 pr-6">
