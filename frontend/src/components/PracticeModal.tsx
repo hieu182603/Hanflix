@@ -10,16 +10,17 @@ import {
   ArrowRight,
   ArrowLeft,
   BookOpen,
+  BookOpenCheck,
+  GraduationCap,
   RotateCw,
   Star,
   Shuffle,
   Layers,
   HelpCircle,
-  Flame,
   Check,
+  Zap,
 } from 'lucide-react';
 import { recordLearningActivity } from '../lib/streak';
-import BurningFlame from './streak/BurningFlame';
 
 interface PracticeModalProps {
   isOpen: boolean;
@@ -461,8 +462,8 @@ export default function PracticeModal({
         {/* Top App Header with Tab Switcher & Progress */}
         <div className="px-5 sm:px-7 py-4 bg-white/90 backdrop-blur-sm border-b border-amber-100/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A]/60 border border-amber-200/90 flex items-center justify-center shadow-xs text-amber-700 shrink-0">
-              <BurningFlame size={24} showSparks={false} intensity="high" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 relative overflow-hidden group">
+              <BookOpenCheck className="w-5 h-5 text-white stroke-[2.2] group-hover:scale-110 transition-transform duration-200" />
             </div>
 
             <div>
@@ -575,7 +576,7 @@ export default function PracticeModal({
 
                   {/* Automatic Streak Notification Banner */}
                   <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 shadow-2xs">
-                    <BurningFlame size={20} showSparks={false} />
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
                     <span className="text-xs font-bold">
                       Hệ thống đã tự động cộng chuỗi học tập hôm nay!
                     </span>
@@ -702,8 +703,8 @@ export default function PracticeModal({
                     </div>
 
                     {streakCount > 1 && (
-                      <div className="flex items-center gap-1 text-orange-600 font-bold bg-orange-50 px-2.5 py-0.5 rounded-xl border border-orange-200/60">
-                        <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-600" />
+                      <div className="flex items-center gap-1 text-amber-600 font-bold bg-amber-50 px-2.5 py-0.5 rounded-xl border border-amber-200/60">
+                        <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
                         <span>{streakCount} câu đúng liên tiếp</span>
                       </div>
                     )}

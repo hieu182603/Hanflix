@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import HeroSection from './components/HeroSection';
 import AIRecommendationSection from './components/AIRecommendationSection';
+import HomeVideoShelves from './components/HomeVideoShelves';
 import { useLanguage } from './i18n';
 import AIAssistantDrawer from './components/AIAssistantDrawer';
 import PreferencesDrawer from './components/PreferencesDrawer';
@@ -161,13 +162,18 @@ export default function App() {
 
   // Check first-time login for survey popup (Requirement 3)
   useEffect(() => {
+    // Clean up deprecated global key to prevent blocking new accounts
+    try {
+      localStorage.removeItem('hanflix_survey_completed_global');
+    } catch {
+      // ignore
+    }
+
     if (currentUser && currentUser.role === 'user') {
       // Server-side check: if surveyVersion is set, user has completed the survey
       const serverSideCompleted = currentUser.learningProfile?.surveyVersion != null;
-      // Fallback: localStorage for backward compatibility
-      const localCompleted =
-        localStorage.getItem(`hanflix_survey_completed_${currentUser.id}`) ||
-        localStorage.getItem('hanflix_survey_completed_global');
+      // Fallback: localStorage per user ID
+      const localCompleted = localStorage.getItem(`hanflix_survey_completed_${currentUser.id}`);
 
       if (!serverSideCompleted && !localCompleted) {
         // Automatically open the survey popup modal on first login
@@ -271,7 +277,15 @@ export default function App() {
   if (authView === 'login') {
     return (
       <LoginView
-        onLoginSuccess={(user) => { setCurrentUser(user); navigateAuth('none'); }}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          navigateAuth('none');
+          const serverSideCompleted = user.learningProfile?.surveyVersion != null;
+          const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
+          if (!serverSideCompleted && !localCompleted && user.role === 'user') {
+            setIsSurveyOpen(true);
+          }
+        }}
         onNavigateToSignup={() => navigateAuth('signup')}
         onNavigateToForgotPassword={() => navigateAuth('forgot-password')}
       />
@@ -282,7 +296,15 @@ export default function App() {
     return (
       <SignupView
         onNavigateToLogin={() => navigateAuth('login')}
-        onGoogleSuccess={(user) => { setCurrentUser(user); navigateAuth('none'); }}
+        onGoogleSuccess={(user) => {
+          setCurrentUser(user);
+          navigateAuth('none');
+          const serverSideCompleted = user.learningProfile?.surveyVersion != null;
+          const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
+          if (!serverSideCompleted && !localCompleted && user.role === 'user') {
+            setIsSurveyOpen(true);
+          }
+        }}
       />
     );
   }
@@ -487,10 +509,17 @@ export default function App() {
             <>
               {activeNav === 'feed' && (
                 <>
-                  <HeroSection onSelectLesson={setSelectedLesson} />
+                  <HeroSection
+                    onSelectLesson={setSelectedLesson}
+                    onStartPractice={() => setIsPracticeOpen(true)}
+                  />
                   <AIRecommendationSection
                     onSelectLessonId={(id) => { setSelectedLesson(null); setSelectedPublishedLessonId(id); }}
                     onOpenPreferences={() => setIsSurveyOpen(true)}
+                  />
+                  <HomeVideoShelves
+                    onSelectLesson={setSelectedLesson}
+                    onStartPractice={() => setIsPracticeOpen(true)}
                   />
                 </>
               )}
