@@ -16,6 +16,7 @@ import {
 import { SAMPLE_WORDS, Word } from '../../data/hanflixData';
 import { recordLearningActivity } from '../../lib/streak';
 import BurningFlame from '../streak/BurningFlame';
+import { usePandaPet } from '../panda-pet';
 
 interface FlashcardReviewViewProps {
   onClose: () => void;
@@ -61,6 +62,7 @@ const RATINGS = [
 ];
 
 export default function FlashcardReviewView({ onClose }: FlashcardReviewViewProps) {
+  const panda = usePandaPet();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionCompleted, setIsSessionCompleted] = useState(false);
@@ -82,21 +84,33 @@ export default function FlashcardReviewView({ onClose }: FlashcardReviewViewProp
   }, []);
 
   const handleRating = useCallback(
-    (_label: string) => {
+    (ratingKeyOrLabel: string) => {
       setIsFlipped(false);
       recordLearningActivity('review');
+
+      // Trigger expressive reactions based on rating difficulty
+      if (ratingKeyOrLabel === 'again' || ratingKeyOrLabel === 'Chưa nhớ') {
+        panda?.triggerReaction('error', 2200);
+      } else if (ratingKeyOrLabel === 'hard' || ratingKeyOrLabel === 'Khó') {
+        panda?.triggerReaction('thinking', 2000);
+      } else {
+        panda?.triggerReaction('success', 2200);
+      }
+
       if (currentIndex < total - 1) {
         setCurrentIndex((prev) => prev + 1);
       } else {
         setIsSessionCompleted(true);
+        panda?.triggerReaction('success', 3500);
       }
     },
-    [currentIndex, total]
+    [currentIndex, total, panda]
   );
 
   const handleFlip = useCallback(() => {
     setIsFlipped((prev) => !prev);
-  }, []);
+    panda?.triggerReaction('working', 1400);
+  }, [panda]);
 
   const handleToggleStar = (id: string) => {
     setStarredIds((prev) => {

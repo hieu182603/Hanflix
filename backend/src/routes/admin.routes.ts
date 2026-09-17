@@ -18,9 +18,13 @@ import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 import { pinyinService } from '../services/pinyin.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import adminVocabularyRoutes from './admin-vocabulary.routes.js';
+import adminGrammarRoutes from './admin-grammar.routes.js';
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
+router.use('/vocabulary', adminVocabularyRoutes);
+router.use('/grammar', adminGrammarRoutes);
 
 const lessonInput = z.object({
   slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120),

@@ -31,6 +31,8 @@ import AdminVideoUpload from './components/admin/AdminVideoUpload';
 import AdminVideoProcessing from './components/admin/AdminVideoProcessing';
 import AdminVideoEditor from './components/admin/AdminVideoEditor';
 import AdminUserList from './components/admin/AdminUserList';
+import AdminVocabularyManager from './components/admin/AdminVocabularyManager';
+import AdminGrammarManager from './components/admin/AdminGrammarManager';
 
 // Auth, Vocabulary & Review
 import LoginView from './components/auth/LoginView';
@@ -45,6 +47,8 @@ import FlashcardReviewView from './components/review/FlashcardReviewView';
 // API auth
 import * as authApi from './api/auth';
 import { PandaPet } from './components/panda-pet';
+import NotFoundPage from './components/NotFoundPage';
+import HanFlixLoadingScreen from './components/HanFlixLoadingScreen';
 
 import {
   VideoLesson,
@@ -74,11 +78,35 @@ const getInitialAuthView = (): AuthView => {
   return 'none';
 };
 
+const isKnownPath = (path: string): boolean => {
+  const p = path.toLowerCase();
+  if (p === '/' || p === '') return true;
+  if (
+    p.startsWith('/auth') ||
+    p.startsWith('/login') ||
+    p.startsWith('/signup') ||
+    p.startsWith('/register') ||
+    p.startsWith('/forgot') ||
+    p.startsWith('/verify-email') ||
+    p.startsWith('/reset-password') ||
+    p.startsWith('/onboarding') ||
+    p.startsWith('/loading') ||
+    p.startsWith('/dev')
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export default function App() {
   // null = guest, populated = logged-in learner
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [is404Route, setIs404Route] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !isKnownPath(window.location.pathname);
+  });
 
   const navigateAuth = (view: AuthView) => {
     setAuthView(view);
@@ -97,6 +125,7 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       setAuthView(getInitialAuthView());
+      setIs404Route(!isKnownPath(window.location.pathname));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -197,7 +226,7 @@ export default function App() {
   };
 
   // Admin
-  const [adminTab, setAdminTab] = useState<'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users'>('overview');
+  const [adminTab, setAdminTab] = useState<'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'vocabulary' | 'grammar'>('overview');
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [processingUploadData, setProcessingUploadData] = useState<any>(null);
 
@@ -261,16 +290,14 @@ export default function App() {
     setAdminTab('videos');
   };
 
-  // Show loading spinner while restoring session
+  // Dedicated loading preview route
+  if (typeof window !== 'undefined' && window.location.pathname === '/loading') {
+    return <HanFlixLoadingScreen />;
+  }
+
+  // Show branded loading screen while restoring session
   if (isRestoringSession) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F9]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-[#B91B1C] text-white flex items-center justify-center font-black text-xl shadow-lg">H</div>
-          <div className="w-6 h-6 border-2 border-[#B91B1C] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return <HanFlixLoadingScreen />;
   }
 
   // Auth screens
@@ -380,7 +407,29 @@ export default function App() {
           />
         )}
         {adminTab === 'users' && <AdminUserList />}
+        {adminTab === 'vocabulary' && <AdminVocabularyManager />}
+        {adminTab === 'grammar' && <AdminGrammarManager />}
       </AdminShell>
+    );
+  }
+
+  // 404 Route handler (for broken URLs or direct /404 navigation)
+  if (is404Route) {
+    return (
+      <NotFoundPage
+        showHeader={true}
+        currentUser={currentUser}
+        onNavigateHome={() => {
+          setIs404Route(false);
+          setActiveNav('feed');
+          window.history.pushState({}, '', '/');
+        }}
+        onNavigateLessons={() => {
+          setIs404Route(false);
+          setActiveNav('lessons');
+          window.history.pushState({}, '', '/');
+        }}
+      />
     );
   }
 
@@ -569,6 +618,14 @@ export default function App() {
                   </div>
                 </div>
               )}
+              {!['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'exam', 'leaderboard', 'community', 'history'].includes(activeNav) && (
+                <NotFoundPage
+                  showHeader={false}
+                  currentUser={currentUser}
+                  onNavigateHome={() => setActiveNav('feed')}
+                  onNavigateLessons={() => setActiveNav('lessons')}
+                />
+              )}
             </>
           )}
         </main>
@@ -646,7 +703,7 @@ export default function App() {
       )}
 
       {/* Interactive AI Pet & Assistant - ONLY displayed when learner is logged in */}
-      {currentUser && <PandaPet onOpenAI={() => handleOpenAI()} />}
+      {currentUser && <PandaPet onOpenAI={() => handleOpenAI()} isAIOpen={isAIOpen} />}
 
       {/* Global Streak Celebration Animated Toast */}
       <StreakCelebrationToast />

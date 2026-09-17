@@ -84,7 +84,10 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 300);
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+      panda?.triggerReaction('thinking', 1400);
+    }
   }, [isOpen]);
 
   const scrollToBottom = () => {
@@ -112,8 +115,14 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
     setIsTyping(true);
     panda?.handlePandaAIEvent({ type: 'thinking' });
 
+    // Transition from thinking to working (compiling/formulating response) after 1.2s
+    const workTimer = setTimeout(() => {
+      panda?.setPandaState('working');
+    }, 1200);
+
     try {
       const aiResponseText = await askPanda(query);
+      clearTimeout(workTimer);
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
@@ -123,10 +132,12 @@ export default function AIAssistantDrawer({ isOpen, onClose, initialPrompt, curr
       setMessages((prev) => [...prev, aiMsg]);
       panda?.handlePandaAIEvent({ type: 'completed' });
     } catch (error) {
+      clearTimeout(workTimer);
       const message = error instanceof ApiRequestError ? error.message : 'Không thể kết nối Panda AI lúc này. Vui lòng thử lại.';
       setMessages(prev => [...prev, { id: `${Date.now()}-error`, sender: 'ai', text: message, time: 'Vừa xong' }]);
       panda?.handlePandaAIEvent({ type: 'error' });
     } finally {
+      clearTimeout(workTimer);
       setIsTyping(false);
     }
   };

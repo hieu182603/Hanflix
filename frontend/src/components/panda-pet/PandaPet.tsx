@@ -65,10 +65,45 @@ function savedPosition(): Position {
 
 export interface PandaPetProps {
   onOpenAI?: () => void
+  isAIOpen?: boolean
 }
 
-export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
-  const { state } = usePandaPet()
+const BUBBLE_MESSAGES: Record<
+  import("./panda.types").PandaState,
+  { title: string; body: string }
+> = {
+  idle: {
+    title: "Xin chào 👋",
+    body: "Tôi là Panda AI. Tôi có thể giúp gì cho bạn trong hành trình học tiếng Trung?",
+  },
+  sleeping: {
+    title: "Khò khò... 💤",
+    body: "Tôi vừa chợp mắt một chút. Bấm vào tôi để cùng học tiếp nhé!",
+  },
+  thinking: {
+    title: "Đang suy nghĩ... 🤔",
+    body: "Đợi tôi một chút, đang phân tích cấu trúc ngữ pháp và từ vựng cho bạn!",
+  },
+  working: {
+    title: "Đang biên soạn ⚡",
+    body: "Panda đang chăm chỉ tra cứu và soạn nội dung chi tiết cho bạn đây!",
+  },
+  searching: {
+    title: "Đang tìm kiếm 🔍",
+    body: "Đang tra cứu từ điển và kho bài học HanFlix phù hợp nhất...",
+  },
+  success: {
+    title: "Tuyệt vời quá! 🎉",
+    body: "Bạn làm rất tốt! Cùng giữ vững ngọn lửa học tập mỗi ngày nhé!",
+  },
+  error: {
+    title: "Bối rối một xíu... 😅",
+    body: "Không sao cả, sai sót là một phần tự nhiên khi học một ngôn ngữ mới!",
+  },
+}
+
+export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
+  const { state, triggerReaction } = usePandaPet()
   const [position, setPosition] = useState<Position>(savedPosition)
   const [bubbleOpen, setBubbleOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -158,7 +193,13 @@ export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
       )
     } else if (!cancelled) {
       if (onOpenAI) {
-        onOpenAI()
+        if (!isAIOpen) {
+          triggerReaction("success", 1600)
+          onOpenAI()
+        } else {
+          triggerReaction("success", 1800)
+          setBubbleOpen((open) => !open)
+        }
       } else {
         setBubbleOpen((open) => !open)
       }
@@ -166,9 +207,16 @@ export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
   }
 
   const size = petSize()
+  const isDesktop = typeof window !== "undefined" && window.innerWidth > 640
+  // When AI Assistant Drawer is open (440px wide on right), offset Panda so it sits nicely beside it
+  const effectiveX =
+    isAIOpen && isDesktop
+      ? Math.min(position.x, window.innerWidth - 440 - size - 20)
+      : position.x
+
   const bubbleWidth = Math.min(280, window.innerWidth - 24)
   const bubbleLeft = Math.min(
-    Math.max(12, position.x + size / 2 - bubbleWidth / 2),
+    Math.max(12, effectiveX + size / 2 - bubbleWidth / 2),
     window.innerWidth - bubbleWidth - 12,
   )
   const bubbleTop =
@@ -181,13 +229,15 @@ export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
     width: bubbleWidth,
   }
 
+  const currentMsg = BUBBLE_MESSAGES[state] || BUBBLE_MESSAGES.idle
+
   return (
     <div
       ref={rootRef}
       className="panda-pet-layer"
       data-testid="panda-pet"
       data-state={state}
-      data-x={Math.round(position.x)}
+      data-x={Math.round(effectiveX)}
       data-y={Math.round(position.y)}
     >
       {bubbleOpen && (
@@ -205,21 +255,16 @@ export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
           >
             ×
           </button>
-          <p className="panda-bubble-title">Xin chào 👋</p>
-          <p>
-            Tôi là Panda AI.{" "}
-            {state === "sleeping"
-              ? "Tôi vừa chợp mắt một chút."
-              : "Tôi có thể giúp gì cho bạn?"}
-          </p>
+          <p className="panda-bubble-title">{currentMsg.title}</p>
+          <p>{currentMsg.body}</p>
         </div>
       )}
       <button
         type="button"
         className="panda-pet-button group"
         data-dragging={dragging}
-        style={{ left: position.x, top: position.y }}
-        aria-label="Mở trợ lý Panda AI"
+        style={{ left: effectiveX, top: position.y }}
+        aria-label={`Trợ lý Panda AI (${pandaLabels[state]})`}
         aria-expanded={bubbleOpen}
         aria-controls="panda-pet-bubble"
         onPointerDown={onPointerDown}
@@ -228,8 +273,17 @@ export function PandaPet({ onOpenAI }: PandaPetProps = {}) {
         onPointerCancel={(event) => endPointer(event, true)}
         onClick={(event) => {
           if (event.detail === 0) {
-            if (onOpenAI) onOpenAI()
-            else setBubbleOpen((open) => !open)
+            if (onOpenAI) {
+              if (!isAIOpen) {
+                triggerReaction("success", 1600)
+                onOpenAI()
+              } else {
+                triggerReaction("success", 1800)
+                setBubbleOpen((open) => !open)
+              }
+            } else {
+              setBubbleOpen((open) => !open)
+            }
           }
         }}
       >

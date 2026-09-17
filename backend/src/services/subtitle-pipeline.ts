@@ -8,12 +8,12 @@ import { LessonModel } from '../models/lesson.model.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
-import { WordModel } from '../models/word.model.js';
 import { transcribeAudio } from './asr.js';
 import { logger } from './logger.js';
 import { extractAudioForASR, probeMedia } from './media-processor.js';
 import { pinyinService } from './pinyin.js';
 import { translationService } from './translator.js';
+import { resolveLearningWordIds } from './learning-word.js';
 
 export type PipelineStage = 'inspect_media' | 'transcribe_zh' | 'generate_pinyin' | 'translate_vi' | 'extract_vocabulary' | 'generate_quiz' | 'finalize';
 
@@ -94,23 +94,14 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
     const finalCues = cuesWithPinyin.map((cue, index) => ({ ...cue, vi: translations[index]! }));
 
     await updateStage('extract_vocabulary', 85);
+    const wordIdMap = await resolveLearningWordIds(finalCues);
+
+    // Assign wordId to every matching token in memory
     for (const cue of finalCues) {
       for (const token of cue.tokens) {
-        if (!/[\u4e00-\u9fff]/.test(token.text)) continue;
-        const word = await WordModel.findOneAndUpdate(
-          { hanzi: token.text },
-          {
-            $setOnInsert: {
-              hanzi: token.text,
-              pinyin: pinyinService.convert(token.text),
-              meaningVi: cue.vi,
-              partOfSpeech: 'chưa phân loại',
-              examples: [{ zh: cue.zh, pinyin: cue.pinyin, vi: cue.vi }],
-            },
-          },
-          { upsert: true, returnDocument: 'after' },
-        );
-        token.wordId = word._id;
+        if (wordIdMap.has(token.text)) {
+          token.wordId = wordIdMap.get(token.text)!;
+        }
       }
     }
 

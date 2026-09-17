@@ -1,10 +1,10 @@
 import React from 'react';
-import { Video, Users, BarChart2, LogOut, Upload, Shield } from 'lucide-react';
+import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText } from 'lucide-react';
 import { User } from '../../data/hanflixData';
 
 interface AdminShellProps {
-  activeTab: 'overview' | 'videos' | 'upload' | 'users';
-  onTabChange: (tab: 'overview' | 'videos' | 'upload' | 'users') => void;
+  activeTab: 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar';
+  onTabChange: (tab: 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar') => void;
   currentUser: User;
   onLogout: () => void;
   children: React.ReactNode;
@@ -20,6 +20,8 @@ export default function AdminShell({
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: BarChart2 },
     { id: 'videos', label: 'Danh sách Video', icon: Video },
+    { id: 'vocabulary', label: 'Kho Từ vựng HSK', icon: BookOpen },
+    { id: 'grammar', label: 'Quản lý Ngữ pháp', icon: FileText },
     { id: 'upload', label: 'Tải video mới', icon: Upload },
     { id: 'users', label: 'Quản lý Người dùng', icon: Users },
   ];

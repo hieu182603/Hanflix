@@ -26,7 +26,7 @@ Create a Consumption environment and deploy the image with external ingress on t
 
 - CPU: 0.5 to 1 vCPU
 - Memory: 1 to 2 GiB
-- Minimum replicas: 0
+- Minimum replicas: 1 when `VIDEO_WORKER_MODE=embedded`
 - Maximum replicas: 2
 - HTTP concurrency: 10
 - Health probe: `/health`
@@ -35,7 +35,7 @@ Store MongoDB, SMTP, R2, Azure Speech, Azure Translator and JWT values as Contai
 
 Set `GOOGLE_CLIENT_ID` to the Web OAuth client ID and add the deployed frontend origin to Google Cloud's authorized JavaScript origins. The frontend reads this public ID from `GET /api/v1/auth/providers`. Set `GEMINI_MODEL` to an API model ID such as `gemini-3.5-flash-lite`; the human-facing model display name is not valid here.
 
-The HTTP app can scale to zero. A queued job is created during upload confirmation and starts immediately while that replica is alive. If the platform stops or replaces the replica, the MongoDB stale-job recovery returns unfinished work to the queue when the app next starts. For stricter processing latency independent of HTTP traffic, use a scheduled Container Apps Job every 5 minutes or keep one worker replica running.
+With an embedded worker, keep at least one replica running so queued jobs and stale-job recovery continue without another HTTP request. If the platform stops or replaces a replica, MongoDB stale-job recovery returns unfinished work to the queue when a worker starts again. If the API must scale to zero, deploy a separate always-on worker; do not rely on another user request to wake pending video jobs.
 
 ## Manual cloud setup
 

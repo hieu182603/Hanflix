@@ -70,4 +70,32 @@ describe('environment configuration', () => {
     });
     expect(result.COOKIE_SECURE).toBe(true);
   });
+
+  it('requires worker providers and accepts a complete embedded production worker', () => {
+    const production = {
+      ...base,
+      NODE_ENV: 'production',
+      APP_PUBLIC_URL: 'https://app.hanflix.test',
+      APP_ORIGINS: 'https://app.hanflix.test',
+      COOKIE_SECURE: 'true',
+      VIDEO_WORKER_MODE: 'embedded',
+      R2_ACCOUNT_ID: 'account123',
+      R2_ACCESS_KEY_ID: 'access-key',
+      R2_SECRET_ACCESS_KEY: 'secret-key',
+      R2_BUCKET_NAME: 'hanflix-media',
+      SMTP_HOST: 'smtp.hanflix.test',
+      SMTP_FROM: 'HanFlix <no-reply@hanflix.test>',
+      METRICS_TOKEN: 'm'.repeat(32),
+      SEED_ADMIN_PASSWORD: 'NonDefaultAdminPassword123!',
+    };
+    expect(() => parseEnvironment(production)).toThrow();
+    const result = parseEnvironment({
+      ...production,
+      AZURE_SPEECH_KEY: 'speech-key',
+      AZURE_SPEECH_REGION: 'southeastasia',
+      AZURE_TRANSLATOR_KEY: 'translator-key',
+      AZURE_TRANSLATOR_REGION: 'southeastasia',
+    });
+    expect(result.VIDEO_WORKER_MODE).toBe('embedded');
+  });
 });
