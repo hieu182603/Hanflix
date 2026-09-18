@@ -64,7 +64,11 @@ export interface QuizResult {
 }
 
 export function submitLessonQuiz(id: string, answers: Array<{ questionId: string; selectedOptionId?: string; textAnswer?: string }>, idempotencyKey: string): Promise<QuizResult> {
-  return apiFetch(`/lessons/${encodeURIComponent(id)}/attempts`, { method: 'POST', body: JSON.stringify({ answers, idempotencyKey }) });
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/attempts`, {
+    method: 'POST',
+    body: JSON.stringify({ answers, idempotencyKey }),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
 }
 
 export interface LearnerDashboard {
@@ -114,8 +118,8 @@ export async function getRuleBasedRecommendations(): Promise<Array<{ lesson: Pub
 
 
 export async function askPanda(question: string): Promise<string> {
-  const data = await apiFetch<{ data: { answerVi: string } }>('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) });
-  return data.data.answerVi;
+  const data = await apiFetch<{ answerVi: string }>('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) });
+  return data.answerVi;
 }
 
 export async function getPublishedLesson(id: string): Promise<PublishedLesson> {
