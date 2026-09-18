@@ -34,8 +34,15 @@ describe('admin R2 upload lifecycle', () => {
     const userId = new Types.ObjectId();
     const lessonId = new Types.ObjectId();
     authenticateAdmin(userId);
+    // F02 (2026-09-18): the confirm endpoint now wraps the lesson lookup in a
+    // Mongo transaction. The test mock has to chain `.session(session)` so the
+    // transaction can be honored. We attach a no-op `.session` that returns the
+    // same promise; this is a common pattern when testing transactional code.
+    const fakeDoc = { _id: lessonId, pendingUploadObjectKey: `videos/${lessonId}/expected.mp4` };
     vi.spyOn(LessonModel, 'findOne').mockReturnValue({
-      select: () => Promise.resolve({ _id: lessonId, pendingUploadObjectKey: `videos/${lessonId}/expected.mp4` }),
+      select: () => ({
+        session: () => Promise.resolve(fakeDoc),
+      }),
     } as never);
     const head = vi.spyOn(storageService, 'headObject');
 
