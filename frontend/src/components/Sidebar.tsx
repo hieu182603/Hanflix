@@ -130,7 +130,7 @@ export default function Sidebar({
             <div className="mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
               {userProfile.level}
             </div>
-            <div className="w-full mt-3 text-left">
+            {userProfile.hskProgress > 0 && <div className="w-full mt-3 text-left">
               <div className="flex justify-between items-center text-[11px] font-semibold mb-1">
                 <span className="text-[#5F6368]">{userProfile.hskLevel}</span>
                 <span className="text-[#B91B1C] font-bold">{userProfile.hskProgress}%</span>
@@ -141,7 +141,7 @@ export default function Sidebar({
                   style={{ width: `${userProfile.hskProgress}%` }}
                 />
               </div>
-            </div>
+            </div>}
           </div>
         )}
 

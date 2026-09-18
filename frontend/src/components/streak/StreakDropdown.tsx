@@ -1,326 +1,79 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Flame,
-  Check,
-  CheckCircle2,
-  Calendar,
-  Sparkles,
-  Zap,
-  Clock,
-  Play,
-  ArrowRight,
-} from 'lucide-react';
-import { useLanguage } from '../../i18n';
-import { getStreakState } from '../../lib/streak';
-import BurningFlame from './BurningFlame';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, Flame, X } from 'lucide-react';
+import { getLearningActivity, type LearningActivity } from '../../api/learning';
 
-interface StreakDropdownProps {
+interface Props {
   initialStreakDays?: number;
+  dailyMinutes?: number;
   onOpenPractice?: () => void;
   onNavigateToLessons?: () => void;
 }
 
-export default function StreakDropdown({
-  initialStreakDays = 14,
-  onOpenPractice,
-  onNavigateToLessons,
-}: StreakDropdownProps) {
-  const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+function getLocalDateKey(date = new Date(), timeZone = 'Asia/Ho_Chi_Minh'): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
 
-  // Sync state with central streak manager
-  const [streakState, setStreakState] = useState(() => getStreakState());
+function getPreviousDateKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
 
-  // Listen for real-time streak updates from video watch or practice events
+export default function StreakDropdown({ dailyMinutes = 15, onNavigateToLessons }: Props) {
+  const [activity, setActivity] = useState<LearningActivity | null>(null);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    const handleUpdate = () => {
-      setStreakState(getStreakState());
+    let active = true;
+    const refresh = () => {
+      void getLearningActivity().then(data => { if (active) { setActivity(data); setError(''); } })
+        .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Không thể tải hoạt động học tập.'); });
     };
-
-    // Initial check
-    handleUpdate();
-
-    window.addEventListener('hanflix:streak-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('hanflix:streak-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
+    refresh();
+    window.addEventListener('hanflix:activity-updated', refresh);
+    return () => { active = false; window.removeEventListener('hanflix:activity-updated', refresh); };
   }, []);
 
-  // Close when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const days = activity?.days ?? [];
+  const tz = activity?.timezone || 'Asia/Ho_Chi_Minh';
+  const today = useMemo(() => getLocalDateKey(new Date(), tz), [tz]);
+  const todaySeconds = days.find(day => day.date === today)?.activeStudySeconds ?? 0;
+  const streak = useMemo(() => {
+    let count = 0;
+    const activeDays = new Set(days.filter(day => day.activeStudySeconds > 0 || day.quizAttempts > 0).map(day => day.date));
+    let cursor = today;
+    if (!activeDays.has(today)) cursor = getPreviousDateKey(cursor);
+    while (activeDays.has(cursor)) {
+      count++;
+      cursor = getPreviousDateKey(cursor);
+    }
+    return count;
+  }, [days, today]);
+  const goalPercent = Math.min(100, Math.round((todaySeconds / (dailyMinutes * 60)) * 100));
 
-  const streakCount = streakState.streakCount || initialStreakDays;
-  const isCompletedToday = streakState.isCompletedToday;
-
-  // 7-day strip data (Monday -> Sunday)
-  // Day index: Mon=0, Tue=1, Wed=2, Thu=3 (Today), Fri=4, Sat=5, Sun=6
-  const weekDays = [
-    { key: 'mon', label: t.streak.weekdays.mon, completed: true, isToday: false },
-    { key: 'tue', label: t.streak.weekdays.tue, completed: true, isToday: false },
-    { key: 'wed', label: t.streak.weekdays.wed, completed: true, isToday: false },
-    { key: 'thu', label: t.streak.weekdays.thu, completed: isCompletedToday, isToday: true },
-    { key: 'fri', label: t.streak.weekdays.fri, completed: false, isToday: false },
-    { key: 'sat', label: t.streak.weekdays.sat, completed: false, isToday: false },
-    { key: 'sun', label: t.streak.weekdays.sun, completed: false, isToday: false },
-  ];
-
-  return (
-    <div className="relative" ref={containerRef}>
-      {/* Trigger Button on Header with spring micro-interaction */}
-      <motion.button
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.96 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer select-none shadow-xs ${
-          isCompletedToday
-            ? 'bg-gradient-to-r from-[#FFFBEB] to-[#FEF3C7] text-[#92400E] border-[#FDE68A] hover:border-[#F59E0B]/50'
-            : 'bg-[#FFFDF7] text-[#B45309] border-amber-200/80 hover:bg-[#FFFBEB]'
-        }`}
-        title={t.streak.title}
-        aria-label={t.streak.title}
-      >
-        <div className="relative flex items-center justify-center">
-          {/* Realistic Animated Burning Flame with Embers */}
-          <BurningFlame size={24} showSparks={true} intensity="high" />
-
-          {/* Status Indicator: Subtle emerald badge if completed */}
-          {isCompletedToday && (
-            <span className="absolute -bottom-0.5 -right-1 w-2.5 h-2.5 bg-[#10B981] rounded-full ring-1.5 ring-white flex items-center justify-center shadow-xs">
-              <Check className="w-1.5 h-1.5 text-white stroke-[3.5]" />
-            </span>
-          )}
-        </div>
-
-        <span className="font-mono text-[13px] font-black">{streakCount}</span>
-        <span className="hidden sm:inline font-semibold">{t.streak.daysCount}</span>
-      </motion.button>
-
-      {/* Streak Center Dropdown Popover */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-            className="absolute right-0 mt-3 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-3xl border border-amber-100/90 shadow-[0_25px_60px_-15px_rgba(217,119,6,0.2),0_4px_16px_rgba(0,0,0,0.04)] z-50 overflow-hidden"
-          >
-            {/* Top Ember Header Banner with Animated Radial Glow */}
-            <div className="relative p-5 pb-4 bg-gradient-to-b from-[#FFFDF7] via-[#FFFBEB] to-white border-b border-amber-100/80 overflow-hidden">
-              {/* Soft Ambient Radial Blur */}
-              <div className="absolute -right-6 -top-6 w-36 h-36 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-orange-400/10 rounded-full blur-xl pointer-events-none" />
-
-              {/* Watermark Streak Number */}
-              <div className="absolute right-3 top-1 text-amber-300/25 font-mono font-black text-6xl select-none pointer-events-none">
-                {streakCount}
-              </div>
-
-              <div className="flex items-start justify-between relative z-10">
-                <div className="flex items-center gap-3.5">
-                  {/* Glowing Animated Flame Badge with BurningFlame */}
-                  <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FFFBEB] via-[#FEF3C7] to-[#FDE68A]/60 border border-amber-200/90 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
-                    <BurningFlame size={44} showSparks={true} intensity="high" />
-                    {isCompletedToday && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#10B981] border-2 border-white flex items-center justify-center shadow-xs">
-                        <Check className="w-3 h-3 text-white stroke-[3]" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl font-black font-mono tracking-tight text-neutral-900">
-                        {streakCount}
-                      </span>
-                      <span className="text-xs font-black uppercase tracking-wider text-amber-800 font-display">
-                        {t.streak.daysCount} Liên Tiếp
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          isCompletedToday
-                            ? 'bg-[#DCFCE7] text-[#15803D] border border-emerald-200/60'
-                            : 'bg-[#FEF3C7] text-[#92400E] border border-amber-200/60'
-                        }`}
-                      >
-                        {isCompletedToday ? (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#15803D]" />
-                            <span>{t.streak.statusCompletedToday}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3.5 h-3.5 text-[#D97706] animate-pulse" />
-                            <span>{t.streak.statusPendingToday}</span>
-                          </>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="mt-3 text-xs text-amber-900/80 leading-relaxed relative z-10 font-medium">
-                {isCompletedToday
-                  ? 'Tuyệt vời! Bạn đã duy trì thói quen học tập hôm nay và ngọn lửa streak đang bùng cháy rực rỡ.'
-                  : 'Học tập mỗi ngày để giữ vững ngọn lửa. Xem video hoặc làm bài ôn tập sẽ tự động cộng chuỗi!'}
-              </p>
-            </div>
-
-            {/* Body Content */}
-            <div className="p-4 sm:p-5 space-y-4">
-              {/* 1. 7-Day Week Calendar Strip */}
-              <div className="bg-[#FAF9F5] rounded-2xl p-3.5 border border-amber-100/70 shadow-2xs">
-                <div className="flex items-center justify-between text-xs font-semibold text-neutral-600 mb-2.5 px-1">
-                  <span className="flex items-center gap-1.5 font-bold text-neutral-800">
-                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Tuần này</span>
-                  </span>
-                  <span className="text-[11px] text-neutral-500 font-mono font-medium">
-                    {isCompletedToday ? '4/7 ngày' : '3/7 ngày'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-                  {weekDays.map((day) => (
-                    <div key={day.key} className="flex flex-col items-center gap-1">
-                      <span
-                        className={`text-[11px] ${
-                          day.isToday
-                            ? 'text-amber-700 font-black'
-                            : 'text-neutral-400 font-semibold'
-                        }`}
-                      >
-                        {day.label}
-                      </span>
-
-                      <motion.div
-                        whileHover={{ scale: 1.08 }}
-                        className={`relative w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center transition-all ${
-                          day.completed
-                            ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white shadow-xs'
-                            : day.isToday
-                            ? 'border-2 border-dashed border-amber-400 bg-amber-50 text-amber-600'
-                            : 'bg-white border border-neutral-200 text-neutral-300'
-                        }`}
-                      >
-                        {day.completed ? (
-                          <BurningFlame size={28} showSparks={false} intensity="high" />
-                        ) : day.isToday ? (
-                          <Zap className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                        ) : (
-                          <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
-                        )}
-
-                        {/* Ripple animation around today's active node */}
-                        {day.isToday && !day.completed && (
-                          <span className="absolute inset-0 rounded-full border border-amber-400 animate-ping opacity-30 pointer-events-none" />
-                        )}
-                      </motion.div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 2. Today's Goal Tracker with Fluid Liquid Bar */}
-              <div className="bg-white rounded-2xl p-3.5 border border-neutral-200/80 shadow-2xs space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    <span>Mục tiêu hàng ngày</span>
-                  </span>
-                  <span className="font-mono text-xs text-neutral-500">
-                    {isCompletedToday ? 'Hoàn thành (100%)' : 'Đang thực hiện (60%)'}
-                  </span>
-                </div>
-
-                {/* Animated Progress Bar */}
-                <div className="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: isCompletedToday ? '100%' : '60%' }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className={`h-full rounded-full ${
-                      isCompletedToday
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                        : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                    }`}
-                  />
-                </div>
-
-                <div className="text-[11px] text-neutral-500 leading-relaxed font-medium">
-                  {isCompletedToday
-                    ? 'Bạn đã hoàn thành mục tiêu học hôm nay. Tuyệt vời!'
-                    : 'Chỉ cần xem video hoặc làm 1 bài luyện tập ngắn để kích hoạt.'}
-                </div>
-              </div>
-
-              {/* 3. Automatic Streak Interaction Card (Only displayed if NOT completed today) */}
-              {!isCompletedToday && (
-                <div className="rounded-2xl p-4 border bg-gradient-to-br from-amber-50/90 to-orange-50/60 border-amber-200/80 text-amber-950 transition-all space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                      <Flame className="w-4.5 h-4.5 fill-amber-500 text-amber-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-amber-900">
-                        Tự động cộng chuỗi khi tương tác
-                      </h4>
-                      <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">
-                        Không cần bấm thủ công! Khi bạn bắt đầu xem video bài học hoặc làm bài ôn tập, chuỗi streak sẽ tự động kích hoạt ngay.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Quick Interaction Buttons */}
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsOpen(false);
-                        if (onNavigateToLessons) onNavigateToLessons();
-                      }}
-                      className="flex-1 h-8.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-white" />
-                      <span>Xem video ngay</span>
-                    </button>
-
-                    {onOpenPractice && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsOpen(false);
-                          onOpenPractice();
-                        }}
-                        className="flex-1 h-8.5 px-3 rounded-xl bg-white border border-amber-200 hover:bg-amber-100/60 text-amber-900 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                      >
-                        <span>Luyện tập nhanh</span>
-                        <ArrowRight className="w-3 h-3 text-amber-600" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  return <div className="relative">
+    <button type="button" onClick={() => setOpen(value => !value)} className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800" aria-label="Hoạt động học tập">
+      <Flame className="h-4 w-4" /> {streak} ngày
+    </button>
+    {open && <div className="absolute right-0 z-50 mt-2 w-[330px] max-w-[calc(100vw-24px)] rounded-2xl border bg-white p-5 shadow-xl">
+      <div className="flex items-center justify-between"><h2 className="flex items-center gap-2 font-black"><CalendarDays className="h-5 w-5 text-[#B91B1C]" /> Hoạt động học tập</h2><button type="button" onClick={() => setOpen(false)} aria-label="Đóng"><X className="h-4 w-4" /></button></div>
+      {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
+      <p className="mt-3 text-sm">Chuỗi hiện tại: <strong>{streak} ngày</strong></p>
+      <p className="mt-1 text-sm">Hôm nay: <strong>{Math.round(todaySeconds / 60)} / {dailyMinutes} phút</strong></p>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-200"><div className="h-full bg-[#B91B1C]" style={{ width: `${goalPercent}%` }} /></div>
+      <div className="mt-4 grid grid-cols-7 gap-1">{days.slice(-7).map(day => <div key={day.date} title={`${day.date}: ${Math.round(day.activeStudySeconds / 60)} phút`} className={`h-8 rounded-md ${day.activeStudySeconds > 0 || day.quizAttempts > 0 ? 'bg-amber-400' : 'bg-neutral-100'}`} />)}</div>
+      <button type="button" onClick={() => { setOpen(false); onNavigateToLessons?.(); }} className="mt-4 rounded-lg bg-[#B91B1C] px-4 py-2 text-xs font-bold text-white">Xem bài học</button>
+    </div>}
+  </div>;
 }

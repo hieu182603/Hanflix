@@ -29,7 +29,7 @@ interface HeaderProps {
     name: string;
     email: string;
     avatarAsset?: string | null;
-    learningProfile?: { hskLevel?: number } | null;
+    learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null;
   };
   onLogout?: () => void;
   streakDays?: number;
@@ -216,6 +216,7 @@ export default function Header({
         {/* Interactive Streak Dropdown Center */}
         <StreakDropdown
           initialStreakDays={streakDays}
+          dailyMinutes={currentUser?.learningProfile?.dailyMinutes}
           onOpenPractice={onOpenPractice}
           onNavigateToLessons={onNavigateToLessons}
         />

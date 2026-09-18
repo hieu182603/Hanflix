@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Types } from 'mongoose';
 import { AccountTokenModel } from '../models/account-token.model.js';
+import { UserModel } from '../models/user.model.js';
 import { AccountTokenService } from './account-token.js';
 import { hashToken } from './jwt.js';
 
@@ -70,16 +71,19 @@ describe('AccountTokenService', () => {
     expect(consume).toHaveBeenCalledWith(expect.objectContaining({ _id: record._id, usedAt: { $exists: false } }), { $set: { usedAt: expect.any(Date) } }, { returnDocument: 'after' });
   });
 
-  it('rejects and cancels OTP if it has expired after 1 minute', async () => {
+  it('rejects and cancels OTP if it has expired after 5 minutes and deletes unverified registration', async () => {
     const userId = new Types.ObjectId();
     const service = new AccountTokenService();
     const expiredRecord = {
       _id: new Types.ObjectId(),
+      userId,
       otpHash: 'a'.repeat(64),
-      otpExpiresAt: new Date(Date.now() - 1000), // 1 second in the past
+      otpExpiresAt: new Date(Date.now() - 1000), // expired
     };
     vi.spyOn(AccountTokenModel, 'findOne').mockReturnValue({ select: () => Promise.resolve(expiredRecord) } as never);
     const cancelToken = vi.spyOn(AccountTokenModel, 'updateOne').mockResolvedValue({ acknowledged: true } as never);
+    const deleteUser = vi.spyOn(UserModel, 'deleteOne').mockResolvedValue({ deletedCount: 1 } as never);
+    const deleteTokens = vi.spyOn(AccountTokenModel, 'deleteMany').mockResolvedValue({ acknowledged: true } as never);
 
     const result = await service.consumeOtp(userId, '123456', 'verify_email');
     expect(result).toBeNull();
@@ -87,5 +91,20 @@ describe('AccountTokenService', () => {
       { _id: expiredRecord._id },
       { $set: { usedAt: expect.any(Date) } },
     );
+    expect(deleteUser).toHaveBeenCalledWith(expect.objectContaining({ _id: userId, emailVerificationRequired: true }));
+    expect(deleteTokens).toHaveBeenCalledWith({ userId });
+  });
+
+  it('deletes unverified user if expired via deleteUnverifiedUserIfExpired', async () => {
+    const userId = new Types.ObjectId();
+    const service = new AccountTokenService();
+    vi.spyOn(AccountTokenModel, 'exists').mockResolvedValue(null);
+    const deleteUser = vi.spyOn(UserModel, 'deleteOne').mockResolvedValue({ deletedCount: 1 } as never);
+    const deleteTokens = vi.spyOn(AccountTokenModel, 'deleteMany').mockResolvedValue({ acknowledged: true } as never);
+
+    const deleted = await service.deleteUnverifiedUserIfExpired(userId);
+    expect(deleted).toBe(true);
+    expect(deleteUser).toHaveBeenCalledWith(expect.objectContaining({ _id: userId, emailVerificationRequired: true }));
+    expect(deleteTokens).toHaveBeenCalledWith({ userId });
   });
 });

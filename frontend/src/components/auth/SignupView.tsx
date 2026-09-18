@@ -26,6 +26,7 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
   const [verified, setVerified] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
   const [resendCooldown, setResendCooldown] = useState(60);
+  const [otpExpiryCountdown, setOtpExpiryCountdown] = useState(300);
 
   useEffect(() => {
     if (registeredEmail && resendCooldown > 0) {
@@ -33,6 +34,13 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
       return () => clearTimeout(timer);
     }
   }, [registeredEmail, resendCooldown]);
+
+  useEffect(() => {
+    if (registeredEmail && otpExpiryCountdown > 0 && !verified) {
+      const timer = setTimeout(() => setOtpExpiryCountdown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [registeredEmail, otpExpiryCountdown, verified]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,11 +56,17 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
     setIsLoading(true);
     try {
       const result = await auth.register(name.trim(), email.trim(), password);
-      if (result.verificationRequired) setRegisteredEmail(result.user.email);
+      if (result.verificationRequired) {
+        setRegisteredEmail(result.user.email);
+        setResendCooldown(60);
+        setOtpExpiryCountdown(300);
+        setVerificationCode('');
+        setVerificationMessage('');
+      }
     } catch (err) {
       if (err instanceof auth.ApiRequestError) {
         if (err.code === 'EMAIL_EXISTS') {
-          setErrorMsg('Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.');
+          setErrorMsg('Email này đã được sử dụng hoặc đang chờ xác thực. Vui lòng đăng nhập hoặc thử lại sau 5 phút.');
         } else {
           setErrorMsg(err.message);
         }
@@ -66,8 +80,8 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
 
   const handleVerifyCode = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
-    if (resendCooldown === 0) {
-      setVerificationMessage('Mã OTP đã hết hạn sau 1 phút và đã bị hủy. Vui lòng bấm "Gửi lại mã" để nhận mã mới.');
+    if (otpExpiryCountdown === 0) {
+      setVerificationMessage('Mã OTP đã hết hạn sau 5 phút. Tài khoản đăng ký đã bị hủy. Vui lòng đóng và đăng ký lại.');
       return;
     }
     setVerificationMessage('');
@@ -88,8 +102,9 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
     setIsLoading(true);
     try {
       await auth.resendVerification(registeredEmail);
-      setVerificationMessage('Mã OTP mới đã được gửi đến email (hiệu lực trong 1 phút).');
+      setVerificationMessage('Mã OTP mới đã được gửi đến email (hiệu lực trong 5 phút).');
       setResendCooldown(60);
+      setOtpExpiryCountdown(300);
     } catch (error) {
       setVerificationMessage(error instanceof auth.ApiRequestError ? error.message : 'Không thể gửi lại mã lúc này.');
     } finally {
@@ -405,13 +420,13 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
 
                 {/* Countdown / Expiry status */}
                 <div className="mb-4">
-                  {resendCooldown > 0 ? (
+                  {otpExpiryCountdown > 0 ? (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-                      <span>Mã OTP tự động hủy sau: <strong>{resendCooldown}s</strong></span>
+                      <span>Mã OTP tự động hủy sau: <strong>{Math.floor(otpExpiryCountdown / 60)}:{(otpExpiryCountdown % 60).toString().padStart(2, '0')}</strong></span>
                     </div>
                   ) : (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-[#E50914] text-xs font-semibold">
-                      <span>Mã OTP đã hết hạn sau 1 phút và bị hủy. Vui lòng bấm gửi lại mã!</span>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-[#E50914] text-xs font-semibold">
+                      <span>Mã OTP đã hết hạn sau 5 phút và tài khoản đã bị hủy. Vui lòng đóng và đăng ký lại!</span>
                     </div>
                   )}
                 </div>
@@ -425,7 +440,7 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
                       if (verificationMessage) setVerificationMessage('');
                     }}
                     length={6}
-                    disabled={isLoading || resendCooldown === 0}
+                    disabled={isLoading || otpExpiryCountdown === 0}
                     autoFocus={true}
                   />
                 </div>
@@ -441,7 +456,7 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
                 <button
                   type="button"
                   onClick={() => handleVerifyCode()}
-                  disabled={isLoading || verificationCode.length !== 6 || resendCooldown === 0}
+                  disabled={isLoading || verificationCode.length !== 6 || otpExpiryCountdown === 0}
                   className="w-full h-12 rounded-full bg-[#E50914] hover:bg-[#CC0813] text-white font-bold transition-all shadow-[0_8px_20px_rgba(229,9,20,0.25)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer mb-4"
                 >
                   {isLoading ? (

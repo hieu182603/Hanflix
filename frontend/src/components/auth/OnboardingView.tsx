@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Sparkles, BookOpen, Calendar, Clock, Edit2 } from 'lucide-react';
 import { UserLearningProfile } from '../../data/hanflixData';
+import { saveLearningProfile } from '../../api/learning';
 
 interface SurveyDraft {
   step: number;
@@ -103,6 +104,8 @@ const HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6'];
 
 export default function OnboardingView({ onCompleteOnboarding, onSkip }: OnboardingViewProps) {
   const [draft, setDraft] = useState<SurveyDraft>(loadDraft);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     saveDraft(draft);
@@ -154,7 +157,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
     set('showProposal', true);
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     const subtitleMap: Record<string, { zh: boolean; pinyin: boolean; vi: boolean }> = {
       all: { zh: true, pinyin: true, vi: true },
       'zh-pinyin': { zh: true, pinyin: true, vi: false },
@@ -168,7 +171,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
 
     const profile: UserLearningProfile = {
       hskLevel: hskLevelNum,
-      goal: draft.goal,
+      goal: draft.goal === 'business' ? 'work' : draft.goal,
       topics: draft.topics.filter((t) => t !== 'no-pref'),
       dailyMinutes: draft.dailyMinutes,
       preferredDuration: '1-5',
@@ -176,8 +179,24 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
       defaultSpeed: 1,
       uiLanguage: 'vi',
     };
-    sessionStorage.removeItem(DRAFT_KEY);
-    onCompleteOnboarding(profile);
+    setSaving(true); setSaveError('');
+    try {
+      await saveLearningProfile({
+        currentHsk: hskLevelNum,
+        currentHskSource: draft.experience === 'know' ? 'self_reported' : 'unknown',
+        targetHsk: draft.targetHSK ? Number(draft.targetHSK.replace(/\D/g, '')) : undefined,
+        goal: profile.goal,
+        focusSkills: draft.skills.map(skill => skill === 'sentences' ? 'sentence_usage' : skill),
+        topicIds: profile.topics,
+        dailyMinutes: profile.dailyMinutes,
+        studyDaysPerWeek: draft.daysPerWeek,
+        subtitlePreference: { all: 'all', 'zh-pinyin': 'zh_pinyin', 'zh-vi': 'zh_vi', zh: 'zh_only', unsure: 'unknown' }[draft.subtitleMode] ?? 'all',
+        surveyVersion: 1,
+      });
+      sessionStorage.removeItem(DRAFT_KEY);
+      onCompleteOnboarding({ ...profile, surveyVersion: 1 });
+    } catch (error) { setSaveError(error instanceof Error ? error.message : 'Không thể lưu hồ sơ.'); }
+    finally { setSaving(false); }
   };
 
   const totalSteps = 6;
@@ -277,11 +296,13 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
               </button>
               <button
                 onClick={handleFinish}
+                disabled={saving}
                 className="flex-[2] h-12 rounded-xl bg-[#B91B1C] text-white font-bold text-sm hover:bg-[#A3181A] transition-colors"
               >
-                Xác nhận lộ trình
+                {saving ? 'Đang lưu…' : 'Xác nhận lộ trình'}
               </button>
             </div>
+            {saveError && <p role="alert" className="text-sm text-red-700">{saveError}</p>}
             
             <div className="text-center">
                <button onClick={() => { sessionStorage.removeItem(DRAFT_KEY); if (onSkip) onSkip(); }} className="text-xs text-[#8B9097] hover:text-[#5F6368] underline">

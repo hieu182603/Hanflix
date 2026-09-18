@@ -2,9 +2,14 @@ import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import type { Types } from 'mongoose';
 import { env } from '../config/env.js';
 import { AccountTokenModel } from '../models/account-token.model.js';
+import { UserModel } from '../models/user.model.js';
 import { hashToken } from './jwt.js';
 
 export type AccountTokenPurpose = 'verify_email' | 'reset_password';
+
+export const OTP_TTL_MINUTES = 5;
+export const OTP_TTL_MS = OTP_TTL_MINUTES * 60_000;
+export const OTP_RESEND_COOLDOWN_MS = 60_000;
 
 function hashOtp(userId: Types.ObjectId, purpose: AccountTokenPurpose, code: string): string {
   return createHmac('sha256', env.JWT_REFRESH_SECRET)
@@ -23,7 +28,7 @@ export class AccountTokenService {
   }
 
   async issueWithOtpIfAllowed(userId: Types.ObjectId, purpose: AccountTokenPurpose, ttlMinutes: number): Promise<{ token: string; code: string } | null> {
-    const recent = await AccountTokenModel.exists({ userId, purpose, createdAt: { $gt: new Date(Date.now() - 60_000) } });
+    const recent = await AccountTokenModel.exists({ userId, purpose, createdAt: { $gt: new Date(Date.now() - OTP_RESEND_COOLDOWN_MS) } });
     return recent ? null : this.issueWithOtp(userId, purpose, ttlMinutes);
   }
 
@@ -41,7 +46,7 @@ export class AccountTokenService {
       ...(code ? {
         otpHash: hashOtp(userId, purpose, code),
         otpAttempts: 0,
-        otpExpiresAt: new Date(Date.now() + 60_000), // OTP expires after 1 minute
+        otpExpiresAt: new Date(Date.now() + OTP_TTL_MS), // OTP expires after 5 minutes
       } : {}),
       expiresAt: new Date(Date.now() + ttlMinutes * 60_000),
     });
@@ -69,9 +74,17 @@ export class AccountTokenService {
 
     if (!record?.otpHash) return null;
 
-    // If OTP has expired (> 1 minute), cancel/invalidate the token and return null
+    // If OTP has expired (> 5 minutes), cancel/invalidate the token and clean up unverified registration
     if (record.otpExpiresAt && record.otpExpiresAt <= now) {
       await AccountTokenModel.updateOne({ _id: record._id }, { $set: { usedAt: now } });
+      if (purpose === 'verify_email') {
+        await UserModel.deleteOne({
+          _id: userId,
+          emailVerificationRequired: true,
+          $or: [{ emailVerifiedAt: { $exists: false } }, { emailVerifiedAt: null }],
+        });
+        await AccountTokenModel.deleteMany({ userId });
+      }
       return null;
     }
 
@@ -86,6 +99,26 @@ export class AccountTokenService {
       { $set: { usedAt: now } },
       { returnDocument: 'after' },
     );
+  }
+
+  async deleteUnverifiedUserIfExpired(userId: Types.ObjectId): Promise<boolean> {
+    const activeOtp = await AccountTokenModel.exists({
+      userId,
+      purpose: 'verify_email',
+      otpExpiresAt: { $gt: new Date() },
+      usedAt: { $exists: false },
+    });
+    if (activeOtp) return false;
+    const deleted = await UserModel.deleteOne({
+      _id: userId,
+      emailVerificationRequired: true,
+      $or: [{ emailVerifiedAt: { $exists: false } }, { emailVerifiedAt: null }],
+    });
+    if (deleted.deletedCount > 0) {
+      await AccountTokenModel.deleteMany({ userId });
+      return true;
+    }
+    return false;
   }
 
   async invalidate(userId: Types.ObjectId, purpose: AccountTokenPurpose): Promise<void> {

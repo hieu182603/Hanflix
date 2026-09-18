@@ -22,6 +22,7 @@ export default function ResetPasswordView({ onNavigateToLogin, initialEmail }: R
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(email ? 60 : 0);
+  const [otpExpiryCountdown, setOtpExpiryCountdown] = useState(email ? 300 : 0);
   const [resendStatus, setResendStatus] = useState('');
 
   React.useEffect(() => {
@@ -31,14 +32,22 @@ export default function ResetPasswordView({ onNavigateToLogin, initialEmail }: R
     }
   }, [resendCooldown]);
 
+  React.useEffect(() => {
+    if (otpExpiryCountdown > 0 && !complete) {
+      const timer = setTimeout(() => setOtpExpiryCountdown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpiryCountdown, complete]);
+
   const handleResendOtp = async () => {
     if (!email || resendCooldown > 0) return;
     setResendStatus('');
     setCode('');
     try {
       await auth.forgotPassword(email);
-      setResendStatus('Mã OTP mới đã được gửi đến email (hiệu lực trong 1 phút).');
+      setResendStatus('Mã OTP mới đã được gửi đến email (hiệu lực trong 5 phút).');
       setResendCooldown(60);
+      setOtpExpiryCountdown(300);
     } catch (e) {
       setResendStatus(e instanceof auth.ApiRequestError ? e.message : 'Không thể gửi lại mã lúc này.');
     }
@@ -53,8 +62,8 @@ export default function ResetPasswordView({ onNavigateToLogin, initialEmail }: R
         setError('Vui lòng nhập email tài khoản.');
         return;
       }
-      if (resendCooldown === 0) {
-        setError('Mã OTP đã hết hạn sau 1 phút và đã bị hủy. Vui lòng bấm "Gửi lại mã" để nhận mã mới.');
+      if (otpExpiryCountdown === 0) {
+        setError('Mã OTP đã hết hạn sau 5 phút và đã bị hủy. Vui lòng bấm "Gửi lại mã" để nhận mã mới.');
         return;
       }
       if (code.length !== 6 || !/^\d{6}$/.test(code)) {
@@ -282,13 +291,13 @@ export default function ResetPasswordView({ onNavigateToLogin, initialEmail }: R
               </div>
               {/* Countdown / Expiry status */}
               <div className="mb-2">
-                {resendCooldown > 0 ? (
+                {otpExpiryCountdown > 0 ? (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-                    <span>Mã OTP tự động hủy sau: <strong>{resendCooldown}s</strong></span>
+                    <span>Mã OTP tự động hủy sau: <strong>{Math.floor(otpExpiryCountdown / 60)}:{(otpExpiryCountdown % 60).toString().padStart(2, '0')}</strong></span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-[#E50914] text-xs font-semibold">
-                    <span>Mã OTP đã hết hạn sau 1 phút và bị hủy. Vui lòng bấm gửi lại mã!</span>
+                    <span>Mã OTP đã hết hạn sau 5 phút và bị hủy. Vui lòng bấm gửi lại mã!</span>
                   </div>
                 )}
               </div>
@@ -298,7 +307,7 @@ export default function ResetPasswordView({ onNavigateToLogin, initialEmail }: R
                   value={code}
                   onChange={setCode}
                   length={6}
-                  disabled={loading || resendCooldown === 0}
+                  disabled={loading || otpExpiryCountdown === 0}
                   autoFocus={true}
                 />
               </div>

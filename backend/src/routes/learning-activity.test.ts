@@ -38,7 +38,7 @@ describe('GET /api/v1/learning/activity', () => {
       .set('Authorization', `Bearer ${signAccessToken(userId.toString(), 'user')}`);
 
     expect(response.status).toBe(200);
-    expect(response.body.data.timezone).toBe('UTC');
+    expect(response.body.data.timezone).toBe('Asia/Ho_Chi_Minh');
     expect(response.body.data.days).toHaveLength(3);
     expect(response.body.data.days[1]).toEqual({
       date: '2026-09-17', activeStudySeconds: 0, progressUpdates: 0, quizAttempts: 0, completedLessons: 0,

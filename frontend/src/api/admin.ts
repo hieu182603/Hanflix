@@ -104,6 +104,20 @@ export function getProcessingStatus(id: string): Promise<ProcessingStatus> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/processing`);
 }
 
+export interface ProcessingJob {
+  _id: string;
+  lessonId: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  stage: string;
+  stageProgress: number;
+  attempts: number;
+  errorMessage?: string;
+}
+
+export function listProcessingJobs(status?: ProcessingJob['status']): Promise<{ items: ProcessingJob[]; total: number }> {
+  return apiFetch(`/admin/processing-jobs${status ? `?status=${status}` : ''}`);
+}
+
 export function retryProcessing(id: string): Promise<ProcessingStatus> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/processing/retry`, { method: 'POST' });
 }

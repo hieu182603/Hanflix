@@ -68,10 +68,10 @@ export interface PandaPetProps {
   isAIOpen?: boolean
 }
 
-const BUBBLE_MESSAGES: Record<
-  import("./panda.types").PandaState,
-  { title: string; body: string }
-> = {
+const BUBBLE_MESSAGES: Record<import("./panda.types").PandaState, {
+  title: string
+  body: string
+}> = {
   idle: {
     title: "Xin chào 👋",
     body: "Tôi là Panda AI. Tôi có thể giúp gì cho bạn trong hành trình học tiếng Trung?",
@@ -194,10 +194,9 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
     } else if (!cancelled) {
       if (onOpenAI) {
         if (!isAIOpen) {
-          triggerReaction("success", 1600)
+          triggerReaction("thinking", 1000)
           onOpenAI()
         } else {
-          triggerReaction("success", 1800)
           setBubbleOpen((open) => !open)
         }
       } else {
@@ -208,10 +207,10 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
 
   const size = petSize()
   const isDesktop = typeof window !== "undefined" && window.innerWidth > 640
-  // When AI Assistant Drawer is open (440px wide on right), offset Panda so it sits nicely beside it
+  // Keep Panda next to the 500px AI drawer instead of underneath it.
   const effectiveX =
     isAIOpen && isDesktop
-      ? Math.min(position.x, window.innerWidth - 440 - size - 20)
+      ? Math.min(position.x, window.innerWidth - 500 - size - 20)
       : position.x
 
   const bubbleWidth = Math.min(280, window.innerWidth - 24)
@@ -230,6 +229,23 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
   }
 
   const currentMsg = BUBBLE_MESSAGES[state] || BUBBLE_MESSAGES.idle
+  const showActionStatus =
+    isAIOpen && !bubbleOpen && state !== "idle" && state !== "sleeping"
+  const statusWidth = 150
+  const statusStyle: CSSProperties = {
+    left: Math.min(
+      Math.max(12, effectiveX + size / 2 - statusWidth / 2),
+      window.innerWidth - statusWidth - 12,
+    ),
+    top:
+      position.y >= 48
+        ? position.y - 38
+        : Math.min(window.innerHeight - 34, position.y + size + 6),
+    width: statusWidth,
+  }
+  const statusLabel = pandaLabels[state].replace(/^./, (letter) =>
+    letter.toUpperCase(),
+  )
 
   return (
     <div
@@ -259,12 +275,21 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
           <p>{currentMsg.body}</p>
         </div>
       )}
+      {showActionStatus && (
+        <div className="panda-state-chip" role="status" style={statusStyle}>
+          {statusLabel}
+        </div>
+      )}
       <button
         type="button"
         className="panda-pet-button group"
         data-dragging={dragging}
         style={{ left: effectiveX, top: position.y }}
-        aria-label={`Trợ lý Panda AI (${pandaLabels[state]})`}
+        aria-label={
+          isAIOpen
+            ? `Trợ lý Panda AI (${pandaLabels[state]})`
+            : "Mở trợ lý Panda AI"
+        }
         aria-expanded={bubbleOpen}
         aria-controls="panda-pet-bubble"
         onPointerDown={onPointerDown}
@@ -275,10 +300,9 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
           if (event.detail === 0) {
             if (onOpenAI) {
               if (!isAIOpen) {
-                triggerReaction("success", 1600)
+                triggerReaction("thinking", 1000)
                 onOpenAI()
               } else {
-                triggerReaction("success", 1800)
                 setBubbleOpen((open) => !open)
               }
             } else {

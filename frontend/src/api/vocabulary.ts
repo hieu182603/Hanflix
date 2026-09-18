@@ -1,5 +1,32 @@
 import { apiFetch } from './client';
 
+export interface SavedVocabulary {
+  _id: string;
+  wordId: { _id: string; hanzi: string; pinyin?: string; meaningVi?: string; partOfSpeech?: string };
+  sourceLessonId?: { _id: string; titleVi: string };
+  nextReviewAt: string;
+  repetitions: number;
+  intervalDays: number;
+}
+
+export function listSavedWords(): Promise<{ items: SavedVocabulary[]; total: number; dueCount: number }> {
+  return apiFetch('/vocabulary/saved');
+}
+
+export function listDueWords(): Promise<{ items: SavedVocabulary[]; count: number }> { return apiFetch('/vocabulary/due'); }
+
+export function saveSubtitleWord(wordId: string, sourceLessonId: string, sourceCueId: string): Promise<SavedVocabulary> {
+  return apiFetch('/vocabulary', { method: 'POST', body: JSON.stringify({ wordId, sourceLessonId, sourceCueId }) });
+}
+
+export function removeSavedWord(wordId: string): Promise<void> {
+  return apiFetch(`/vocabulary/${encodeURIComponent(wordId)}`, { method: 'DELETE' });
+}
+
+export function reviewSavedWord(wordId: string, rating: 'again' | 'hard' | 'good' | 'easy'): Promise<SavedVocabulary> {
+  return apiFetch(`/vocabulary/${encodeURIComponent(wordId)}/review`, { method: 'POST', body: JSON.stringify({ rating }) });
+}
+
 export interface VocabularyItem {
   _id: string;
   simplified: string;

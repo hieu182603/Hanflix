@@ -1,4 +1,4 @@
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -60,6 +60,17 @@ export class R2StorageService implements StorageService {
     const result = await this.getClient().send(new GetObjectCommand({ Bucket: config.bucket, Key: objectKey }));
     if (!result.Body) throw new AppError(502, 'R2_EMPTY_OBJECT', 'R2 không trả về dữ liệu video');
     await pipeline(result.Body as Readable, createWriteStream(destinationPath, { flags: 'w' }));
+  }
+
+  async uploadFile(objectKey: string, filePath: string, contentType: string) {
+    const config = this.config();
+    const fileStream = createReadStream(filePath);
+    await this.getClient().send(new PutObjectCommand({
+      Bucket: config.bucket,
+      Key: objectKey,
+      Body: fileStream,
+      ContentType: contentType,
+    }));
   }
 
   async deleteObject(objectKey: string) {

@@ -8,6 +8,11 @@ export interface UserLearningProfile {
   defaultSpeed: number;
   uiLanguage: string;
   surveyVersion?: number; // Set when onboarding survey is completed
+  currentHskSource?: string;
+  targetHsk?: number;
+  focusSkills?: string[];
+  studyDaysPerWeek?: number;
+  subtitlePreference?: string;
 }
 
 export interface User {

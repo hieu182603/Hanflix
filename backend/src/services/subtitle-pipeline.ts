@@ -10,7 +10,8 @@ import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { transcribeAudio } from './asr.js';
 import { logger } from './logger.js';
-import { extractAudioForASR, probeMedia } from './media-processor.js';
+import { extractAudioForASR, generateThumbnail, probeMedia } from './media-processor.js';
+import { uploadR2File } from './r2.js';
 import { pinyinService } from './pinyin.js';
 import { translationService } from './translator.js';
 import { resolveLearningWordIds } from './learning-word.js';
@@ -63,11 +64,24 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
   try {
     await updateStage('inspect_media', 10);
     let metadata;
+    let thumbnailKey: string | undefined;
     try {
       metadata = await probeMedia(videoLocalPath);
       await extractAudioForASR(videoLocalPath, audioPath);
     } catch (error) {
       throw new AppError(422, 'FAILED_MEDIA_PROCESSING', `Không thể đọc hoặc tách audio: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      const tempDir = path.dirname(videoLocalPath);
+      const thumbnailFilename = `thumb-${lessonId}-${randomUUID()}.jpg`;
+      const generatedThumbPath = await generateThumbnail(videoLocalPath, tempDir, thumbnailFilename, '00:00:01');
+      thumbnailKey = `thumbnails/${lessonId}/${randomUUID()}.jpg`;
+      await uploadR2File(thumbnailKey, generatedThumbPath, 'image/jpeg');
+      await fs.unlink(generatedThumbPath).catch(() => undefined);
+      logger.info({ videoId: lessonId, thumbnailKey }, '[VideoProcessing] Thumbnail generated and uploaded');
+    } catch (thumbError) {
+      logger.warn({ videoId: lessonId, error: thumbError instanceof Error ? thumbError.message : String(thumbError) }, '[VideoProcessing] Thumbnail generation failed, continuing without thumbnail');
     }
 
     await updateStage('transcribe_zh', 35);
@@ -135,6 +149,7 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
       LessonModel.findByIdAndUpdate(lessonId, {
         $set: {
           durationSeconds: Math.max(60, Math.min(300, Math.round(metadata.durationSeconds))),
+          ...(thumbnailKey ? { thumbnailKey } : {}),
           activeSubtitleRevision: subtitleTrack.revision,
           status: 'ready_for_review',
           processingStatus: 'READY',
