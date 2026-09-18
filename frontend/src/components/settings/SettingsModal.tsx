@@ -14,6 +14,7 @@ import {
   Compass,
 } from 'lucide-react';
 import * as authApi from '../../api/auth';
+import { saveLearningProfile } from '../../api/learning';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { UserProfile } from '../../data/hanflixData';
 
@@ -60,6 +61,8 @@ export default function SettingsModal({
   const [autoPronounce, setAutoPronounce] = useState<boolean>(true);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [prefSuccess, setPrefSuccess] = useState('');
+  const [prefError, setPrefError] = useState('');
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   if (!isOpen) return null;
 
@@ -95,14 +98,28 @@ export default function SettingsModal({
     }
   };
 
-  const handleSaveLearningPrefs = () => {
-    if (onSavePreferences) {
-      onSavePreferences({
-        subtitleMode,
+  const handleSaveLearningPrefs = async () => {
+    setSavingPrefs(true); setPrefError(''); setPrefSuccess('');
+    try {
+      const profile = currentUser?.learningProfile;
+      await saveLearningProfile({
+        currentHsk: profile?.hskLevel ?? 3,
+        currentHskSource: profile?.currentHskSource ?? 'unknown',
+        targetHsk: profile?.targetHsk,
+        goal: profile?.goal ?? 'daily',
+        focusSkills: profile?.focusSkills,
+        topicIds: profile?.topics ?? [],
+        dailyMinutes: profile?.dailyMinutes ?? 15,
+        studyDaysPerWeek: profile?.studyDaysPerWeek,
+        subtitlePreference: { all: 'all', 'zh-pinyin': 'zh_pinyin', zh: 'zh_only' }[subtitleMode],
+        surveyVersion: profile?.surveyVersion ?? 1,
       });
-    }
-    setPrefSuccess('Đã lưu tùy chọn học tập thành công!');
-    setTimeout(() => setPrefSuccess(''), 2500);
+      localStorage.setItem('hanflix_auto_pronounce', String(autoPronounce));
+      localStorage.setItem('hanflix_playback_speed', String(playbackSpeed));
+      onSavePreferences?.({ subtitleMode });
+      setPrefSuccess('Đã lưu tùy chọn học tập.');
+    } catch (error) { setPrefError(error instanceof Error ? error.message : 'Không thể lưu tùy chọn.'); }
+    finally { setSavingPrefs(false); }
   };
 
   return (
@@ -243,6 +260,7 @@ export default function SettingsModal({
                   <span>{prefSuccess}</span>
                 </div>
               )}
+              {prefError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700">{prefError}</p>}
 
               {/* Subtitle mode */}
               <div className="space-y-2">
@@ -312,9 +330,10 @@ export default function SettingsModal({
                 <button
                   type="button"
                   onClick={handleSaveLearningPrefs}
+                  disabled={savingPrefs}
                   className="px-5 py-2.5 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
-                  Lưu tùy chọn học tập
+                  {savingPrefs ? 'Đang lưu…' : 'Lưu tùy chọn học tập'}
                 </button>
               </div>
             </div>

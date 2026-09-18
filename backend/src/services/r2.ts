@@ -11,4 +11,7 @@ export const createVideoDownloadUrl = (objectKey: string) => storageService.crea
 export const downloadR2Object = (objectKey: string, destinationPath: string) =>
   storageService.downloadToFile(objectKey, destinationPath);
 
+export const uploadR2File = (objectKey: string, filePath: string, contentType: string) =>
+  storageService.uploadFile(objectKey, filePath, contentType);
+
 export const deleteR2Object = (objectKey: string) => storageService.deleteObject(objectKey);

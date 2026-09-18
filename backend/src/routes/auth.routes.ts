@@ -101,8 +101,17 @@ function publicUser(user: {
 
 router.post('/register', authLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   mailService.assertConfigured();
-  const exists = await UserModel.exists({ email: req.body.email });
-  if (exists) throw new AppError(409, 'EMAIL_EXISTS', 'Email đã được sử dụng');
+  const existingUser = await UserModel.findOne({ email: req.body.email }).select('+emailVerificationRequired');
+  if (existingUser) {
+    if (existingUser.emailVerificationRequired && !existingUser.emailVerifiedAt) {
+      const deleted = await accountTokenService.deleteUnverifiedUserIfExpired(existingUser._id);
+      if (!deleted) {
+        throw new AppError(409, 'EMAIL_EXISTS', 'Email này đã đăng ký và đang chờ xác thực OTP. Vui lòng kiểm tra email hoặc chờ hết 5 phút để thử lại.');
+      }
+    } else {
+      throw new AppError(409, 'EMAIL_EXISTS', 'Email đã được sử dụng');
+    }
+  }
   const passwordHash = await bcrypt.hash(req.body.password, 12);
   let user;
   try {
@@ -325,13 +334,13 @@ router.post('/verify-email', authLimiter, validate(accountProofSchema), asyncHan
       const user = await UserModel.findOne({ email: req.body.email });
       return user ? accountTokenService.consumeOtp(user._id, req.body.code, 'verify_email') : null;
     })();
-  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Mã hoặc liên kết xác minh không hợp lệ hoặc đã hết hạn');
+  if (!accountToken) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Mã xác minh không hợp lệ hoặc đã hết hạn (tài khoản chưa xác thực quá 5 phút đã bị hủy, vui lòng đăng ký lại)');
   const user = await UserModel.findByIdAndUpdate(
     accountToken.userId,
     { $set: { emailVerifiedAt: new Date(), emailVerificationRequired: false } },
     { returnDocument: 'after' },
   );
-  if (!user) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Liên kết xác minh không hợp lệ');
+  if (!user) throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Tài khoản chưa xác thực đã bị hủy do hết hạn OTP. Vui lòng đăng ký lại.');
   res.json({ data: { verified: true, user: publicUser(user) } });
 }));
 

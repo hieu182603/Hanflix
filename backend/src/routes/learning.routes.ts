@@ -11,7 +11,12 @@ import { SavedWordModel } from '../models/saved-word.model.js';
 import { StudyActivityModel } from '../models/study-activity.model.js';
 import { UserModel } from '../models/user.model.js';
 import { rerankLessonCandidates } from '../services/gemini.js';
-import { enumerateUtcDateKeys, parseUtcDateKey, toUtcDateKey } from '../services/study-activity.js';
+import {
+  DEFAULT_TIMEZONE,
+  enumerateDateKeys,
+  parseDateKey,
+  toTimezoneDateKey,
+} from '../services/study-activity.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
@@ -20,18 +25,20 @@ router.use(requireAuth);
 const activityQuerySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from phải có dạng YYYY-MM-DD').optional(),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'to phải có dạng YYYY-MM-DD').optional(),
+  timezone: z.string().trim().min(1).max(50).optional(),
 });
 
 router.get('/activity', validate(activityQuerySchema, 'query'), asyncHandler(async (req, res) => {
   const query = req.query as unknown as z.infer<typeof activityQuerySchema>;
-  const to = query.to ?? toUtcDateKey();
-  const toDate = parseUtcDateKey(to);
+  const timezone = query.timezone || DEFAULT_TIMEZONE;
+  const to = query.to ?? toTimezoneDateKey(new Date(), timezone);
+  const toDate = parseDateKey(to);
   const defaultFrom = new Date(toDate);
   defaultFrom.setUTCDate(defaultFrom.getUTCDate() - 29);
-  const from = query.from ?? toUtcDateKey(defaultFrom);
+  const from = query.from ?? defaultFrom.toISOString().slice(0, 10);
   let dateKeys: string[];
   try {
-    dateKeys = enumerateUtcDateKeys(from, to);
+    dateKeys = enumerateDateKeys(from, to);
   } catch {
     throw new AppError(422, 'INVALID_ACTIVITY_RANGE', 'Khoảng thời gian hoạt động không hợp lệ');
   }
@@ -59,7 +66,7 @@ router.get('/activity', validate(activityQuerySchema, 'query'), asyncHandler(asy
     completedLessons: sum.completedLessons + day.completedLessons,
   }), { activeStudySeconds: 0, progressUpdates: 0, quizAttempts: 0, completedLessons: 0 });
 
-  res.json({ data: { from, to, timezone: 'UTC', days, totals } });
+  res.json({ data: { from, to, timezone, days, totals } });
 }));
 
 router.get('/dashboard', asyncHandler(async (req, res) => {

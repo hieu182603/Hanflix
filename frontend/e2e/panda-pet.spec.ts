@@ -43,4 +43,16 @@ test.describe("Panda AI Pet", () => {
       "idle",
     )
   })
+
+  test("stays idle without a user action instead of changing on a random timer", async ({
+    page,
+  }) => {
+    await page.clock.install()
+    await page.goto("/dev/panda")
+    const pet = page.getByTestId("panda-pet")
+
+    await expect(pet).toHaveAttribute("data-state", "idle")
+    await page.clock.fastForward(30_000)
+    await expect(pet).toHaveAttribute("data-state", "idle")
+  })
 })

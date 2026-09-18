@@ -56,6 +56,15 @@ async function recordActivitySafely(userId: Types.ObjectId, increment: StudyActi
   }
 }
 
+async function safeDownloadUrl(key?: string | null): Promise<string | null> {
+  if (!key) return null;
+  try {
+    return await createVideoDownloadUrl(key);
+  } catch {
+    return null;
+  }
+}
+
 router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => {
   const { q, hsk, topic, page, limit } = req.query as unknown as z.infer<typeof listSchema>;
   const filter: Record<string, unknown> = { status: 'published' };
@@ -72,14 +81,23 @@ router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => 
       .lean(),
     LessonModel.countDocuments(filter),
   ]);
-  res.json({ data: { items: items.map(item => withProcessingCompatibility(item)), page, limit, total, pages: Math.ceil(total / limit) } });
+  const itemsWithThumbnails = await Promise.all(
+    items.map(async item => {
+      const thumbnailUrl = await safeDownloadUrl(item.thumbnailKey);
+      return withProcessingCompatibility({ ...item, thumbnailUrl });
+    }),
+  );
+  res.json({ data: { items: itemsWithThumbnails, page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
 router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
-  const mediaUrl = lesson.media?.objectKey ? await createVideoDownloadUrl(lesson.media.objectKey) : null;
-  res.json({ data: withProcessingCompatibility({ ...lesson, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });
+  const [mediaUrl, thumbnailUrl] = await Promise.all([
+    safeDownloadUrl(lesson.media?.objectKey),
+    safeDownloadUrl(lesson.thumbnailKey),
+  ]);
+  res.json({ data: withProcessingCompatibility({ ...lesson, thumbnailUrl, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });
 }));
 
 router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(async (req, res) => {

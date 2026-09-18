@@ -31,19 +31,20 @@ export function PandaPetProvider({ children }: { children: ReactNode }) {
   }>({ state: "idle", version: 0 })
   const stateRef = useRef(snapshot.state)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const randomActionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   stateRef.current = snapshot.state
 
   const setPandaState = useCallback((state: PandaState) => {
+    if (reactionTimer.current) {
+      clearTimeout(reactionTimer.current)
+      reactionTimer.current = null
+    }
     stateRef.current = state
     setSnapshot((previous) => ({ state, version: previous.version + 1 }))
   }, [])
 
   const triggerReaction = useCallback(
     (targetState: PandaState, durationMs: number = 2500) => {
-      if (reactionTimer.current) clearTimeout(reactionTimer.current)
-      if (randomActionTimer.current) clearTimeout(randomActionTimer.current)
       setPandaState(targetState)
       reactionTimer.current = setTimeout(() => {
         if (stateRef.current === targetState) {
@@ -73,27 +74,6 @@ export function PandaPetProvider({ children }: { children: ReactNode }) {
     }
   }, [setPandaState])
 
-  // Random idle micro-actions (every 16-24s, do searching / thinking / working for 3.5s)
-  const scheduleRandomIdle = useCallback(() => {
-    if (randomActionTimer.current) clearTimeout(randomActionTimer.current)
-    if (stateRef.current !== "idle" || document.hidden) return
-
-    const delay = 16000 + Math.random() * 8000 // 16s - 24s
-    randomActionTimer.current = setTimeout(() => {
-      if (stateRef.current === "idle" && !document.hidden) {
-        const playfulActions: PandaState[] = ["searching", "thinking", "working"]
-        const nextAction = playfulActions[Math.floor(Math.random() * playfulActions.length)]
-        setPandaState(nextAction)
-
-        reactionTimer.current = setTimeout(() => {
-          if (stateRef.current === nextAction) {
-            setPandaState("idle")
-          }
-        }, 3600)
-      }
-    }, delay)
-  }, [setPandaState])
-
   useEffect(() => {
     preloadPandaSprites()
   }, [])
@@ -101,12 +81,10 @@ export function PandaPetProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (snapshot.state === "idle") {
       scheduleIdle()
-      scheduleRandomIdle()
     } else {
       if (idleTimer.current) clearTimeout(idleTimer.current)
-      if (randomActionTimer.current) clearTimeout(randomActionTimer.current)
     }
-  }, [snapshot.state, scheduleIdle, scheduleRandomIdle])
+  }, [snapshot.state, scheduleIdle])
 
   useEffect(() => {
     let lastPointerMove = 0
@@ -121,13 +99,11 @@ export function PandaPetProvider({ children }: { children: ReactNode }) {
         setPandaState("idle")
       } else if (stateRef.current === "idle") {
         scheduleIdle()
-        scheduleRandomIdle()
       }
     }
     const onVisibility = () => {
       if (document.hidden) {
         if (idleTimer.current) clearTimeout(idleTimer.current)
-        if (randomActionTimer.current) clearTimeout(randomActionTimer.current)
       } else {
         activity(new Event("visibilitychange"))
       }
@@ -147,10 +123,9 @@ export function PandaPetProvider({ children }: { children: ReactNode }) {
       events.forEach((event) => window.removeEventListener(event, activity))
       document.removeEventListener("visibilitychange", onVisibility)
       if (idleTimer.current) clearTimeout(idleTimer.current)
-      if (randomActionTimer.current) clearTimeout(randomActionTimer.current)
       if (reactionTimer.current) clearTimeout(reactionTimer.current)
     }
-  }, [scheduleIdle, scheduleRandomIdle, setPandaState])
+  }, [scheduleIdle, setPandaState])
 
   useEffect(() => {
     if (snapshot.state !== "success" && snapshot.state !== "error") return

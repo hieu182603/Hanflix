@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import HeroSection from './components/HeroSection';
-import AIRecommendationSection from './components/AIRecommendationSection';
-import HomeVideoShelves from './components/HomeVideoShelves';
 import { useLanguage } from './i18n';
 import AIAssistantDrawer from './components/AIAssistantDrawer';
 import PreferencesDrawer from './components/PreferencesDrawer';
-import PracticeModal from './components/PracticeModal';
-import LessonsPage from './components/LessonsPage';
-import SavedPage from './components/SavedPage';
-import RoadmapPage from './components/RoadmapPage';
 import LandingPage from './components/LandingPage';
 import { ExamPrepPage, LeaderboardPage, CommunityPage } from './components/ExamPrepPage';
 
@@ -25,12 +18,6 @@ import PublishedLessonView from './components/watch/PublishedLessonView';
 
 // Admin Components
 import AdminShell from './components/admin/AdminShell';
-import AdminDashboard from './components/admin/AdminDashboard';
-import AdminVideoList from './components/admin/AdminVideoList';
-import AdminVideoUpload from './components/admin/AdminVideoUpload';
-import AdminVideoProcessing from './components/admin/AdminVideoProcessing';
-import AdminVideoEditor from './components/admin/AdminVideoEditor';
-import AdminUserList from './components/admin/AdminUserList';
 import AdminVocabularyManager from './components/admin/AdminVocabularyManager';
 import AdminGrammarManager from './components/admin/AdminGrammarManager';
 
@@ -41,11 +28,11 @@ import OnboardingView from './components/auth/OnboardingView';
 import ForgotPasswordView from './components/auth/ForgotPasswordView';
 import VerifyEmailView from './components/auth/VerifyEmailView';
 import ResetPasswordView from './components/auth/ResetPasswordView';
-import VocabularyPage from './components/vocabulary/VocabularyPage';
-import FlashcardReviewView from './components/review/FlashcardReviewView';
 
 // API auth
 import * as authApi from './api/auth';
+import ConnectedLearner from './components/ConnectedLearner';
+import ConnectedAdmin from './components/admin/ConnectedAdmin';
 import { PandaPet } from './components/panda-pet';
 import NotFoundPage from './components/NotFoundPage';
 import HanFlixLoadingScreen from './components/HanFlixLoadingScreen';
@@ -55,13 +42,10 @@ import {
   User,
   UserProfile,
   SAMPLE_LESSONS,
-  Lesson,
-  SavedWord,
   UserLearningProfile,
-  SAMPLE_WORDS
 } from './data/hanflixData';
 import {
-  Sparkles, Home, BookOpen, Bookmark, RotateCcw, User as UserIcon, Menu, BookMarked, Settings, Map
+  Home, BookOpen, Bookmark, BookMarked, Map
 } from 'lucide-react';
 
 type AuthView = 'none' | 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
@@ -157,8 +141,6 @@ export default function App() {
   const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
-  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false);
-  const [isFlashcardOpen, setIsFlashcardOpen] = useState<boolean>(false);
   const { lang: currentLang, setLang: setCurrentLang, t } = useLanguage();
 
   // Account Settings Modal (Requirement 2)
@@ -167,18 +149,6 @@ export default function App() {
   // First-time Login Survey Modal (Requirement 3)
   const [isSurveyOpen, setIsSurveyOpen] = useState<boolean>(false);
 
-  // Store data
-  const [lessons, setLessons] = useState<Lesson[]>(SAMPLE_LESSONS);
-  const [savedWords, setSavedWords] = useState<SavedWord[]>(
-    SAMPLE_WORDS.map((w, index) => ({
-      userId: 'test',
-      wordId: w.id,
-      sourceRefs: w.sourceRefs,
-      srs: { dueAt: index < 2 ? Date.now() - 1000 : Date.now() + 86400000, intervalDays: 1, repetitions: 0 },
-      savedAt: Date.now()
-    }))
-  );
-  const [savedLessons, setSavedLessons] = useState<VideoLesson[]>([]);
 
   // Try to restore session on mount
   useEffect(() => {
@@ -211,14 +181,6 @@ export default function App() {
     }
   }, [currentUser]);
 
-  const handleToggleSaveLesson = (lesson: VideoLesson) => {
-    setSavedLessons((prev) =>
-      prev.some((l) => l.id === lesson.id)
-        ? prev.filter((l) => l.id !== lesson.id)
-        : [lesson, ...prev]
-    );
-  };
-
   const handleLogout = async () => {
     await authApi.logout();
     setCurrentUser(null);
@@ -228,7 +190,6 @@ export default function App() {
   // Admin
   const [adminTab, setAdminTab] = useState<'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'vocabulary' | 'grammar'>('overview');
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
-  const [processingUploadData, setProcessingUploadData] = useState<any>(null);
 
   const handleOpenAI = (prompt?: string) => {
     if (prompt) {
@@ -252,42 +213,12 @@ export default function App() {
           hskLevel,
           goal: updated.targetGoal ?? currentUser.learningProfile.goal,
           topics: updated.interests ?? currentUser.learningProfile.topics,
+          subtitlePreference: updated.subtitleMode
+            ? { all: 'all', 'zh-pinyin': 'zh_pinyin', zh: 'zh_only' }[updated.subtitleMode]
+            : currentUser.learningProfile.subtitlePreference,
         },
       });
     }
-  };
-
-  const handleStartProcessing = (data: any) => {
-    setProcessingUploadData(data);
-    setAdminTab('processing');
-  };
-
-  const handleCompleteProcessing = () => {
-    const newLesson: Lesson = {
-      id: `lesson-${Date.now()}`,
-      titleVi: processingUploadData?.titleVi || 'Bài học mới',
-      titleZh: processingUploadData?.titleZh || '新课',
-      pinyin: 'Xīn kè',
-      descriptionVi: processingUploadData?.descriptionVi || '',
-      hsk: processingUploadData?.hsk || 3,
-      topics: processingUploadData?.topics || ['food'],
-      goalTags: ['daily'],
-      durationSeconds: 150,
-      status: 'draft',
-      publishedRevision: 1,
-      mediaMode: 'simulation',
-      thumbnailAsset: 'https://picsum.photos/seed/new-lesson/600/350',
-      glossaryIds: [],
-      contentReady: false,
-    };
-    setLessons([newLesson, ...lessons]);
-    setEditingLessonId(newLesson.id);
-    setAdminTab('editor');
-  };
-
-  const handleSaveAndPublishLesson = (updatedLesson: Lesson) => {
-    setLessons(lessons.map((l) => (l.id === updatedLesson.id ? updatedLesson : l)));
-    setAdminTab('videos');
   };
 
   // Dedicated loading preview route
@@ -306,6 +237,7 @@ export default function App() {
       <LoginView
         onLoginSuccess={(user) => {
           setCurrentUser(user);
+          setSelectedLesson(null);
           navigateAuth('none');
           const serverSideCompleted = user.learningProfile?.surveyVersion != null;
           const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
@@ -325,6 +257,7 @@ export default function App() {
         onNavigateToLogin={() => navigateAuth('login')}
         onGoogleSuccess={(user) => {
           setCurrentUser(user);
+          setSelectedLesson(null);
           navigateAuth('none');
           const serverSideCompleted = user.learningProfile?.surveyVersion != null;
           const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
@@ -358,6 +291,7 @@ export default function App() {
   }
 
   if (authView === 'onboarding') {
+    if (!currentUser) return <LoginView onLoginSuccess={(user) => { setCurrentUser(user); navigateAuth('onboarding'); }} onNavigateToSignup={() => navigateAuth('signup')} onNavigateToForgotPassword={() => navigateAuth('forgot-password')} />;
     return (
       <OnboardingView
         onCompleteOnboarding={(profile: UserLearningProfile) => {
@@ -378,36 +312,14 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
       >
-        {adminTab === 'overview' && (
-          <AdminDashboard
-            lessons={lessons}
-            onNavigateToUpload={() => setAdminTab('upload')}
-            onSelectLessonToEdit={(id) => { setEditingLessonId(id); setAdminTab('editor'); }}
+        {adminTab !== 'vocabulary' && adminTab !== 'grammar' && (
+          <ConnectedAdmin
+            tab={adminTab}
+            setTab={setAdminTab}
+            editingId={editingLessonId}
+            setEditingId={setEditingLessonId}
           />
-        )}
-        {adminTab === 'videos' && (
-          <AdminVideoList
-            lessons={lessons}
-            onNavigateToUpload={() => setAdminTab('upload')}
-            onEditLesson={(id) => { setEditingLessonId(id); setAdminTab('editor'); }}
-            onDeleteLesson={(id) => setLessons(lessons.filter((l) => l.id !== id))}
-          />
-        )}
-        {adminTab === 'upload' && (
-          <AdminVideoUpload onStartProcessing={handleStartProcessing} onCancel={() => setAdminTab('videos')} />
-        )}
-        {adminTab === 'processing' && (
-          <AdminVideoProcessing lessonData={processingUploadData} onCompleteProcessing={handleCompleteProcessing} />
-        )}
-        {adminTab === 'editor' && (
-          <AdminVideoEditor
-            lesson={lessons.find((l) => l.id === editingLessonId) || lessons[0]}
-            onSaveAndPublish={handleSaveAndPublishLesson}
-            onCancel={() => setAdminTab('videos')}
-          />
-        )}
-        {adminTab === 'users' && <AdminUserList />}
-        {adminTab === 'vocabulary' && <AdminVocabularyManager />}
+        )}        {adminTab === 'vocabulary' && <AdminVocabularyManager />}
         {adminTab === 'grammar' && <AdminGrammarManager />}
       </AdminShell>
     );
@@ -452,7 +364,7 @@ export default function App() {
           </div>
         ) : (
           <LandingPage
-            onStartSurvey={() => navigateAuth('onboarding')}
+            onStartSurvey={() => navigateAuth('signup')}
             onViewSample={(id) => {
               const lesson = SAMPLE_LESSONS.find(l => l.id === id) || SAMPLE_LESSONS[0];
               setSelectedLesson(lesson as unknown as VideoLesson);
@@ -477,12 +389,12 @@ export default function App() {
   const userProfile = {
     name: currentUser.name,
     avatar: currentUser.avatarAsset || 'https://picsum.photos/seed/avatar-default/64/64',
-    level: `HSK ${currentUser.learningProfile?.hskLevel || 3} Intermediate`,
-    hskProgress: 71,
+    level: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
+    hskProgress: 0,
     hskLevel: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
-    streakDays: 14,
-    targetGoal: currentUser.learningProfile?.goal || 'Kinh doanh',
-    interests: currentUser.learningProfile?.topics || ['Ẩm thực', 'Du lịch'],
+    streakDays: 0,
+    targetGoal: currentUser.learningProfile?.goal || 'daily',
+    interests: currentUser.learningProfile?.topics || [],
   };
 
   return (
@@ -501,7 +413,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         streakDays={userProfile.streakDays}
-        onOpenPractice={() => setIsPracticeOpen(true)}
+        onOpenPractice={() => setActiveNav('lessons')}
         onNavigateToLessons={() => {
           setActiveNav('lessons');
           setSelectedLesson(null);
@@ -521,103 +433,28 @@ export default function App() {
             setIsSidebarOpen(false);
           }}
           userProfile={userProfile}
-          onStartPractice={() => setIsPracticeOpen(true)}
+          onStartPractice={() => setActiveNav('lessons')}
           isDrawerOpen={isSidebarOpen}
           onCloseDrawer={() => setIsSidebarOpen(false)}
-          isCollapsed={isSidebarCollapsed || (!!selectedLesson && typeof window !== 'undefined' && window.innerWidth >= 1024)}
+          isCollapsed={isSidebarCollapsed}
         />
 
         {/* Main content: YouTube Watch Stage or Dashboard Pages */}
         <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden">
           {selectedPublishedLessonId ? (
-            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={() => setSelectedPublishedLessonId(null)} />
-          ) : selectedLesson ? (
-            /* Requirement 4: In-page YouTube-style Watch View */
-            <WatchView
-              lesson={selectedLesson}
-              onBack={() => setSelectedLesson(null)}
-              onSelectLesson={(lesson) => setSelectedLesson(lesson)}
-              onAskAI={(prompt) => handleOpenAI(prompt)}
-              isSaved={savedLessons.some((l) => l.id === selectedLesson.id)}
-              onToggleSave={handleToggleSaveLesson}
-              onStartPractice={() => setIsPracticeOpen(true)}
-              onSaveWord={(word) => {
-                setSavedWords((prev) => [
-                  {
-                    userId: currentUser?.id || 'learner',
-                    wordId: `word-${Date.now()}`,
-                    sourceRefs: [{ lessonId: selectedLesson.id, cueId: 'cue-1' }],
-                    srs: { dueAt: Date.now() + 86400000, intervalDays: 1, repetitions: 0 },
-                    savedAt: Date.now(),
-                  },
-                  ...prev,
-                ]);
-              }}
-            />
+            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={() => setSelectedPublishedLessonId(null)} subtitlePreference={currentUser.learningProfile?.subtitlePreference} />
           ) : (
             <>
-              {activeNav === 'feed' && (
-                <>
-                  <HeroSection
-                    onSelectLesson={setSelectedLesson}
-                    onStartPractice={() => setIsPracticeOpen(true)}
-                  />
-                  <AIRecommendationSection
-                    onSelectLessonId={(id) => { setSelectedLesson(null); setSelectedPublishedLessonId(id); }}
-                    onOpenPreferences={() => setIsSurveyOpen(true)}
-                  />
-                  <HomeVideoShelves
-                    onSelectLesson={setSelectedLesson}
-                    onStartPractice={() => setIsPracticeOpen(true)}
-                  />
-                </>
-              )}
-              {activeNav === 'lessons' && (
-                <LessonsPage onSelectLesson={setSelectedLesson} />
-              )}
-              {activeNav === 'saved' && (
-                <SavedPage
-                  onSelectLesson={setSelectedLesson}
-                  savedWords={savedWords}
-                  savedLessons={savedLessons}
-                  onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
-                  onRemoveSavedLesson={(id) => setSavedLessons(savedLessons.filter((l) => l.id !== id))}
+              {(['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history'] as const).some(section => section === activeNav) && (
+                <ConnectedLearner
+                  section={activeNav as 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history'}
+                  onSelectLesson={(id) => { setSelectedLesson(null); setSelectedPublishedLessonId(id); }}
+                  onOpenPreferences={() => setIsSurveyOpen(true)}
                 />
               )}
-              {activeNav === 'vocabulary' && (
-                <VocabularyPage
-                  savedWords={savedWords}
-                  onStartReviewSession={() => setIsFlashcardOpen(true)}
-                  onRemoveWord={(id) => setSavedWords(savedWords.filter((w) => w.wordId !== id))}
-                />
-              )}
-              {activeNav === 'roadmap' && <RoadmapPage />}
-              {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setIsPracticeOpen(true)} />}
-              {activeNav === 'leaderboard' && (
-                <LeaderboardPage
-                  onStartPractice={() => setIsPracticeOpen(true)}
-                  onSelectLesson={() => {
-                    const l = SAMPLE_LESSONS[0];
-                    setSelectedLesson(l as unknown as VideoLesson);
-                  }}
-                />
-              )}
+              {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setActiveNav('lessons')} />}
+              {activeNav === 'leaderboard' && <LeaderboardPage onStartPractice={() => setActiveNav('lessons')} onSelectLesson={() => setActiveNav('lessons')} />}
               {activeNav === 'community' && <CommunityPage />}
-              {activeNav === 'history' && (
-                <div className="space-y-4">
-                  <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] flex items-center justify-between">
-                    <div>
-                      <h1 className="text-xl font-black text-[#18181B]">Lịch sử học tập</h1>
-                      <p className="text-sm text-[#5F6368] mt-1">Các bài học gần đây của bạn.</p>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-3xl p-8 border border-[#E7E7EA] text-center">
-                    <RotateCcw className="w-10 h-10 text-[#E7E7EA] mx-auto mb-3" />
-                    <h2 className="font-bold text-[#18181B] mb-1">Chưa có lịch sử học tập</h2>
-                    <p className="text-sm text-[#5F6368]">Bạn chưa xem bài học nào gần đây.</p>
-                  </div>
-                </div>
-              )}
               {!['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'exam', 'leaderboard', 'community', 'history'].includes(activeNav) && (
                 <NotFoundPage
                   showHeader={false}
@@ -645,6 +482,7 @@ export default function App() {
               onClick={() => {
                 setActiveNav(item.id);
                 setSelectedLesson(null);
+                setSelectedPublishedLessonId(null);
               }}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
@@ -695,13 +533,6 @@ export default function App() {
       />
 
       {/* Practice Modal */}
-      <PracticeModal isOpen={isPracticeOpen} onClose={() => setIsPracticeOpen(false)} />
-
-      {/* Flashcard Review */}
-      {isFlashcardOpen && (
-        <FlashcardReviewView onClose={() => setIsFlashcardOpen(false)} />
-      )}
-
       {/* Interactive AI Pet & Assistant - ONLY displayed when learner is logged in */}
       {currentUser && <PandaPet onOpenAI={() => handleOpenAI()} isAIOpen={isAIOpen} />}
 

@@ -19,6 +19,8 @@ interface AuthResponse {
       dailyMinutes?: number;
       subtitlePreference?: string;
       surveyVersion?: number;
+      focusSkills?: string[];
+      studyDaysPerWeek?: number;
     } | null;
   };
 }
@@ -54,6 +56,11 @@ function toFrontendUser(u: AuthResponse['user']): User {
       defaultSpeed: 1,
       uiLanguage: 'vi',
       surveyVersion: lp.surveyVersion,
+      currentHskSource: lp.currentHskSource,
+      targetHsk: lp.targetHsk,
+      focusSkills: lp.focusSkills,
+      studyDaysPerWeek: lp.studyDaysPerWeek,
+      subtitlePreference: lp.subtitlePreference,
     } : null,
   };
 }

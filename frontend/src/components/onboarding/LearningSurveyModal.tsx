@@ -22,6 +22,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { UserProfile } from '../../data/hanflixData';
+import { saveLearningProfile } from '../../api/learning';
 
 interface LearningSurveyModalProps {
   isOpen: boolean;
@@ -159,6 +160,8 @@ export default function LearningSurveyModal({
     currentUser?.learningProfile?.dailyMinutes || 15
   );
   const [subtitleDefault, setSubtitleDefault] = useState<'all' | 'zh-pinyin' | 'zh'>('all');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   if (!isOpen) return null;
 
@@ -187,52 +190,37 @@ export default function LearningSurveyModal({
     'zh': 'zh_only',
   };
 
-  const handleComplete = async () => {
-    onSavePreferences({
-      hskLevel: selectedHsk,
-      targetGoal: selectedGoal,
-      interests: selectedInterests,
-    });
+  const topicMap: Record<string, string> = {
+    'Ẩm thực': 'food', 'Du lịch': 'travel', 'Mua sắm': 'shopping',
+    'Phim ảnh': 'entertainment', 'Kinh tế': 'business', 'Công nghệ': 'daily-life',
+    'Đời sống': 'daily-life', 'Âm nhạc': 'entertainment',
+  };
 
-    // Persist to backend with surveyVersion
+  const handleComplete = async () => {
+    setSaving(true);
+    setSaveError('');
     const hskNum = Number(selectedHsk.replace(/\D/g, '')) || 3;
     try {
-      const { saveLearningProfile } = await import('../../api/learning');
       await saveLearningProfile({
         currentHsk: hskNum,
         currentHskSource: 'self_reported',
         goal: goalMap[selectedGoal] || 'daily',
-        topicIds: selectedInterests.slice(0, 3),
+        topicIds: [...new Set(selectedInterests.map(value => topicMap[value] ?? value))].slice(0, 3),
         dailyMinutes,
         subtitlePreference: subtitleMap[subtitleDefault] || 'all',
         surveyVersion: 1,
       });
-    } catch {
-      // Silent fail — localStorage fallback below
+      onSavePreferences({ hskLevel: selectedHsk, targetGoal: goalMap[selectedGoal] || 'daily', interests: selectedInterests.map(value => topicMap[value] ?? value) });
+      if (currentUser?.id) localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Không thể lưu hồ sơ học tập.');
+    } finally {
+      setSaving(false);
     }
-
-    if (currentUser?.id) {
-      localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
-    }
-    localStorage.removeItem('hanflix_survey_completed_global');
-    onClose();
   };
 
-  const handleSkip = async () => {
-    // Even when skipping, mark as completed to avoid re-showing
-    try {
-      const { saveLearningProfile } = await import('../../api/learning');
-      await saveLearningProfile({ surveyVersion: 1 });
-    } catch {
-      // Silent fail — localStorage fallback below
-    }
-
-    if (currentUser?.id) {
-      localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
-    }
-    localStorage.removeItem('hanflix_survey_completed_global');
-    onClose();
-  };
+  const handleSkip = () => onClose();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 animate-in fade-in duration-200">
@@ -554,6 +542,7 @@ export default function LearningSurveyModal({
           )}
         </div>
 
+        {saveError && <p role="alert" className="px-6 text-sm text-red-700">{saveError}</p>}
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0">
           <div>
@@ -591,10 +580,11 @@ export default function LearningSurveyModal({
               <button
                 type="button"
                 onClick={handleComplete}
+                disabled={saving}
                 className="px-6 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>Lưu & Bắt đầu học</span>
+                <span>{saving ? 'Đang lưu…' : 'Lưu & Bắt đầu học'}</span>
               </button>
             )}
           </div>

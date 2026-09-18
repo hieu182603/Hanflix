@@ -11,7 +11,77 @@ export interface PublishedLesson {
   goalTags: string[];
   durationSeconds: number;
   media?: { url?: string | null } | null;
+  thumbnailUrl?: string | null;
 }
+
+export interface LessonList {
+  items: PublishedLesson[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export function listPublishedLessons(params: { q?: string; hsk?: number; topic?: string; page?: number; limit?: number } = {}): Promise<LessonList> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)); });
+  return apiFetch(`/lessons?${query}`);
+}
+
+export interface LessonProgress {
+  lastPositionSeconds: number;
+  watchedRanges: Array<{ start: number; end: number }>;
+  coverage: number;
+  activeStudySeconds: number;
+  completed: boolean;
+  bestQuizScore: number | null;
+}
+
+export function getLessonProgress(id: string): Promise<LessonProgress> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`);
+}
+
+export function updateLessonProgress(id: string, input: { positionSeconds: number; watchedRange?: { start: number; end: number }; activeStudyDeltaSeconds?: number }): Promise<{ coverage: number }> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export interface PublicQuestion {
+  questionId: string;
+  type: 'multiple_choice' | 'fill_blank';
+  prompt: string;
+  options: Array<{ optionId: string; text: string }>;
+}
+
+export function getLessonQuiz(id: string): Promise<{ questions: PublicQuestion[] }> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/quiz`);
+}
+
+export interface QuizResult {
+  score: number;
+  correctCount: number;
+  totalCount: number;
+  answers: Array<{ questionId: string; correct: boolean; explanationVi: string; correctOptionId?: string; acceptedAnswers?: string[] }>;
+}
+
+export function submitLessonQuiz(id: string, answers: Array<{ questionId: string; selectedOptionId?: string; textAnswer?: string }>, idempotencyKey: string): Promise<QuizResult> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/attempts`, { method: 'POST', body: JSON.stringify({ answers, idempotencyKey }) });
+}
+
+export interface LearnerDashboard {
+  metrics: { completedLessons: number; savedWords: number; dueWords: number; averageQuizScore: number | null };
+  continueLearning: { lessonId?: PublishedLesson; lastPositionSeconds: number } | null;
+  recentProgress: Array<{ lessonId?: PublishedLesson; completed: boolean; lastPositionSeconds: number }>;
+}
+
+export function getLearnerDashboard(): Promise<LearnerDashboard> { return apiFetch('/learning/dashboard'); }
+
+export interface LearningActivity {
+  days: Array<{ date: string; activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number }>;
+  totals: { activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number };
+  timezone?: string;
+}
+
+export function getLearningActivity(): Promise<LearningActivity> { return apiFetch('/learning/activity'); }
 
 export interface SubtitleCue {
   cueId: string;

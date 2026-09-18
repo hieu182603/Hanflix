@@ -98,13 +98,42 @@
 }
 .panda-bubble-close:hover, .panda-bubble-close:focus-visible { background: #f2f1ef; }
 
+.panda-state-chip {
+  position: fixed;
+  z-index: 2;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid #e8c7c3;
+  border-radius: 12px;
+  background: #fffaf8;
+  color: #8f1719;
+  box-shadow: 0 8px 22px rgb(81 37 33 / 12%);
+  font: 700 11px/1.35 Inter, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+  animation: panda-bubble-in 160ms ease-out both;
+}
+
+.panda-state-chip::after {
+  position: absolute;
+  bottom: -5px;
+  left: calc(50% - 5px);
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid #e8c7c3;
+  border-bottom: 1px solid #e8c7c3;
+  background: #fffaf8;
+  content: "";
+  transform: rotate(45deg);
+}
+
 @keyframes panda-bubble-in {
   from { opacity: 0; transform: translateY(5px) scale(.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panda-sprite, .panda-bubble { animation: none !important; }
+  .panda-sprite, .panda-bubble, .panda-state-chip { animation: none !important; }
 }
 
 .panda-playground {

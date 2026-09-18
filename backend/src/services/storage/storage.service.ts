@@ -13,5 +13,6 @@ export interface StorageService {
   createDownloadUrl(objectKey: string): Promise<string>;
   headObject(objectKey: string): Promise<StoredObjectMetadata>;
   downloadToFile(objectKey: string, destinationPath: string): Promise<void>;
+  uploadFile(objectKey: string, filePath: string, contentType: string): Promise<void>;
   deleteObject(objectKey: string): Promise<void>;
 }

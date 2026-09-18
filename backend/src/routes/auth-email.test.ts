@@ -33,6 +33,7 @@ describe('email verification and password recovery', () => {
       emailVerificationRequired: true,
     };
     vi.spyOn(mailService, 'assertConfigured').mockImplementation(() => undefined);
+    vi.spyOn(UserModel, 'findOne').mockReturnValue({ select: () => Promise.resolve(null) } as never);
     vi.spyOn(UserModel, 'exists').mockResolvedValue(null);
     vi.spyOn(UserModel, 'create').mockResolvedValue(user as never);
     vi.spyOn(accountTokenService, 'issueWithOtp').mockResolvedValue({ token: 'verification-token', code: '123456' });
@@ -49,6 +50,31 @@ describe('email verification and password recovery', () => {
     expect(response.body.data.accessToken).toBeUndefined();
     expect(send).toHaveBeenCalledWith({ to: 'new@example.com', name: 'New Learner', token: 'verification-token', code: '123456' });
     expect(createSession).not.toHaveBeenCalled();
+  });
+
+  it('deletes an expired unverified user on new registration attempt and proceeds', async () => {
+    const expiredUserId = new Types.ObjectId();
+    const newUserId = new Types.ObjectId();
+    const existingUnverified = {
+      _id: expiredUserId, email: 'expired@example.com', emailVerificationRequired: true, emailVerifiedAt: null,
+    };
+    const newUser = {
+      _id: newUserId, name: 'New Learner', email: 'expired@example.com', role: 'user', status: 'active',
+      emailVerificationRequired: true,
+    };
+    vi.spyOn(mailService, 'assertConfigured').mockImplementation(() => undefined);
+    vi.spyOn(UserModel, 'findOne').mockReturnValue({ select: () => Promise.resolve(existingUnverified) } as never);
+    vi.spyOn(accountTokenService, 'deleteUnverifiedUserIfExpired').mockResolvedValue(true);
+    vi.spyOn(UserModel, 'create').mockResolvedValue(newUser as never);
+    vi.spyOn(accountTokenService, 'issueWithOtp').mockResolvedValue({ token: 'token-2', code: '654321' });
+    vi.spyOn(mailService, 'sendVerificationEmail').mockResolvedValue(undefined);
+
+    const response = await request(app).post('/api/v1/auth/register').send({
+      name: 'New Learner', email: 'expired@example.com', password: 'Password123!',
+    });
+
+    expect(response.status).toBe(201);
+    expect(accountTokenService.deleteUnverifiedUserIfExpired).toHaveBeenCalledWith(expiredUserId);
   });
 
   it('rejects password login until the new account email is verified', async () => {
