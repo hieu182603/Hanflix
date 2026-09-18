@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { SavedWordModel } from '../models/saved-word.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { WordModel } from '../models/word.model.js';
@@ -35,13 +35,31 @@ const publicListQuerySchema = z.object({
 
 // GET /api/vocabulary/saved
 router.get('/saved', requireAuth, asyncHandler(async (req, res) => {
-  const items = await SavedWordModel.find({ userId: req.auth!.userId })
-    .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
-    .populate('sourceLessonId', 'titleVi titleZh slug')
-    .sort({ nextReviewAt: 1 })
-    .lean();
-  const dueCount = items.filter(item => item.nextReviewAt <= new Date()).length;
-  res.json({ data: { items, total: items.length, dueCount } });
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    SavedWordModel.find({ userId: req.auth!.userId })
+      .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
+      .populate('sourceLessonId', 'titleVi titleZh slug')
+      .sort({ nextReviewAt: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    SavedWordModel.countDocuments({ userId: req.auth!.userId }),
+  ]);
+  const dueCount = await SavedWordModel.countDocuments({
+    userId: req.auth!.userId,
+    nextReviewAt: { $lte: new Date() },
+  });
+  res.json({
+    data: {
+      items,
+      total,
+      dueCount,
+      pagination: { page, limit, totalItems: total, totalPages: Math.ceil(total / limit) },
+    },
+  });
 }));
 
 // GET /api/vocabulary/due
@@ -55,8 +73,8 @@ router.get('/due', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/vocabulary (Public HSK catalog OR backwards-compatible saved words)
-router.get('/', validate(publicListQuerySchema, 'query'), asyncHandler(async (req, res, next) => {
-  const query = req.query as unknown as z.infer<typeof publicListQuerySchema>;
+router.get('/', validateQuery(publicListQuerySchema), asyncHandler(async (req, res, next) => {
+  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof publicListQuerySchema>;
 
   // Backwards compatibility for user saved words
   if (query.view === 'saved' || query.saved === 'true') {

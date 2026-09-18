@@ -19,7 +19,7 @@ export default function PreferencesDrawer({
   const [selectedGoal, setSelectedGoal] = useState(userProfile.targetGoal);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(userProfile.interests);
 
-  const hskLevels = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6'];
+  const hskLevels = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9'];
   const goalOptions = ['Kinh doanh', 'Du lịch', 'Luyện thi HSK', 'Giao tiếp hằng ngày', 'Văn hóa & Giải trí'];
   const interestTopics = ['Ẩm thực', 'Du lịch', 'Mua sắm', 'Phim ảnh', 'Kinh tế', 'Công nghệ', 'Đời sống', 'Âm nhạc'];
 

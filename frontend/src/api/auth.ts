@@ -9,6 +9,11 @@ interface AuthResponse {
     email: string;
     role: 'user' | 'admin';
     status: 'active' | 'locked';
+    avatarUrl?: string | null;
+    googleAvatarUrl?: string | null;
+    avatarType?: 'generated' | 'custom' | null;
+    avatarConfig?: any;
+    avatarPublicId?: string | null;
     emailVerified?: boolean;
     learningProfile?: {
       currentHsk?: number;
@@ -45,7 +50,13 @@ function toFrontendUser(u: AuthResponse['user']): User {
     status: u.status,
     name: u.name,
     email: u.email,
-    avatarAsset: null,
+    avatarAsset: u.avatarUrl ?? u.googleAvatarUrl ?? null,
+    avatarUrl: u.avatarUrl ?? u.googleAvatarUrl ?? null,
+    googleAvatarUrl: u.googleAvatarUrl ?? null,
+    avatarType: u.avatarType ?? (u.avatarUrl ? 'custom' : 'generated'),
+    avatarConfig: u.avatarConfig ?? null,
+    avatarPublicId: u.avatarPublicId ?? null,
+
     learningProfile: lp ? {
       hskLevel: lp.currentHsk ?? 3,
       goal: lp.goal ?? 'daily',
@@ -80,6 +91,31 @@ export async function register(
   return { user: toFrontendUser(data.user), verificationRequired: data.verificationRequired };
 }
 
+const USER_STORAGE_KEY = 'hanflix_user';
+
+export function getCachedUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveUserCache(user: User | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (user) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Login with email and password.
  */
@@ -89,7 +125,9 @@ export async function login(email: string, password: string): Promise<User> {
     body: JSON.stringify({ email, password }),
   });
   setAccessToken(data.accessToken);
-  return toFrontendUser(data.user);
+  const user = toFrontendUser(data.user);
+  saveUserCache(user);
+  return user;
 }
 
 export async function getGoogleClientId(): Promise<string | null> {
@@ -103,11 +141,52 @@ export async function signInWithGoogle(credential: string): Promise<User> {
     body: JSON.stringify({ credential }),
   });
   setAccessToken(data.accessToken);
-  return toFrontendUser(data.user);
+  const user = toFrontendUser(data.user);
+  saveUserCache(user);
+  return user;
 }
 
 export async function linkGoogle(credential: string): Promise<void> {
   await apiFetch('/auth/google/link', { method: 'POST', body: JSON.stringify({ credential }) });
+}
+
+export async function unlinkGoogle(currentPassword: string): Promise<void> {
+  await apiFetch('/auth/google/unlink', { method: 'POST', body: JSON.stringify({ currentPassword }) });
+}
+
+export async function setPassword(password: string, credential: string): Promise<void> {
+  await apiFetch('/auth/password/set', { method: 'POST', body: JSON.stringify({ password, credential }) });
+}
+
+export interface AuthSessionItem {
+  sessionId: string;
+  userAgent?: string;
+  ip?: string;
+  createdAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
+export async function listSessions(): Promise<AuthSessionItem[]> {
+  const data = await apiFetch<{ items: AuthSessionItem[] }>('/auth/sessions');
+  return data.items;
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  await apiFetch(`/auth/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+}
+
+/**
+ * Update basic profile (name, avatarUrl)
+ */
+export async function updateBasicProfile(payload: { name?: string; avatarUrl?: string | null }): Promise<User> {
+  const data = await apiFetch<{ name: string; email: string; avatarUrl?: string; role: 'user' | 'admin'; status: 'active' | 'locked'; learningProfile?: any }>('/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  const user = toFrontendUser(data as AuthResponse['user']);
+  saveUserCache(user);
+  return user;
 }
 
 /**
@@ -120,6 +199,7 @@ export async function logout(): Promise<void> {
     // Best-effort — always clear local state
   }
   setAccessToken(null);
+  saveUserCache(null);
 }
 
 /**
@@ -134,9 +214,12 @@ export async function restoreSession(): Promise<User | null> {
     setAccessToken(data.accessToken);
 
     const me = await apiFetch<MeResponse>('/auth/me');
-    return toFrontendUser(me.user);
+    const user = toFrontendUser(me.user);
+    saveUserCache(user);
+    return user;
   } catch {
     setAccessToken(null);
+    saveUserCache(null);
     return null;
   }
 }
@@ -180,3 +263,4 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export { ApiRequestError };
+

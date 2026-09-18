@@ -107,9 +107,15 @@ export async function getAiRecommendations(): Promise<Array<{ lesson: PublishedL
   return data.items;
 }
 
+export async function getRuleBasedRecommendations(): Promise<Array<{ lesson: PublishedLesson; reasonVi: string }>> {
+  const data = await apiFetch<{ items: Array<{ lesson: PublishedLesson; reasonVi: string }> }>('/learning/recommendations');
+  return data.items;
+}
+
+
 export async function askPanda(question: string): Promise<string> {
-  const data = await apiFetch<{ answerVi: string }>('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) });
-  return data.answerVi;
+  const data = await apiFetch<{ data: { answerVi: string } }>('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) });
+  return data.data.answerVi;
 }
 
 export async function getPublishedLesson(id: string): Promise<PublishedLesson> {

@@ -26,7 +26,7 @@ export function toUtcDateKey(value = new Date()): string {
 export function parseDateKey(value: string): Date {
   if (!dateKeyPattern.test(value)) throw new Error('Invalid date key');
   const [y, m, d] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
+  const date = new Date(Date.UTC(y!, m! - 1, d!));
   if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) {
     throw new Error('Invalid date key');
   }

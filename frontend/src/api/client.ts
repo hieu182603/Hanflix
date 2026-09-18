@@ -65,8 +65,9 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
 
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string> | undefined),
   };
 
@@ -80,38 +81,45 @@ export async function apiFetch<T = unknown>(
     credentials: 'include',
   });
 
-  // Auto-refresh on 401
-  if (res.status === 401 && accessToken) {
-    if (!isRefreshing) {
-      isRefreshing = true;
-      try {
-        const newToken = await refreshAccessToken();
-        processRefreshQueue(newToken, null);
-      } catch (err) {
-        processRefreshQueue(null, err as Error);
+  // Auto-refresh on 401 (limit to 1 retry per request to prevent infinite loop)
+  if (res.status === 401 && accessToken && !(options as any).__retried) {
+    try {
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          const newToken = await refreshAccessToken();
+          processRefreshQueue(newToken, null);
+        } catch (err) {
+          processRefreshQueue(null, err as Error);
+          isRefreshing = false;
+          throw err;
+        }
         isRefreshing = false;
-        throw err;
+      } else {
+        // Wait for the in-progress refresh to complete
+        const newToken = await new Promise<string>((resolve, reject) => {
+          refreshQueue.push({ resolve, reject });
+        });
+        headers['Authorization'] = `Bearer ${newToken}`;
       }
-      isRefreshing = false;
 
-      // Retry with new token
+      // Retry with new token (mark as retried to prevent infinite loop)
       headers['Authorization'] = `Bearer ${accessToken}`;
       res = await fetch(url, {
         ...options,
         headers,
         credentials: 'include',
-      });
-    } else {
-      // Wait for the in-progress refresh to complete
-      const newToken = await new Promise<string>((resolve, reject) => {
-        refreshQueue.push({ resolve, reject });
-      });
-      headers['Authorization'] = `Bearer ${newToken}`;
-      res = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include',
-      });
+      } as RequestInit);
+      (options as any).__retried = true;
+
+      // SECURITY: If retry still returns 401, clear session to force logout
+      // and prevent infinite refresh loops (e.g., when account gets locked)
+      if (res.status === 401) {
+        accessToken = null;
+      }
+    } catch {
+      // Refresh failed - clear token to stop further refresh attempts
+      accessToken = null;
     }
   }
 

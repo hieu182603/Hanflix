@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Lock, Unlock, Shield, Search, UserCheck } from 'lucide-react';
 import { User, INITIAL_USERS } from '../../data/hanflixData';
+import UserAvatar from '../common/UserAvatar';
 
 export default function AdminUserList() {
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -62,10 +63,10 @@ export default function AdminUserList() {
               <tr key={user.id} className="hover:bg-[#F7F7F9]/50 transition-colors">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={user.avatarAsset || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces"}
-                      alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover border border-[#E7E7EA]"
+                    <UserAvatar
+                      user={user}
+                      size={32}
+                      className="border border-[#E7E7EA]"
                     />
                     <span className="font-bold text-sm text-[#18181B]">{user.name}</span>
                   </div>

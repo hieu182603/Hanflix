@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  cancelVideoUpload, confirmVideo, createAdminLesson, getAdminReview, getProcessingStatus,
+  cancelVideoUpload, confirmVideo, createAdminLesson, getAdminMedia, getAdminReview, getProcessingStatus,
   hideAdminLesson, listAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
   presignVideo, publishAdminLesson, restoreAdminLesson, retryProcessing, saveAdminQuiz,
   saveAdminSubtitles, setAdminUserStatus, uploadVideoToR2,
@@ -23,6 +23,7 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
   const [processing, setProcessing] = useState<ProcessingStatus | null>(null);
   const [review, setReview] = useState<AdminReview | null>(null);
+  const [media, setMedia] = useState<{ url: string; mimeType: string; sizeBytes: number } | null>(null);
   const [cues, setCues] = useState<AdminCue[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -54,15 +55,22 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   useEffect(() => {
     if (tab !== 'editor' || !editingId) return;
     let active = true;
-    setReview(null); setError('');
+    setReview(null); setMedia(null); setError('');
     void getAdminReview(editingId).then(data => {
       if (!active) return;
       setReview(data); setCues(data.subtitle?.cues ?? []); setQuestions(data.quiz?.questions ?? []);
       const lesson = lessons.find(item => item._id === editingId);
       if (lesson) { setTitleVi(lesson.titleVi); setTitleZh(lesson.titleZh ?? ''); setDescriptionVi(lesson.descriptionVi); }
     }).catch(reason => { if (active) setError(errorText(reason)); });
+
+    void getAdminMedia(editingId).then(data => {
+      if (active) setMedia(data.media);
+    }).catch(() => {
+      if (active) setMedia(null);
+    });
+
     return () => { active = false; };
-  }, [tab, editingId]);
+  }, [tab, editingId, lessons]);
 
   useEffect(() => {
     if (tab !== 'processing' || !editingId) return;
@@ -142,7 +150,7 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
       <label className="block text-sm font-bold">Tiêu đề tiếng Việt<input required minLength={2} maxLength={160} value={titleVi} onChange={event => setTitleVi(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
       <label className="block text-sm font-bold">Tiêu đề tiếng Trung<input value={titleZh} onChange={event => setTitleZh(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
       <label className="block text-sm font-bold">Mô tả<input required minLength={10} maxLength={1000} value={descriptionVi} onChange={event => setDescriptionVi(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
-      <div className="grid gap-3 sm:grid-cols-3"><label className="text-sm font-bold">HSK<select value={hsk} onChange={event => setHsk(Number(event.target.value))} className="mt-1 block w-full rounded-xl border p-2 font-normal">{[1,2,3,4,5,6].map(level => <option key={level} value={level}>HSK {level}</option>)}</select></label>
+      <div className="grid gap-3 sm:grid-cols-3"><label className="text-sm font-bold">HSK<select value={hsk} onChange={event => setHsk(Number(event.target.value))} className="mt-1 block w-full rounded-xl border p-2 font-normal">{[1,2,3,4,5,6,7,8,9].map(level => <option key={level} value={level}>HSK {level}</option>)}</select></label>
         <label className="text-sm font-bold">Chủ đề<select value={topic} onChange={event => setTopic(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal">{['daily-life','food','travel','shopping','business','entertainment'].map(value => <option key={value} value={value}>{value}</option>)}</select></label>
         <label className="text-sm font-bold">Thời lượng (giây)<input type="number" required min={60} max={300} value={duration} onChange={event => setDuration(Number(event.target.value))} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label></div>
       <button type="submit" disabled={busy} className="rounded-xl bg-[#B91B1C] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">{busy ? 'Đang tải video…' : 'Tạo bài và tải video'}</button>
@@ -159,6 +167,14 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     </>}
     {tab === 'editor' && selected && <div className="space-y-5">
       <div><h1 className="text-2xl font-black">Biên tập: {selected.titleVi}</h1><p className="text-sm text-neutral-500">{statusLabel[selected.status]}</p></div>
+      {media?.url && (
+        <div className="rounded-2xl border bg-white p-5 space-y-3">
+          <h2 className="font-bold">Xem trước video</h2>
+          <div className="aspect-video max-w-2xl overflow-hidden rounded-xl bg-black">
+            <video src={media.url} controls className="h-full w-full object-contain" preload="metadata" />
+          </div>
+        </div>
+      )}
       {review && <>
         <div className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-bold">Thông tin chung</h2>
           <input value={titleVi} onChange={event => setTitleVi(event.target.value)} aria-label="Tiêu đề tiếng Việt" className="block w-full rounded-lg border p-2 text-sm" />

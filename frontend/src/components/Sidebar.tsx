@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../data/hanflixData';
 import { useLanguage } from '../i18n';
+import UserAvatar from './common/UserAvatar';
 
 interface SidebarProps {
   activeNav: string;
@@ -115,14 +116,10 @@ export default function Sidebar({
         {!collapsed && (
           <div className="bg-[#F7F7F9] rounded-2xl p-4 border border-[#E7E7EA] flex flex-col items-center text-center transition-opacity duration-200">
             <div className="relative mb-2.5">
-              <img
-                src={userProfile.avatar}
-                alt={userProfile.name}
-                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://picsum.photos/seed/avatar-default/64/64';
-                }}
+              <UserAvatar
+                user={{ id: userProfile.id, name: userProfile.name, avatarConfig: userProfile.avatarConfig, avatar: userProfile.avatar }}
+                size={56}
+                className="border-2 border-white shadow-md"
               />
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#188A5A] rounded-full border-2 border-white" />
             </div>
@@ -149,14 +146,10 @@ export default function Sidebar({
         {collapsed && (
           <div className="flex justify-center py-1 group relative">
             <div className="relative cursor-pointer" title={userProfile.name}>
-              <img
-                src={userProfile.avatar}
-                alt={userProfile.name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://picsum.photos/seed/avatar-default/64/64';
-                }}
+              <UserAvatar
+                user={{ id: userProfile.id, name: userProfile.name, avatarConfig: userProfile.avatarConfig, avatar: userProfile.avatar }}
+                size={40}
+                className="border-2 border-white shadow"
               />
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#188A5A] rounded-full border-2 border-white" />
             </div>

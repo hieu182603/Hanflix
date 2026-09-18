@@ -116,6 +116,9 @@ export async function getVocabularyById(id: string): Promise<VocabularyItem> {
   return apiFetch<VocabularyItem>(`/vocabulary/${id}`);
 }
 
+export const getPublicVocabularyById = getVocabularyById;
+
+
 export async function getAdminVocabularyStats(): Promise<VocabularyStats> {
   return apiFetch<VocabularyStats>('/admin/vocabulary/stats');
 }

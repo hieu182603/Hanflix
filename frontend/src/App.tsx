@@ -62,6 +62,9 @@ const getInitialAuthView = (): AuthView => {
   return 'none';
 };
 
+const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'community'] as const;
+type NavSection = typeof NAV_SECTIONS[number];
+
 const isKnownPath = (path: string): boolean => {
   const p = path.toLowerCase();
   if (p === '/' || p === '') return true;
@@ -75,21 +78,81 @@ const isKnownPath = (path: string): boolean => {
     p.startsWith('/reset-password') ||
     p.startsWith('/onboarding') ||
     p.startsWith('/loading') ||
-    p.startsWith('/dev')
+    p.startsWith('/dev') ||
+    p.startsWith('/watch') ||
+    p.startsWith('/admin')
   ) {
     return true;
+  }
+  for (const section of NAV_SECTIONS) {
+    if (p === `/${section}` || p.startsWith(`/${section}/`)) return true;
   }
   return false;
 };
 
+function parseCurrentRoute(): {
+  authView: AuthView;
+  activeNav: string;
+  selectedLessonId: string | null;
+  is404: boolean;
+} {
+  if (typeof window === 'undefined') {
+    return { authView: 'none', activeNav: 'feed', selectedLessonId: null, is404: false };
+  }
+
+  const p = window.location.pathname.toLowerCase();
+  const auth = getInitialAuthView();
+  if (auth !== 'none') {
+    return { authView: auth, activeNav: 'feed', selectedLessonId: null, is404: false };
+  }
+
+  // Watch route: /watch/:lessonId or /watch?id=:lessonId
+  if (p.startsWith('/watch')) {
+    const parts = window.location.pathname.split('/');
+    const lessonId = parts[2] || new URLSearchParams(window.location.search).get('id') || null;
+    return { authView: 'none', activeNav: 'lessons', selectedLessonId: lessonId, is404: false };
+  }
+
+  // Known nav sections
+  for (const section of NAV_SECTIONS) {
+    if (p === `/${section}`) {
+      return { authView: 'none', activeNav: section, selectedLessonId: null, is404: false };
+    }
+  }
+
+  // Admin / loading / root
+  if (p === '/admin' || p.startsWith('/admin/')) {
+    return { authView: 'none', activeNav: 'admin', selectedLessonId: null, is404: false };
+  }
+
+  if (p === '/' || p === '' || p.startsWith('/loading') || p.startsWith('/dev')) {
+    const savedNav = localStorage.getItem('hanflix_last_nav');
+    const nav = (savedNav && NAV_SECTIONS.includes(savedNav as any)) ? savedNav : 'feed';
+    return { authView: 'none', activeNav: nav, selectedLessonId: null, is404: false };
+  }
+
+  return { authView: 'none', activeNav: 'feed', selectedLessonId: null, is404: !isKnownPath(p) };
+}
+
 export default function App() {
-  // null = guest, populated = logged-in learner
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authView, setAuthView] = useState<AuthView>(getInitialAuthView);
-  const [isRestoringSession, setIsRestoringSession] = useState(true);
-  const [is404Route, setIs404Route] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return !isKnownPath(window.location.pathname);
+  const initialRoute = parseCurrentRoute();
+  // Initialize currentUser from local cache immediately to prevent flash of LandingPage on reload
+  const [currentUser, setCurrentUser] = useState<User | null>(authApi.getCachedUser);
+  const [authView, setAuthView] = useState<AuthView>(initialRoute.authView);
+  const [isRestoringSession, setIsRestoringSession] = useState<boolean>(() => {
+    return authApi.getCachedUser() === null;
+  });
+  const [is404Route, setIs404Route] = useState<boolean>(initialRoute.is404);
+
+  // Navigation & Collapsible sidebar state
+  const [activeNav, setActiveNav] = useState<string>(initialRoute.activeNav);
+  const [selectedPublishedLessonId, setSelectedPublishedLessonId] = useState<string | null>(initialRoute.selectedLessonId);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hanflix_sidebar_collapsed') === 'true';
+    }
+    return false;
   });
 
   const navigateAuth = (view: AuthView) => {
@@ -106,24 +169,47 @@ export default function App() {
     }
   };
 
+  const handleNavChange = (navId: string) => {
+    setActiveNav(navId);
+    setSelectedLesson(null);
+    setSelectedPublishedLessonId(null);
+    setIsSidebarOpen(false);
+    setIs404Route(false);
+    localStorage.setItem('hanflix_last_nav', navId);
+    const targetPath = navId === 'feed' ? '/' : `/${navId}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
+
+  const handleSelectLesson = (lessonId: string) => {
+    setSelectedLesson(null);
+    setSelectedPublishedLessonId(lessonId);
+    const targetPath = `/watch/${lessonId}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
+
+  const handleBackFromLesson = () => {
+    setSelectedPublishedLessonId(null);
+    const targetPath = activeNav === 'feed' ? '/' : `/${activeNav}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
+
   useEffect(() => {
     const handlePopState = () => {
-      setAuthView(getInitialAuthView());
-      setIs404Route(!isKnownPath(window.location.pathname));
+      const route = parseCurrentRoute();
+      setAuthView(route.authView);
+      setActiveNav(route.activeNav);
+      setSelectedPublishedLessonId(route.selectedLessonId);
+      setIs404Route(route.is404);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  // Navigation & Collapsible sidebar state (Requirement 1)
-  const [activeNav, setActiveNav] = useState<string>('feed');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('hanflix_sidebar_collapsed') === 'true';
-    }
-    return false;
-  });
 
   const handleToggleSidebarCollapse = () => {
     setIsSidebarCollapsed((prev) => {
@@ -137,7 +223,6 @@ export default function App() {
 
   // Modals & Drawers
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
-  const [selectedPublishedLessonId, setSelectedPublishedLessonId] = useState<string | null>(null);
   const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
@@ -149,15 +234,21 @@ export default function App() {
   // First-time Login Survey Modal (Requirement 3)
   const [isSurveyOpen, setIsSurveyOpen] = useState<boolean>(false);
 
-
-  // Try to restore session on mount
+  // Try to restore session on mount (silently refreshes token if cached user exists)
   useEffect(() => {
     authApi.restoreSession().then((user) => {
-      if (user) setCurrentUser(user);
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+      }
+    }).catch(() => {
+      setCurrentUser(null);
     }).finally(() => {
       setIsRestoringSession(false);
     });
   }, []);
+
 
   // Check first-time login for survey popup (Requirement 3)
   useEffect(() => {
@@ -216,6 +307,8 @@ export default function App() {
           subtitlePreference: updated.subtitleMode
             ? { all: 'all', 'zh-pinyin': 'zh_pinyin', zh: 'zh_only' }[updated.subtitleMode]
             : currentUser.learningProfile.subtitlePreference,
+          // Mark survey as completed so the modal won't re-appear on next login
+          surveyVersion: currentUser.learningProfile.surveyVersion ?? 1,
         },
       });
     }
@@ -387,9 +480,12 @@ export default function App() {
   ];
 
   const userProfile = {
+    id: currentUser.id,
     name: currentUser.name,
-    avatar: currentUser.avatarAsset || 'https://picsum.photos/seed/avatar-default/64/64',
+    avatar: currentUser.avatarUrl || currentUser.googleAvatarUrl || currentUser.avatarAsset || '',
+    avatarConfig: currentUser.avatarConfig || null,
     level: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
+
     hskProgress: 0,
     hskLevel: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
     streakDays: 0,
@@ -413,12 +509,8 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         streakDays={userProfile.streakDays}
-        onOpenPractice={() => setActiveNav('lessons')}
-        onNavigateToLessons={() => {
-          setActiveNav('lessons');
-          setSelectedLesson(null);
-          setSelectedPublishedLessonId(null);
-        }}
+        onOpenPractice={() => handleNavChange('lessons')}
+        onNavigateToLessons={() => handleNavChange('lessons')}
       />
 
       {/* Main layout with collapsible sidebar */}
@@ -426,14 +518,9 @@ export default function App() {
         {/* Sidebar: collapses to w-[72px] mini-rail or expands to w-[260px] */}
         <Sidebar
           activeNav={activeNav}
-          onNavChange={(id) => {
-            setActiveNav(id);
-            setSelectedLesson(null); // Return to list if navigating from watch mode
-            setSelectedPublishedLessonId(null);
-            setIsSidebarOpen(false);
-          }}
+          onNavChange={handleNavChange}
           userProfile={userProfile}
-          onStartPractice={() => setActiveNav('lessons')}
+          onStartPractice={() => handleNavChange('lessons')}
           isDrawerOpen={isSidebarOpen}
           onCloseDrawer={() => setIsSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}
@@ -442,25 +529,25 @@ export default function App() {
         {/* Main content: YouTube Watch Stage or Dashboard Pages */}
         <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden">
           {selectedPublishedLessonId ? (
-            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={() => setSelectedPublishedLessonId(null)} subtitlePreference={currentUser.learningProfile?.subtitlePreference} />
+            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={handleBackFromLesson} subtitlePreference={currentUser.learningProfile?.subtitlePreference} />
           ) : (
             <>
               {(['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history'] as const).some(section => section === activeNav) && (
                 <ConnectedLearner
                   section={activeNav as 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history'}
-                  onSelectLesson={(id) => { setSelectedLesson(null); setSelectedPublishedLessonId(id); }}
+                  onSelectLesson={handleSelectLesson}
                   onOpenPreferences={() => setIsSurveyOpen(true)}
                 />
               )}
-              {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => setActiveNav('lessons')} />}
-              {activeNav === 'leaderboard' && <LeaderboardPage onStartPractice={() => setActiveNav('lessons')} onSelectLesson={() => setActiveNav('lessons')} />}
+              {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => handleNavChange('lessons')} />}
+              {activeNav === 'leaderboard' && <LeaderboardPage onStartPractice={() => handleNavChange('lessons')} onSelectLesson={() => handleNavChange('lessons')} />}
               {activeNav === 'community' && <CommunityPage />}
               {!['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'exam', 'leaderboard', 'community', 'history'].includes(activeNav) && (
                 <NotFoundPage
                   showHeader={false}
                   currentUser={currentUser}
-                  onNavigateHome={() => setActiveNav('feed')}
-                  onNavigateLessons={() => setActiveNav('lessons')}
+                  onNavigateHome={() => handleNavChange('feed')}
+                  onNavigateLessons={() => handleNavChange('lessons')}
                 />
               )}
             </>
@@ -475,15 +562,11 @@ export default function App() {
       >
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeNav === item.id && !selectedLesson;
+          const isActive = activeNav === item.id && !selectedLesson && !selectedPublishedLessonId;
           return (
             <button
               key={item.id}
-              onClick={() => {
-                setActiveNav(item.id);
-                setSelectedLesson(null);
-                setSelectedPublishedLessonId(null);
-              }}
+              onClick={() => handleNavChange(item.id)}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-bold transition-colors cursor-pointer ${
@@ -497,6 +580,7 @@ export default function App() {
         })}
       </nav>
 
+
       {/* Requirement 2: Account Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -505,7 +589,9 @@ export default function App() {
         userProfile={userProfile}
         onSavePreferences={handleSavePreferences}
         onOpenSurvey={() => setIsSurveyOpen(true)}
+        onUpdateUser={(updated) => setCurrentUser(updated)}
       />
+
 
       {/* Requirement 3: First-time Login Survey Modal */}
       <LearningSurveyModal

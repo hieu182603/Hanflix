@@ -1,3 +1,14 @@
+/**
+ * Rate Limiters
+ *
+ * NOTE (SEC-03): These limiters use in-memory store by default.
+ * When running multi-instance (PM2 cluster / multiple containers),
+ * each instance has its own counter → limit becomes effectively (limit * instances).
+ * Mitigation: use a Redis store via `rate-limit-redis` in production, or
+ * delegate rate limiting to a reverse proxy (Nginx/Cloudflare).
+ *
+ * TODO: Wire `rate-limit-redis` when Redis is available in production stack.
+ */
 import { rateLimit } from 'express-rate-limit';
 import { env } from '../config/env.js';
 

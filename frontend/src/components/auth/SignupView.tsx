@@ -148,14 +148,14 @@ export default function SignupView({ onNavigateToLogin, onGoogleSuccess }: Signu
           </div>
         </div>
 
-        {/* Card 2: Lộ trình HSK 1-6 */}
+        {/* Card 2: Lộ trình HSK 1-9 */}
         <div className="rounded-[18px] sm:rounded-[22px] bg-white p-3 sm:p-3.5 xl:p-4 shadow-[0_20px_40px_rgba(180,60,20,0.12),0_2px_8px_rgba(0,0,0,0.04)] border border-white flex flex-col justify-between auth-card-compact">
           <div>
             <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl bg-[#E50914]/10 text-[#E50914] flex items-center justify-center mb-1.5 sm:mb-2">
               <GitBranch className="w-4 h-4 xl:w-4.5 xl:h-4.5 stroke-[2]" />
             </div>
             <div className="text-[13px] xl:text-[14px] font-bold text-neutral-900 leading-tight mb-0.5 font-display">
-              Lộ Trình HSK 1-6
+              Lộ Trình HSK 1-9
             </div>
             <div className="text-[11px] text-neutral-400 font-medium mb-1.5">
               Milestone chuẩn

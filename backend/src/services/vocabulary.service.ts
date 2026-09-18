@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { z } from 'zod';
 import { VocabularyModel, type Vocabulary } from '../models/vocabulary.model.js';
 
-export const HSK_LEVELS = [1, 2, 3, 4, 5, 6, '7-9'] as const;
+export const HSK_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, '7-9'] as const;
 export type HskLevelType = (typeof HSK_LEVELS)[number];
 
 export const vocabularyValidationSchema = z.object({
@@ -21,6 +21,9 @@ export const vocabularyValidationSchema = z.object({
     z.literal(4),
     z.literal(5),
     z.literal(6),
+    z.literal(7),
+    z.literal(8),
+    z.literal(9),
     z.literal('7-9'),
     z.literal('1'),
     z.literal('2'),
@@ -28,7 +31,10 @@ export const vocabularyValidationSchema = z.object({
     z.literal('4'),
     z.literal('5'),
     z.literal('6'),
-  ]).transform(v => (v === '7-9' ? '7-9' : Number(v) as 1 | 2 | 3 | 4 | 5 | 6)),
+    z.literal('7'),
+    z.literal('8'),
+    z.literal('9'),
+  ]).transform(v => (v === '7-9' ? '7-9' : Number(v) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)),
   partOfSpeech: z.array(z.string().trim().min(1)).optional().default([]),
   variants: z.array(z.string().trim().min(1)).optional().default([]),
   examples: z.array(
@@ -189,6 +195,9 @@ export class VocabularyService {
       hsk4,
       hsk5,
       hsk6,
+      hsk7,
+      hsk8,
+      hsk9,
       hsk7to9,
       pendingReview,
       published,
@@ -201,6 +210,9 @@ export class VocabularyService {
       VocabularyModel.countDocuments({ hskLevel: 4 }),
       VocabularyModel.countDocuments({ hskLevel: 5 }),
       VocabularyModel.countDocuments({ hskLevel: 6 }),
+      VocabularyModel.countDocuments({ hskLevel: 7 }),
+      VocabularyModel.countDocuments({ hskLevel: 8 }),
+      VocabularyModel.countDocuments({ hskLevel: 9 }),
       VocabularyModel.countDocuments({ hskLevel: '7-9' }),
       VocabularyModel.countDocuments({ status: 'pending_review' }),
       VocabularyModel.countDocuments({ status: 'published' }),
@@ -216,6 +228,9 @@ export class VocabularyService {
         4: hsk4,
         5: hsk5,
         6: hsk6,
+        7: hsk7,
+        8: hsk8,
+        9: hsk9,
         '7-9': hsk7to9,
       },
       byStatus: {

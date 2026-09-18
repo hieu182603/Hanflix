@@ -28,9 +28,9 @@ const vocabularySchema = new Schema({
     required: true,
     validate: {
       validator(v: any) {
-        return [1, 2, 3, 4, 5, 6, '7-9'].includes(v) || ['1', '2', '3', '4', '5', '6'].includes(String(v));
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, '7-9'].includes(v) || ['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(String(v));
       },
-      message: 'hskLevel must be 1, 2, 3, 4, 5, 6 or "7-9"',
+      message: 'hskLevel must be between 1 and 9, or "7-9"',
     },
     index: true,
   },

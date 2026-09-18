@@ -13,7 +13,7 @@ const lessonSchema = new Schema({
   titleZh: { type: String, trim: true, maxlength: 160 },
   pinyin: { type: String, trim: true, maxlength: 240 },
   descriptionVi: { type: String, required: true, trim: true, maxlength: 1000 },
-  hsk: { type: Number, required: true, min: 1, max: 6, index: true },
+  hsk: { type: Number, required: true, min: 1, max: 9, index: true },
   topicIds: [{ type: String, required: true, trim: true, index: true }],
   goalTags: [{ type: String, enum: ['daily', 'travel', 'work', 'hsk', 'culture', 'other'] }],
   durationSeconds: { type: Number, required: true, min: 60, max: 300 },

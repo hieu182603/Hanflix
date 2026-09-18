@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
-import { validate } from '../middleware/validate.js';
+import { validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProgressModel } from '../models/progress.model.js';
 import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
@@ -28,8 +28,8 @@ const activityQuerySchema = z.object({
   timezone: z.string().trim().min(1).max(50).optional(),
 });
 
-router.get('/activity', validate(activityQuerySchema, 'query'), asyncHandler(async (req, res) => {
-  const query = req.query as unknown as z.infer<typeof activityQuerySchema>;
+router.get('/activity', validateQuery(activityQuerySchema), asyncHandler(async (req, res) => {
+  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof activityQuerySchema>;
   const timezone = query.timezone || DEFAULT_TIMEZONE;
   const to = query.to ?? toTimezoneDateKey(new Date(), timezone);
   const toDate = parseDateKey(to);
@@ -71,10 +71,15 @@ router.get('/activity', validate(activityQuerySchema, 'query'), asyncHandler(asy
 
 router.get('/dashboard', asyncHandler(async (req, res) => {
   const now = new Date();
+  // PERFORMANCE (PERF-01): Limit dashboard progress query to 50 items.
+  // For power users with thousands of progress records, use the dedicated
+  // /learning/history endpoint with proper pagination.
+  const PROGRESS_DASHBOARD_LIMIT = 50;
   const [progress, savedCount, dueCount, attempts] = await Promise.all([
     ProgressModel.find({ userId: req.auth!.userId })
       .populate('lessonId', 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey')
       .sort({ updatedAt: -1 })
+      .limit(PROGRESS_DASHBOARD_LIMIT)
       .lean(),
     SavedWordModel.countDocuments({ userId: req.auth!.userId }),
     SavedWordModel.countDocuments({ userId: req.auth!.userId, nextReviewAt: { $lte: now } }),
@@ -97,6 +102,11 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 router.get('/recommendations', asyncHandler(async (req, res) => {
   const [user, lessons, progress] = await Promise.all([
     UserModel.findById(req.auth!.userId).select('learningProfile').lean(),
+    // PERFORMANCE (PERF-03): We fetch up to 100 lessons and score/sort in JS
+    // because the scoring function depends on multiple profile fields (hsk match,
+    // topic overlap, completion history) — it's complex enough that translating
+    // into a Mongo aggregation would hurt readability without clear win.
+    // For scale: cap the candidate pool (100) and add DB index on { status, hsk, topicIds }.
     LessonModel.find({ status: 'published' }).select('-media.objectKey').limit(100).lean(),
     ProgressModel.find({ userId: req.auth!.userId }).select('lessonId completed bestQuizScore').lean(),
   ]);

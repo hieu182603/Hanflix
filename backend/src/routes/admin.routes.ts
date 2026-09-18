@@ -6,7 +6,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { uploadLimiter } from '../middleware/rate-limits.js';
-import { validate } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
 import { QuizModel } from '../models/quiz.model.js';
@@ -32,7 +32,7 @@ const lessonInput = z.object({
   titleZh: z.string().trim().max(160).optional(),
   pinyin: z.string().trim().max(240).optional(),
   descriptionVi: z.string().trim().min(10).max(1000),
-  hsk: z.number().int().min(1).max(6),
+  hsk: z.number().int().min(1).max(9),
   topicIds: z.array(z.string().trim().min(1).max(50)).min(1).max(5),
   goalTags: z.array(z.enum(['daily', 'travel', 'work', 'hsk', 'culture', 'other'])).max(6).default([]),
   durationSeconds: z.number().min(60).max(300),
@@ -201,8 +201,8 @@ router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), 
   res.json({ data: { ...job, video: lesson } });
 }));
 
-router.get('/processing-jobs', validate(processingListSchema, 'query'), asyncHandler(async (req, res) => {
-  const { status, page, limit } = req.query as unknown as z.infer<typeof processingListSchema>;
+router.get('/processing-jobs', validateQuery(processingListSchema), asyncHandler(async (req, res) => {
+  const { status, page, limit } = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof processingListSchema>;
   const filter = status ? { status } : {};
   const [items, total] = await Promise.all([
     ProcessingJobModel.find(filter).select('-objectKey -activeKey -lockedBy').sort({ createdAt: -1 })

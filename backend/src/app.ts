@@ -16,6 +16,7 @@ import authRoutes from './routes/auth.routes.js';
 import learningRoutes from './routes/learning.routes.js';
 import lessonRoutes from './routes/lesson.routes.js';
 import profileRoutes from './routes/profile.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 import vocabularyRoutes from './routes/vocabulary.routes.js';
 
 export const app = express();
@@ -25,7 +26,12 @@ if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 app.use(requestId);
 app.use(metricsMiddleware);
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Allow cross-origin window.postMessage by not setting COOP header.
+  // If you need strict popup isolation, use crossOriginOpenerPolicy: { policy: 'same-origin' }
+  crossOriginOpenerPolicy: false,
+}));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || env.APP_ORIGINS.includes(origin)) callback(null, true);
@@ -45,6 +51,12 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/metrics', async (_req, res) => {
+  // SECURITY: In production, metrics endpoint must be protected by METRICS_TOKEN.
+  // Without token in production, block access entirely to prevent information leakage.
+  if (!env.METRICS_TOKEN && env.NODE_ENV === 'production') {
+    res.status(403).json({ error: { code: 'METRICS_DISABLED', message: 'Metrics endpoint is disabled in production without METRICS_TOKEN' } });
+    return;
+  }
   if (env.METRICS_TOKEN) {
     const supplied = _req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
     const expectedBuffer = Buffer.from(env.METRICS_TOKEN);
@@ -85,6 +97,7 @@ app.get(env.API_PREFIX, (_req, res) => {
 
 app.use(`${env.API_PREFIX}/auth`, authRoutes);
 app.use(`${env.API_PREFIX}/profile`, profileRoutes);
+app.use(`${env.API_PREFIX}/uploads`, uploadRoutes);
 app.use(`${env.API_PREFIX}/lessons`, lessonRoutes);
 app.use(`${env.API_PREFIX}/vocabulary`, vocabularyRoutes);
 app.use(`${env.API_PREFIX}/learning`, learningRoutes);

@@ -218,10 +218,15 @@ export default function AIAssistantDrawer({
       panda.handlePandaAIEvent({ type: "completed" })
     } catch (error) {
       window.clearTimeout(workTimer)
-      const errorMessage =
+      // Sanitize error message from API: strip HTML/control chars and cap length
+      const rawMessage =
         error instanceof ApiRequestError
           ? error.message
           : "Không thể kết nối Panda AI lúc này. Vui lòng thử lại."
+      const errorMessage = rawMessage
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/<[^>]*>/g, '')
+        .slice(0, 200)
       setMessages((previous) => [
         ...previous,
         {

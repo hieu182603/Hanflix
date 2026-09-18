@@ -231,12 +231,12 @@ export default function HomeVideoShelves({ onSelectLesson, onStartPractice }: Ho
             <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 tracking-tight">
               Khám phá bài học theo chứng chỉ HSK
             </h2>
-            <p className="text-xs text-neutral-500">Lựa chọn bài học video bám sát theo khung từ vựng HSK 1 đến HSK 6</p>
+            <p className="text-xs text-neutral-500">Lựa chọn bài học video bám sát theo khung từ vựng HSK 1 đến HSK 9</p>
           </div>
 
           {/* Level Switcher Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 no-scrollbar shrink-0">
-            {['all', 'hsk 1', 'hsk 2', 'hsk 3'].map((lvl) => (
+            {['all', 'hsk 1', 'hsk 2', 'hsk 3', 'hsk 4', 'hsk 5', 'hsk 6', 'hsk 7', 'hsk 8', 'hsk 9'].map((lvl) => (
               <button
                 key={lvl}
                 type="button"
