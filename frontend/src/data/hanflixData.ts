@@ -1,5 +1,5 @@
 export interface UserLearningProfile {
-  hskLevel: number; // 1 to 6
+  hskLevel: number; // 1 to 9
   goal: string; // "business" | "travel" | "daily" | "hsk"
   topics: string[]; // ["food", "travel", "shopping", "entertainment", "business", "daily-life"]
   dailyMinutes: number;
@@ -22,12 +22,20 @@ export interface User {
   name: string;
   email: string;
   avatarAsset?: string | null;
+  avatarUrl?: string | null;
+  googleAvatarUrl?: string | null;
+  avatarType?: 'generated' | 'custom' | null;
+  avatarConfig?: any;
+  avatarPublicId?: string | null;
   learningProfile?: UserLearningProfile | null;
 }
 
+
 export interface UserProfile {
+  id?: string;
   name: string;
   avatar: string;
+  avatarConfig?: any;
   level: string;
   hskProgress: number;
   hskLevel: string;

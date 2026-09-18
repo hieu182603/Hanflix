@@ -1,6 +1,7 @@
 import React from 'react';
 import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText } from 'lucide-react';
 import { User } from '../../data/hanflixData';
+import UserAvatar from '../common/UserAvatar';
 
 interface AdminShellProps {
   activeTab: 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar';
@@ -45,10 +46,9 @@ export default function AdminShell({
         <div className="flex items-center gap-4">
 
           <div className="flex items-center gap-2 border-l border-[#E7E7EA] pl-4">
-            <img
-              src={currentUser.avatarAsset || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=faces"}
-              alt={currentUser.name}
-              className="w-8 h-8 rounded-full object-cover"
+            <UserAvatar
+              user={currentUser}
+              size={32}
             />
             <div className="text-left hidden sm:block">
               <div className="text-xs font-bold text-[#18181B]">{currentUser.name}</div>

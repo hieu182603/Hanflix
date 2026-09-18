@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProgressModel } from '../models/progress.model.js';
 import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
@@ -20,7 +20,7 @@ const router = Router();
 
 const listSchema = z.object({
   q: z.string().trim().max(120).optional(),
-  hsk: z.coerce.number().int().min(1).max(6).optional(),
+  hsk: z.coerce.number().int().min(1).max(9).optional(),
   topic: z.string().trim().max(50).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(12),
@@ -65,8 +65,8 @@ async function safeDownloadUrl(key?: string | null): Promise<string | null> {
   }
 }
 
-router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => {
-  const { q, hsk, topic, page, limit } = req.query as unknown as z.infer<typeof listSchema>;
+router.get('/', validateQuery(listSchema), asyncHandler(async (req, res) => {
+  const { q, hsk, topic, page, limit } = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listSchema>;
   const filter: Record<string, unknown> = { status: 'published' };
   if (hsk) filter.hsk = hsk;
   if (topic) filter.topicIds = topic;
@@ -81,6 +81,10 @@ router.get('/', validate(listSchema, 'query'), asyncHandler(async (req, res) => 
       .lean(),
     LessonModel.countDocuments(filter),
   ]);
+  // PERFORMANCE (BUG-04): Parallel signed URL generation is already in Promise.all,
+  // but each URL still hits R2/S3 individually. For high-traffic thumbnail lists,
+  // consider caching the signed URLs (Redis with TTL ~= signed URL expiry)
+  // or making the thumbnail bucket public (CDN) to skip signing entirely.
   const itemsWithThumbnails = await Promise.all(
     items.map(async item => {
       const thumbnailUrl = await safeDownloadUrl(item.thumbnailKey);

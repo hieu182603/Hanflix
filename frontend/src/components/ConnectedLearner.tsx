@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
 import { getLearnerDashboard, getLearningActivity, listPublishedLessons, type LearnerDashboard, type LearningActivity, type LessonList } from '../api/learning';
-import { getPublicVocabulary, listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, type SavedVocabulary, type VocabularyListResponse } from '../api/vocabulary';
+import { listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, type SavedVocabulary } from '../api/vocabulary';
 import AIRecommendationSection from './AIRecommendationSection';
+import VocabularyPage from './vocabulary/VocabularyPage';
+import RoadmapPage from './RoadmapPage';
 
 type Section = 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history';
 
@@ -16,7 +18,6 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   const [activity, setActivity] = useState<LearningActivity | null>(null);
   const [saved, setSaved] = useState<SavedVocabulary[]>([]);
   const [due, setDue] = useState<SavedVocabulary[]>([]);
-  const [vocabulary, setVocabulary] = useState<VocabularyListResponse | null>(null);
   const [search, setSearch] = useState('');
   const [hsk, setHsk] = useState('');
   const [page, setPage] = useState(1);
@@ -31,13 +32,11 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
     setError('');
     const requests = section === 'feed' || section === 'lessons'
       ? [listPublishedLessons({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12 }).then(data => { if (active) setCatalog(data); }), ...(section === 'feed' ? [getLearnerDashboard().then(data => { if (active) setDashboard(data); })] : [])]
-      : section === 'saved'
-        ? [listSavedWords().then(data => { if (active) setSaved(data.items); }), listDueWords().then(data => { if (active) setDue(data.items); })]
-        : section === 'vocabulary'
-          ? [getPublicVocabulary({ page, limit: 20, search: search || undefined, hskLevel: hsk || undefined }).then(data => { if (active) setVocabulary(data); })]
-          : section === 'roadmap'
-            ? [getLearningActivity().then(data => { if (active) setActivity(data); }), getLearnerDashboard().then(data => { if (active) setDashboard(data); })]
-            : [getLearnerDashboard().then(data => { if (active) setDashboard(data); })];
+      : section === 'saved' || section === 'vocabulary'
+        ? [listSavedWords().then(data => { if (active) setSaved(data.items); }), ...(section === 'saved' ? [listDueWords().then(data => { if (active) setDue(data.items); })] : [])]
+        : section === 'roadmap'
+          ? [getLearningActivity().then(data => { if (active) setActivity(data); }), getLearnerDashboard().then(data => { if (active) setDashboard(data); })]
+          : [getLearnerDashboard().then(data => { if (active) setDashboard(data); })];
     void Promise.all(requests).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Không thể tải dữ liệu.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -55,7 +54,7 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
 
   const controls = <div className="flex flex-wrap gap-2">
     <label className="flex items-center gap-2 rounded-xl border bg-white px-3"><Search className="w-4 h-4" /><input className="p-2 text-sm outline-none" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Tìm kiếm" /></label>
-    <select className="rounded-xl border bg-white p-2 text-sm" value={hsk} onChange={event => { setHsk(event.target.value); setPage(1); }} aria-label="Lọc HSK"><option value="">Mọi cấp HSK</option>{[1,2,3,4,5,6].map(level => <option key={level} value={level}>HSK {level}</option>)}</select>
+    <select className="rounded-xl border bg-white p-2 text-sm" value={hsk} onChange={event => { setHsk(event.target.value); setPage(1); }} aria-label="Lọc HSK"><option value="">Mọi cấp HSK</option>{[1,2,3,4,5,6,7,8,9].map(level => <option key={level} value={level}>HSK {level}</option>)}</select>
   </div>;
 
   const pagination = (pages: number) => pages > 1 && <div className="flex items-center gap-3 justify-center pt-3">
@@ -94,17 +93,22 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
       {!loading && due.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm">Không có từ đến hạn ôn.</p>}
       <div className="grid gap-3 sm:grid-cols-2">{saved.map(item => <div key={item._id} className="rounded-xl border bg-white p-4 flex justify-between gap-3"><div><p className="font-bold">{item.wordId?.hanzi}</p><p className="text-sm text-neutral-600">{item.wordId?.pinyin} · {item.wordId?.meaningVi}</p><p className="text-xs text-neutral-500">{item.sourceLessonId?.titleVi}</p></div><button type="button" disabled={busy} onClick={() => void mutate(() => removeSavedWord(item.wordId._id))} className="text-xs text-[#B91B1C]">Bỏ lưu</button></div>)}</div>
     </section>}
-    {section === 'vocabulary' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h1 className="text-2xl font-black">Từ vựng HSK</h1>{controls}</div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{vocabulary?.items.map(item => <div key={item._id} className="rounded-xl border bg-white p-4"><p className="text-lg font-bold">{item.simplified}</p><p className="text-sm text-neutral-600">{item.pinyin} · {item.meanings?.vi?.join(', ')}</p><p className="text-xs text-[#B91B1C]">HSK {item.hskLevel}</p></div>)}</div>
-      {!loading && vocabulary?.items.length === 0 && <p className="text-sm">Không tìm thấy từ vựng.</p>}{pagination(vocabulary?.pagination.totalPages ?? 0)}
-    </section>}
-    {section === 'roadmap' && <section className="space-y-4"><h1 className="text-2xl font-black">Tiến độ học tập</h1><div className="grid gap-3 sm:grid-cols-3">{[
-      ['Thời gian học', `${Math.round((activity?.totals.activeStudySeconds ?? 0) / 60)} phút`],
-      ['Bài hoàn thành', String(activity?.totals.completedLessons ?? 0)],
-      ['Lượt làm quiz', String(activity?.totals.quizAttempts ?? 0)],
-    ].map(([label, value]) => <div key={label} className="rounded-xl border bg-white p-5"><p className="text-sm text-neutral-500">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></div>)}</div>
-      <h2 className="font-bold">Hoạt động 30 ngày gần đây (UTC)</h2><div className="grid grid-cols-7 gap-1 sm:grid-cols-10">{activity?.days.map(day => <div key={day.date} title={`${day.date}: ${Math.round(day.activeStudySeconds / 60)} phút`} className={`h-9 rounded ${day.activeStudySeconds ? 'bg-[#B91B1C]' : 'bg-neutral-200'}`} />)}</div>
-    </section>}
+    {section === 'vocabulary' && (
+      <VocabularyPage
+        savedWords={saved}
+        onStartReviewSession={() => {
+          window.location.hash = '#saved';
+        }}
+        onRemoveWord={(wordId) => void mutate(() => removeSavedWord(wordId))}
+      />
+    )}
+    {section === 'roadmap' && (
+      <RoadmapPage
+        onSelectLesson={onSelectLesson}
+        onStartPractice={() => onSelectLesson('17')}
+      />
+    )}
     {section === 'history' && <section className="space-y-4"><h1 className="text-2xl font-black">Lịch sử học tập</h1>{dashboard?.recentProgress.length ? dashboard.recentProgress.map((item, index) => <button key={index} type="button" disabled={!item.lessonId?._id} onClick={() => onSelectLesson(item.lessonId!._id)} className="flex w-full items-center justify-between rounded-xl border bg-white p-4 text-left disabled:opacity-60"><span><BookOpen className="mr-2 inline w-4 h-4" />{item.lessonId?.titleVi ?? 'Bài học không còn khả dụng'}</span><span className="text-xs text-neutral-500"><Clock3 className="mr-1 inline w-3 h-3" />{item.completed ? 'Hoàn thành' : `${Math.round(item.lastPositionSeconds)} giây`}</span></button>) : <p className="rounded-xl bg-white p-5 text-sm">Chưa có lịch sử học tập.</p>}</section>}
   </div>;
 }
+

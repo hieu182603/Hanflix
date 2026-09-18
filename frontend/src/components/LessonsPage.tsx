@@ -16,7 +16,7 @@ export default function LessonsPage({ onSelectLesson }: LessonsPageProps) {
   );
 
   const categories = ['All', 'Ẩm thực', 'Du lịch', 'Phim ảnh & âm nhạc', 'Mua sắm', 'Kinh doanh', 'Đời sống'];
-  const hskLevels = ['All', 'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6'];
+  const hskLevels = ['All', 'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9'];
 
   const filtered = allLessons.filter((l) => {
     if (selectedCategory !== 'All' && l.category !== selectedCategory) return false;
@@ -30,7 +30,7 @@ export default function LessonsPage({ onSelectLesson }: LessonsPageProps) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
             <h1 className="text-2xl font-black text-[#18181B] tracking-tight">Kho Bài Học Video Tiếng Trung</h1>
-            <p className="text-sm text-[#5F6368] mt-0.5">Hơn 500+ video ngắn phân loại theo chuẩn HSK 1–6 và tình huống giao tiếp</p>
+            <p className="text-sm text-[#5F6368] mt-0.5">Hơn 500+ video ngắn phân loại theo chuẩn HSK 1–9 và tình huống giao tiếp</p>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-[#5F6368] shrink-0">
             <Filter className="w-3.5 h-3.5" />

@@ -76,9 +76,30 @@ const HSK_LEVELS = [
   {
     level: 'HSK 6',
     stage: 'Chuyên sâu',
-    vocabCount: '5.000+ từ vựng',
+    vocabCount: '5.000 từ vựng',
     desc: 'Làm việc chuyên môn, đàm phán thương mại và nghiên cứu học thuật',
     badge: 'Chuyên gia',
+  },
+  {
+    level: 'HSK 7',
+    stage: 'Cao cấp 1',
+    vocabCount: '5.000+ từ vựng',
+    desc: 'Làm chủ các chủ đề liên ngành: ngoại giao, luật pháp, khoa học kỹ thuật',
+    badge: 'Thành thạo',
+  },
+  {
+    level: 'HSK 8',
+    stage: 'Cao cấp 2',
+    vocabCount: '5.000+ từ vựng',
+    desc: 'Nắm vững ngôn ngữ học thuật, phân tích văn bản phức tạp đa ngữ cảnh',
+    badge: 'Chuyên gia',
+  },
+  {
+    level: 'HSK 9',
+    stage: 'Hoàn mỹ',
+    vocabCount: '5.000+ từ vựng',
+    desc: 'Năng lực sử dụng tiếng Trung hoàn hảo ở tầm chuyên gia quốc tế',
+    badge: 'Bậc thầy',
   },
 ];
 
@@ -192,7 +213,7 @@ export default function LearningSurveyModal({
 
   const topicMap: Record<string, string> = {
     'Ẩm thực': 'food', 'Du lịch': 'travel', 'Mua sắm': 'shopping',
-    'Phim ảnh': 'entertainment', 'Kinh tế': 'business', 'Công nghệ': 'daily-life',
+    'Phim ảnh': 'entertainment', 'Kinh tế': 'business', 'Công nghệ': 'technology',
     'Đời sống': 'daily-life', 'Âm nhạc': 'entertainment',
   };
 

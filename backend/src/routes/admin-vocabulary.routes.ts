@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
-import { validate } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { VocabularyModel } from '../models/vocabulary.model.js';
 import { vocabularyService, vocabularyValidationSchema } from '../services/vocabulary.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
@@ -34,8 +34,8 @@ router.get('/stats', asyncHandler(async (_req, res) => {
 }));
 
 // GET /api/admin/vocabulary
-router.get('/', validate(listQuerySchema, 'query'), asyncHandler(async (req, res) => {
-  const query = req.query as unknown as z.infer<typeof listQuerySchema>;
+router.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
+  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listQuerySchema>;
   const result = await vocabularyService.searchCatalog({
     page: query.page,
     limit: query.limit,

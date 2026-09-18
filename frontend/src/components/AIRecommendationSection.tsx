@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles, SlidersHorizontal, RefreshCw, Filter } from 'lucide-react';
-import { getAiRecommendations, type PublishedLesson } from '../api/learning';
+import { getAiRecommendations, getRuleBasedRecommendations, type PublishedLesson } from '../api/learning';
 import { ApiRequestError } from '../api/client';
 import { useLanguage } from '../i18n';
 
@@ -23,10 +23,21 @@ export default function AIRecommendationSection({
     setIsRefreshing(true);
     setError('');
     try {
-      setLessons(await getAiRecommendations());
+      const aiResults = await getAiRecommendations();
+      if (aiResults.length > 0) {
+        setLessons(aiResults);
+      } else {
+        const ruleResults = await getRuleBasedRecommendations();
+        setLessons(ruleResults);
+      }
     } catch (requestError) {
-      setLessons([]);
-      setError(requestError instanceof ApiRequestError ? requestError.message : 'Không thể tải gợi ý lúc này.');
+      try {
+        const ruleResults = await getRuleBasedRecommendations();
+        setLessons(ruleResults);
+      } catch (fallbackError) {
+        setLessons([]);
+        setError(requestError instanceof ApiRequestError ? requestError.message : 'Không thể tải gợi ý lúc này.');
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -37,6 +48,7 @@ export default function AIRecommendationSection({
   const filterChips = [
     { id: 'all', label: t.feed.filterAll },
     { id: 'HSK 3', label: t.feed.filterHsk3, isLevel: true },
+    { id: 'HSK 6', label: 'HSK 6' },
     { id: 'business', label: t.feed.filterBusiness },
     { id: 'travel', label: t.feed.filterTravel },
     { id: 'food', label: t.feed.filterFood },
@@ -45,6 +57,7 @@ export default function AIRecommendationSection({
   const filteredLessons = lessons.filter(({ lesson }) => {
     if (activeChip === 'all') return true;
     if (activeChip === 'HSK 3') return lesson.hsk === 3;
+    if (activeChip === 'HSK 6') return lesson.hsk === 6;
     return lesson.topicIds.includes(activeChip);
   });
 

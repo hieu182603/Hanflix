@@ -14,6 +14,7 @@ import NotificationsDropdown from './notifications/NotificationsDropdown';
 import StreakDropdown from './streak/StreakDropdown';
 import { useLanguage, Language } from '../i18n';
 import { usePandaPet } from './panda-pet';
+import UserAvatar from './common/UserAvatar';
 
 interface HeaderProps {
   onSearchSelect?: (query: string) => void;
@@ -269,17 +270,10 @@ export default function Header({
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 p-1 rounded-full hover:bg-[#F7F7F9] transition-colors cursor-pointer"
           >
-            <img
-              src={
-                currentUser?.avatarAsset ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces'
-              }
-              alt={currentUser?.name || 'Avatar'}
-              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-xs"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  'https://picsum.photos/seed/avatar/40/40';
-              }}
+            <UserAvatar
+              user={currentUser}
+              size={40}
+              className="border-2 border-white shadow-xs"
             />
           </button>
 

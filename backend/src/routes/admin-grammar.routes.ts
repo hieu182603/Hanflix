@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
-import { validate } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { GrammarModel } from '../models/grammar.model.js';
 import { grammarService, grammarValidationSchema } from '../services/grammar.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
@@ -26,8 +26,8 @@ router.get('/stats', asyncHandler(async (_req, res) => {
 }));
 
 // GET /api/admin/grammar
-router.get('/', validate(listQuerySchema, 'query'), asyncHandler(async (req, res) => {
-  const query = req.query as unknown as z.infer<typeof listQuerySchema>;
+router.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
+  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listQuerySchema>;
   const result = await grammarService.searchGrammar({
     page: query.page,
     limit: query.limit,

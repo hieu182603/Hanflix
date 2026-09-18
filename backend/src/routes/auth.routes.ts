@@ -22,6 +22,7 @@ import {
   verifyRefreshToken,
 } from '../services/jwt.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { generateDefaultAvatarConfig } from '../utils/avatar-generator.js';
 
 const router = Router();
 
@@ -84,20 +85,10 @@ async function issueSession(user: { _id: Types.ObjectId; role: 'user' | 'admin' 
   return signAccessToken(user._id.toString(), user.role);
 }
 
-function publicUser(user: {
-  _id: unknown; name: string; email: string; role: string; status: string; learningProfile?: unknown;
-  emailVerifiedAt?: Date | null; emailVerificationRequired?: boolean;
-}) {
-  return {
-    id: String(user._id),
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-    emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequired),
-    learningProfile: user.learningProfile,
-  };
-}
+// Re-export from utils/user.mapper for backwards compatibility
+// (ARCH-04: extracted to break route-file dependency on helper functions)
+export { publicUser } from '../utils/user.mapper.js';
+import { publicUser } from '../utils/user.mapper.js';
 
 router.post('/register', authLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   mailService.assertConfigured();
@@ -113,13 +104,19 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
     }
   }
   const passwordHash = await bcrypt.hash(req.body.password, 12);
+  const newUserId = new Types.ObjectId();
   let user;
   try {
     user = await UserModel.create({
+      _id: newUserId,
       name: req.body.name,
       email: req.body.email,
       passwordHash,
       role: 'user',
+      avatarType: 'generated',
+      avatarConfig: generateDefaultAvatarConfig(newUserId.toString()),
+      avatarUrl: null,
+      avatarPublicId: null,
       emailVerificationRequired: true,
     });
   } catch (error) {
@@ -158,6 +155,7 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
         existingEmailUser.googleSub = identity.sub;
         existingEmailUser.emailVerifiedAt = new Date();
         existingEmailUser.emailVerificationRequired = false;
+        existingEmailUser.googleAvatarUrl = identity.picture;
         existingEmailUser.avatarUrl ??= identity.picture;
         try {
           await existingEmailUser.save();
@@ -175,11 +173,17 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
     }
     if (!user) {
       try {
+        const newUserId = new Types.ObjectId();
         user = await UserModel.create({
+          _id: newUserId,
           name: identity.name,
           email: identity.email,
           googleSub: identity.sub,
-          avatarUrl: identity.picture,
+          avatarType: identity.picture ? 'custom' : 'generated',
+          avatarUrl: identity.picture || null,
+          googleAvatarUrl: identity.picture || null,
+          avatarConfig: generateDefaultAvatarConfig(newUserId.toString()),
+          avatarPublicId: null,
           emailVerifiedAt: new Date(),
           emailVerificationRequired: false,
           role: 'user',
@@ -190,6 +194,19 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
         user = await UserModel.findOne({ googleSub: identity.sub }).select('+googleSub');
         if (!user) throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập và liên kết Google.');
       }
+    }
+  } else {
+    // Existing user logging in with Google
+    if (identity.picture) {
+      user.googleAvatarUrl = identity.picture;
+      if (!user.avatarUrl || user.avatarUrl.includes('googleusercontent.com')) {
+        user.avatarUrl = identity.picture;
+        user.avatarType = 'custom';
+      }
+      if (!user.avatarConfig) {
+        user.avatarConfig = generateDefaultAvatarConfig(String(user._id));
+      }
+      await user.save();
     }
   }
   if (user.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
@@ -216,6 +233,10 @@ router.post('/google/link', requireAuth, authLimiter, validate(googleCredentialS
     user.googleSub = identity.sub;
     user.emailVerifiedAt ??= new Date();
     user.emailVerificationRequired = false;
+    if (identity.picture) {
+      user.googleAvatarUrl = identity.picture;
+      if (!user.avatarUrl) user.avatarUrl = identity.picture;
+    }
     await user.save();
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
@@ -264,7 +285,18 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
     { $set: { revokedAt: new Date() } },
     { returnDocument: 'after' },
   );
-  if (!session) throw new AppError(401, 'REFRESH_REUSED', 'Phiên làm mới đã hết hạn hoặc đã được sử dụng');
+  if (!session) {
+    // SECURITY: Token reuse detected (OWASP). Revoke ALL active sessions for this user
+    // to protect them if the leaked token was used by an attacker.
+    const compromisedSession = await RefreshSessionModel.findOne({ jti: claims.jti });
+    if (compromisedSession) {
+      await RefreshSessionModel.updateMany(
+        { userId: compromisedSession.userId, revokedAt: { $exists: false } },
+        { $set: { revokedAt: new Date() } },
+      );
+    }
+    throw new AppError(401, 'REFRESH_REUSED', 'Phát hiện tái sử dụng phiên bảo mật. Vui lòng đăng nhập lại.');
+  }
 
   const user = await UserModel.findById(claims.sub).select('+emailVerificationRequired');
   if (!user || user.status !== 'active') throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');

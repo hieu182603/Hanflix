@@ -153,7 +153,7 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
             <GitBranch className="w-4 h-4 xl:w-5 xl:h-5 stroke-[1.8]" />
           </div>
           <div className="text-[16px] xl:text-[18px] font-black text-neutral-900 leading-none mb-0.5 font-display">
-            HSK 1-6
+            HSK 1-9
           </div>
           <div className="text-[10px] xl:text-[11px] font-medium text-neutral-500">
             Lộ trình

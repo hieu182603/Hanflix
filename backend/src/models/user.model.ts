@@ -1,9 +1,9 @@
 import { Schema, model, type InferSchemaType } from 'mongoose';
 
 const learningProfileSchema = new Schema({
-  currentHsk: { type: Number, min: 1, max: 6 },
+  currentHsk: { type: Number, min: 1, max: 9 },
   currentHskSource: { type: String, enum: ['unknown', 'self_reported', 'assessed'], default: 'unknown' },
-  targetHsk: { type: Number, min: 1, max: 6 },
+  targetHsk: { type: Number, min: 1, max: 9 },
   goal: {
     type: String,
     enum: ['daily', 'travel', 'work', 'hsk', 'culture', 'other'],
@@ -30,6 +30,10 @@ const userSchema = new Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user', index: true },
   status: { type: String, enum: ['active', 'locked'], default: 'active', index: true },
   avatarUrl: { type: String, trim: true },
+  googleAvatarUrl: { type: String, trim: true },
+  avatarType: { type: String, enum: ['generated', 'custom'], default: 'generated' },
+  avatarConfig: { type: Schema.Types.Mixed, default: null },
+  avatarPublicId: { type: String, trim: true, default: null },
   learningProfile: { type: learningProfileSchema, default: () => ({ currentHskSource: 'unknown', subtitlePreference: 'all' }) },
 }, { timestamps: true, versionKey: false });
 

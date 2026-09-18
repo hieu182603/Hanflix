@@ -100,7 +100,7 @@ const SUBTITLE_MODES = [
   { id: 'unsure', label: 'Chưa biết, thử tất cả' },
 ];
 
-const HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6'];
+const HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9'];
 
 export default function OnboardingView({ onCompleteOnboarding, onSkip }: OnboardingViewProps) {
   const [draft, setDraft] = useState<SurveyDraft>(loadDraft);
