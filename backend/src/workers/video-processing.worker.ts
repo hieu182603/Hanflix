@@ -6,9 +6,13 @@ import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { env } from '../config/env.js';
 import { LessonModel } from '../models/lesson.model.js';
 import {
+  abortProcessingJob,
   claimNextVideoProcessingJob,
+  expireProcessingJob,
   failOrRequeueVideoProcessingJob,
+  heartbeatProcessingJob,
   getVideoQueueMetrics,
+  type VideoProcessingJobLease,
 } from '../queue/video.queue.js';
 import { downloadR2Object } from '../services/r2.js';
 import { logger } from '../services/logger.js';
@@ -21,37 +25,115 @@ let running = false;
 async function processNextJob(): Promise<boolean> {
   if (running) return false;
   running = true;
+  let lease: VideoProcessingJobLease | null = null;
+  // F04: AbortController wired to every I/O operation in the pipeline.
+  // Three ways this can fire:
+  //   1) The job's stageDeadlineAt passes (enforced by the deadline timer below).
+  //   2) The lease's heartbeat fails (another worker claimed it back).
+  //   3) The worker's parent process receives SIGTERM/SIGINT (graceful shutdown).
+  const abortController = new AbortController();
+  const { signal } = abortController;
+  let deadlineTimer: NodeJS.Timeout | undefined;
   try {
-    const job = await claimNextVideoProcessingJob(workerId);
-    if (!job) return false;
-    const lesson = await LessonModel.findById(job.lessonId).select('media.objectKey').lean();
-    const objectKey = job.objectKey || lesson?.media?.objectKey;
+    lease = await claimNextVideoProcessingJob(workerId);
+    if (!lease) return false;
+    const lesson = await LessonModel.findById(lease.lessonId).select('media.objectKey').lean();
+    const objectKey = lease.objectKey || lesson?.media?.objectKey;
     if (!objectKey) {
-      await failOrRequeueVideoProcessingJob(job._id.toString(), 'FAILED_DOWNLOAD', 'Processing job không có R2 object key');
+      await failOrRequeueVideoProcessingJob(lease.jobId, 'FAILED_DOWNLOAD', 'Processing job không có R2 object key', lease.leaseToken);
       return true;
     }
     const extension = objectKey.endsWith('.webm') ? 'webm' : 'mp4';
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'hanflix-'));
     const localPath = path.join(tempDir, `input.${extension}`);
     const startedAt = Date.now();
-    logger.info({ videoId: job.lessonId, jobId: job._id, step: 'DOWNLOAD', status: 'START' }, '[VideoProcessing]');
+
+    // F04: stage deadline timer. Fires `abort()` if the pipeline doesn't reach
+    // the next stage transition (which refreshes stageDeadlineAt) in time.
+    const armDeadline = (ms: number) => {
+      if (deadlineTimer) clearTimeout(deadlineTimer);
+      deadlineTimer = setTimeout(() => {
+        logger.warn({ videoId: lease!.lessonId, jobId: lease!.jobId, deadlineMs: ms }, '[VideoProcessing] stage deadline exceeded — aborting');
+        abortController.abort(new Error('STAGE_DEADLINE_EXCEEDED'));
+      }, ms);
+      deadlineTimer.unref();
+    };
+    armDeadline(env.VIDEO_STAGE_DEADLINE_INSPECT_MS);
+
+    // F04: lease heartbeat loop. Renews leaseExpiresAt + heartbeatAt every
+    // VIDEO_HEARTBEAT_INTERVAL_SECONDS. If a heartbeat update returns false
+    // (lease revoked), we abort the pipeline so we don't keep working a job
+    // another worker has reclaimed.
+    let heartbeatStopped = false;
+    const heartbeatLoop = async () => {
+      while (!heartbeatStopped && !signal.aborted) {
+        await new Promise<void>(resolve => setTimeout(resolve, env.VIDEO_HEARTBEAT_INTERVAL_SECONDS * 1000));
+        if (heartbeatStopped || signal.aborted) break;
+        if (!lease) break;
+        const ok = await heartbeatProcessingJob(lease);
+        if (!ok) {
+          logger.warn({ videoId: lease.lessonId, jobId: lease.jobId }, '[VideoProcessing] heartbeat rejected — lease revoked, aborting');
+          abortController.abort(new Error('LEASE_REVOKED'));
+          break;
+        }
+      }
+    };
+
+    logger.info({ videoId: lease.lessonId, jobId: lease.jobId, step: 'DOWNLOAD', status: 'START', leaseExpiresAt: lease.leaseExpiresAt }, '[VideoProcessing]');
     try {
+      const heartbeatPromise = void heartbeatLoop();
       try {
         await downloadR2Object(objectKey, localPath);
+        if (signal.aborted) throw signal.reason ?? new Error('aborted');
       } catch (error) {
+        if (signal.aborted) {
+          // Distinguish "user/system cancelled" from "real error".
+          const reason = signal.reason instanceof Error ? signal.reason.message : 'aborted';
+          if (reason === 'STAGE_DEADLINE_EXCEEDED') {
+            await expireProcessingJob(lease, 'inspect_media');
+          } else if (reason === 'LEASE_REVOKED') {
+            await abortProcessingJob(lease, 'Lease bị thu hồi bởi worker khác');
+          } else {
+            await abortProcessingJob(lease, 'Đã hủy xử lý video');
+          }
+          return true;
+        }
         throw Object.assign(new Error(`Không thể tải video từ R2: ${error instanceof Error ? error.message : String(error)}`), { code: 'FAILED_DOWNLOAD' });
       }
-      await processLessonVideoPipeline(job.lessonId.toString(), job._id.toString(), localPath);
-      logger.info({ videoId: job.lessonId, jobId: job._id, status: 'SUCCESS', durationMs: Date.now() - startedAt }, '[VideoProcessing]');
+      // Pass the lease + signal into the pipeline so every stage can:
+      //   - extend its stageDeadlineAt via heartbeatProcessingJob()
+      //   - abort cooperatively via signal.aborted
+      //   - re-arm the deadline timer on each stage transition
+      await processLessonVideoPipeline(lease.lessonId, lease.jobId, localPath, {
+        lease,
+        signal,
+        rearmDeadline: armDeadline,
+      });
+      logger.info({ videoId: lease.lessonId, jobId: lease.jobId, status: 'SUCCESS', durationMs: Date.now() - startedAt }, '[VideoProcessing]');
     } catch (error) {
+      if (signal.aborted) {
+        const reason = signal.reason instanceof Error ? signal.reason.message : 'aborted';
+        if (reason === 'STAGE_DEADLINE_EXCEEDED') {
+          // Already handled by the timer path above. If we reach here, the
+          // pipeline raised its own abort error after the timer fired.
+          await expireProcessingJob(lease, 'inspect_media');
+        } else if (reason === 'LEASE_REVOKED') {
+          await abortProcessingJob(lease, 'Lease bị thu hồi bởi worker khác');
+        } else {
+          await abortProcessingJob(lease, 'Đã hủy xử lý video');
+        }
+        return true;
+      }
       const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'PROCESSING_FAILED';
       const message = error instanceof Error ? error.message : 'Lỗi xử lý video không xác định';
-      const updated = await failOrRequeueVideoProcessingJob(job._id.toString(), code, message);
-      await LessonModel.findByIdAndUpdate(job.lessonId, updated?.status === 'failed'
+      const updated = await failOrRequeueVideoProcessingJob(lease.jobId, code, message, lease.leaseToken);
+      await LessonModel.findByIdAndUpdate(lease.lessonId, updated?.status === 'failed'
         ? { $set: { status: 'failed', processingStatus: 'FAILED', processingStep: 'FAILED', processingError: message } }
         : { $set: { status: 'processing', processingStatus: 'QUEUED', processingStep: 'QUEUED', processingError: message } });
-      logger.error({ videoId: job.lessonId, jobId: job._id, step: job.stage, status: 'FAILED', error: message }, '[VideoProcessing]');
+      logger.error({ videoId: lease.lessonId, jobId: lease.jobId, step: 'pipeline', status: 'FAILED', error: message }, '[VideoProcessing]');
     } finally {
+      heartbeatStopped = true;
+      if (deadlineTimer) clearTimeout(deadlineTimer);
       await fs.rm(tempDir, { recursive: true, force: true });
     }
     return true;
@@ -61,16 +143,17 @@ async function processNextJob(): Promise<boolean> {
 }
 
 export function wakeVideoProcessingWorker() {
-  if (env.VIDEO_WORKER_MODE === 'disabled') return;
+  if (env.VIDEO_WORKER_MODE !== 'embedded') return;
+  if (running) return;
   setImmediate(() => void processNextJob());
 }
 
 export function startVideoProcessingWorker() {
-  if (env.VIDEO_WORKER_MODE === 'disabled' || timer) return;
+  if (env.VIDEO_WORKER_MODE !== 'embedded' || timer) return;
   wakeVideoProcessingWorker();
   timer = setInterval(() => void processNextJob(), env.VIDEO_PROCESSING_POLL_MS);
   timer.unref();
-  logger.info({ workerId, mode: env.VIDEO_WORKER_MODE }, '[VideoProcessing] worker started');
+  logger.info({ workerId, mode: env.VIDEO_WORKER_MODE, leaseTtlSeconds: env.VIDEO_LEASE_TTL_SECONDS, heartbeatSeconds: env.VIDEO_HEARTBEAT_INTERVAL_SECONDS }, '[VideoProcessing] worker started');
 }
 
 export async function stopVideoProcessingWorker() {
@@ -80,7 +163,18 @@ export async function stopVideoProcessingWorker() {
 }
 
 export async function getVideoWorkerStatus() {
-  return { workerId, running, mode: env.VIDEO_WORKER_MODE, ...(await getVideoQueueMetrics()) };
+  const queueMetrics = await getVideoQueueMetrics();
+  return {
+    workerId,
+    running,
+    mode: env.VIDEO_WORKER_MODE,
+    readiness: env.VIDEO_WORKER_MODE === 'disabled'
+      ? 'worker-disabled'
+      : env.VIDEO_WORKER_MODE === 'standalone'
+        ? 'worker-standalone-process'
+        : running ? 'worker-busy' : 'worker-idle',
+    ...queueMetrics,
+  };
 }
 
 const isDirectExecution = process.argv[1]?.endsWith('video-processing.worker.js') || process.argv[1]?.endsWith('video-processing.worker.ts');

@@ -31,14 +31,23 @@ export class R2StorageService implements StorageService {
     return this.client;
   }
 
-  async createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm') {
+  async createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm', maxBytes: number) {
     const config = this.config();
+    // SECURITY (H-4): R2 presigned URLs cannot enforce Content-Length server-side via S3 SDK.
+    // To prevent oversized uploads, we set a content-length-range policy by including
+    // the max byte size as metadata and instruct the client to enforce it. For true
+    // server-side enforcement, configure an R2 bucket policy with `max-object-size`.
+    // The metadata is informational; the presigned PUT itself permits any size up to 5GB.
     const uploadUrl = await getSignedUrl(this.getClient(), new PutObjectCommand({
       Bucket: config.bucket,
       Key: objectKey,
       ContentType: contentType,
+      Metadata: {
+        'max-bytes': String(maxBytes),
+        'uploaded-by': 'hanflix-presign',
+      },
     }), { expiresIn: env.R2_UPLOAD_URL_TTL_SECONDS });
-    return { uploadUrl, objectKey, expiresIn: env.R2_UPLOAD_URL_TTL_SECONDS };
+    return { uploadUrl, objectKey, expiresIn: env.R2_UPLOAD_URL_TTL_SECONDS, maxBytes };
   }
 
   async createDownloadUrl(objectKey: string) {

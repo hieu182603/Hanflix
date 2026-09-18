@@ -47,8 +47,8 @@ router.post('/explain', requireAuth, aiLimiter, validate(explainSchema), asyncHa
 
   const explanation = await explainChineseInContext({
     hanzi: word.hanzi,
-    pinyin: word.pinyin,
-    meaningVi: word.meaningVi,
+    pinyin: word.pinyin ?? undefined,
+    meaningVi: word.meaningVi ?? undefined,
     sentenceZh: cue.zh,
     sentenceVi: cue.vi,
     learnerHsk: learner?.learningProfile?.currentHsk ?? undefined,

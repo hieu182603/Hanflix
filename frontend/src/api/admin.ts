@@ -65,6 +65,7 @@ export interface AdminUser {
   role: 'user' | 'admin';
   status: 'active' | 'locked';
   learningProfile?: { currentHsk?: number; goal?: string } | null;
+  createdAt?: string;
 }
 
 export async function listAdminLessons(): Promise<AdminLesson[]> {
@@ -80,7 +81,15 @@ export function patchAdminLesson(id: string, input: Partial<Pick<AdminLesson, 't
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
-export function presignVideo(lessonId: string, file: File): Promise<{ uploadUrl: string; objectKey: string; requiredHeaders: { 'Content-Type': string }; maxBytes: number }> {
+export function presignVideo(lessonId: string, file: File): Promise<{
+  uploadUrl: string;
+  objectKey: string;
+  requiredHeaders: { 'Content-Type': string };
+  maxBytes: number;
+  clientByteSize?: number;
+  uploadSessionId?: string;
+  uploadedAt?: string;
+}> {
   return apiFetch('/admin/uploads/presign', {
     method: 'POST',
     body: JSON.stringify({ lessonId, fileName: file.name, contentType: file.type, sizeBytes: file.size }),
@@ -95,9 +104,68 @@ export function cancelVideoUpload(lessonId: string): Promise<unknown> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(lessonId)}/upload/cancel`, { method: 'POST' });
 }
 
-export async function uploadVideoToR2(uploadUrl: string, file: File, contentType: string, signal?: AbortSignal): Promise<void> {
-  const response = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file, signal });
-  if (!response.ok) throw new Error(`R2 từ chối video (HTTP ${response.status}).`);
+/**
+ * F08 fix (2026-09-18): upload progress via XMLHttpRequest.
+ *
+ * Why XHR instead of fetch?
+ *   - `fetch` with `duplex: 'half'` does not work reliably with all R2/CDN endpoints
+ *     and throws ERR_ALPN_NEGOTIATION_FAILED when the body stream cannot negotiate
+ *     HTTP/2 properly.
+ *   - XMLHttpRequest's `upload.onprogress` event is universally supported, has
+ *     built-in byte counters, and is easy to abort via `xhr.abort()`.
+ *   - We use a per-call XHR so the caller can supply an AbortSignal that maps
+ *     to xhr.abort() and exposes onProgress as a callback.
+ */
+export interface UploadProgressEvent {
+  bytesSent: number;
+  totalBytes: number;
+  percent: number;
+}
+export async function uploadVideoToR2(
+  uploadUrl: string,
+  file: File,
+  contentType: string,
+  options: { onProgress?: (event: UploadProgressEvent) => void; signal?: AbortSignal } = {},
+): Promise<void> {
+  const { onProgress, signal } = options;
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl, true);
+    xhr.setRequestHeader('Content-Type', contentType);
+    // XHR will automatically include cookies/credentials if `withCredentials = true`.
+    // R2 presigned URLs use query-string auth so we don't need credentials here.
+    if (onProgress) {
+      xhr.upload.onprogress = (event: ProgressEvent) => {
+        const bytesSent = event.loaded;
+        const totalBytes = event.total || file.size;
+        onProgress({
+          bytesSent,
+          totalBytes,
+          percent: totalBytes > 0 ? Math.min(100, Math.round((bytesSent / totalBytes) * 100)) : 0,
+        });
+      };
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`R2 từ chối video (HTTP ${xhr.status}).`));
+    };
+    xhr.onerror = () => reject(new Error('Không thể kết nối tới R2.'));
+    xhr.onabort = () => reject(Object.assign(new Error('Đã hủy tải lên.'), { name: 'AbortError' }));
+    xhr.ontimeout = () => reject(new Error('Tải lên quá thời gian cho phép.'));
+    // Wire AbortSignal to xhr.abort() so callers can cancel mid-upload.
+    const onAbort = () => xhr.abort();
+    if (signal) {
+      if (signal.aborted) {
+        xhr.abort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+      xhr.addEventListener('loadend', () => signal.removeEventListener('abort', onAbort), { once: true });
+      xhr.addEventListener('error', () => signal.removeEventListener('abort', onAbort), { once: true });
+      xhr.addEventListener('abort', () => signal.removeEventListener('abort', onAbort), { once: true });
+    }
+    xhr.send(file);
+  });
 }
 
 export function getProcessingStatus(id: string): Promise<ProcessingStatus> {
@@ -142,6 +210,10 @@ export function publishAdminLesson(id: string): Promise<AdminLesson> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/publish`, { method: 'POST' });
 }
 
+export function deleteAdminLesson(id: string): Promise<{ lessonId: string; titleVi: string; deleted: true }> {
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 export function hideAdminLesson(id: string): Promise<AdminLesson> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/hide`, { method: 'POST' });
 }
@@ -150,8 +222,9 @@ export function restoreAdminLesson(id: string): Promise<AdminLesson> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/restore`, { method: 'POST' });
 }
 
-export async function listAdminUsers(): Promise<AdminUser[]> {
-  const data = await apiFetch<{ items: AdminUser[] }>('/admin/users');
+export async function listAdminUsers(query?: string): Promise<AdminUser[]> {
+  const q = query ? `?q=${encodeURIComponent(query.trim())}` : '';
+  const data = await apiFetch<{ items: AdminUser[] }>(`/admin/users${q}`);
   return data.items;
 }
 

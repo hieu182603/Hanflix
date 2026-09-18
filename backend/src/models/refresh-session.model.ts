@@ -7,6 +7,9 @@ const refreshSessionSchema = new Schema({
   expiresAt: { type: Date, required: true, index: { expires: 0 } },
   revokedAt: { type: Date },
   replacedByJti: { type: String },
+  // SECURITY (C-3): Device fingerprint hash used to detect stolen refresh tokens.
+  // sha256(userAgent + ip) — not a secret, just a binding identifier.
+  fingerprint: { type: String, maxlength: 100 },
   userAgent: { type: String, maxlength: 500 },
   ip: { type: String, maxlength: 100 },
 }, { timestamps: true, versionKey: false });

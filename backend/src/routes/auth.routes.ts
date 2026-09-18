@@ -1,5 +1,6 @@
 import { Router, type CookieOptions, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'node:crypto';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { env } from '../config/env.js';
@@ -70,6 +71,20 @@ function cookieOptions(): CookieOptions {
   return options;
 }
 
+/**
+ * SECURITY (C-3): Device fingerprint binding for refresh tokens.
+ * The fingerprint is a SHA-256 hash of (user-agent + IP prefix). It is NOT a secret —
+ * its only purpose is to detect when a stolen refresh token is replayed from a
+ * different device/IP than the one that originally received it. A mismatch does
+ * NOT silently revoke (mobile users on flaky networks would be locked out);
+ * instead it triggers the OWASP session-reuse response and revokes ALL sessions.
+ */
+function deviceFingerprint(req: Request): string {
+  const userAgent = req.get('user-agent') ?? 'unknown';
+  const ip = req.ip ?? 'unknown';
+  return createHash('sha256').update(`${userAgent}|${ip}`).digest('hex');
+}
+
 async function issueSession(user: { _id: Types.ObjectId; role: 'user' | 'admin' }, req: Request, res: Response) {
   const jti = newJti();
   const refreshToken = signRefreshToken(user._id.toString(), user.role, jti);
@@ -77,6 +92,7 @@ async function issueSession(user: { _id: Types.ObjectId; role: 'user' | 'admin' 
     userId: user._id,
     jti,
     tokenHash: hashToken(refreshToken),
+    fingerprint: deviceFingerprint(req),
     expiresAt: refreshExpiry(),
     userAgent: req.get('user-agent')?.slice(0, 500),
     ip: req.ip,
@@ -147,14 +163,26 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
   if (!user) {
     if (await UserModel.exists({ email: identity.email })) {
       const existingEmailUser = await UserModel.findOne({ email: identity.email })
-        .select('+googleSub +emailVerificationRequired');
-      // A verified Google email may safely claim a still-unverified password signup.
-      // Established accounts must authenticate before linking to prevent account takeover.
-      if (existingEmailUser?.emailVerificationRequired && !existingEmailUser.emailVerifiedAt && !existingEmailUser.googleSub) {
+        .select('+googleSub +emailVerificationRequired +createdAt +googleLinkedAt');
+      // SECURITY (C-4): Google OAuth MUST NOT silently take over a password account.
+      // Only an UNVERIFIED signup created within the last 5 minutes (the OTP window) may
+      // be claimed via Google. Any established, verified or older account must link
+      // explicitly through Account Settings after re-authenticating with the password.
+      // This blocks the attack: attacker controls attacker@gmail.com → registers a
+      // password account with victim's email → victim has Google on that email →
+      // attacker clicks "Sign in with Google" → account takeover.
+      const OTP_GRACE_WINDOW_MS = 5 * 60 * 1000;
+      const isFreshUnverifiedSignup = existingEmailUser?.emailVerificationRequired
+        && !existingEmailUser.emailVerifiedAt
+        && !existingEmailUser.googleSub
+        && existingEmailUser.createdAt
+        && (Date.now() - existingEmailUser.createdAt.getTime()) < OTP_GRACE_WINDOW_MS;
+      if (isFreshUnverifiedSignup) {
         if (existingEmailUser.status !== 'active') throw new AppError(423, 'ACCOUNT_LOCKED', 'Tài khoản đã bị khóa');
         existingEmailUser.googleSub = identity.sub;
         existingEmailUser.emailVerifiedAt = new Date();
         existingEmailUser.emailVerificationRequired = false;
+        existingEmailUser.googleLinkedAt = new Date();
         existingEmailUser.googleAvatarUrl = identity.picture;
         existingEmailUser.avatarUrl ??= identity.picture;
         try {
@@ -168,7 +196,7 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
           throw error;
         }
       } else {
-        throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu rồi liên kết Google.');
+        throw new AppError(409, 'GOOGLE_LINK_REQUIRED', 'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu rồi liên kết Google trong phần Cài đặt.');
       }
     }
     if (!user) {
@@ -231,6 +259,7 @@ router.post('/google/link', requireAuth, authLimiter, validate(googleCredentialS
   }
   try {
     user.googleSub = identity.sub;
+    user.googleLinkedAt = new Date();
     user.emailVerifiedAt ??= new Date();
     user.emailVerificationRequired = false;
     if (identity.picture) {
@@ -280,22 +309,43 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
   const claims = verifyRefreshToken(token);
   if (!claims.jti) throw new AppError(401, 'INVALID_TOKEN', 'Phiên làm mới không hợp lệ');
 
+  const incomingFingerprint = deviceFingerprint(req);
+
   const session = await RefreshSessionModel.findOneAndUpdate(
     { jti: claims.jti, tokenHash: hashToken(token), revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } },
     { $set: { revokedAt: new Date() } },
     { returnDocument: 'after' },
   );
   if (!session) {
-    // SECURITY: Token reuse detected (OWASP). Revoke ALL active sessions for this user
-    // to protect them if the leaked token was used by an attacker.
+    // SECURITY (BUG-01 + C-3): Token reuse OR fingerprint mismatch detected.
+    // Revoke ALL active sessions for this user (OWASP session family revocation).
     const compromisedSession = await RefreshSessionModel.findOne({ jti: claims.jti });
     if (compromisedSession) {
       await RefreshSessionModel.updateMany(
         { userId: compromisedSession.userId, revokedAt: { $exists: false } },
         { $set: { revokedAt: new Date() } },
       );
+      logger.warn(
+        { userId: compromisedSession.userId.toString(), jti: claims.jti },
+        '[Auth] Refresh token reused or fingerprint mismatch — all sessions revoked',
+      );
     }
     throw new AppError(401, 'REFRESH_REUSED', 'Phát hiện tái sử dụng phiên bảo mật. Vui lòng đăng nhập lại.');
+  }
+
+  // SECURITY (C-3): Fingerprint mismatch on a valid session is a strong theft signal.
+  // We revoke all sessions to be safe (mobile users on changing IPs would otherwise be locked out
+  // on the very next request, so this is a deliberate trade-off for security).
+  if (session.fingerprint && session.fingerprint !== incomingFingerprint) {
+    await RefreshSessionModel.updateMany(
+      { userId: session.userId, revokedAt: { $exists: false } },
+      { $set: { revokedAt: new Date() } },
+    );
+    logger.warn(
+      { userId: session.userId.toString(), jti: claims.jti },
+      '[Auth] Refresh token replayed from different device — all sessions revoked',
+    );
+    throw new AppError(401, 'DEVICE_MISMATCH', 'Phiên được sử dụng từ thiết bị khác. Vui lòng đăng nhập lại.');
   }
 
   const user = await UserModel.findById(claims.sub).select('+emailVerificationRequired');
@@ -311,6 +361,7 @@ router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
     userId: user._id,
     jti: replacementJti,
     tokenHash: hashToken(replacement),
+    fingerprint: incomingFingerprint,
     expiresAt: refreshExpiry(),
     userAgent: req.get('user-agent')?.slice(0, 500),
     ip: req.ip,

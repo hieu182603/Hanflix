@@ -127,12 +127,15 @@ describe('POST /api/v1/auth/google', () => {
     expect(Object.keys(response.body.data)).toEqual(['googleClientId']);
   });
 
-  it('lets a verified Google identity claim its still-unverified password signup', async () => {
+  it('lets a verified Google identity claim a fresh unverified password signup (within OTP grace window)', async () => {
     const userId = new Types.ObjectId();
     const user = {
       _id: userId, name: 'Learner', email: 'learner@example.com', role: 'user', status: 'active',
       emailVerificationRequired: true, emailVerifiedAt: undefined as Date | undefined,
       googleSub: undefined as string | undefined, avatarUrl: undefined as string | undefined,
+      // SECURITY (C-4): The user must have been created within the OTP grace window
+      // (5 minutes). Otherwise the OAuth auto-link must be refused to prevent takeover.
+      createdAt: new Date(Date.now() - 60 * 1000),
       save: vi.fn().mockResolvedValue(undefined),
     };
     vi.spyOn(googleIdentityService, 'verify').mockResolvedValue({
@@ -151,6 +154,32 @@ describe('POST /api/v1/auth/google', () => {
     expect(user.googleSub).toBe('google-verified');
     expect(user.save).toHaveBeenCalledOnce();
     expect(accountTokenService.invalidate).toHaveBeenCalledWith(userId, 'verify_email');
+  });
+
+  it('refuses OAuth auto-link for a password account older than the OTP grace window', async () => {
+    const userId = new Types.ObjectId();
+    const user = {
+      _id: userId, name: 'Learner', email: 'learner@example.com', role: 'user', status: 'active',
+      emailVerificationRequired: true, emailVerifiedAt: undefined as Date | undefined,
+      googleSub: undefined as string | undefined, avatarUrl: undefined as string | undefined,
+      // SECURITY (C-4): Older than the 5-minute OTP grace window. Auto-link MUST be refused.
+      createdAt: new Date(Date.now() - 10 * 60 * 1000),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(googleIdentityService, 'verify').mockResolvedValue({
+      sub: 'google-verified', email: 'learner@example.com', name: 'Learner',
+    });
+    // Distinguish: findOne({ googleSub }) returns null (no linked Google user),
+    // findOne({ email }) returns the existing password account.
+    vi.spyOn(UserModel, 'findOne').mockImplementation((query) => ({
+      select: () => Promise.resolve('googleSub' in query ? null : user),
+    } as never));
+    vi.spyOn(UserModel, 'exists').mockResolvedValue({ _id: userId } as never);
+
+    const response = await request(app).post('/api/v1/auth/google').send({ credential: 'x'.repeat(120) });
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('GOOGLE_LINK_REQUIRED');
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   it('registers a new verified Google user and returns the existing auth contract', async () => {

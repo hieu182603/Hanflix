@@ -6,7 +6,6 @@ import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
-import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { transcribeAudio } from './asr.js';
 import { logger } from './logger.js';
@@ -15,6 +14,8 @@ import { uploadR2File } from './r2.js';
 import { pinyinService } from './pinyin.js';
 import { translationService } from './translator.js';
 import { resolveLearningWordIds } from './learning-word.js';
+import { STAGE_DEADLINES_MS, transitionStage, type VideoProcessingJobLease } from '../queue/video.queue.js';
+import { runGenerationCommit } from './revision-commit.js';
 
 export type PipelineStage = 'inspect_media' | 'transcribe_zh' | 'generate_pinyin' | 'translate_vi' | 'extract_vocabulary' | 'generate_quiz' | 'finalize';
 
@@ -28,66 +29,111 @@ const frontendStep: Record<PipelineStage, string> = {
   finalize: 'SAVING',
 };
 
-export async function processLessonVideoPipeline(lessonId: string, processingJobId: string, videoLocalPath: string): Promise<void> {
+export interface PipelineOptions {
+  lease: VideoProcessingJobLease;
+  signal: AbortSignal;
+  rearmDeadline: (ms: number) => void;
+}
+
+/**
+ * Throws an AbortError if the signal has been aborted. Pipeline code MUST
+ * call this between stages (and after long awaits) to make cancellation
+ * cooperative and instant.
+ */
+function ensureNotAborted(signal: AbortSignal, stage: PipelineStage): void {
+  if (signal.aborted) {
+    const reason = signal.reason instanceof Error ? signal.reason.message : `${stage} aborted`;
+    const err = new Error(reason);
+    err.name = 'PipelineAbortedError';
+    throw err;
+  }
+}
+
+export async function processLessonVideoPipeline(
+  lessonId: string,
+  processingJobId: string,
+  videoLocalPath: string,
+  options: PipelineOptions,
+): Promise<void> {
+  const { lease, signal, rearmDeadline } = options;
   const lesson = await LessonModel.findById(lessonId);
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   if (!videoLocalPath) throw new AppError(500, 'FAILED_DOWNLOAD', 'Worker chưa tải được video về thư mục tạm');
 
+  ensureNotAborted(signal, 'inspect_media');
+
   const updateStage = async (stage: PipelineStage, progress: number) => {
+    ensureNotAborted(signal, stage);
+    // F04: stage transition must succeed (lease must still be valid). If it
+    // fails, another worker has taken over — abort immediately.
+    const ok = await transitionStage(lease, stage, progress);
+    if (!ok) {
+      const err = new Error(`Lease ${lease.leaseToken} đã bị thu hồi khi chuyển stage ${stage}`);
+      err.name = 'LeaseRevokedError';
+      throw err;
+    }
     await Promise.all([
-      ProcessingJobModel.findByIdAndUpdate(processingJobId, {
-        $set: { stage, stageProgress: progress, status: 'running', heartbeatAt: new Date() },
-      }),
       LessonModel.findByIdAndUpdate(lessonId, {
         $set: { status: 'processing', processingStatus: 'PROCESSING', processingStep: frontendStep[stage], processingProgress: progress },
         $unset: { processingError: 1 },
       }),
     ]);
-    logger.info({ videoId: lessonId, jobId: processingJobId, step: frontendStep[stage], status: 'START' }, '[VideoProcessing]');
+    // F04: rearm the deadline timer for the new stage.
+    rearmDeadline(STAGE_DEADLINES_MS[stage]);
+    logger.info({ videoId: lessonId, jobId: processingJobId, step: frontendStep[stage], status: 'START', leaseToken: lease.leaseToken }, '[VideoProcessing]');
   };
 
   const audioPath = path.join(path.dirname(videoLocalPath), 'speech.wav');
   let heartbeatInFlight = false;
   const heartbeat = setInterval(() => {
-    if (heartbeatInFlight) return;
+    if (heartbeatInFlight || signal.aborted) return;
     heartbeatInFlight = true;
     void ProcessingJobModel.updateOne(
-      { _id: processingJobId, status: 'running' },
-      { $set: { heartbeatAt: new Date() } },
+      { _id: processingJobId, leaseToken: lease.leaseToken, status: 'running' },
+      { $set: { heartbeatAt: new Date(), leaseExpiresAt: new Date(Date.now() + env.VIDEO_LEASE_TTL_SECONDS * 1000) } },
     ).catch(error => {
       logger.warn({ videoId: lessonId, jobId: processingJobId, error: error instanceof Error ? error.message : String(error) }, '[VideoProcessing] heartbeat failed');
     }).finally(() => {
       heartbeatInFlight = false;
     });
-  }, Math.min(30_000, Math.max(5_000, env.VIDEO_PROCESSING_POLL_MS * 2)));
+  }, Math.min(30_000, Math.max(5_000, env.VIDEO_HEARTBEAT_INTERVAL_SECONDS * 1000 / 2)));
   heartbeat.unref();
   try {
     await updateStage('inspect_media', 10);
     let metadata;
     let thumbnailKey: string | undefined;
     try {
-      metadata = await probeMedia(videoLocalPath);
-      await extractAudioForASR(videoLocalPath, audioPath);
+      metadata = await probeMedia(videoLocalPath, signal);
+      ensureNotAborted(signal, 'inspect_media');
+      await extractAudioForASR(videoLocalPath, audioPath, signal);
     } catch (error) {
+      // F04: distinguish abort from real media failure.
+      if (signal.aborted) throw error;
       throw new AppError(422, 'FAILED_MEDIA_PROCESSING', `Không thể đọc hoặc tách audio: ${error instanceof Error ? error.message : String(error)}`);
     }
+
+    ensureNotAborted(signal, 'inspect_media');
 
     try {
       const tempDir = path.dirname(videoLocalPath);
       const thumbnailFilename = `thumb-${lessonId}-${randomUUID()}.jpg`;
-      const generatedThumbPath = await generateThumbnail(videoLocalPath, tempDir, thumbnailFilename, '00:00:01');
+      const generatedThumbPath = await generateThumbnail(videoLocalPath, tempDir, thumbnailFilename, '00:00:01', signal);
       thumbnailKey = `thumbnails/${lessonId}/${randomUUID()}.jpg`;
       await uploadR2File(thumbnailKey, generatedThumbPath, 'image/jpeg');
       await fs.unlink(generatedThumbPath).catch(() => undefined);
       logger.info({ videoId: lessonId, thumbnailKey }, '[VideoProcessing] Thumbnail generated and uploaded');
     } catch (thumbError) {
+      if (signal.aborted) throw thumbError;
       logger.warn({ videoId: lessonId, error: thumbError instanceof Error ? thumbError.message : String(thumbError) }, '[VideoProcessing] Thumbnail generation failed, continuing without thumbnail');
     }
 
+    ensureNotAborted(signal, 'transcribe_zh');
     await updateStage('transcribe_zh', 35);
     const segments = await transcribeAudio(audioPath);
+    if (signal.aborted) throw signal.reason ?? new Error('aborted');
     if (segments.length === 0) throw new AppError(502, 'FAILED_TRANSCRIPTION_EMPTY', 'Azure Speech không trả về câu thoại');
 
+    ensureNotAborted(signal, 'generate_pinyin');
     await updateStage('generate_pinyin', 60);
     let cuesWithPinyin;
     try {
@@ -100,15 +146,20 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
         tokens: pinyinService.tokenize(segment.zh).map(token => ({ text: token.text, wordId: null as Types.ObjectId | null })),
       }));
     } catch (error) {
+      if (signal.aborted) throw error;
       throw new AppError(500, 'FAILED_PINYIN', `Không thể sinh Pinyin: ${error instanceof Error ? error.message : String(error)}`);
     }
 
+    ensureNotAborted(signal, 'translate_vi');
     await updateStage('translate_vi', 75);
     const translations = await translationService.translateChineseToVietnamese(cuesWithPinyin.map(cue => cue.zh));
+    if (signal.aborted) throw signal.reason ?? new Error('aborted');
     const finalCues = cuesWithPinyin.map((cue, index) => ({ ...cue, vi: translations[index]! }));
 
+    ensureNotAborted(signal, 'extract_vocabulary');
     await updateStage('extract_vocabulary', 85);
     const wordIdMap = await resolveLearningWordIds(finalCues);
+    if (signal.aborted) throw signal.reason ?? new Error('aborted');
 
     // Assign wordId to every matching token in memory
     for (const cue of finalCues) {
@@ -119,6 +170,7 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
       }
     }
 
+    ensureNotAborted(signal, 'generate_quiz');
     await updateStage('generate_quiz', 92);
     const questions = finalCues.slice(0, 3).map((cue, index) => ({
       questionId: `q-${index + 1}`,
@@ -131,38 +183,42 @@ export async function processLessonVideoPipeline(lessonId: string, processingJob
       relatedWordIds: cue.tokens.flatMap(token => token.wordId ? [token.wordId] : []),
     }));
 
+    ensureNotAborted(signal, 'finalize');
     await updateStage('finalize', 96);
-    const [subtitleTrack] = await Promise.all([
-      SubtitleTrackModel.findOneAndUpdate(
-        { lessonId: lesson._id, revision: 1 },
-        { $set: { lessonId: lesson._id, revision: 1, status: 'draft', cues: finalCues, generatedBy: 'pipeline' } },
-        { upsert: true, returnDocument: 'after' },
-      ),
-      QuizModel.findOneAndUpdate(
-        { lessonId: lesson._id, revision: 1 },
-        { $set: { lessonId: lesson._id, revision: 1, status: 'draft', questions } },
-        { upsert: true, returnDocument: 'after' },
-      ),
-    ]);
 
-    await Promise.all([
-      LessonModel.findByIdAndUpdate(lessonId, {
-        $set: {
-          durationSeconds: Math.max(60, Math.min(300, Math.round(metadata.durationSeconds))),
-          ...(thumbnailKey ? { thumbnailKey } : {}),
-          activeSubtitleRevision: subtitleTrack.revision,
-          status: 'ready_for_review',
-          processingStatus: 'READY',
-          processingStep: 'COMPLETED',
-          processingProgress: 100,
-        },
-        $unset: { processingError: 1 },
-      }),
-      ProcessingJobModel.findByIdAndUpdate(processingJobId, {
-        $set: { status: 'completed', stage: 'finalize', stageProgress: 100, completedAt: new Date(), heartbeatAt: new Date() },
-        $unset: { activeKey: 1, lockedAt: 1, lockedBy: 1, errorCode: 1, errorMessage: 1 },
-      }),
-    ]);
+    // F11 fix (2026-09-18): atomic commit of Subtitle + Quiz + Lesson + Job.
+    // Previously these were four independent writes; a partial failure could
+    // leave the lesson pointing at a subtitle revision whose quiz was never
+    // written. Now runGenerationCommit wraps everything in a MongoDB transaction
+    // (or compensating writes on standalone) and validates input up front so
+    // we don't start a session for invalid data.
+    await runGenerationCommit({
+      lessonId,
+      jobId: processingJobId,
+      durationSeconds: metadata.durationSeconds,
+      thumbnailKey,
+      cues: finalCues.map(cue => ({
+        cueId: cue.cueId,
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+        zh: cue.zh,
+        pinyin: cue.pinyin,
+        vi: cue.vi,
+        tokens: cue.tokens.map(token => ({ text: token.text, wordId: token.wordId })),
+      })),
+      questions: questions.map(question => ({
+        questionId: question.questionId,
+        type: question.type,
+        prompt: question.prompt,
+        cueId: question.cueId,
+        options: question.options,
+        correctOptionId: (question as { correctOptionId?: string }).correctOptionId,
+        acceptedAnswers: (question as { acceptedAnswers?: string[] }).acceptedAnswers,
+        explanationVi: (question as { explanationVi?: string }).explanationVi,
+        relatedWordIds: question.relatedWordIds,
+      })),
+      leaseToken: lease.leaseToken,
+    });
   } finally {
     clearInterval(heartbeat);
     await fs.unlink(audioPath).catch(() => undefined);

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText } from 'lucide-react';
+import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText, ListChecks } from 'lucide-react';
 import { User } from '../../data/hanflixData';
 import UserAvatar from '../common/UserAvatar';
 
+type AdminTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz';
+
 interface AdminShellProps {
-  activeTab: 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar';
-  onTabChange: (tab: 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar') => void;
+  activeTab: AdminTab;
+  onTabChange: (tab: AdminTab) => void;
   currentUser: User;
   onLogout: () => void;
   children: React.ReactNode;
@@ -21,6 +23,7 @@ export default function AdminShell({
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: BarChart2 },
     { id: 'videos', label: 'Danh sách Video', icon: Video },
+    { id: 'quiz', label: 'Bài Luyện Tập', icon: ListChecks },
     { id: 'vocabulary', label: 'Kho Từ vựng HSK', icon: BookOpen },
     { id: 'grammar', label: 'Quản lý Ngữ pháp', icon: FileText },
     { id: 'upload', label: 'Tải video mới', icon: Upload },
@@ -79,7 +82,7 @@ export default function AdminShell({
             return (
               <button
                 key={item.id}
-                onClick={() => onTabChange(item.id as any)}
+                onClick={() => onTabChange(item.id as AdminTab)}
                 className={`w-full h-11 px-3.5 rounded-xl flex items-center gap-3 text-xs font-bold transition-all ${
                   isActive
                     ? 'bg-[#B91B1C] text-white shadow-2xs'

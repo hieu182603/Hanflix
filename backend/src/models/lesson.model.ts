@@ -44,6 +44,11 @@ const lessonSchema = new Schema({
   hiddenAt: { type: Date },
   hiddenBy: { type: Schema.Types.ObjectId, ref: 'User' },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  // F06 fix (2026-09-18): flag to indicate that subtitle/quiz content was edited
+  // and downstream artifacts (translation, pinyin, word links, quiz answers) may
+  // need re-review. Reset to false on publish.
+  contentDirty: { type: Boolean, default: false, index: true },
+  contentDirtyReason: { type: String, maxlength: 500 },
 }, { timestamps: true, versionKey: false });
 
 lessonSchema.index({ titleVi: 'text', titleZh: 'text', pinyin: 'text', descriptionVi: 'text' });

@@ -1,8 +1,11 @@
 import { storageService } from './storage/r2-storage.service.js';
 
 // Compatibility wrappers keep existing route imports and response contracts unchanged.
-export const createVideoUploadUrl = (objectKey: string, contentType: 'video/mp4' | 'video/webm') =>
-  storageService.createUploadUrl(objectKey, contentType);
+export const createVideoUploadUrl = (
+  objectKey: string,
+  contentType: 'video/mp4' | 'video/webm',
+  maxBytes: number,
+) => storageService.createUploadUrl(objectKey, contentType, maxBytes);
 
 export const confirmR2Object = (objectKey: string) => storageService.headObject(objectKey);
 

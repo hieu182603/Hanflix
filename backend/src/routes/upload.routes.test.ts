@@ -98,7 +98,7 @@ describe('Upload routes (Cloudinary & Multer)', () => {
     expect(deleteSpy).toHaveBeenCalledWith('hanflix/avatars/old-public-id');
   });
 
-  it('POST /api/v1/uploads/avatar/restore restores default generated avatar and cleans up Cloudinary', async () => {
+  it('DELETE /api/v1/uploads/avatar restores default generated avatar and cleans up Cloudinary', async () => {
     const userId = new Types.ObjectId();
     const mockUserDoc = {
       _id: userId,
@@ -124,7 +124,7 @@ describe('Upload routes (Cloudinary & Multer)', () => {
 
     const token = signAccessToken(userId.toString(), 'user');
     const response = await request(app)
-      .post('/api/v1/uploads/avatar/restore')
+      .delete('/api/v1/uploads/avatar')
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);

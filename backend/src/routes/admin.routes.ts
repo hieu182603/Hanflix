@@ -13,7 +13,11 @@ import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
 import { confirmR2Object, createVideoDownloadUrl, createVideoUploadUrl, deleteR2Object } from '../services/r2.js';
+import { resolveLearningWordIds } from '../services/learning-word.js';
+import { logger } from '../services/logger.js';
 import { addVideoProcessingJob, retryVideoProcessingJob } from '../queue/video.queue.js';
+import { purgeAdminLesson } from '../services/lesson-delete.js';
+import { runEditorCommit } from '../services/revision-commit.js';
 import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 import { pinyinService } from '../services/pinyin.js';
@@ -130,7 +134,7 @@ router.post('/uploads/presign', uploadLimiter, validate(presignSchema), asyncHan
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bản nháp video');
   const extension = req.body.contentType === 'video/mp4' ? 'mp4' : 'webm';
   const objectKey = `videos/${lesson._id}/${randomUUID()}.${extension}`;
-  const signed = await createVideoUploadUrl(objectKey, req.body.contentType);
+  const signed = await createVideoUploadUrl(objectKey, req.body.contentType, env.MAX_VIDEO_BYTES);
   lesson.status = 'uploading';
   lesson.processingStatus = 'UPLOADED';
   lesson.processingStep = 'UPLOADING';
@@ -138,40 +142,88 @@ router.post('/uploads/presign', uploadLimiter, validate(presignSchema), asyncHan
   lesson.processingError = undefined;
   lesson.pendingUploadObjectKey = objectKey;
   await lesson.save();
-  res.json({ data: { ...signed, requiredHeaders: { 'Content-Type': req.body.contentType }, maxBytes: env.MAX_VIDEO_BYTES } });
+  res.json({
+    data: {
+      ...signed,
+      requiredHeaders: { 'Content-Type': req.body.contentType },
+      maxBytes: env.MAX_VIDEO_BYTES,
+      // F08 fix (2026-09-18): return the byte count that the client committed to upload.
+      // The admin UI uses this to compute "% uploaded" against the actual file size.
+      // R2 presigned URLs do NOT expose server-side progress; we calculate client-side
+      // by streaming the file and counting bytes transferred.
+      clientByteSize: req.body.sizeBytes,
+      // F08: explicit sessionId so the cancel endpoint can be idempotent and so
+      // future resume support can identify which upload attempt was current.
+      uploadSessionId: signed.objectKey,
+      uploadedAt: new Date().toISOString(),
+    },
+  });
 }));
 
 router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findOne({ _id: req.body.lessonId, createdBy: req.auth!.userId, status: 'uploading' })
-    .select('+pendingUploadObjectKey');
-  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy video đang tải lên');
-  if (!lesson.pendingUploadObjectKey || req.body.objectKey !== lesson.pendingUploadObjectKey) {
-    throw new AppError(422, 'INVALID_OBJECT_KEY', 'Đường dẫn R2 không khớp phiên tải lên');
-  }
-  const object = await confirmR2Object(req.body.objectKey);
-  if (!['video/mp4', 'video/webm'].includes(object.contentType ?? '') || object.sizeBytes > env.MAX_VIDEO_BYTES) {
-    throw new AppError(422, 'INVALID_UPLOADED_VIDEO', 'Object R2 không đúng định dạng hoặc dung lượng');
-  }
-  lesson.media = {
-    objectKey: req.body.objectKey,
-    mimeType: object.contentType as 'video/mp4' | 'video/webm',
-    sizeBytes: object.sizeBytes,
-    etag: object.etag,
-  };
-  lesson.status = 'processing';
-  lesson.processingStatus = 'QUEUED';
-  lesson.processingStep = 'QUEUED';
-  lesson.processingProgress = 5;
-  lesson.processingError = undefined;
-  lesson.pendingUploadObjectKey = undefined;
-  await lesson.save();
-  const job = await addVideoProcessingJob({
-    lessonId: lesson._id.toString(),
-    objectKey: req.body.objectKey,
-  });
-  wakeVideoProcessingWorker();
+  // F02 fix (2026-09-18): wrap lesson state transition + job creation in a single
+  // MongoDB transaction so a network/DB failure between the two writes cannot leave
+  // the system with a "processing" lesson but no job.
+  //
+  // Fallback: if transactions are not supported (standalone Mongo, no replica set),
+  // we run sequentially. The atomicity guarantee weakens to "best effort" but the
+  // happy-path failure modes are still caught (job-creation failure rolls the lesson
+  // back to its uploading state for the admin to retry).
+  const supportsTransactions = mongoose.connection.readyState === 1 && (
+    mongoose.connection as unknown as { client?: { topology?: { description?: { type?: string } } } }
+  ).client?.topology?.description?.type === 'ReplicaSetWithPrimary';
 
-  res.json({ data: { lessonId: lesson._id, status: lesson.status, processingJobId: job._id, media: { sizeBytes: object.sizeBytes, contentType: object.contentType } } });
+  const session = supportsTransactions ? await mongoose.startSession() : null;
+  let result: { lessonId: Types.ObjectId; jobId: Types.ObjectId; media: { sizeBytes: number; contentType: string } } | undefined;
+  try {
+    const runInSession = async (op: (s: mongoose.ClientSession | null) => Promise<void>) => {
+      if (session) {
+        await session.withTransaction(() => op(session));
+      } else {
+        await op(null);
+      }
+    };
+    await runInSession(async (sess) => {
+      const lesson = await LessonModel.findOne({ _id: req.body.lessonId, createdBy: req.auth!.userId, status: 'uploading' })
+        .select('+pendingUploadObjectKey')
+        .session(sess as mongoose.ClientSession | null);
+      if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy video đang tải lên');
+      if (!lesson.pendingUploadObjectKey || req.body.objectKey !== lesson.pendingUploadObjectKey) {
+        throw new AppError(422, 'INVALID_OBJECT_KEY', 'Đường dẫn R2 không khớp phiên tải lên');
+      }
+      const object = await confirmR2Object(req.body.objectKey);
+      if (!['video/mp4', 'video/webm'].includes(object.contentType ?? '') || object.sizeBytes > env.MAX_VIDEO_BYTES) {
+        throw new AppError(422, 'INVALID_UPLOADED_VIDEO', 'Object R2 không đúng định dạng hoặc dung lượng');
+      }
+      lesson.media = {
+        objectKey: req.body.objectKey,
+        mimeType: object.contentType as 'video/mp4' | 'video/webm',
+        sizeBytes: object.sizeBytes,
+        etag: object.etag,
+      };
+      lesson.status = 'processing';
+      lesson.processingStatus = 'QUEUED';
+      lesson.processingStep = 'QUEUED';
+      lesson.processingProgress = 5;
+      lesson.processingError = undefined;
+      lesson.pendingUploadObjectKey = undefined;
+      await lesson.save({ session: sess });
+      const job = await addVideoProcessingJob({
+        lessonId: lesson._id.toString(),
+        objectKey: req.body.objectKey,
+      }, { session: sess });
+      if (!job) {
+        // F02: signal back to the transaction so both writes are rolled back.
+        throw new AppError(503, 'JOB_QUEUE_UNAVAILABLE', 'Không thể tạo tiến trình xử lý. Vui lòng thử lại.');
+      }
+      result = { lessonId: lesson._id, jobId: job._id, media: { sizeBytes: object.sizeBytes, contentType: object.contentType! } };
+    });
+  } finally {
+    if (session) await session.endSession();
+  }
+  wakeVideoProcessingWorker();
+  if (!result) throw new AppError(500, 'CONFIRM_INCOMPLETE', 'Quá trình xác nhận video không hoàn tất');
+  res.json({ data: { lessonId: result.lessonId, status: 'processing', processingJobId: result.jobId, media: result.media } });
 }));
 
 router.post('/lessons/:lessonId/upload/cancel', uploadLimiter, validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
@@ -195,10 +247,35 @@ router.post('/lessons/:lessonId/upload/cancel', uploadLimiter, validate(lessonId
 router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
   const [job, lesson] = await Promise.all([
     ProcessingJobModel.findOne({ lessonId: req.params.lessonId }).sort({ createdAt: -1 }).lean(),
-    LessonModel.findById(req.params.lessonId).select('status processingStatus processingProgress processingStep processingError').lean(),
+    LessonModel.findById(req.params.lessonId).select('status media processingStatus processingProgress processingStep processingError').lean(),
   ]);
   if (!job) throw new AppError(404, 'PROCESSING_JOB_NOT_FOUND', 'Không tìm thấy tiến trình xử lý');
-  res.json({ data: { ...job, video: lesson } });
+  // F03 fix (2026-09-18): publish a normalized status payload so the admin UI
+  // does not have to reconcile lesson vs job itself. We surface:
+  //   - canRetry: lesson is in 'failed' AND has a media objectKey (ready for retry)
+  //   - canCancel: lesson is in 'uploading' (user can still cancel)
+  //   - capabilities.suggestedAction: union of state
+  //   - job.lessonStatusSync: 'synced' when both documents agree, 'drift' otherwise.
+  //   - correctedError: prefer job.errorMessage when lesson has none.
+  const lessonStates = {
+    canRetry: lesson?.status === 'failed' && Boolean(lesson.media?.objectKey),
+    canCancel: lesson?.status === 'uploading',
+    lessonStatus: lesson?.status ?? 'unknown',
+  };
+  const drift = lesson?.status === 'processing' && job.status !== 'running' && job.status !== 'queued';
+  res.json({
+    data: {
+      ...job,
+      video: lesson,
+      capabilities: {
+        ...lessonStates,
+        canPublish: lesson?.status === 'ready_for_review',
+      },
+      lessonStatusSync: drift ? 'drift' : 'synced',
+      correctedError: lesson?.processingError ?? job.errorMessage,
+      updatedAt: job.heartbeatAt ?? job.lockedAt ?? job.completedAt ?? job.createdAt,
+    },
+  });
 }));
 
 router.get('/processing-jobs', validateQuery(processingListSchema), asyncHandler(async (req, res) => {
@@ -210,6 +287,65 @@ router.get('/processing-jobs', validateQuery(processingListSchema), asyncHandler
     ProcessingJobModel.countDocuments(filter),
   ]);
   res.json({ data: { items, page, limit, total, pages: Math.ceil(total / limit) } });
+}));
+
+/**
+ * F03 fix (2026-09-18): reconciliation report.
+ *
+ * Returns three sets of inconsistencies that admins must triage:
+ *   - lessons in 'processing' with NO active job (lesson limbo).
+ *   - lessons in 'failed' with an active (queued/running) job (job limbo).
+ *   - jobs in 'queued'/'running' whose lesson is already 'published' (stale worker).
+ *
+ * This endpoint is a read-only diagnostic; it does NOT mutate state. The admin can
+ * decide whether to call retry, cancel, or manually reconcile via the DB.
+ */
+router.get('/processing-jobs/reconcile', asyncHandler(async (_req, res) => {
+  const [processingLessons, failedLessons, activeJobsForPublished] = await Promise.all([
+    LessonModel.find({ status: 'processing' }).select('_id titleVi media').lean(),
+    LessonModel.find({ status: 'failed' }).select('_id titleVi media processingError').lean(),
+    ProcessingJobModel.find({ status: { $in: ['queued', 'running'] } }).select('_id lessonId').lean(),
+  ]);
+  const processingLessonIds = new Set(processingLessons.map(l => String(l._id)));
+  const failedLessonIds = new Set(failedLessons.map(l => String(l._id)));
+  const allJobs = await ProcessingJobModel.find({
+    lessonId: { $in: Array.from(new Set([
+      ...processingLessonIds,
+      ...failedLessonIds,
+      ...activeJobsForPublished.map(j => String(j.lessonId)),
+    ])) },
+  }).select('_id lessonId status attempts').lean();
+  const jobsByLesson = new Map<string, { _id: unknown; status: string; attempts: number }[]>();
+  for (const job of allJobs) {
+    const key = String(job.lessonId);
+    const list = jobsByLesson.get(key) ?? [];
+    list.push({ _id: job._id, status: job.status, attempts: job.attempts });
+    jobsByLesson.set(key, list);
+  }
+  const lessonWithoutJob = processingLessons.filter(lesson => {
+    const jobs = jobsByLesson.get(String(lesson._id)) ?? [];
+    return !jobs.some(j => j.status === 'queued' || j.status === 'running');
+  }).map(l => ({ _id: l._id, titleVi: l.titleVi }));
+  const lessonWithActiveJobButFailed = failedLessons.filter(lesson => {
+    const jobs = jobsByLesson.get(String(lesson._id)) ?? [];
+    return jobs.some(j => j.status === 'queued' || j.status === 'running');
+  }).map(l => ({ _id: l._id, titleVi: l.titleVi, processingError: l.processingError }));
+  const publishedLessons = await LessonModel.find({ status: 'published' }).select('_id').lean();
+  const publishedSet = new Set(publishedLessons.map(l => String(l._id)));
+  const staleJobs = activeJobsForPublished.filter(job => publishedSet.has(String(job.lessonId)))
+    .map(j => ({ _id: j._id, lessonId: j.lessonId }));
+  res.json({
+    data: {
+      lessonWithoutJob,
+      lessonWithActiveJobButFailed,
+      staleJobs,
+      summary: {
+        lessonWithoutJobCount: lessonWithoutJob.length,
+        lessonWithActiveJobButFailedCount: lessonWithActiveJobButFailed.length,
+        staleJobsCount: staleJobs.length,
+      },
+    },
+  });
 }));
 
 router.get('/lessons/:lessonId/review', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
@@ -240,37 +376,126 @@ router.get('/lessons/:lessonId/media', validate(lessonIdSchema, 'params'), async
 }));
 
 router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), validate(subtitleDraftSchema), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).select('durationSeconds').lean();
+  const lessonId = String(req.params.lessonId);
+  const lesson = await LessonModel.findOne({ _id: lessonId, status: 'ready_for_review' }).select('durationSeconds').lean();
   if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để duyệt');
   const track = await SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 });
   if (!track) throw new AppError(404, 'SUBTITLES_NOT_FOUND', 'Không tìm thấy phụ đề nháp');
+
   const previous = new Map(track.cues.map(cue => [cue.cueId, cue]));
-  const cues = (req.body as z.infer<typeof subtitleDraftSchema>).cues.map(cue => {
-    if (cue.endMs > lesson.durationSeconds * 1000) throw new AppError(422, 'INVALID_CUE_TIME', 'Phụ đề vượt thời lượng video');
+
+  // F06 fix (2026-09-18): when an admin edits a cue's `zh`, we must re-tokenize
+  // AND re-resolve Word IDs. Previously the new tokens got wordId=null and never
+  // got linked back, so learners couldn't save/lookup the word from those cues.
+  const newCueInputs = (req.body as z.infer<typeof subtitleDraftSchema>).cues;
+  const cuesNeedingResolve = newCueInputs
+    .filter(cue => cue.endMs <= lesson.durationSeconds * 1000)
+    .filter(cue => cue.zh !== previous.get(cue.cueId)?.zh)
+    .map(cue => ({
+      zh: cue.zh,
+      pinyin: cue.pinyin || pinyinService.convert(cue.zh),
+      vi: cue.vi,
+      tokens: pinyinService.tokenize(cue.zh).map(token => ({ text: token.text, wordId: null as unknown })),
+    }));
+  // Word resolution is best-effort: failure here should not break the save.
+  // Missing words show in the editor's "needsReview" filter.
+  let resolvedWordIds = new Map<string, Types.ObjectId>();
+  if (cuesNeedingResolve.length > 0) {
+    try {
+      resolvedWordIds = await resolveLearningWordIds(cuesNeedingResolve);
+    } catch (error) {
+      logger.warn({ lessonId, error: error instanceof Error ? error.message : String(error) }, '[admin] Word re-resolution failed; saving cues with wordId=null');
+    }
+  }
+
+  const cues = newCueInputs.map(cue => {
+    if (cue.endMs > lesson.durationSeconds * 1000) {
+      throw new AppError(422, 'INVALID_CUE_TIME', 'Phụ đề vượt thời lượng video');
+    }
     const old = previous.get(cue.cueId);
+    const zhChanged = old?.zh !== cue.zh;
+    const tokens = zhChanged
+      ? pinyinService.tokenize(cue.zh).map(token => ({ text: token.text, wordId: resolvedWordIds.get(token.text) ?? null }))
+      : (old?.tokens ?? []);
     return {
       ...cue,
       pinyin: cue.pinyin || pinyinService.convert(cue.zh),
-      tokens: old?.zh === cue.zh ? old.tokens : pinyinService.tokenize(cue.zh).map(token => ({ text: token.text, wordId: null })),
+      tokens,
     };
   });
-  track.set('cues', cues);
-  await track.save();
-  res.json({ data: track });
+
+  // F11 fix (2026-09-18): atomic save via runEditorCommit. Previously this
+  // endpoint did two non-atomic writes (track.save + LessonModel.updateOne).
+  // If the second one failed the cues were updated but contentDirty was
+  // never set, so the UI would show "ready to publish" while translation
+  // was actually stale. The helper also handles revalidation and dirty
+  // flag bookkeeping in a single transaction.
+  const zhChangedCount = newCueInputs.filter(cue => cue.zh !== previous.get(cue.cueId)?.zh).length;
+  const result = await runEditorCommit({
+    lessonId,
+    subtitle: {
+      revision: track.revision,
+      cues: cues.map(cue => ({
+        cueId: cue.cueId,
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+        zh: cue.zh,
+        pinyin: cue.pinyin,
+        vi: cue.vi,
+        tokens: (cue.tokens ?? []).map(token => ({ text: token.text, wordId: token.wordId ?? null })),
+      })),
+      dirty: zhChangedCount > 0
+        ? { reason: `${zhChangedCount} câu phụ đề đã thay đổi — cần duyệt lại bản dịch và câu hỏi`, zhChangedCount }
+        : undefined,
+    },
+  });
+  res.json({ data: result.subtitle });
 }));
 
 router.put('/lessons/:lessonId/quiz', validate(lessonIdSchema, 'params'), validate(quizDraftSchema), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).select('_id').lean();
+  const lessonId = String(req.params.lessonId);
+  const lesson = await LessonModel.findOne({ _id: lessonId, status: 'ready_for_review' }).select('_id').lean();
   if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để duyệt');
   const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
     .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi');
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập nháp');
-  quiz.set('questions', (req.body as z.infer<typeof quizDraftSchema>).questions.map(question => ({
-    ...question,
-    relatedWordIds: [],
-  })));
-  await quiz.save();
-  res.json({ data: quiz });
+
+  // F06 fix (2026-09-18): preserve previously resolved relatedWordIds when the
+  // admin did not change the question. Drop them only when the prompt or options
+  // changed enough to invalidate the linkage.
+  const previousQuestions = new Map(quiz.questions.map(q => [q.questionId, q]));
+  const mergedQuestions = (req.body as z.infer<typeof quizDraftSchema>).questions.map(question => {
+    const previous = previousQuestions.get(question.questionId);
+    const reResolvedNeeded = !previous || previous.prompt !== question.prompt;
+    if (reResolvedNeeded) {
+      // Drop stale links; admin will re-attach via a follow-up "Liên kết từ" action.
+      return { ...question, relatedWordIds: [] as Types.ObjectId[] };
+    }
+    return { ...question, relatedWordIds: previous?.relatedWordIds ?? [] };
+  });
+
+  // F11: atomic save via runEditorCommit. Same rationale as subtitles above —
+  // we previously wrote Quiz without updating the lesson's contentDirty flag,
+  // so if a question's prompt changed and the user removed relatedWordIds, the
+  // admin would never see the "needs re-link" warning.
+  const result = await runEditorCommit({
+    lessonId,
+    quiz: {
+      revision: quiz.revision,
+      questions: mergedQuestions.map(question => ({
+        questionId: question.questionId,
+        type: question.type,
+        prompt: question.prompt,
+        cueId: question.cueId,
+        options: question.options,
+        correctOptionId: (question as { correctOptionId?: string }).correctOptionId,
+        acceptedAnswers: (question as { acceptedAnswers?: string[] }).acceptedAnswers,
+        explanationVi: (question as { explanationVi?: string }).explanationVi,
+        relatedWordIds: question.relatedWordIds,
+      })),
+    },
+  });
+  res.json({ data: result.quiz });
 }));
 
 const retryProcessing = asyncHandler(async (req, res) => {
@@ -292,19 +517,50 @@ router.post('/lessons/:lessonId/processing/retry', uploadLimiter, validate(lesso
 router.post('/videos/:lessonId/retry-processing', uploadLimiter, validate(lessonIdSchema, 'params'), retryProcessing);
 
 router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
-  const session = await mongoose.startSession();
+  // F07 fix (2026-09-18): unified publish-time validator + transaction-wrapped writes.
+  // Falls back to sequential writes when transactions are not supported (standalone Mongo).
+  const supportsTransactions = mongoose.connection.readyState === 1 && (
+    mongoose.connection as unknown as { client?: { topology?: { description?: { type?: string } } } }
+  ).client?.topology?.description?.type === 'ReplicaSetWithPrimary';
+
+  const session = supportsTransactions ? await mongoose.startSession() : null;
   let publishedLesson;
   try {
-    await session.withTransaction(async () => {
-      const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).session(session);
-      if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để đăng');
-      const [subtitle, quiz] = await Promise.all([
-        SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(session),
-        QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(session),
-      ]);
-      if (!lesson.media || !subtitle || !quiz || subtitle.cues.length === 0 || quiz.questions.length === 0) {
-        throw new AppError(422, 'CONTENT_INCOMPLETE', 'Cần video, phụ đề và bài tập đã duyệt trước khi đăng');
+    const runInSession = async (op: (s: mongoose.ClientSession | null) => Promise<void>) => {
+      if (session) {
+        await session.withTransaction(() => op(session));
+      } else {
+        await op(null);
       }
+    };
+    await runInSession(async (sess) => {
+      const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).session(sess);
+      if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để đăng');
+      const subtitle = await SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(sess);
+      const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(sess);
+
+      // F07 fix: unified publish-time validator. Same rules as the
+      // individual save endpoints so direct API calls to /publish cannot bypass
+      // cue-time, word-link or quiz-answer checks.
+      if (!lesson.media) throw new AppError(422, 'CONTENT_INCOMPLETE', 'Bài học chưa có video');
+      if (!subtitle || subtitle.cues.length === 0) {
+        throw new AppError(422, 'CONTENT_INCOMPLETE', 'Phụ đề chưa có nội dung');
+      }
+      if (!quiz || quiz.questions.length === 0) {
+        throw new AppError(422, 'CONTENT_INCOMPLETE', 'Bài tập chưa có câu hỏi');
+      }
+      const lastCue = subtitle.cues[subtitle.cues.length - 1]!;
+      if (lastCue.endMs > lesson.durationSeconds * 1000) {
+        throw new AppError(422, 'INVALID_CUE_TIME', 'Câu phụ đề cuối vượt thời lượng video');
+      }
+      const invalidQuestion = quiz.questions.find(question =>
+        question.type === 'multiple_choice'
+          ? !question.correctOptionId || !question.options.some(option => option.optionId === question.correctOptionId)
+          : !(question.acceptedAnswers && question.acceptedAnswers.length > 0));
+      if (invalidQuestion) {
+        throw new AppError(422, 'INVALID_QUIZ', `Câu hỏi ${invalidQuestion.questionId} thiếu đáp án hợp lệ`);
+      }
+
       subtitle.status = 'published';
       subtitle.reviewedBy = req.auth!.userId;
       quiz.status = 'published';
@@ -315,13 +571,28 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
       lesson.activeSubtitleRevision = subtitle.revision;
       lesson.activeQuizRevision = quiz.revision;
       lesson.publishedAt = new Date();
-      await Promise.all([subtitle.save({ session }), quiz.save({ session }), lesson.save({ session })]);
+      // F07: reset dirty flag since content has now been reviewed and published.
+      lesson.contentDirty = false;
+      lesson.contentDirtyReason = undefined;
+
+      // F07 fix: Mongoose transactions require sequential awaits on the same
+      // session. Promise.all under withTransaction() silently degrades to
+      // non-transactional behavior. See:
+      //   https://mongoosejs.com/docs/transactions.html
+      await subtitle.save({ session: sess });
+      await quiz.save({ session: sess });
+      await lesson.save({ session: sess });
       publishedLesson = lesson;
     });
   } finally {
-    await session.endSession();
+    if (session) await session.endSession();
   }
   res.json({ data: publishedLesson });
+}));
+
+router.delete('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const result = await purgeAdminLesson(String(req.params.lessonId));
+  res.json({ data: { ...result, deleted: true } });
 }));
 
 router.post('/lessons/:lessonId/hide', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
