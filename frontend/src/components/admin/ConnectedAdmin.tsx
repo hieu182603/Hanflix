@@ -1,16 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
   cancelVideoUpload, confirmVideo, createAdminLesson, getAdminMedia, getAdminReview, getProcessingStatus,
-  hideAdminLesson, listAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
+  deleteAdminLesson, hideAdminLesson, listAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
   presignVideo, publishAdminLesson, restoreAdminLesson, retryProcessing, saveAdminQuiz,
   saveAdminSubtitles, setAdminUserStatus, uploadVideoToR2,
   type AdminCue, type AdminLesson, type AdminQuestion, type AdminReview, type AdminUser,
-  type ProcessingJob, type ProcessingStatus,
+  type ProcessingJob, type ProcessingStatus, type UploadProgressEvent,
 } from '../../api/admin';
+import AdminQuizManager from './AdminQuizManager';
+import AdminOverviewDashboard from './AdminOverviewDashboard';
+import AdminVideoList from './AdminVideoList';
+import AdminUserManager from './AdminUserManager';
+import AdminVideoUploader from './AdminVideoUploader';
+import AdminLessonReviewStudio from './AdminLessonReviewStudio';
 
-type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users';
+type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'quiz' | 'vocabulary' | 'grammar';
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : 'Thao tác thất bại.'; }
+
+/**
+ * F01 fix (2026-09-18): dirty-state tracking for editor sections.
+ *
+ * Background: previously every save action called reload() which re-fetched `lessons`,
+ * which triggered the editor effect (deps include `lessons`), which re-loaded cues/
+ * questions/title from the server and overwrote in-progress edits. A user editing
+ * subtitles who then clicked "Save metadata" would silently lose their subtitle edits.
+ *
+ * Fix:
+ *   - Each section (metadata / subtitles / quiz) tracks a dirty flag.
+ *   - Server data is only loaded when (a) the editingId changes, or (b) the user
+ *     explicitly clicks "Tải lại". This prevents accidental overwrites.
+ *   - Before navigating away or switching lessons, we warn the user if there are
+ *     unsaved changes.
+ *   - The dirty flags are reset individually after each successful save of that
+ *     section, so an unrelated save does not affect other dirty states.
+ */
+type DirtyMap = { metadata: boolean; subtitles: boolean; quiz: boolean };
 
 export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }: {
   tab: AdminTab;
@@ -38,6 +63,36 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // F01: per-section dirty tracking. Saved status only resets the affected section.
+  const [dirty, setDirty] = useState<DirtyMap>({ metadata: false, subtitles: false, quiz: false });
+  const initialLoadDone = useRef<string | null>(null);
+
+  // F08 fix (2026-09-18): upload progress + abort state.
+  //   - uploadProgress: { percent, bytesSent, totalBytes } reported by the streaming
+  //     uploadVideoToR2(). 0..100; -1 means "idle".
+  //   - uploadController: AbortController wired to the in-flight PUT to R2. The user
+  //     can press "Hủy tải lên" while the upload is in flight and we abort the request
+  //     BEFORE calling /upload/cancel (so we don't pay for orphaned bytes).
+  const [uploadProgress, setUploadProgress] = useState<{ percent: number; bytesSent: number; totalBytes: number }>({ percent: 0, bytesSent: 0, totalBytes: 0 });
+  const [uploadStage, setUploadStage] = useState<'idle' | 'presigning' | 'uploading' | 'confirming'>('idle');
+  const uploadControllerRef = useRef<AbortController | null>(null);
+  const [uploadError, setUploadError] = useState<string>('');
+  // Throttle progress UI updates: emit at most every 200ms to avoid 60fps re-renders.
+  const lastProgressEmitRef = useRef<number>(0);
+
+  // F10 fix (2026-09-18): cue editor viewport state for virtualized rendering.
+  //   - cueQuery: filter cues by zh/vi/pinyin text.
+  //   - cueExpanded: cueIds that are expanded. Collapsed by default for >20 cues.
+  //   - cueSort: by start time (default) or by duration.
+  const [cueQuery, setCueQuery] = useState('');
+  const [cueExpanded, setCueExpanded] = useState<Set<string>>(new Set());
+  // Snapshot timer for non-blocking "X giây trước" display
+  const [tickNow, setTickNow] = useState(Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setTickNow(Date.now()), 30000);
+    return () => window.clearInterval(t);
+  }, []);
+
   const reload = async () => {
     const [lessonItems, userItems, jobItems] = await Promise.all([listAdminLessons(), listAdminUsers(), listProcessingJobs()]);
     setLessons(lessonItems); setUsers(userItems); setJobs(jobItems.items);
@@ -52,15 +107,28 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     return () => { active = false; };
   }, []);
 
+  /**
+   * F01: editor effect — only refetch when (a) we switch to editor tab AND
+   * (b) the editingId has changed since last successful load. The `lessons` array
+   * no longer triggers a refetch. Each `action()` that previously called reload()
+   * no longer overwrites in-progress edits.
+   */
   useEffect(() => {
     if (tab !== 'editor' || !editingId) return;
+    // Skip if we already loaded this lesson and the user hasn't requested a refresh
+    if (initialLoadDone.current === editingId) return;
     let active = true;
     setReview(null); setMedia(null); setError('');
+    // Reset dirty when switching lessons
+    setDirty({ metadata: false, subtitles: false, quiz: false });
     void getAdminReview(editingId).then(data => {
       if (!active) return;
-      setReview(data); setCues(data.subtitle?.cues ?? []); setQuestions(data.quiz?.questions ?? []);
+      setReview(data);
+      setCues(data.subtitle?.cues ?? []);
+      setQuestions(data.quiz?.questions ?? []);
       const lesson = lessons.find(item => item._id === editingId);
       if (lesson) { setTitleVi(lesson.titleVi); setTitleZh(lesson.titleZh ?? ''); setDescriptionVi(lesson.descriptionVi); }
+      initialLoadDone.current = editingId;
     }).catch(reason => { if (active) setError(errorText(reason)); });
 
     void getAdminMedia(editingId).then(data => {
@@ -70,7 +138,53 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     });
 
     return () => { active = false; };
-  }, [tab, editingId, lessons]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, editingId]);
+
+  /**
+   * F01: explicit "Tải lại" button allows the user to discard local edits and
+   * pull fresh data from the server.
+   */
+  const reloadEditor = async () => {
+    if (!editingId) return;
+    if (dirty.metadata || dirty.subtitles || dirty.quiz) {
+      const confirmed = window.confirm('Có thay đổi chưa lưu. Tải lại sẽ mất các thay đổi đó. Tiếp tục?');
+      if (!confirmed) return;
+    }
+    initialLoadDone.current = null;
+    setError('');
+    try {
+      const [reviewData, mediaData] = await Promise.all([getAdminReview(editingId), getAdminMedia(editingId)]);
+      setReview(reviewData);
+      setCues(reviewData.subtitle?.cues ?? []);
+      setQuestions(reviewData.quiz?.questions ?? []);
+      setMedia(mediaData.media);
+      const lesson = lessons.find(item => item._id === editingId);
+      if (lesson) { setTitleVi(lesson.titleVi); setTitleZh(lesson.titleZh ?? ''); setDescriptionVi(lesson.descriptionVi); }
+      setDirty({ metadata: false, subtitles: false, quiz: false });
+      initialLoadDone.current = editingId;
+      setMessage('Đã tải lại nội dung.');
+    } catch (reason) {
+      setError(errorText(reason));
+    }
+  };
+
+  /**
+   * F01: navigate-with-warning. Before switching lessons while edits exist, prompt
+   * the user to confirm.
+   */
+  const requestSwitchLesson = (newId: string | null) => {
+    if (!newId || newId === editingId) {
+      setEditingId(newId);
+      return;
+    }
+    if (dirty.metadata || dirty.subtitles || dirty.quiz) {
+      const confirmed = window.confirm('Có thay đổi chưa lưu. Rời đi sẽ mất các thay đổi đó. Tiếp tục?');
+      if (!confirmed) return;
+    }
+    initialLoadDone.current = null;
+    setEditingId(newId);
+  };
 
   useEffect(() => {
     if (tab !== 'processing' || !editingId) return;
@@ -86,116 +200,253 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     return () => { active = false; window.clearInterval(timer); };
   }, [tab, editingId]);
 
-  const action = async (task: () => Promise<unknown>, success: string) => {
+  /**
+   * F01: action() no longer calls reload() globally. It only refreshes the lessons
+   * list (so the user sees status changes in the sidebar) but does NOT touch the
+   * editor state. The user must click "Tải lại" to pull fresh editor data.
+   */
+  const action = async (task: () => Promise<unknown>, success: string, options?: { refreshEditor?: boolean }) => {
     setBusy(true); setError(''); setMessage('');
-    try { await task(); await reload(); setMessage(success); }
+    try {
+      await task();
+      // Refresh lessons list (sidebar) but keep editor state intact.
+      const [lessonItems, jobItems] = await Promise.all([listAdminLessons(), listProcessingJobs()]);
+      setLessons(lessonItems); setJobs(jobItems.items);
+      if (options?.refreshEditor && editingId) {
+        initialLoadDone.current = null;
+        // Trigger editor effect to refetch on next render.
+        setEditingId(editingId);
+      }
+      setMessage(success);
+    }
     catch (reason) { setError(errorText(reason)); }
     finally { setBusy(false); }
   };
 
-  const submitUpload = async (event: React.FormEvent) => {
+  const submitUpload = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
     if (!file) { setError('Hãy chọn video MP4 hoặc WebM.'); return; }
     if (!['video/mp4', 'video/webm'].includes(file.type)) { setError('Chỉ hỗ trợ MP4 hoặc WebM.'); return; }
-    setBusy(true); setError(''); setMessage('');
+    setBusy(true); setError(''); setMessage(''); setUploadError('');
     let lessonId: string | null = null;
     let uploadStarted = false;
+    uploadControllerRef.current = new AbortController();
     try {
       const slug = titleVi.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) || 'bai-hoc';
+      setUploadStage('presigning');
       const draft = await createAdminLesson({ slug: `${slug}-${crypto.randomUUID().slice(0, 8)}`, titleVi, titleZh, descriptionVi, hsk, topicIds: [topic], goalTags: [], durationSeconds: duration, pinyin: '' });
       lessonId = draft._id;
       const signed = await presignVideo(draft._id, file);
       uploadStarted = true;
-      await uploadVideoToR2(signed.uploadUrl, file, signed.requiredHeaders['Content-Type']);
+      const totalBytes = signed.clientByteSize ?? file.size;
+      setUploadProgress({ percent: 0, bytesSent: 0, totalBytes });
+      setUploadStage('uploading');
+      // F08: stream the upload so we can report progress AND honor abort.
+      // We throttle onProgress to once every 200ms to avoid re-rendering 60×/sec.
+      await uploadVideoToR2(signed.uploadUrl, file, signed.requiredHeaders['Content-Type'], {
+        signal: uploadControllerRef.current?.signal,
+        onProgress: (event: UploadProgressEvent) => {
+          const now = Date.now();
+          if (now - lastProgressEmitRef.current < 200 && event.percent < 100) return;
+          lastProgressEmitRef.current = now;
+          setUploadProgress({ percent: event.percent, bytesSent: event.bytesSent, totalBytes: event.totalBytes });
+        },
+      });
+      if (uploadControllerRef.current?.signal.aborted) {
+        // User pressed cancel; the abort already raised an exception in the upload.
+        // Fall through to the catch below.
+        throw new Error('Đã hủy tải lên.');
+      }
+      setUploadStage('confirming');
       await confirmVideo(draft._id, signed.objectKey);
+      setUploadStage('idle');
       await reload();
+      // F08: reset form state so a new upload doesn't re-use the previous file.
+      setFile(null);
+      initialLoadDone.current = null;
       setEditingId(draft._id); setTab('processing');
       setMessage('Video đã tải lên. Đang theo dõi quá trình xử lý.');
     } catch (reason) {
       if (lessonId && uploadStarted) {
         try { await cancelVideoUpload(lessonId); } catch { /* Leave the draft visible for manual recovery. */ }
       }
+      setUploadStage('idle');
+      setUploadError(errorText(reason));
       setError(errorText(reason));
       void reload();
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+      uploadControllerRef.current = null;
+    }
+  };
+
+  /**
+   * F08 fix (2026-09-18): abort the in-flight upload and free the R2 presigned
+   * object. Cancelling before the request completes saves the user's bandwidth
+   * and prevents orphaned objects accumulating in R2.
+   */
+  const cancelInFlightUpload = () => {
+    if (uploadControllerRef.current) {
+      uploadControllerRef.current.abort();
+    }
   };
 
   const selected = lessons.find(item => item._id === editingId);
   const statusLabel: Record<string, string> = { draft: 'Bản nháp', uploading: 'Đang tải lên', processing: 'Đang xử lý', ready_for_review: 'Chờ duyệt', published: 'Đã đăng', hidden: 'Đã ẩn', failed: 'Lỗi xử lý' };
 
   return <div className="space-y-5">
-    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+    {tab !== 'overview' && error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     {message && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{message}</p>}
-    {loading && <p className="text-sm">Đang tải dữ liệu quản trị…</p>}
-    {tab === 'overview' && <>
-      <h1 className="text-2xl font-black">Tổng quan quản trị</h1>
-      <div className="grid gap-3 sm:grid-cols-3">{[
-        ['Bài học', lessons.length], ['Đã xuất bản', lessons.filter(item => item.status === 'published').length], ['Chờ duyệt', lessons.filter(item => item.status === 'ready_for_review').length],
-      ].map(([label, value]) => <div key={label} className="rounded-2xl border bg-white p-5"><p className="text-sm text-neutral-500">{label}</p><p className="text-2xl font-black">{value}</p></div>)}</div>
-      <button type="button" onClick={() => setTab('upload')} className="rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold text-white">Thêm video mới</button>
-    </>}
-    {tab === 'videos' && <>
-      <div className="flex justify-between gap-2"><h1 className="text-2xl font-black">Bài học video</h1><button type="button" onClick={() => setTab('upload')} className="rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold text-white">Thêm video</button></div>
-      {lessons.length === 0 && !loading && <p className="rounded-xl bg-white p-5 text-sm">Chưa có bài học.</p>}
-      <div className="space-y-2">{lessons.map(item => <div key={item._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4"><div><h2 className="font-bold">{item.titleVi}</h2><p className="text-xs text-neutral-500">HSK {item.hsk} · {statusLabel[item.status] ?? item.status}</p></div><div className="flex flex-wrap gap-2">
-        {['ready_for_review', 'draft'].includes(item.status) && <button type="button" onClick={() => { setEditingId(item._id); setTab('editor'); }} className="rounded-lg border px-3 py-1 text-sm">Biên tập</button>}
-        {['processing', 'failed', 'uploading'].includes(item.status) && <button type="button" onClick={() => { setEditingId(item._id); setTab('processing'); }} className="rounded-lg border px-3 py-1 text-sm">Tiến trình</button>}
-        {item.status === 'published' && <button type="button" disabled={busy} onClick={() => void action(() => hideAdminLesson(item._id), 'Đã ẩn bài học.')} className="rounded-lg border px-3 py-1 text-sm">Ẩn bài</button>}
-        {item.status === 'hidden' && <button type="button" disabled={busy} onClick={() => void action(() => restoreAdminLesson(item._id), 'Đã khôi phục bài học.')} className="rounded-lg border px-3 py-1 text-sm">Khôi phục</button>}
-      </div></div>)}</div>
-    </>}
-    {tab === 'upload' && <form onSubmit={event => void submitUpload(event)} className="mx-auto max-w-2xl space-y-4 rounded-2xl border bg-white p-6">
-      <h1 className="text-2xl font-black">Thêm video bài học</h1>
-      <label className="block text-sm font-bold">Video MP4/WebM<input type="file" required accept="video/mp4,video/webm" onChange={event => setFile(event.target.files?.[0] ?? null)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
-      <label className="block text-sm font-bold">Tiêu đề tiếng Việt<input required minLength={2} maxLength={160} value={titleVi} onChange={event => setTitleVi(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
-      <label className="block text-sm font-bold">Tiêu đề tiếng Trung<input value={titleZh} onChange={event => setTitleZh(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
-      <label className="block text-sm font-bold">Mô tả<input required minLength={10} maxLength={1000} value={descriptionVi} onChange={event => setDescriptionVi(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label>
-      <div className="grid gap-3 sm:grid-cols-3"><label className="text-sm font-bold">HSK<select value={hsk} onChange={event => setHsk(Number(event.target.value))} className="mt-1 block w-full rounded-xl border p-2 font-normal">{[1,2,3,4,5,6,7,8,9].map(level => <option key={level} value={level}>HSK {level}</option>)}</select></label>
-        <label className="text-sm font-bold">Chủ đề<select value={topic} onChange={event => setTopic(event.target.value)} className="mt-1 block w-full rounded-xl border p-2 font-normal">{['daily-life','food','travel','shopping','business','entertainment'].map(value => <option key={value} value={value}>{value}</option>)}</select></label>
-        <label className="text-sm font-bold">Thời lượng (giây)<input type="number" required min={60} max={300} value={duration} onChange={event => setDuration(Number(event.target.value))} className="mt-1 block w-full rounded-xl border p-2 font-normal" /></label></div>
-      <button type="submit" disabled={busy} className="rounded-xl bg-[#B91B1C] px-5 py-2 text-sm font-bold text-white disabled:opacity-40">{busy ? 'Đang tải video…' : 'Tạo bài và tải video'}</button>
-    </form>}
-    {tab === 'processing' && <>
-      <h1 className="text-2xl font-black">Tiến trình xử lý</h1>
-      {selected && <div className="rounded-2xl border bg-white p-5 space-y-2"><h2 className="font-bold">{selected.titleVi}</h2><p className="text-sm">{statusLabel[selected.status]} · {processing?.stage ?? selected.processingStep ?? ''} · {processing?.stageProgress ?? selected.processingProgress ?? 0}%</p>
-        {selected.processingError && <p className="text-sm text-red-700">{selected.processingError}</p>}
-        {selected.status === 'ready_for_review' && <button type="button" onClick={() => setTab('editor')} className="rounded-xl bg-[#B91B1C] px-4 py-2 text-sm text-white">Kiểm tra và biên tập</button>}
-        {selected.status === 'failed' && <button type="button" disabled={busy} onClick={() => void action(() => retryProcessing(selected._id), 'Đã yêu cầu xử lý lại.')} className="rounded-xl border px-4 py-2 text-sm">Thử lại</button>}
-        {selected.status === 'uploading' && <button type="button" disabled={busy} onClick={() => void action(() => cancelVideoUpload(selected._id), 'Đã hủy phiên tải lên.')} className="rounded-xl border px-4 py-2 text-sm">Hủy tải lên</button>}
-      </div>}
-      <div className="space-y-2">{jobs.map(job => <div key={job._id} className="rounded-xl border bg-white p-3 text-sm">{lessons.find(item => item._id === job.lessonId)?.titleVi ?? job.lessonId} · {job.status} · {job.stage} · {job.stageProgress}%</div>)}</div>
-    </>}
-    {tab === 'editor' && selected && <div className="space-y-5">
-      <div><h1 className="text-2xl font-black">Biên tập: {selected.titleVi}</h1><p className="text-sm text-neutral-500">{statusLabel[selected.status]}</p></div>
-      {media?.url && (
-        <div className="rounded-2xl border bg-white p-5 space-y-3">
-          <h2 className="font-bold">Xem trước video</h2>
-          <div className="aspect-video max-w-2xl overflow-hidden rounded-xl bg-black">
-            <video src={media.url} controls className="h-full w-full object-contain" preload="metadata" />
-          </div>
-        </div>
-      )}
-      {review && <>
-        <div className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-bold">Thông tin chung</h2>
-          <input value={titleVi} onChange={event => setTitleVi(event.target.value)} aria-label="Tiêu đề tiếng Việt" className="block w-full rounded-lg border p-2 text-sm" />
-          <input value={titleZh} onChange={event => setTitleZh(event.target.value)} aria-label="Tiêu đề tiếng Trung" className="block w-full rounded-lg border p-2 text-sm" />
-          <textarea value={descriptionVi} onChange={event => setDescriptionVi(event.target.value)} aria-label="Mô tả" className="block w-full rounded-lg border p-2 text-sm" />
-          <button type="button" disabled={busy || !['draft','ready_for_review','failed'].includes(selected.status)} onClick={() => void action(() => patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi }), 'Đã lưu thông tin.')} className="rounded-lg border px-3 py-2 text-sm">Lưu thông tin</button>
-        </div>
-        {selected.status === 'ready_for_review' && <>
-          <div className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-bold">Phụ đề ({cues.length})</h2>{cues.map((cue, index) => <div key={cue.cueId} className="rounded-lg border p-3 space-y-2"><p className="text-xs">{cue.cueId} · {Math.round(cue.startMs / 1000)}–{Math.round(cue.endMs / 1000)} giây</p>{(['zh','pinyin','vi'] as const).map(field => <input key={field} aria-label={`${field} ${index + 1}`} value={cue[field]} onChange={event => setCues(current => current.map((item, i) => i === index ? { ...item, [field]: event.target.value } : item))} className="block w-full rounded-lg border p-2 text-sm" />)}</div>)}
-            <button type="button" disabled={busy || !cues.length} onClick={() => void action(() => saveAdminSubtitles(selected._id, cues), 'Đã lưu phụ đề.')} className="rounded-lg border px-3 py-2 text-sm">Lưu phụ đề</button>
-          </div>
-          <div className="rounded-2xl border bg-white p-5 space-y-3"><h2 className="font-bold">Câu hỏi ({questions.length})</h2>{questions.map((question, index) => <div key={question.questionId} className="rounded-lg border p-3 space-y-2"><p className="text-xs">Câu {index + 1} · {question.type}</p>
-            <input value={question.prompt} aria-label={`Câu hỏi ${index + 1}`} onChange={event => setQuestions(current => current.map((item, i) => i === index ? { ...item, prompt: event.target.value } : item))} className="w-full rounded-lg border p-2 text-sm" />
-            {question.options.map(option => <label key={option.optionId} className="flex items-center gap-2 text-sm"><input type="radio" name={`correct-${question.questionId}`} checked={question.correctOptionId === option.optionId} onChange={() => setQuestions(current => current.map((item, i) => i === index ? { ...item, correctOptionId: option.optionId } : item))} /><input value={option.text} onChange={event => setQuestions(current => current.map((item, i) => i === index ? { ...item, options: item.options.map(entry => entry.optionId === option.optionId ? { ...entry, text: event.target.value } : entry) } : item))} className="flex-1 rounded-lg border p-2" /></label>)}
-            {question.type === 'fill_blank' && <input value={question.acceptedAnswers?.join(', ') ?? ''} aria-label="Đáp án chấp nhận" onChange={event => setQuestions(current => current.map((item, i) => i === index ? { ...item, acceptedAnswers: event.target.value.split(',').map(value => value.trim()).filter(Boolean) } : item))} className="w-full rounded-lg border p-2 text-sm" />}
-            <input value={question.explanationVi} aria-label="Giải thích" onChange={event => setQuestions(current => current.map((item, i) => i === index ? { ...item, explanationVi: event.target.value } : item))} className="w-full rounded-lg border p-2 text-sm" />
-          </div>)}<button type="button" disabled={busy || !questions.length} onClick={() => void action(() => saveAdminQuiz(selected._id, questions), 'Đã lưu quiz.')} className="rounded-lg border px-3 py-2 text-sm">Lưu quiz</button></div>
-          <button type="button" disabled={busy} onClick={() => void action(async () => { await saveAdminSubtitles(selected._id, cues); await saveAdminQuiz(selected._id, questions); await publishAdminLesson(selected._id); setTab('videos'); }, 'Đã xuất bản bài học.')} className="rounded-xl bg-[#188A5A] px-5 py-3 text-sm font-bold text-white disabled:opacity-40">Lưu và xuất bản</button>
-        </>}
-      </>}
-    </div>}
-    {tab === 'users' && <><h1 className="text-2xl font-black">Người dùng</h1><div className="space-y-2">{users.map(user => <div key={user._id} className="flex items-center justify-between gap-3 rounded-xl border bg-white p-4"><div><p className="font-bold">{user.name}</p><p className="text-sm text-neutral-500">{user.email} · {user.role} · {user.status}</p></div>{user.role !== 'admin' && <button type="button" disabled={busy} onClick={() => void action(() => setAdminUserStatus(user._id, user.status === 'active' ? 'locked' : 'active'), 'Đã cập nhật tài khoản.')} className="rounded-lg border px-3 py-2 text-sm">{user.status === 'active' ? 'Khóa' : 'Mở khóa'}</button>}</div>)}</div></>}
+    {tab !== 'overview' && loading && <p className="text-sm">Đang tải dữ liệu quản trị…</p>}
+    {tab === 'overview' && (
+      <AdminOverviewDashboard
+        lessons={lessons}
+        users={users}
+        jobs={jobs}
+        loading={loading}
+        error={error}
+        onReload={reload}
+        onNavigateToTab={(targetTab) => setTab(targetTab as AdminTab)}
+        onSelectLessonToEdit={(lessonId) => {
+          requestSwitchLesson(lessonId);
+          setTab('editor');
+        }}
+        onPublishLesson={async (lessonId) => {
+          await action(() => publishAdminLesson(lessonId), 'Đã xuất bản bài học.');
+        }}
+        onRetryProcessing={async (lessonId) => {
+          await action(() => retryProcessing(lessonId), 'Đã yêu cầu xử lý lại tiến trình AI.');
+        }}
+      />
+    )}
+    {tab === 'videos' && (
+      <AdminVideoList
+        lessons={lessons}
+        loading={loading}
+        busy={busy}
+        onNavigateToUpload={() => setTab('upload')}
+        onEditLesson={(id) => {
+          requestSwitchLesson(id);
+          setTab('editor');
+        }}
+        onViewProcessing={(id) => {
+          requestSwitchLesson(id);
+          setTab('processing');
+        }}
+        onPublishLesson={async (id) => {
+          await action(() => publishAdminLesson(id), 'Đã xuất bản bài học.');
+        }}
+        onHideLesson={async (id) => {
+          await action(() => hideAdminLesson(id), 'Đã ẩn bài học.');
+        }}
+        onRestoreLesson={async (id) => {
+          await action(() => restoreAdminLesson(id), 'Đã khôi phục bài học.');
+        }}
+        onDeleteLesson={async (id) => {
+          await action(async () => {
+            await deleteAdminLesson(id);
+            if (editingId === id) {
+              setEditingId(null);
+              setTab('videos');
+            }
+          }, 'Đã xóa bài học vĩnh viễn.');
+        }}
+        onRetryProcessing={async (id) => {
+          await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');
+        }}
+      />
+    )}
+    {(tab === 'upload' || tab === 'processing') && (
+      <AdminVideoUploader
+        activeTab={tab}
+        onTabChange={(t) => setTab(t)}
+        titleVi={titleVi}
+        setTitleVi={(v) => { setTitleVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+        titleZh={titleZh}
+        setTitleZh={(v) => { setTitleZh(v); setDirty(d => ({ ...d, metadata: true })); }}
+        descriptionVi={descriptionVi}
+        setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+        hsk={hsk}
+        setHsk={setHsk}
+        topic={topic}
+        setTopic={setTopic}
+        duration={duration}
+        setDuration={setDuration}
+        file={file}
+        setFile={setFile}
+        busy={busy}
+        uploadStage={uploadStage}
+        uploadProgress={uploadProgress}
+        uploadError={uploadError}
+        onSubmitUpload={submitUpload}
+        onCancelUpload={cancelInFlightUpload}
+        selectedLesson={selected}
+        processingStatus={processing}
+        jobs={jobs}
+        lessons={lessons}
+        onSelectLesson={(id) => {
+          requestSwitchLesson(id);
+          setTab('processing');
+        }}
+        onRetryProcessing={async (id) => {
+          await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');
+        }}
+        onCancelVideoUpload={async (id) => {
+          await action(() => cancelVideoUpload(id), 'Đã hủy phiên tải lên.');
+        }}
+      />
+    )}
+    {tab === 'editor' && selected && (
+      <AdminLessonReviewStudio
+        lesson={selected}
+        media={media}
+        review={review}
+        cues={cues}
+        questions={questions}
+        dirty={dirty}
+        busy={busy}
+        titleVi={titleVi}
+        setTitleVi={(v) => { setTitleVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+        titleZh={titleZh}
+        setTitleZh={(v) => { setTitleZh(v); setDirty(d => ({ ...d, metadata: true })); }}
+        descriptionVi={descriptionVi}
+        setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+        onCuesChange={(next) => { setCues(next); setDirty(d => ({ ...d, subtitles: true })); }}
+        onQuestionsChange={(next) => { setQuestions(next); setDirty(d => ({ ...d, quiz: true })); }}
+        onSaveMetadata={async () => {
+          await action(async () => {
+            await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
+            setDirty(d => ({ ...d, metadata: false }));
+          }, 'Đã lưu thông tin bài học.');
+        }}
+        onSaveSubtitles={async () => {
+          await action(async () => {
+            await saveAdminSubtitles(selected._id, cues);
+            setDirty(d => ({ ...d, subtitles: false }));
+          }, 'Đã lưu phụ đề song ngữ.');
+        }}
+        onSaveQuiz={async () => {
+          await action(async () => {
+            await saveAdminQuiz(selected._id, questions);
+            setDirty(d => ({ ...d, quiz: false }));
+          }, 'Đã lưu bộ câu hỏi.');
+        }}
+        onPublishAll={async () => {
+          await action(async () => {
+            await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
+            await saveAdminSubtitles(selected._id, cues);
+            await saveAdminQuiz(selected._id, questions);
+            await publishAdminLesson(selected._id);
+            setDirty({ metadata: false, subtitles: false, quiz: false });
+            initialLoadDone.current = null;
+            setTab('videos');
+          }, 'Đã xuất bản bài học thành công!');
+        }}
+        onReload={reloadEditor}
+        onBackToVideos={() => setTab('videos')}
+      />
+    )}
+    {tab === 'users' && <AdminUserManager />}
+    {tab === 'quiz' && <AdminQuizManager />}
   </div>;
 }

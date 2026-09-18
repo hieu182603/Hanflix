@@ -20,6 +20,7 @@ import PublishedLessonView from './components/watch/PublishedLessonView';
 import AdminShell from './components/admin/AdminShell';
 import AdminVocabularyManager from './components/admin/AdminVocabularyManager';
 import AdminGrammarManager from './components/admin/AdminGrammarManager';
+import AdminQuizManager from './components/admin/AdminQuizManager';
 
 // Auth, Vocabulary & Review
 import LoginView from './components/auth/LoginView';
@@ -279,7 +280,7 @@ export default function App() {
   };
 
   // Admin
-  const [adminTab, setAdminTab] = useState<'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'vocabulary' | 'grammar'>('overview');
+  const [adminTab, setAdminTab] = useState<'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'vocabulary' | 'grammar' | 'quiz'>('overview');
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
 
   const handleOpenAI = (prompt?: string) => {
@@ -405,7 +406,7 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
       >
-        {adminTab !== 'vocabulary' && adminTab !== 'grammar' && (
+        {adminTab !== 'vocabulary' && adminTab !== 'grammar' && adminTab !== 'quiz' && (
           <ConnectedAdmin
             tab={adminTab}
             setTab={setAdminTab}
@@ -414,6 +415,7 @@ export default function App() {
           />
         )}        {adminTab === 'vocabulary' && <AdminVocabularyManager />}
         {adminTab === 'grammar' && <AdminGrammarManager />}
+        {adminTab === 'quiz' && <AdminQuizManager />}
       </AdminShell>
     );
   }
