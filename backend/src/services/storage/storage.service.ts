@@ -5,10 +5,11 @@ export type StoredObjectMetadata = {
 };
 
 export interface StorageService {
-  createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm'): Promise<{
+  createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm', maxBytes?: number): Promise<{
     uploadUrl: string;
     objectKey: string;
     expiresIn: number;
+    maxBytes?: number;
   }>;
   createDownloadUrl(objectKey: string): Promise<string>;
   headObject(objectKey: string): Promise<StoredObjectMetadata>;

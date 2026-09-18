@@ -25,6 +25,9 @@ const userSchema = new Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
   passwordHash: { type: String, select: false },
   googleSub: { type: String, unique: true, sparse: true, select: false },
+  // SECURITY (C-4): Tracks when Google was linked, used by the OTP-grace-window check
+  // in /auth/google to prevent account takeover via OAuth auto-link.
+  googleLinkedAt: { type: Date },
   emailVerifiedAt: { type: Date },
   emailVerificationRequired: { type: Boolean, default: false, select: false },
   role: { type: String, enum: ['user', 'admin'], default: 'user', index: true },

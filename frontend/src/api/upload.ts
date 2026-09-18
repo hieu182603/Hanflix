@@ -60,8 +60,8 @@ export interface RestoreAvatarResponse {
  * Restore default react-nice-avatar and delete custom image on Cloudinary
  */
 export async function restoreDefaultAvatar(): Promise<RestoreAvatarResponse> {
-  const res = await apiFetch<RestoreAvatarResponse>('/uploads/avatar/restore', {
-    method: 'POST',
+  const res = await apiFetch<RestoreAvatarResponse>('/uploads/avatar', {
+    method: 'DELETE',
   });
 
   if (res?.user) {

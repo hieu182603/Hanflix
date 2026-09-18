@@ -152,3 +152,25 @@ The remaining API work is prioritized in [API roadmap](./docs/API_ROADMAP.md).
 - Run integration tests against disposable MongoDB and R2 staging resources.
 - Add backup/retention policies and restrict `/metrics` at the platform/network layer.
 - For strict background latency when the HTTP app is scaled to zero, schedule the worker as a Container Apps Job or run one standalone worker replica.
+
+## Production hardening (Sep 2026)
+
+The following critical security items were addressed in a dedicated review pass. See `bug.md` for the full change list.
+
+- Quiz answer leak (H-6): `GET /lessons/:id/quiz` and `POST /attempts` strip `correctOptionId`, `acceptedAnswers` and `explanationVi` from learner responses. Only the `correct` boolean is returned.
+- Upload magic-byte verification (H-2): JPEG/PNG/WebP signatures are checked after multer parse; spoofed Content-Type is rejected with `415 INVALID_FILE_SIGNATURE`.
+- Refresh token fingerprinting (C-3): every session stores `sha256(userAgent + ip)`; mismatches on `/refresh` revoke all sessions and respond `401 DEVICE_MISMATCH`.
+- Google OAuth grace window (C-4): OAuth can only auto-claim a password account that was created in the last 5 minutes AND still unverified. Established accounts must link explicitly.
+- MongoDB TLS (H-5): connections are encrypted by default in production via `MONGODB_TLS=true`.
+- Redis-backed rate limiter (H-1): set `REDIS_URL` to share counters across `maxReplicas>1`. Falls back to in-memory when unset.
+- `/metrics` is always protected (SEC-04): `METRICS_TOKEN` is mandatory, with optional `METRICS_IP_ALLOWLIST` for CIDR-based source restrictions.
+- Video worker hard caps (Critical): `probeMedia` rejects files exceeding 600s or 200MB regardless of upstream validation.
+- Frontend localStorage minimization (H-7): only `id/name/avatarUrl/avatarType/avatarConfig` are cached; email/role are re-fetched via `/auth/me`.
+
+Manual steps still required before launch:
+
+1. Rotate every secret in `.env` (MongoDB, JWT, R2, Azure, Cloudinary, SMTP, Gemini).
+2. Configure R2 bucket policy with `max-object-size` so server-side enforcement matches `MAX_VIDEO_BYTES`.
+3. Provision Azure Cache for Redis and set `REDIS_URL`.
+4. Set up MongoDB backups with point-in-time recovery and a tested restore procedure.
+5. Whitelist Prometheus scraper IPs via `METRICS_IP_ALLOWLIST`.

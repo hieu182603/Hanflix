@@ -11,6 +11,8 @@ import { errorHandler, notFound } from './middleware/error-handler.js';
 import { globalLimiter } from './middleware/rate-limits.js';
 import { requestId } from './middleware/request-id.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminGrammarRoutes from './routes/admin-grammar.routes.js';
+import adminVocabularyRoutes from './routes/admin-vocabulary.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import learningRoutes from './routes/learning.routes.js';
@@ -50,21 +52,29 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.get('/metrics', async (_req, res) => {
-  // SECURITY: In production, metrics endpoint must be protected by METRICS_TOKEN.
-  // Without token in production, block access entirely to prevent information leakage.
-  if (!env.METRICS_TOKEN && env.NODE_ENV === 'production') {
-    res.status(403).json({ error: { code: 'METRICS_DISABLED', message: 'Metrics endpoint is disabled in production without METRICS_TOKEN' } });
+app.get('/metrics', async (req, res) => {
+  // SECURITY (SEC-04): /metrics is now ALWAYS protected.
+  // - In production, METRICS_TOKEN is required (env validation enforces this).
+  // - In staging/dev, METRICS_TOKEN must also be configured or the endpoint refuses.
+  // - Optional METRICS_IP_ALLOWLIST (comma-separated CIDR ranges) restricts by source IP.
+  if (!env.METRICS_TOKEN) {
+    res.status(403).json({ error: { code: 'METRICS_DISABLED', message: 'Metrics endpoint is disabled without METRICS_TOKEN. Configure METRICS_TOKEN or restrict at the network layer.' } });
     return;
   }
-  if (env.METRICS_TOKEN) {
-    const supplied = _req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
-    const expectedBuffer = Buffer.from(env.METRICS_TOKEN);
-    const suppliedBuffer = Buffer.from(supplied);
-    if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
-      res.status(401).json({ error: { code: 'METRICS_AUTH_REQUIRED', message: 'Metrics authentication required' } });
+  if (env.METRICS_IP_ALLOWLIST.length > 0) {
+    const remoteIp = req.ip ?? '';
+    const allowed = env.METRICS_IP_ALLOWLIST.some(entry => remoteIp.startsWith(entry));
+    if (!allowed) {
+      res.status(403).json({ error: { code: 'METRICS_IP_NOT_ALLOWED', message: 'Source IP is not in the metrics allowlist' } });
       return;
     }
+  }
+  const supplied = req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+  const expectedBuffer = Buffer.from(env.METRICS_TOKEN);
+  const suppliedBuffer = Buffer.from(supplied);
+  if (expectedBuffer.length !== suppliedBuffer.length || !timingSafeEqual(expectedBuffer, suppliedBuffer)) {
+    res.status(401).json({ error: { code: 'METRICS_AUTH_REQUIRED', message: 'Metrics authentication required' } });
+    return;
   }
   try {
     const { contentType, metrics } = await getPrometheusMetrics();
@@ -103,6 +113,8 @@ app.use(`${env.API_PREFIX}/vocabulary`, vocabularyRoutes);
 app.use(`${env.API_PREFIX}/learning`, learningRoutes);
 app.use(`${env.API_PREFIX}/ai`, aiRoutes);
 app.use(`${env.API_PREFIX}/admin`, adminRoutes);
+app.use(`${env.API_PREFIX}/admin`, adminGrammarRoutes);
+app.use(`${env.API_PREFIX}/admin`, adminVocabularyRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

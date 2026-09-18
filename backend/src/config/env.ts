@@ -31,6 +31,10 @@ const envSchema = z.object({
   APP_ORIGINS: z.string().default('http://localhost:5173,http://localhost:3000'),
   MONGODB_URI: z.string().min(1),
   MONGODB_DB_NAME: z.string().min(1).default('hanflix'),
+  // SECURITY (H-5): Explicit TLS toggle for MongoDB connections. Defaults to true in production
+  // (see database.ts). Set MONGODB_TLS=false only when connecting to a local mongod.
+  MONGODB_TLS: booleanFromString.optional(),
+  MONGODB_TLS_ALLOW_INVALID: booleanFromString.optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optionalString,
@@ -74,16 +78,46 @@ const envSchema = z.object({
   VIDEO_PROCESSING_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(120).default(30),
   VIDEO_PROCESSING_POLL_MS: z.coerce.number().int().min(1000).max(60000).default(5000),
   VIDEO_WORKER_MODE: z.enum(['embedded', 'standalone', 'disabled']).default('embedded'),
+  // F11 fix (2026-09-18): disable transactions explicitly. Some Atlas tiers
+  // (e.g. M0 free) advertise ReplicaSetWithPrimary but the driver still
+  // throws "Only servers in a sharded cluster can start a new transaction"
+  // on the second session — we fall back to sequential writes instead.
+  // Set DISABLE_TRANSACTIONS=true in .env to opt out for production runs
+  // that you control via your own Mongo replica set.
+  // NOTE: we use a string → enum transform instead of z.coerce.boolean()
+  // because Boolean("false") === true (any non-empty string is truthy).
+  DISABLE_TRANSACTIONS: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  // F04 fix (2026-09-18): per-stage deadlines (milliseconds). When a stage runs
+  // longer than its deadline, the worker aborts the in-flight ffmpeg/ASR call
+  // and fails the job. Each value is the absolute ceiling; the pipeline also
+  // enforces `leaseExpiresAt` (a sliding window) on every heartbeat.
+  VIDEO_STAGE_DEADLINE_INSPECT_MS: z.coerce.number().int().min(10_000).max(600_000).default(60_000),
+  VIDEO_STAGE_DEADLINE_TRANSCRIBE_MS: z.coerce.number().int().min(60_000).max(1_800_000).default(900_000),
+  VIDEO_STAGE_DEADLINE_PINYIN_MS: z.coerce.number().int().min(10_000).max(600_000).default(120_000),
+  VIDEO_STAGE_DEADLINE_TRANSLATE_MS: z.coerce.number().int().min(10_000).max(600_000).default(180_000),
+  VIDEO_STAGE_DEADLINE_VOCABULARY_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
+  VIDEO_STAGE_DEADLINE_QUIZ_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
+  VIDEO_STAGE_DEADLINE_FINALIZE_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
+  // F04: lease TTL (seconds). Worker must heartbeat within this window or its
+  // lease is considered abandoned and another worker may claim the job.
+  VIDEO_LEASE_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
+  // F04: heartbeat interval (seconds). Worker emits heartbeat at this rate.
+  VIDEO_HEARTBEAT_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(120).default(20),
   GLOBAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(12),
   UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  // SECURITY (H-1): Optional Redis URL for shared rate-limit counters across replicas.
+  REDIS_URL: optionalString,
   CLOUDINARY_CLOUD_NAME: optionalString,
   CLOUDINARY_API_KEY: optionalString,
   CLOUDINARY_API_SECRET: optionalString,
   CLOUDINARY_URL: optionalString,
   METRICS_TOKEN: optionalSecret,
+  // SECURITY (SEC-04): Optional CIDR/IP allowlist for /metrics. Empty = allow any source
+  // that has a valid bearer token. Useful for restricting scraping to monitoring subnets.
+  METRICS_IP_ALLOWLIST: z.string().default(''),
   SEED_ADMIN_EMAIL: z.string().email().default('admin@hanflix.local'),
   SEED_ADMIN_PASSWORD: z.string().min(10).default('ChangeMe123!'),
 }).superRefine((value, context) => {
@@ -169,6 +203,9 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
   return {
     ...parsed,
     APP_ORIGINS: parsed.APP_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean),
+    METRICS_IP_ALLOWLIST: parsed.METRICS_IP_ALLOWLIST
+      ? parsed.METRICS_IP_ALLOWLIST.split(',').map(entry => entry.trim()).filter(Boolean)
+      : [],
     R2_ENDPOINT: parsed.R2_ENDPOINT || (parsed.R2_ACCOUNT_ID
       ? `https://${parsed.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
       : undefined),

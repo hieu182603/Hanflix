@@ -119,7 +119,12 @@ router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(as
 router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeQuizRevision').lean();
   if (!lesson?.activeQuizRevision) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Bài học chưa có bài luyện tập');
-  const quiz = await QuizModel.findOne({ lessonId: lesson._id, revision: lesson.activeQuizRevision, status: 'published' }).lean();
+  // SECURITY (H-6): NEVER leak correctOptionId/acceptedAnswers/explanationVi to learners.
+  // Quiz model uses `select: false` on answer fields; here we also project them out explicitly
+  // so a future schema change cannot accidentally start returning answer keys.
+  const quiz = await QuizModel.findOne({ lessonId: lesson._id, revision: lesson.activeQuizRevision, status: 'published' })
+    .select('-questions.correctOptionId -questions.acceptedAnswers -questions.explanationVi')
+    .lean();
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài luyện tập');
   res.json({ data: quiz });
 }));
@@ -220,7 +225,14 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
     { upsert: true },
   );
   await recordActivitySafely(req.auth!.userId, { quizAttempts: 1 });
-  res.status(201).json({ data: { attemptId: attempt._id, score, correctCount, totalCount: quiz.questions.length, answers: graded } });
+  // SECURITY (H-6): Strip answer keys from the response sent back to learners.
+  // The graded answers still contain correct/explanation, but correctOptionId/acceptedAnswers
+  // must never be echoed to the client (already filtered out in the persisted attempt above).
+  const safeGraded = graded.map(({ correctOptionId: _correctOption, acceptedAnswers: _accepted, explanationVi: _explanation, ...answer }) => ({
+    ...answer,
+    // Keep `correct` flag so UI can show pass/fail, but do NOT reveal the right answer.
+  }));
+  res.status(201).json({ data: { attemptId: attempt._id, score, correctCount, totalCount: quiz.questions.length, answers: safeGraded } });
 }));
 
 export default router;

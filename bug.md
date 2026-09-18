@@ -4,6 +4,12 @@
 > Thiết lập theo nguyên tắc Tech Lead: Phân tích nguyên nhân gốc (Root Cause) → Đánh giá phạm vi ảnh hưởng (Impact) → Giải pháp chi tiết (Solution) → Kế hoạch kiểm thử (Verification).
 > Sử dụng checklist `[ ]` bên dưới để cập nhật tiến độ sửa dần.
 
+> **Cập nhật lần cuối (2026-09-18):** Production-readiness pass. Đã sửa xong: H-6 (quiz answer leak), H-4 (R2 maxBytes), H-2 (magic-byte upload), H-5 (MongoDB TLS), H-1 (Redis rate limiter), H-7 (localStorage minimal cache), C-4 (OAuth grace window), C-3 (refresh token fingerprinting), C-2 (metrics IP allowlist + always-on protection). Còn lại cần thao tác thủ công: rotate `.env` secrets và setup MongoDB backup.
+
+> **Cập nhật (2026-09-18, đợt 2):** F03 (lesson/job sync khi stale-exhausted + normalize /processing endpoint capabilities + reconcile endpoint), F04 (worker lease token + stage deadline + AbortSignal → FFmpeg kill + cooperative cancel với expire/abort paths), F09 (worker mode guard — chỉ embedded mới wake, standalone có process riêng), F08 (upload progress UI + abort signal + presign trả về clientByteSize/uploadSessionId/uploadedAt), F10 (editor optimization — memoized CueEditorRow + QuizEditorRow, paginated cue list 25/page, search filter, duplicate/remove/move/preview), **F11** (atomic revision commit helper `runGenerationCommit` + `runEditorCommit` — Subtitle/Quiz/Lesson/Job + contentDirty cùng transaction; lease guard FIRST; `DISABLE_TRANSACTIONS=true` cho Atlas M0 do driver lỗi "ConflictingOperationInProgress"; fix `z.coerce.boolean()` bug — `Boolean("false") === true`).
+
+> **Cập nhật (2026-09-18, đợt tiếp theo):** Sửa theo doc/admin-video-review-plan-2026-09-18.md. Đã sửa: F01 (UI form dirty-state tracking + explicit reload), F02 (transactional confirm + job creation), F05/F06 (Word re-resolution + contentDirty flag), F07 (publish validator + sequential awaits), F12 (meaningVi fallback fix, needsReview flag). Còn lại: F03/F04/F08/F09/F10/F11 theo đợt tiếp.
+
 ---
 
 ## 📊 Bảng tổng hợp trạng thái (Executive Summary)
@@ -325,3 +331,90 @@
 - [x] **Cookie Security**: `httpOnly`, cờ `secure` theo môi trường, phạm vi `path` rõ ràng.
 - [x] **Mã hoá mật khẩu**: `bcrypt` với cost factor 12.
 - [x] **Idempotency**: Kiểm tra chống trùng lặp submission khi làm bài quiz.
+
+---
+
+## 🚀 GIAI ĐOẠN 5: Production-Readiness Hardening (Sep 2026)
+
+Các hạng mục được sửa trong chuyến production-readiness review.
+
+### [x] 21. `H-6`: Endpoint `GET /lessons/:id/quiz` rò rỉ đáp án cho learner
+- **Vị trí**: [backend/src/routes/lesson.routes.ts](file:///e:/Hanflix/backend/src/routes/lesson.routes.ts#L118-L130)
+- **Mức độ**: 🔴 CRITICAL
+- **Vấn đề**: Quiz model dùng `select: false` cho `correctOptionId/acceptedAnswers/explanationVi`, nhưng `POST /attempts` và `GET /quiz` đều dùng `.lean()` không projection. Khi học viên gọi `GET /quiz`, server trả về TOÀN BỘ câu hỏi kèm đáp án đúng → không thể đánh giá năng lực, lộ tài sản nội dung.
+- **Giải pháp**:
+  1. `GET /quiz` thêm `.select('-questions.correctOptionId -questions.acceptedAnswers -questions.explanationVi')`.
+  2. `POST /attempts` strip `correctOptionId/acceptedAnswers/explanationVi` khỏi response trước khi gửi về client (giữ lại `correct` boolean cho UI).
+- **Kiểm thử**: `npm run typecheck` + `npm test` đều pass.
+
+### [x] 22. `H-4`: Presigned URL không thực thi max-bytes phía server
+- **Vị trí**: [backend/src/services/storage/r2-storage.service.ts](file:///e:/Hanflix/backend/src/services/storage/r2-storage.service.ts#L33-L48), [admin.routes.ts](file:///e:/Hanflix/backend/src/routes/admin.routes.ts#L127-L142)
+- **Mức độ**: 🟠 HIGH
+- **Vấn đề**: R2 presigned PUT URL cho phép client upload tối đa 5GB (giới hạn S3 SDK), bất kể `MAX_VIDEO_BYTES`. Frontend chỉ kiểm tra client-side.
+- **Giải pháp**:
+  1. Truyền `maxBytes` xuống `createUploadUrl`, gắn vào S3 Metadata để audit.
+  2. Đề xuất cấu hình R2 bucket policy với `max-object-size` (cần thao tác ngoài code).
+  3. Endpoint `/uploads/confirm` đã enforce `MAX_VIDEO_BYTES` qua `HeadObject`.
+
+### [x] 23. `H-2`: Upload chỉ kiểm tra MIME header, dễ bị polyglot attack
+- **Vị trí**: [backend/src/middleware/upload.ts](file:///e:/Hanflix/backend/src/middleware/upload.ts#L36-L62)
+- **Mức độ**: 🟠 HIGH
+- **Vấn pháp**: Thêm magic-byte verification (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF/WEBP`) sau khi multer parse xong. Reject với `415 INVALID_FILE_SIGNATURE`.
+
+### [x] 24. `H-5`: MongoDB connection không bật TLS tường minh
+- **Vị trí**: [backend/src/config/database.ts](file:///e:/Hanflix/backend/src/config/database.ts#L7-L24), [env.ts](file:///e:/Hanflix/backend/src/config/env.ts#L29-L36)
+- **Mức độ**: 🟠 HIGH
+- **Giải pháp**: Thêm `MONGODB_TLS` env (mặc định `true` ở production), `MONGODB_TLS_ALLOW_INVALID` cho local dev. Mongo driver sẽ reject certificate hỏng ngoại trừ local.
+
+### [x] 25. `H-1`: In-memory rate limiter không đồng bộ giữa replicas
+- **Vị trí**: [backend/src/middleware/rate-limits.ts](file:///e:/Hanflix/backend/src/middleware/rate-limits.ts)
+- **Mức độ**: 🟠 HIGH (khi chạy ACA maxReplicas=2)
+- **Giải pháp**:
+  1. Thêm `REDIS_URL` env (optional).
+  2. Khi set, tự động lazy-load `ioredis` + `rate-limit-redis`, swap vào store mà không đổi route code.
+  3. Khi unset, fallback in-memory như cũ (phù hợp dev).
+
+### [x] 26. `H-7`: `localStorage` lưu full user object (email + role + learningProfile)
+- **Vị trí**: [frontend/src/api/auth.ts](file:///e:/Hanflix/frontend/src/api/auth.ts#L96-L121)
+- **Mức độ**: 🟠 HIGH
+- **Giải pháp**: Project user xuống còn `id`, `name`, `avatarUrl`, `avatarType`, `avatarConfig` trước khi ghi localStorage. Email/role/learningProfile luôn fetch lại qua `/auth/me`.
+
+### [x] 27. `C-4`: Google OAuth auto-link có thể takeover account cũ
+- **Vị trí**: [backend/src/routes/auth.routes.ts](file:///e:/Hanflix/backend/src/routes/auth.routes.ts#L160-L218)
+- **Mức độ**: 🔴 CRITICAL
+- **Vấn đề**: Khi một user đã đăng ký bằng password nhưng CHƯA verify email, attacker có thể dùng Google OAuth với cùng email để "claim" account đó — bao gồm cả account cũ đã verify từ lâu (vì logic chỉ check `emailVerificationRequired`, không check tuổi account).
+- **Giải pháp**: Thêm `OTP_GRACE_WINDOW_MS = 5 phút`. Chỉ cho phép OAuth auto-link nếu account thỏa TẤT CẢ:
+  1. Chưa verify email
+  2. Chưa liên kết Google
+  3. Tạo trong vòng 5 phút qua (trùng OTP window)
+- Tài khoản đã verified HOẶC cũ hơn 5 phút phải link thủ công qua Settings (đã có sẵn flow `/auth/google/link`).
+
+### [x] 28. `C-3`: Refresh token không gắn với thiết bị
+- **Vị trí**: [backend/src/routes/auth.routes.ts](file:///e:/Hanflix/backend/src/routes/auth.routes.ts#L92-L101, L313-L347), [refresh-session.model.ts](file:///e:/Hanflix/backend/src/models/refresh-session.model.ts)
+- **Mức độ**: 🔴 CRITICAL
+- **Vấn đề**: Cookie refresh token bị steal = full session hijack 30 ngày, không phát hiện được.
+- **Giải pháp**:
+  1. Mỗi session lưu `fingerprint = sha256(userAgent + ip)`.
+  2. Khi `POST /refresh`, so sánh fingerprint hiện tại với fingerprint lưu.
+  3. Mismatch → revoke ALL sessions của user, trả `401 DEVICE_MISMATCH`.
+
+### [x] 29. `SEC-04`: `/metrics` vẫn public khi dev không set token
+- **Vị trí**: [backend/src/app.ts](file:///e:/Hanflix/backend/src/app.ts#L51-L73), [env.ts](file:///e:/Hanflix/backend/src/config/env.ts#L79-L82)
+- **Mức độ**: 🟡 MEDIUM
+- **Vấn pháp**: Endpoint luôn yêu cầu `METRICS_TOKEN` (không còn fallback "open" khi dev). Thêm `METRICS_IP_ALLOWLIST` (CIDR list) để restrict theo source IP — phù hợp với Azure scraper pods.
+
+### [x] 30. Video worker không có absolute ceiling về duration/size
+- **Vị trí**: [backend/src/services/media-processor.ts](file:///e:/Hanflix/backend/src/services/media-processor.ts#L33-L83)
+- **Mức độ**: 🔴 CRITICAL
+- **Vấn đề**: `probeMedia` đọc metadata mà không validate. Admin upload có thể submit video 10 tiếng 4K 50GB, làm worker OOM/disk full/Azure Speech quota burn.
+- **Giải pháp**: Thêm hard limits trong `probeMedia`: `MAX_DURATION_SECONDS=600`, `MAX_SIZE_BYTES=200MB`. Reject với `413 VIDEO_DURATION_EXCEEDED` / `VIDEO_SIZE_EXCEEDED`.
+
+---
+
+## 📝 HÀNH ĐỘNG THỦ CÔNG CẦN LÀM TRƯỚC KHI DEPLOY
+
+1. **Rotate tất cả secrets** (đã được đưa ra khỏi git, nhưng lịch sử vẫn lộ). MongoDB, R2, JWT, Azure, Gemini, Cloudinary, SMTP phải rotate.
+2. **Setup MongoDB backup** với PITR và test restore vào DB riêng mỗi tháng.
+3. **Cấu hình R2 bucket policy** với `max-object-size=104857600` để enforce H-4 ở tầng storage.
+4. **Setup Redis (Azure Cache for Redis)** và set `REDIS_URL` để giải quyết H-1.
+5. **Whitelist IP cho Prometheus scraper** qua `METRICS_IP_ALLOWLIST`.
