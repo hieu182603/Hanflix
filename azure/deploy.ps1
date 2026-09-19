@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  HanFlix Backend — Azure Deployment Script (PowerShell)
+  HanFlix Backend - Azure Deployment Script (PowerShell)
 
 .DESCRIPTION
   Deploys HanFlix backend to Azure Container Apps using Bicep templates.
@@ -63,17 +63,23 @@ function Write-Info($msg) { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Warn($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 function Write-Fail($msg) { Write-Host "[FAIL] $msg" -ForegroundColor Red }
 
+function Get-LatestDeploymentName {
+  param([string]$ResourceGroup)
+  $jmesQuery = 'sort_by(@, &properties.timestamp)[-1].name'
+  return (az deployment group list -g $ResourceGroup --query $jmesQuery -o tsv 2>$null)
+}
+
 # ---- Banner ----
 Write-Host ""
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Magenta
-Write-Host "  HanFlix Backend — Azure Deployment" -ForegroundColor Magenta
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "==================================================" -ForegroundColor Magenta
+Write-Host "  HanFlix Backend - Azure Deployment" -ForegroundColor Magenta
+Write-Host "==================================================" -ForegroundColor Magenta
 Write-Host ""
 
 # ============================================================
 # STEP 0: Prerequisites check
 # ============================================================
-Write-Host "── Checking prerequisites ──────────────────────────" -ForegroundColor Gray
+Write-Host "-- Checking prerequisites --------------------------" -ForegroundColor Gray
 
 $requiredTools = @("az", "docker")
 $missingTools = @()
@@ -98,7 +104,7 @@ Write-Success "Docker: $(docker --version 2>$null)"
 # STEP 1: Azure Login & Subscription
 # ============================================================
 Write-Host ""
-Write-Host "── Step 1: Azure Login ─────────────────────────────" -ForegroundColor Gray
+Write-Host "-- Step 1: Azure Login -----------------------------" -ForegroundColor Gray
 
 $account = az account show --query "id" -o tsv 2>$null
 if (-not $account) {
@@ -115,7 +121,7 @@ Write-Success "Logged in to Azure. Subscription: $subName ($subId)"
 # STEP 2: Resource Group
 # ============================================================
 Write-Host ""
-Write-Host "── Step 2: Resource Group ────────────────────────" -ForegroundColor Gray
+Write-Host "-- Step 2: Resource Group ------------------------" -ForegroundColor Gray
 
 $rgName = "rg-$ResourcePrefix"
 $rgExists = az group show --name $rgName --query "name" -o tsv 2>$null
@@ -133,7 +139,7 @@ if (-not $rgExists) {
 # ============================================================
 if (-not $SkipInfra) {
   Write-Host ""
-  Write-Host "── Step 3: Deploy Infrastructure (Bicep) ─────────" -ForegroundColor Gray
+  Write-Host "-- Step 3: Deploy Infrastructure (Bicep) ---------" -ForegroundColor Gray
 
   $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
   $bicepFile = Join-Path $scriptDir "main.bicep"
@@ -198,7 +204,7 @@ if (-not $SkipInfra) {
 # ============================================================
 if (-not $SkipImageBuild) {
   Write-Host ""
-  Write-Host "── Step 4: ACR Login ───────────────────────────────" -ForegroundColor Gray
+  Write-Host "-- Step 4: ACR Login -------------------------------" -ForegroundColor Gray
 
   Write-Info "Logging in to ACR: $acrLoginServer"
   az acr login --name $acrLoginServer.Split('.')[0]
@@ -207,7 +213,7 @@ if (-not $SkipImageBuild) {
   # ---- Build & Push Docker Image ----
   if (-not $DockerImage) {
     Write-Host ""
-    Write-Host "── Step 4b: Build & Push Docker Image ──────────────" -ForegroundColor Gray
+    Write-Host "-- Step 4b: Build & Push Docker Image --------------" -ForegroundColor Gray
 
     $tagVersion = "v$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     $imageTag = "$acrLoginServer/hanflix-backend:$tagVersion"
@@ -242,11 +248,11 @@ if (-not $SkipImageBuild) {
 # ============================================================
 if (-not $SkipSecrets) {
   Write-Host ""
-  Write-Host "── Step 5: Configure Key Vault Secrets ───────────────" -ForegroundColor Gray
+  Write-Host "-- Step 5: Configure Key Vault Secrets ---------------" -ForegroundColor Gray
 
   $keyVaultName = az deployment group show `
     --resource-group $rgName `
-    --name (az deployment group list -g $rgName --query "sort_by(@,&properties.timestamp)[-1].name" -o tsv) `
+    --name (Get-LatestDeploymentName -ResourceGroup $rgName) `
     --query "properties.outputs.keyVaultName.value" -o tsv 2>$null
 
   Write-Info "Key Vault: $keyVaultName"
@@ -266,26 +272,26 @@ if (-not $SkipSecrets) {
 
     $existing = az keyvault secret show --vault-name $keyVaultName --name $Name --query "value" -o tsv 2>$null
     if ($existing) {
-      Write-Info "  $Name: already set (skipping)"
+      Write-Info "  ${Name}: already set (skipping)"
       return
     }
 
     if ($IsPath) {
-      Write-Host "  $Name:" -NoNewline
+      Write-Host "  ${Name}:" -NoNewline
       $path = Read-Host " (path to $Prompt)"
       if ($path) {
         $value = Get-Content $path -Raw -ErrorAction SilentlyContinue
         if ($value) {
           az keyvault secret set --vault-name $keyVaultName --name $Name --value $value --output none
-          Write-Success "  $Name: set from file"
+          Write-Success "  ${Name}: set from file"
         }
       }
     } else {
-      Write-Host "  $Name:" -NoNewline
+      Write-Host "  ${Name}:" -NoNewline
       $value = Read-Host " ($Prompt)"
       if ($value) {
         az keyvault secret set --vault-name $keyVaultName --name $Name --value $value --output none
-        Write-Success "  $Name: set"
+        Write-Success "  ${Name}: set"
       }
     }
   }
@@ -320,11 +326,11 @@ if (-not $SkipSecrets) {
 # STEP 6: Update Container App with Docker Image
 # ============================================================
 Write-Host ""
-Write-Host "── Step 6: Update Container App Image ───────────────" -ForegroundColor Gray
+Write-Host "-- Step 6: Update Container App Image ---------------" -ForegroundColor Gray
 
 if ($DockerImage) {
   $backendAppName = "$ResourcePrefix" + "backend" # will be named via unique suffix, retrieve from outputs
-  $latestDeploy = az deployment group list -g $rgName --query "sort_by(@,&properties.timestamp)[-1].name" -o tsv
+  $latestDeploy = Get-LatestDeploymentName -ResourceGroup $rgName
 
   Write-Info "Updating Container App with image: $DockerImage"
 
@@ -358,13 +364,13 @@ if ($DockerImage) {
 # STEP 7: Health Check
 # ============================================================
 Write-Host ""
-Write-Host "── Step 7: Verifying Deployment ─────────────────────" -ForegroundColor Gray
+Write-Host "-- Step 7: Verifying Deployment ---------------------" -ForegroundColor Gray
 
 Start-Sleep -Seconds 10
 
 $backendFqdn = az deployment group show `
   --resource-group $rgName `
-  --name (az deployment group list -g $rgName --query "sort_by(@,&properties.timestamp)[-1].name" -o tsv) `
+  --name (Get-LatestDeploymentName -ResourceGroup $rgName) `
   --query "properties.outputs.backendFqdn.value" -o tsv 2>$null
 
 $healthUrl = "https://$backendFqdn/health"
@@ -386,9 +392,9 @@ try {
 # DONE
 # ============================================================
 Write-Host ""
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "==================================================" -ForegroundColor Magenta
 Write-Host "  Deployment Complete!" -ForegroundColor Magenta
-Write-Host "══════════════════════════════════════════════════" -ForegroundColor Magenta
+Write-Host "==================================================" -ForegroundColor Magenta
 Write-Host ""
 Write-Host "  Backend URL:    https://$backendFqdn" -ForegroundColor Green
 Write-Host "  ACR Server:     $acrLoginServer" -ForegroundColor Green
@@ -397,5 +403,5 @@ Write-Host ""
 Write-Host "  Useful commands:" -ForegroundColor Yellow
 Write-Host "    View logs:     az containerapp logs --name $($ResourcePrefix)backend --resource-group $rgName -f"
 Write-Host "    Restart:      az containerapp revision restart --name $($ResourcePrefix)backend --resource-group $rgName"
-Write-Host "    Redeploy:     .\deploy.ps1 -ResourcePrefix $ResourcePrefix -DockerImage `"$DockerImage`" -SkipImageBuild -SkipSecrets"
+Write-Host "    Redeploy:     .\deploy.ps1 -ResourcePrefix $ResourcePrefix -DockerImage '$DockerImage' -SkipImageBuild -SkipSecrets"
 Write-Host ""
