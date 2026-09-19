@@ -6,7 +6,7 @@
 #           nginx:alpine image. Nginx serves the SPA on port 80 with
 #           try_files fallback for React Router deep links.
 
-FROM node:22-bookworm-slim AS builder
+FROM node:25-bookworm-slim AS builder
 WORKDIR /app
 
 # Enable pnpm via corepack (ships with Node 22)
