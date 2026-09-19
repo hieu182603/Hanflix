@@ -384,7 +384,13 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                 <img
                   src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1000&h=650&fit=crop&auto=format"
                   alt="Tình huống giao tiếp phim Trung Quốc"
+                  crossOrigin="anonymous"
+                  loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="650" viewBox="0 0 1000 650"><rect width="1000" height="650" fill="%2318181B"/></svg>';
+                  }}
                 />
 
                 {/* Top overlay controls */}
@@ -622,11 +628,17 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                 className="bg-white rounded-3xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-300 border border-[#F2E4D8] flex flex-col justify-between"
               >
                 <div>
-                  <div className="relative aspect-video overflow-hidden">
+                  <div className="relative aspect-video overflow-hidden bg-stone-900">
                     <img
                       src={lesson.thumbnailAsset || 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&h=500&fit=crop&auto=format'}
                       alt={lesson.titleVi}
+                      loading="lazy"
+                      crossOrigin="anonymous"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="350" viewBox="0 0 600 350"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%2318181B"/><stop offset="100%" stop-color="%232D201A"/></linearGradient></defs><rect width="600" height="350" fill="url(%23g)"/><text x="50%" y="45%" fill="%23ffffff" font-family="system-ui,sans-serif" font-size="24" font-weight="bold" text-anchor="middle">${encodeURIComponent(lesson.titleZh || '')}</text><text x="50%" y="62%" fill="%23E7A92F" font-family="system-ui,sans-serif" font-size="16" font-weight="600" text-anchor="middle">${encodeURIComponent(lesson.titleVi || '')}</text></svg>`;
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
                     
@@ -719,7 +731,13 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                   <img
                     src={t.avatar}
                     alt={t.name}
+                    crossOrigin="anonymous"
+                    loading="lazy"
                     className="w-11 h-11 rounded-full object-cover border-2 border-[#E7A92F]"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44"><rect width="44" height="44" rx="22" fill="%23E7A92F"/><text x="50%" y="58%" fill="%23ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">${encodeURIComponent(t.name.charAt(0))}</text></svg>`;
+                    }}
                   />
                   <div>
                     <div className="font-bold text-sm text-[#18181B]">{t.name}</div>
