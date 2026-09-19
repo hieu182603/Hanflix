@@ -1,13 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import { explainWord, getLessonProgress, getLessonQuiz, getPublishedLesson, getPublishedSubtitles, submitLessonQuiz, updateLessonProgress, type LessonProgress, type PublicQuestion, type QuizResult, type PublishedLesson, type SubtitleCue, type WordExplanation } from '../../api/learning';
+import { explainWord, getLessonProgress, getLessonQuiz, getPublishedLesson, getPublishedSubtitles, submitLessonQuiz, updateLessonProgress, type LessonProgress, type LearningTip, type PublicQuestion, type QuizResult, type PublishedLesson, type SubtitleCue, type WordExplanation } from '../../api/learning';
+import { InlineBanner } from '../notifications';
 import { saveSubtitleWord } from '../../api/vocabulary';
 import { ApiRequestError } from '../../api/client';
+import { SubtitleOverlay, type SubtitleLanguageTrack } from './SubtitleOverlay';
+import { SubtitleTrackPicker } from './SubtitleTrackPicker';
+import SubtitleToggleButton from './SubtitleToggleButton';
+import LearningTipsPanel from './LearningTipsPanel';
+import AiImprovedBadge from './AiImprovedBadge';
+import { useSubtitlePreferences } from '../../hooks/useSubtitlePreferences';
 
 export default function PublishedLessonView({ lessonId, onBack, subtitlePreference = 'all' }: { lessonId: string; onBack: () => void; subtitlePreference?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [lesson, setLesson] = useState<PublishedLesson | null>(null);
   const [cues, setCues] = useState<SubtitleCue[]>([]);
+  const [translationImproved, setTranslationImproved] = useState(false);
+  const [learningTips, setLearningTips] = useState<LearningTip[]>([]);
+  const [drillWords, setDrillWords] = useState<string[]>([]);
   const [currentMs, setCurrentMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,6 +36,15 @@ export default function PublishedLessonView({ lessonId, onBack, subtitlePreferen
   const lastFlush = useRef(0);
   const progressRequest = useRef<Promise<void>>(Promise.resolve());
   const quizAttemptKey = useRef(crypto.randomUUID());
+
+  const { prefs: subtitlePrefs, setTop: setSubtitleTop, setBottom: setSubtitleBottom, setStyle: setSubtitleStyle } = useSubtitlePreferences();
+  const setSubtitleTracks = useCallback(
+    (next: { top: SubtitleLanguageTrack; bottom: SubtitleLanguageTrack }) => {
+      setSubtitleTop(next.top);
+      setSubtitleBottom(next.bottom);
+    },
+    [setSubtitleTop, setSubtitleBottom],
+  );
 
   const flushProgress = (position: number) => {
     const range = pendingRange.current;
@@ -51,6 +70,9 @@ export default function PublishedLessonView({ lessonId, onBack, subtitlePreferen
     setError('');
     setLesson(null);
     setCues([]);
+    setTranslationImproved(false);
+    setLearningTips([]);
+    setDrillWords([]);
     setExplanation(null);
     setProgress(null);
     setQuiz([]);
@@ -64,7 +86,13 @@ export default function PublishedLessonView({ lessonId, onBack, subtitlePreferen
         setError(lessonResult.reason instanceof ApiRequestError ? lessonResult.reason.message : 'Không thể tải bài học.');
       } else {
         setLesson(lessonResult.value);
-        if (subtitleResult.status === 'fulfilled') setCues(subtitleResult.value);
+        if (subtitleResult.status === 'fulfilled') {
+          const track = subtitleResult.value;
+          setCues(track.cues ?? []);
+          setTranslationImproved(Boolean(track.translationImproved));
+          setLearningTips(track.learningTips ?? []);
+          setDrillWords(track.drillWords ?? []);
+        }
         if (progressResult.status === 'fulfilled') setProgress(progressResult.value);
         if (quizResult.status === 'fulfilled') setQuiz(quizResult.value.questions);
       }
@@ -135,15 +163,25 @@ export default function PublishedLessonView({ lessonId, onBack, subtitlePreferen
       <ArrowLeft className="w-4 h-4" /> Quay lại gợi ý
     </button>
     {loading && <p className="rounded-2xl bg-white border border-neutral-200 p-6 text-sm">Đang tải bài học…</p>}
-    {error && <p className="rounded-2xl bg-red-50 border border-red-200 p-6 text-sm text-red-800" role="alert">{error}</p>}
+    {error && <div className="my-4"><InlineBanner variant="error" message={error} /></div>}
     {lesson && <>
       <div>
-        <p className="text-xs font-bold text-[#B91B1C]">HSK {lesson.hsk} · Bài học đã xuất bản</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-bold text-[#B91B1C]">HSK {lesson.hsk} · Bài học đã xuất bản</p>
+          <AiImprovedBadge visible={translationImproved} size="sm" />
+        </div>
         <h1 className="text-2xl md:text-3xl font-black mt-1">{lesson.titleVi}</h1>
         {lesson.titleZh && <p className="text-neutral-600 mt-1">{lesson.titleZh} · {lesson.pinyin}</p>}
         {lesson.descriptionVi && <p className="text-sm text-neutral-600 mt-2">{lesson.descriptionVi}</p>}
         {progress && <p className="text-xs text-neutral-600 mt-2">Đã xem {Math.round(progress.coverage * 100)}% · {progress.completed ? 'Hoàn thành bài học' : 'Đang học'}{progress.bestQuizScore !== null ? ` · Điểm cao nhất: ${progress.bestQuizScore}%` : ''}</p>}
       </div>
+
+      {/* AI learning tips tailored to this lesson */}
+      {(learningTips.length > 0 || drillWords.length > 0) && (
+        <div className="mt-4">
+          <LearningTipsPanel tips={learningTips} drillWords={drillWords} audience="learner" />
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] gap-5">
         <div className="space-y-4">
           {lesson.media?.url ? <div className="relative rounded-2xl overflow-hidden bg-black">
@@ -157,13 +195,30 @@ export default function PublishedLessonView({ lessonId, onBack, subtitlePreferen
               onSeeking={() => { if (videoRef.current) { flushProgress(videoRef.current.currentTime); lastPosition.current = null; } }}
               onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
               onEnded={() => { flushProgress(lesson.durationSeconds); setQuizOpen(true); }} />
-            {activeCue && <div className="pointer-events-none absolute bottom-12 left-4 right-4 text-center text-white bg-black/70 rounded-xl p-2">
-              <p className="text-lg font-bold">{activeCue.zh}</p>
-              {['all', 'zh_pinyin'].includes(subtitlePreference) && <p className="text-sm">{activeCue.pinyin}</p>}
-              {['all', 'zh_vi'].includes(subtitlePreference) && <p className="text-sm">{activeCue.vi}</p>}
-            </div>}
+            <SubtitleOverlay
+              cues={cues}
+              currentMs={currentMs}
+              topTrack={subtitlePrefs.top}
+              bottomTrack={subtitlePrefs.bottom}
+              style={subtitlePrefs.style}
+              onTokenClick={(cueId, wordId) => void requestExplanation(cueId, wordId)}
+              onSaveWord={(cueId, wordId) => void saveWord(cueId, wordId)}
+            />
+            <SubtitleToggleButton
+              topTrack={subtitlePrefs.top}
+              bottomTrack={subtitlePrefs.bottom}
+              onQuickToggle={setSubtitleTracks}
+            />
           </div> : <p className="rounded-2xl bg-neutral-900 p-8 text-white">Video của bài học này chưa sẵn sàng để phát.</p>}
-          <p className="text-xs text-neutral-500">Chọn từ trong phụ đề bên cạnh để xem nghĩa và cách dùng theo ngữ cảnh.</p>
+          <SubtitleTrackPicker
+            topTrack={subtitlePrefs.top}
+            bottomTrack={subtitlePrefs.bottom}
+            style={subtitlePrefs.style}
+            onChangeTop={setSubtitleTop}
+            onChangeBottom={setSubtitleBottom}
+            onChangeStyle={setSubtitleStyle}
+          />
+          <p className="text-xs text-neutral-500">Bấm vào từ tiếng Trung trong phụ đề để xem nghĩa và cách dùng theo ngữ cảnh. Tuỳ chỉnh hiển thị được lưu tự động cho lần xem sau.</p>
           {quiz.length > 0 && <button type="button" onClick={() => setQuizOpen(value => !value)} className="rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold text-white">{quizOpen ? 'Ẩn bài luyện tập' : 'Làm bài luyện tập'}</button>}
         </div>
         <div className="rounded-2xl bg-white border border-[#E7E7EA] p-4 max-h-[540px] overflow-y-auto">
