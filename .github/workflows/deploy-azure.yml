@@ -130,7 +130,6 @@ jobs:
           resourceGroupName: rg-${{ needs.resolve-environment.outputs.resourcePrefix }}
           location: southeastasia
           template: azure/main.bicep
-          parameters: azure/main.parameters.json
           parameters: |
             resourcePrefix=${{ needs.resolve-environment.outputs.resourcePrefix }}
             location=southeastasia
