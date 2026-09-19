@@ -20,9 +20,11 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   location: location
   properties: {
     sku: {
-      name: 'Free' // Free tier: 5GB/month, 30-day retention (fixed)
+      // Azure for Students / many subscriptions reject 'Free'/'Standard'/'Premium'.
+      // Use 'PerGB2018' (Pay-as-you-go, charged per GB ingested).
+      name: 'PerGB2018'
     }
-    // Note: retentionInDays is NOT configurable on Free tier
+    retentionInDays: 30
     features: {
       searchVersion: 2
       legacy: 0

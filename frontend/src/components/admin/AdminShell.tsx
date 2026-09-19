@@ -54,6 +54,16 @@ export default function AdminShell({
             <span className="text-[#5F6368] font-semibold">Hệ thống hoạt động ổn định</span>
           </div>
 
+          {/* Link back to Learner View */}
+          <a
+            href="/"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6368] hover:text-[#B91B1C] hover:bg-[#FFF5F0] border border-[#F2E4D8] transition-all cursor-pointer"
+            title="Xem giao diện học viên"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-[#B91B1C]" />
+            <span className="hidden sm:inline">Trang học viên</span>
+          </a>
+
           <div className="flex items-center gap-2.5 border-l border-[#F2E4D8] pl-4">
             <div className="relative">
               <UserAvatar

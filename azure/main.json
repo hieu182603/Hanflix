@@ -1,0 +1,972 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "14206376663937606422"
+    }
+  },
+  "parameters": {
+    "resourcePrefix": {
+      "type": "string",
+      "defaultValue": "hanflix",
+      "metadata": {
+        "description": "Unique prefix for all resources (e.g. hanflix, hf-staging). Max 15 chars, lowercase."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "southeastasia",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "dockerImage": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Docker image for backend (e.g. myacr.azurecr.io/hanflix-backend:v1.0.0)"
+      }
+    },
+    "nodeEnv": {
+      "type": "string",
+      "defaultValue": "production",
+      "allowedValues": [
+        "production",
+        "development"
+      ],
+      "metadata": {
+        "description": "NODE_ENV: production or development"
+      }
+    },
+    "minReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Minimum replica count for backend. Set 0 to scale-to-zero (no cost when idle; cold start ~5-10s on first request)."
+      }
+    },
+    "maxReplicas": {
+      "type": "int",
+      "defaultValue": 3,
+      "metadata": {
+        "description": "Maximum replica count for backend"
+      }
+    },
+    "cpuCoreCount": {
+      "type": "string",
+      "defaultValue": "0.5",
+      "allowedValues": [
+        "0.25",
+        "0.5",
+        "1.0",
+        "2.0"
+      ],
+      "metadata": {
+        "description": "CPU cores per replica"
+      }
+    },
+    "memoryGb": {
+      "type": "string",
+      "defaultValue": "1.0",
+      "allowedValues": [
+        "0.5",
+        "1.0",
+        "2.0"
+      ],
+      "metadata": {
+        "description": "Memory (GB) per replica"
+      }
+    },
+    "healthCheckPath": {
+      "type": "string",
+      "defaultValue": "/health",
+      "metadata": {
+        "description": "Health check HTTP endpoint path"
+      }
+    },
+    "allowedOrigins": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Comma-separated CORS allowed origins"
+      }
+    },
+    "appPublicUrl": {
+      "type": "string",
+      "defaultValue": "https://app.hanflix.vn",
+      "metadata": {
+        "description": "Public URL of the frontend (must be HTTPS in production)"
+      }
+    },
+    "azureTranslatorRegion": {
+      "type": "string",
+      "defaultValue": "japaneast",
+      "metadata": {
+        "description": "Azure Translator region (e.g. japaneast, southeastasia)"
+      }
+    },
+    "azureSpeechRegion": {
+      "type": "string",
+      "defaultValue": "japaneast",
+      "metadata": {
+        "description": "Azure Speech region (e.g. japaneast, southeastasia)"
+      }
+    },
+    "secretsReady": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "When true, the container app binds to Key Vault secret refs at provisioning. Set true only after secrets are populated."
+      }
+    },
+    "ghcrUsername": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Container Registry username (used to pull image from ghcr.io)."
+      }
+    },
+    "ghcrToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub Container Registry personal access token (scope: read:packages or write:packages)."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "kvName": "[format('{0}kv{1}', replace(parameters('resourcePrefix'), '-', ''), variables('suffix'))]",
+    "logAnalyticsName": "[format('{0}logs{1}', parameters('resourcePrefix'), variables('suffix'))]",
+    "containerAppsEnvName": "[format('{0}env{1}', parameters('resourcePrefix'), variables('suffix'))]",
+    "backendAppName": "[format('{0}backend', parameters('resourcePrefix'))]",
+    "managedIdName": "[format('{0}mid', parameters('resourcePrefix'))]",
+    "backendFqdn": "[format('{0}.{1}.azurecontainerapps.io', variables('backendAppName'), parameters('location'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('managedIdName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "kv-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "kvName": {
+            "value": "[variables('kvName')]"
+          },
+          "managedIdentityId": {
+            "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdName'))]"
+          },
+          "managedIdentityPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdName')), '2023-01-31').principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "4061918545504418863"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "kvName": {
+              "type": "string",
+              "maxLength": 24,
+              "metadata": {
+                "description": "Key Vault name"
+              }
+            },
+            "managedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "User-Assigned Managed Identity resource ID"
+              }
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "User-Assigned Managed Identity Principal ID (GUID). Used for role assignments."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('kvName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('kvName')), parameters('managedIdentityPrincipalId'), 'secretsuser')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('kvName')), '2023-07-01').vaultUri]"
+            },
+            "keyVaultName": {
+              "type": "string",
+              "value": "[parameters('kvName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "loganalytics-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsName": {
+            "value": "[variables('logAnalyticsName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "14347053864316833455"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "logAnalyticsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace name"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[parameters('logAnalyticsName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30,
+                "features": {
+                  "searchVersion": 2,
+                  "legacy": 0
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "logAnalyticsId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+            },
+            "logAnalyticsKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2022-10-01').primarySharedKey]"
+            },
+            "logAnalyticsWorkspace": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2022-10-01').customerId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "container-app-env-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "containerAppsEnvName": {
+            "value": "[variables('containerAppsEnvName')]"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'loganalytics-deployment'), '2025-04-01').outputs.logAnalyticsId.value]"
+          },
+          "logAnalyticsSharedKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'loganalytics-deployment'), '2025-04-01').outputs.logAnalyticsKey.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "2296748513429054250"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "containerAppsEnvName": {
+              "type": "string",
+              "metadata": {
+                "description": "Container Apps environment name"
+              }
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace resource ID"
+              }
+            },
+            "logAnalyticsSharedKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Log Analytics shared key"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('containerAppsEnvName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(parameters('logAnalyticsWorkspaceId'), '2022-10-01').customerId]",
+                    "sharedKey": "[parameters('logAnalyticsSharedKey')]"
+                  }
+                },
+                "zoneRedundant": false
+              }
+            }
+          ],
+          "outputs": {
+            "containerAppEnvId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName'))]"
+            },
+            "containerAppEnvName": {
+              "type": "string",
+              "value": "[parameters('containerAppsEnvName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'loganalytics-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "backend-app-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "containerAppName": {
+            "value": "[variables('backendAppName')]"
+          },
+          "containerAppsEnvName": {
+            "value": "[variables('containerAppsEnvName')]"
+          },
+          "containerAppsEnvResourceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'container-app-env-deployment'), '2025-04-01').outputs.containerAppEnvId.value]"
+          },
+          "dockerImage": {
+            "value": "[parameters('dockerImage')]"
+          },
+          "managedIdentityId": {
+            "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdName'))]"
+          },
+          "nodeEnv": {
+            "value": "[parameters('nodeEnv')]"
+          },
+          "minReplicas": {
+            "value": "[parameters('minReplicas')]"
+          },
+          "maxReplicas": {
+            "value": "[parameters('maxReplicas')]"
+          },
+          "cpuCoreCount": {
+            "value": "[parameters('cpuCoreCount')]"
+          },
+          "memoryGb": {
+            "value": "[parameters('memoryGb')]"
+          },
+          "healthCheckPath": {
+            "value": "[parameters('healthCheckPath')]"
+          },
+          "allowedOrigins": {
+            "value": "[parameters('allowedOrigins')]"
+          },
+          "appPublicUrl": {
+            "value": "[parameters('appPublicUrl')]"
+          },
+          "azureTranslatorRegion": {
+            "value": "[parameters('azureTranslatorRegion')]"
+          },
+          "azureSpeechRegion": {
+            "value": "[parameters('azureSpeechRegion')]"
+          },
+          "keyVaultName": {
+            "value": "[variables('kvName')]"
+          },
+          "secretsReady": {
+            "value": "[parameters('secretsReady')]"
+          },
+          "ghcrUsername": {
+            "value": "[parameters('ghcrUsername')]"
+          },
+          "ghcrToken": {
+            "value": "[parameters('ghcrToken')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "4641898805423948784"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "containerAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "Container App name"
+              }
+            },
+            "containerAppsEnvName": {
+              "type": "string",
+              "metadata": {
+                "description": "Container Apps environment name"
+              }
+            },
+            "dockerImage": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Full Docker image URL (e.g. myacr.azurecr.io/hanflix-backend:v1.0.0)"
+              }
+            },
+            "acrLoginServer": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "ACR login server. Empty disables ACR pull (use when GHCR is configured)."
+              }
+            },
+            "managedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "User-Assigned Managed Identity resource ID"
+              }
+            },
+            "nodeEnv": {
+              "type": "string",
+              "defaultValue": "production",
+              "allowedValues": [
+                "production",
+                "development"
+              ],
+              "metadata": {
+                "description": "NODE_ENV"
+              }
+            },
+            "minReplicas": {
+              "type": "int",
+              "defaultValue": 0,
+              "metadata": {
+                "description": "Min replicas. Set to 0 for scale-to-zero (no cost when idle; cold start ~5-10s on first request)."
+              }
+            },
+            "maxReplicas": {
+              "type": "int",
+              "defaultValue": 3,
+              "metadata": {
+                "description": "Max replicas"
+              }
+            },
+            "cpuCoreCount": {
+              "type": "string",
+              "defaultValue": "0.5",
+              "metadata": {
+                "description": "CPU cores (as string: \"0.25\", \"0.5\", \"1.0\", \"2.0\")"
+              }
+            },
+            "memoryGb": {
+              "type": "string",
+              "defaultValue": "1.0",
+              "metadata": {
+                "description": "Memory GB (as string: \"0.5\", \"1.0\", \"2.0\")"
+              }
+            },
+            "healthCheckPath": {
+              "type": "string",
+              "defaultValue": "/health",
+              "metadata": {
+                "description": "Health check HTTP path"
+              }
+            },
+            "allowedOrigins": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Comma-separated CORS allowed origins"
+              }
+            },
+            "appPublicUrl": {
+              "type": "string",
+              "defaultValue": "https://app.hanflix.vn",
+              "metadata": {
+                "description": "Public URL of the frontend (must be HTTPS in production)"
+              }
+            },
+            "azureTranslatorRegion": {
+              "type": "string",
+              "defaultValue": "japaneast",
+              "metadata": {
+                "description": "Azure Translator region (e.g. japaneast, southeastasia)"
+              }
+            },
+            "azureSpeechRegion": {
+              "type": "string",
+              "defaultValue": "japaneast",
+              "metadata": {
+                "description": "Azure Speech region (e.g. japaneast, southeastasia)"
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Key Vault name"
+              }
+            },
+            "containerAppsEnvResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Container Apps environment resource ID. Read from main.bicep to enforce deployment dependency."
+              }
+            },
+            "secretsReady": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "When true, secrets are resolved from Key Vault at provisioning time. When false, placeholder values are used so the app can be deployed before secrets are populated."
+              }
+            },
+            "ghcrUsername": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "GitHub Container Registry username. Empty disables GHCR pull (uses ACR)."
+              }
+            },
+            "ghcrToken": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "GitHub Container Registry PAT (scope: packages:read). Empty disables GHCR pull."
+              }
+            }
+          },
+          "variables": {
+            "defaultImage": "mcr.microsoft.com/azuredocs/aci-helloworld:latest",
+            "actualImage": "[if(not(empty(parameters('dockerImage'))), parameters('dockerImage'), variables('defaultImage'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('containerAppName')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "managedEnvironmentId": "[parameters('containerAppsEnvResourceId')]",
+                "configuration": {
+                  "registries": "[if(empty(parameters('ghcrUsername')), if(empty(parameters('acrLoginServer')), createArray(), createArray(createObject('server', parameters('acrLoginServer'), 'identity', parameters('managedIdentityId')))), createArray(if(empty(parameters('ghcrUsername')), createObject('server', 'ghcr.io'), createObject('server', 'ghcr.io', 'username', parameters('ghcrUsername'), 'passwordSecretRef', 'ghcr-token'))))]",
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 4000,
+                    "transport": "http",
+                    "allowInsecure": false,
+                    "traffic": [
+                      {
+                        "latestRevision": true,
+                        "weight": 100
+                      }
+                    ]
+                  },
+                  "secrets": "[concat(if(empty(parameters('ghcrUsername')), createArray(), createArray(createObject('name', 'ghcr-token', 'value', parameters('ghcrToken')))), if(parameters('secretsReady'), createArray(createObject('name', 'mongodb-uri', 'keyVaultUrl', format('https://{0}{1}/secrets/MONGODB-URI', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'jwt-access-secret', 'keyVaultUrl', format('https://{0}{1}/secrets/JWT-ACCESS-SECRET', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'jwt-refresh-secret', 'keyVaultUrl', format('https://{0}{1}/secrets/JWT-REFRESH-SECRET', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'seed-admin-password', 'keyVaultUrl', format('https://{0}{1}/secrets/SEED-ADMIN-PASSWORD', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-host', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-HOST', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-port', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-PORT', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-secure', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-SECURE', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-user', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-USER', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-pass', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-PASS', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'smtp-from', 'keyVaultUrl', format('https://{0}{1}/secrets/SMTP-FROM', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'r2-account-id', 'keyVaultUrl', format('https://{0}{1}/secrets/R2-ACCOUNT-ID', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'r2-access-key-id', 'keyVaultUrl', format('https://{0}{1}/secrets/R2-ACCESS-KEY-ID', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'r2-secret-access-key', 'keyVaultUrl', format('https://{0}{1}/secrets/R2-SECRET-ACCESS-KEY', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'r2-bucket-name', 'keyVaultUrl', format('https://{0}{1}/secrets/R2-BUCKET-NAME', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'r2-public-base-url', 'keyVaultUrl', format('https://{0}{1}/secrets/R2-PUBLIC-BASE-URL', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'gemini-api-key', 'keyVaultUrl', format('https://{0}{1}/secrets/GEMINI-API-KEY', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'azure-translator-key', 'keyVaultUrl', format('https://{0}{1}/secrets/AZURE-TRANSLATOR-KEY', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'azure-speech-key', 'keyVaultUrl', format('https://{0}{1}/secrets/AZURE-SPEECH-KEY', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'google-client-id', 'keyVaultUrl', format('https://{0}{1}/secrets/GOOGLE-CLIENT-ID', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId')), createObject('name', 'metrics-token', 'keyVaultUrl', format('https://{0}{1}/secrets/METRICS-TOKEN', parameters('keyVaultName'), environment().suffixes.keyvaultDns), 'identity', parameters('managedIdentityId'))), createArray(createObject('name', 'mongodb-uri', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'jwt-access-secret', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'jwt-refresh-secret', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'seed-admin-password', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-host', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-port', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-secure', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-user', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-pass', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'smtp-from', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'r2-account-id', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'r2-access-key-id', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'r2-secret-access-key', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'r2-bucket-name', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'r2-public-base-url', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'gemini-api-key', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'azure-translator-key', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'azure-speech-key', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'google-client-id', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'), createObject('name', 'metrics-token', 'value', 'PLACEHOLDER_SET_AFTER_DEPLOY'))))]"
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "hanflix-backend",
+                      "image": "[variables('actualImage')]",
+                      "resources": {
+                        "cpu": "[json(format('\"{0}\"', parameters('cpuCoreCount')))]",
+                        "memory": "[format('{0}Gi', parameters('memoryGb'))]"
+                      },
+                      "env": [
+                        {
+                          "name": "NODE_ENV",
+                          "value": "[parameters('nodeEnv')]"
+                        },
+                        {
+                          "name": "PORT",
+                          "value": "4000"
+                        },
+                        {
+                          "name": "APP_PUBLIC_URL",
+                          "value": "[parameters('appPublicUrl')]"
+                        },
+                        {
+                          "name": "MONGODB_URI",
+                          "secretRef": "mongodb-uri"
+                        },
+                        {
+                          "name": "MONGODB_TLS",
+                          "value": "true"
+                        },
+                        {
+                          "name": "JWT_ACCESS_SECRET",
+                          "secretRef": "jwt-access-secret"
+                        },
+                        {
+                          "name": "JWT_REFRESH_SECRET",
+                          "secretRef": "jwt-refresh-secret"
+                        },
+                        {
+                          "name": "SEED_ADMIN_PASSWORD",
+                          "secretRef": "seed-admin-password"
+                        },
+                        {
+                          "name": "SMTP_HOST",
+                          "secretRef": "smtp-host"
+                        },
+                        {
+                          "name": "SMTP_PORT",
+                          "secretRef": "smtp-port"
+                        },
+                        {
+                          "name": "SMTP_SECURE",
+                          "secretRef": "smtp-secure"
+                        },
+                        {
+                          "name": "SMTP_USER",
+                          "secretRef": "smtp-user"
+                        },
+                        {
+                          "name": "SMTP_PASS",
+                          "secretRef": "smtp-pass"
+                        },
+                        {
+                          "name": "SMTP_FROM",
+                          "secretRef": "smtp-from"
+                        },
+                        {
+                          "name": "R2_ACCOUNT_ID",
+                          "secretRef": "r2-account-id"
+                        },
+                        {
+                          "name": "R2_ACCESS_KEY_ID",
+                          "secretRef": "r2-access-key-id"
+                        },
+                        {
+                          "name": "R2_SECRET_ACCESS_KEY",
+                          "secretRef": "r2-secret-access-key"
+                        },
+                        {
+                          "name": "R2_BUCKET_NAME",
+                          "secretRef": "r2-bucket-name"
+                        },
+                        {
+                          "name": "R2_PUBLIC_BASE_URL",
+                          "secretRef": "r2-public-base-url"
+                        },
+                        {
+                          "name": "GEMINI_API_KEY",
+                          "secretRef": "gemini-api-key"
+                        },
+                        {
+                          "name": "AZURE_TRANSLATOR_KEY",
+                          "secretRef": "azure-translator-key"
+                        },
+                        {
+                          "name": "AZURE_SPEECH_KEY",
+                          "secretRef": "azure-speech-key"
+                        },
+                        {
+                          "name": "GOOGLE_CLIENT_ID",
+                          "secretRef": "google-client-id"
+                        },
+                        {
+                          "name": "METRICS_TOKEN",
+                          "secretRef": "metrics-token"
+                        },
+                        {
+                          "name": "GEMINI_MODEL",
+                          "value": "gemini-3.5-flash-lite"
+                        },
+                        {
+                          "name": "GEMINI_TIMEOUT_MS",
+                          "value": "15000"
+                        },
+                        {
+                          "name": "GEMINI_TRANSLATION_IMPROVE_ENABLED",
+                          "value": "true"
+                        },
+                        {
+                          "name": "AZURE_TRANSLATOR_REGION",
+                          "value": "[parameters('azureTranslatorRegion')]"
+                        },
+                        {
+                          "name": "AZURE_SPEECH_REGION",
+                          "value": "[parameters('azureSpeechRegion')]"
+                        },
+                        {
+                          "name": "PLAYBACK_DERIVATIVE_ENABLED",
+                          "value": "true"
+                        },
+                        {
+                          "name": "PLAYBACK_DERIVATIVE_MAX_HEIGHT",
+                          "value": "720"
+                        },
+                        {
+                          "name": "VIDEO_WORKER_MODE",
+                          "value": "embedded"
+                        },
+                        {
+                          "name": "VIDEO_PROCESSING_MAX_RETRIES",
+                          "value": "3"
+                        },
+                        {
+                          "name": "APP_ORIGINS",
+                          "value": "[parameters('allowedOrigins')]"
+                        },
+                        {
+                          "name": "COOKIE_SECURE",
+                          "value": "[if(equals(parameters('nodeEnv'), 'production'), 'true', 'false')]"
+                        },
+                        {
+                          "name": "DISABLE_TRANSACTIONS",
+                          "value": "true"
+                        }
+                      ],
+                      "probes": [
+                        {
+                          "type": "Liveness",
+                          "httpGet": {
+                            "path": "[parameters('healthCheckPath')]",
+                            "port": 4000,
+                            "scheme": "HTTPS"
+                          },
+                          "initialDelaySeconds": 15,
+                          "periodSeconds": 30,
+                          "timeoutSeconds": 5,
+                          "failureThreshold": 3
+                        },
+                        {
+                          "type": "Readiness",
+                          "httpGet": {
+                            "path": "[parameters('healthCheckPath')]",
+                            "port": 4000,
+                            "scheme": "HTTPS"
+                          },
+                          "initialDelaySeconds": 10,
+                          "periodSeconds": 10,
+                          "timeoutSeconds": 3,
+                          "failureThreshold": 3
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": "[parameters('minReplicas')]",
+                    "maxReplicas": "[parameters('maxReplicas')]",
+                    "rules": [
+                      {
+                        "name": "http-scaling",
+                        "http": {
+                          "metadata": {
+                            "concurrentRequests": "100"
+                          }
+                        }
+                      },
+                      {
+                        "name": "cpu-scaling",
+                        "custom": {
+                          "type": "cpu",
+                          "metadata": {
+                            "type": "Utilization",
+                            "value": "70"
+                          }
+                        }
+                      },
+                      {
+                        "name": "memory-scaling",
+                        "custom": {
+                          "type": "memory",
+                          "metadata": {
+                            "type": "Utilization",
+                            "value": "80"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "fqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2023-05-01').configuration.ingress.fqdn]"
+            },
+            "backendUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2023-05-01').configuration.ingress.fqdn)]"
+            },
+            "containerAppId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/containerApps', parameters('containerAppName'))]"
+            },
+            "containerAppName": {
+              "type": "string",
+              "value": "[parameters('containerAppName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'container-app-env-deployment')]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "backendUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', variables('backendFqdn'))]"
+    },
+    "backendFqdn": {
+      "type": "string",
+      "value": "[variables('backendFqdn')]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[variables('kvName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'kv-deployment'), '2025-04-01').outputs.keyVaultUri.value]"
+    },
+    "containerAppEnvId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'container-app-env-deployment'), '2025-04-01').outputs.containerAppEnvId.value]"
+    },
+    "resourceGroup": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    }
+  }
+}

@@ -32,8 +32,8 @@ param dockerImage string = ''
 @allowed(['production', 'development'])
 param nodeEnv string = 'production'
 
-@description('Minimum replica count for backend')
-param minReplicas int = 1
+@description('Minimum replica count for backend. Set 0 to scale-to-zero (no cost when idle; cold start ~5-10s on first request).')
+param minReplicas int = 0
 
 @description('Maximum replica count for backend')
 param maxReplicas int = 3
@@ -52,10 +52,28 @@ param healthCheckPath string = '/health'
 @description('Comma-separated CORS allowed origins')
 param allowedOrigins string = ''
 
+@description('Public URL of the frontend (must be HTTPS in production)')
+param appPublicUrl string = 'https://app.hanflix.vn'
+
+@description('Azure Translator region (e.g. japaneast, southeastasia)')
+param azureTranslatorRegion string = 'japaneast'
+
+@description('Azure Speech region (e.g. japaneast, southeastasia)')
+param azureSpeechRegion string = 'japaneast'
+
+@description('When true, the container app binds to Key Vault secret refs at provisioning. Set true only after secrets are populated.')
+param secretsReady bool = false
+
+@description('GitHub Container Registry username (used to pull image from ghcr.io).')
+@secure()
+param ghcrUsername string = ''
+
+@description('GitHub Container Registry personal access token (scope: read:packages or write:packages).')
+@secure()
+param ghcrToken string = ''
+
 // ---------- Variables ----------
 var suffix = uniqueString(resourceGroup().id)
-var acrName = '${resourcePrefix}acr${suffix}'
-var acrLoginServerVal = '${acrName}.azurecr.io'
 var kvName = '${replace(resourcePrefix, '-', '')}kv${suffix}'
 var logAnalyticsName = '${resourcePrefix}logs${suffix}'
 var containerAppsEnvName = '${resourcePrefix}env${suffix}'
@@ -70,21 +88,18 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
 }
 
 // ---------- Modules ----------
-module acr 'modules/acr.bicep' = {
-  name: 'acr-deployment'
-  params: {
-    location: location
-    acrName: acrName
-    managedIdentityId: managedIdentity.id
-  }
-}
-
+// ACR is intentionally excluded from this template — we use GitHub Container
+// Registry (GHCR) instead for $0 storage. The pre-existing ACR resource
+// remains in the resource group but is no longer managed here. Delete it
+// manually after verifying GHCR works:
+//   az acr delete -n <acrName> -g <rg> -y
 module kv 'modules/keyvault.bicep' = {
   name: 'kv-deployment'
   params: {
     location: location
     kvName: kvName
-    managedIdentityId: managedIdentity.properties.principalId
+    managedIdentityId: managedIdentity.id
+    managedIdentityPrincipalId: managedIdentity.properties.principalId
   }
 }
 
@@ -112,8 +127,8 @@ module backendApp 'modules/container-app.bicep' = {
     location: location
     containerAppName: backendAppName
     containerAppsEnvName: containerAppsEnvName
+    containerAppsEnvResourceId: containerAppEnv.outputs.containerAppEnvId
     dockerImage: dockerImage
-    acrLoginServer: acrLoginServerVal
     managedIdentityId: managedIdentity.id
     nodeEnv: nodeEnv
     minReplicas: minReplicas
@@ -122,13 +137,17 @@ module backendApp 'modules/container-app.bicep' = {
     memoryGb: memoryGb
     healthCheckPath: healthCheckPath
     allowedOrigins: allowedOrigins
+    appPublicUrl: appPublicUrl
+    azureTranslatorRegion: azureTranslatorRegion
+    azureSpeechRegion: azureSpeechRegion
     keyVaultName: kvName
+    secretsReady: secretsReady
+    ghcrUsername: ghcrUsername
+    ghcrToken: ghcrToken
   }
 }
 
 // ---------- Outputs ----------
-output acrLoginServer string = acrLoginServerVal
-output acrName string = acrName
 output backendUrl string = 'https://${backendFqdn}'
 output backendFqdn string = backendFqdn
 output keyVaultName string = kvName

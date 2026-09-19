@@ -199,13 +199,29 @@ async function processNextJob(): Promise<boolean> {
 export function wakeVideoProcessingWorker() {
   if (env.VIDEO_WORKER_MODE !== 'embedded') return;
   if (running) return;
-  setImmediate(() => void processNextJob());
+  // Catch + log to avoid an unhandled rejection killing the whole process when
+  // MongoDB or R2 transiently fails (DatabaseDifferCase, network blip, etc.).
+  setImmediate(() => {
+    processNextJob().catch(error => {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        '[VideoProcessing] poll failed - will retry on next tick',
+      );
+    });
+  });
 }
 
 export function startVideoProcessingWorker() {
   if (env.VIDEO_WORKER_MODE !== 'embedded' || timer) return;
   wakeVideoProcessingWorker();
-  timer = setInterval(() => void processNextJob(), env.VIDEO_PROCESSING_POLL_MS);
+  timer = setInterval(() => {
+    processNextJob().catch(error => {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        '[VideoProcessing] poll failed - will retry on next tick',
+      );
+    });
+  }, env.VIDEO_PROCESSING_POLL_MS);
   timer.unref();
   logger.info({ workerId, mode: env.VIDEO_WORKER_MODE, leaseTtlSeconds: env.VIDEO_LEASE_TTL_SECONDS, heartbeatSeconds: env.VIDEO_HEARTBEAT_INTERVAL_SECONDS }, '[VideoProcessing] worker started');
 }

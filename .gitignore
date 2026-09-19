@@ -18,6 +18,9 @@ build/
 */.env
 */.env.*
 !*/.env.example
+*.local
+azure/secrets.local
+azure/secrets.production
 
 # Logs
 *.log

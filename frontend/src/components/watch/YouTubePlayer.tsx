@@ -20,6 +20,7 @@ import {
   Volume1,
   Volume2,
   VolumeX,
+  AlertCircle,
 } from 'lucide-react';
 import {
   SubtitleOverlay,
@@ -133,6 +134,12 @@ export default function YouTubePlayer({
 
   // Settings menu state
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoadError(null);
+  }, [src]);
+
   const [settingsSubmenu, setSettingsSubmenu] = useState<
     'main' | 'speed' | 'topTrack' | 'bottomTrack' | 'size'
   >('main');
@@ -451,6 +458,16 @@ export default function YouTubePlayer({
         aria-label={`Video ${title}`}
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
+        onError={(e) => {
+          const mediaError = e.currentTarget.error;
+          let msg = 'Không thể tải tệp video từ máy chủ lưu trữ (Cloudflare R2).';
+          if (mediaError?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+            msg = 'Tệp video không tồn tại trên Cloudflare R2 hoặc bị chặn bởi cấu hình CORS.';
+          } else if (mediaError?.code === MediaError.MEDIA_ERR_NETWORK) {
+            msg = 'Lỗi kết nối mạng khi tải video.';
+          }
+          setLoadError(msg);
+        }}
         onPlay={() => {
           setIsPlaying(true);
           markFirstFrameIfNeeded();
@@ -483,6 +500,41 @@ export default function YouTubePlayer({
           markFirstFrameIfNeeded();
         }}
       />
+
+      {/* Video Load Error Overlay */}
+      {loadError && (
+        <div className="absolute inset-0 bg-neutral-950/95 z-30 flex flex-col items-center justify-center p-6 text-center text-white space-y-3 backdrop-blur-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#B91B1C]/20 border border-[#B91B1C]/40 flex items-center justify-center text-[#B91B1C] shadow-lg">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="max-w-md space-y-1">
+            <h3 className="font-bold text-base text-white">Chưa thể phát video này</h3>
+            <p className="text-xs text-neutral-400 leading-relaxed">{loadError}</p>
+          </div>
+          <div className="flex items-center gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLoadError(null);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
+            >
+              Thử tải lại
+            </button>
+            <a
+              href="/admin/upload"
+              onClick={(e) => e.stopPropagation()}
+              className="px-3.5 py-1.5 rounded-xl bg-[#B91B1C] hover:bg-[#991415] text-xs font-bold text-white transition-colors cursor-pointer shadow-sm"
+            >
+              Tải video mới (Admin)
+            </a>
+          </div>
+        </div>
+      )}
       {/* Invisible <video> for true first-frame measurement via rVFC.
           The browser reports a frame callback before the first decoded frame
           is painted; we mark `first_frame:rendered` only then. Falls back

@@ -34,6 +34,12 @@
 .PARAMETER SkipInfra
   Skip infrastructure deployment (Bicep). Use when infra already exists.
 
+.PARAMETER UsePublicGhcr
+  Skip GHCR credentials and pull anonymously. Image MUST be public.
+
+.PARAMETER BuildkitCache
+  Enable BuildKit registry cache for faster rebuilds. Default: false.
+
 .EXAMPLE
   # Full deployment with manual image
   .\deploy.ps1 -ResourcePrefix "hanflix" -DockerImage "ghcr.io/owner/hanflix-backend:v1.0.0"
@@ -43,6 +49,10 @@
 
   # Skip image build (infra already exists, just redeploy)
   .\deploy.ps1 -ResourcePrefix "hanflix" -DockerImage "myregistry.azurecr.io/hanflix-backend:latest" -SkipImageBuild -SkipSecrets -SkipInfra
+
+.TIP
+  For the inner-loop after first deploy, prefer the faster `deploy-quick.ps1`
+  (rebuilds image + updates Container App + polls health, no Bicep/Key Vault).
 #>
 
 param(
@@ -51,7 +61,9 @@ param(
   [string] $DockerImage = "",
   [switch] $SkipImageBuild,
   [switch] $SkipSecrets,
-  [switch] $SkipInfra
+  [switch] $SkipInfra,
+  [switch] $BindKeyVaultSecrets,
+  [switch] $UsePublicGhcr
 )
 
 $ErrorActionPreference = "Continue"
@@ -157,11 +169,40 @@ if (-not $SkipInfra) {
     "--parameters", "resourcePrefix=$ResourcePrefix",
     "--parameters", "location=$Location",
     "--parameters", "nodeEnv=production",
-    "--parameters", "allowedOrigins=*"
+    # CORS: every origin MUST be HTTPS in production (env validation rejects HTTP).
+    # Add new frontends here when you bring them online.
+    "--parameters", "allowedOrigins=https://hanflix-edu.vercel.app,https://www.hanflix-edu.vercel.app"
   )
 
   if ($DockerImage) {
     $params += @("--parameters", "dockerImage=$DockerImage")
+  }
+
+  if ($BindKeyVaultSecrets) {
+    $params += @("--parameters", "secretsReady=true")
+  }
+
+  # GHCR auth: only required for PRIVATE images. If -UsePublicGhcr is set, we
+  # pull anonymously and skip credentials entirely.
+  if ($DockerImage -like "ghcr.io/*" -and -not $UsePublicGhcr) {
+    if (-not $env:GHCR_USERNAME -or -not $env:GHCR_TOKEN) {
+      Write-Fail "DockerImage points to ghcr.io but GHCR_USERNAME / GHCR_TOKEN env vars are not set."
+      Write-Info "  Either set them, or pass -UsePublicGhcr if the image is already public."
+      exit 1
+    }
+    $params += @("--parameters", "ghcrUsername=$env:GHCR_USERNAME")
+    # Azure CLI does not accept inline JSON strings for @secure() params in
+    # all versions; use the documented `KEY=@file` form to feed a values
+    # object whose only key is ghcrToken. The temp file is deleted
+    # immediately after the deployment call returns.
+    $ghcrTokenFile = Join-Path $env:TEMP "hanflix-ghcr-token-values.json"
+    @{
+      ghcrToken = @{ value = $env:GHCR_TOKEN }
+    } | ConvertTo-Json | Set-Content -Path $ghcrTokenFile -Encoding UTF8
+    $params += @("--parameters", "ghcrToken=@$ghcrTokenFile")
+    Write-Info "GHCR credentials configured (from env vars)"
+  } elseif ($DockerImage -like "ghcr.io/*" -and $UsePublicGhcr) {
+    Write-Info "GHCR: anonymous pull (public image)"
   }
 
   Write-Info "Deploying Bicep templates..."
@@ -170,6 +211,11 @@ if (-not $SkipInfra) {
     --name "hanflix-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
     @params `
     --output json
+
+  # Clean up any temp files we wrote (GHCR token values file).
+  if ($ghcrTokenFile -and (Test-Path $ghcrTokenFile)) {
+    Remove-Item -Path $ghcrTokenFile -Force -ErrorAction SilentlyContinue
+  }
 
   if ($LASTEXITCODE -ne 0 -or -not $deployOutput) {
     Write-Fail "Bicep deployment failed"
@@ -184,7 +230,11 @@ if (-not $SkipInfra) {
   $backendFqdn = $outputs.backendFqdn.value
 
   Write-Success "Infrastructure deployed successfully"
-  Write-Info "  ACR Login Server: $acrLoginServer"
+  if ($acrLoginServer) {
+    Write-Info "  ACR Login Server: $acrLoginServer"
+  } else {
+    Write-Info "  Registry: GHCR (ghcr.io)"
+  }
   Write-Info "  Key Vault: $keyVaultName"
   Write-Info "  Backend URL: https://$backendFqdn"
 } else {
@@ -192,25 +242,43 @@ if (-not $SkipInfra) {
   Write-Info "Skipping infrastructure deployment"
   $acrLoginServer = az deployment group show `
     --resource-group $rgName `
-    --name "hanflix-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
+    --name (Get-LatestDeploymentName -ResourceGroup $rgName) `
     --query "properties.outputs.acrLoginServer.value" -o tsv 2>$null
 
   if (-not $acrLoginServer) {
-    Write-Fail "Cannot retrieve outputs. Run without -SkipInfra first."
-    exit 1
+    # GHCR deployment - registry is not tracked in outputs.
+    $acrLoginServer = "ghcr.io"
+    Write-Info "  Registry: GHCR (ghcr.io)"
   }
 }
 
 # ============================================================
-# STEP 4: Azure Container Registry Setup
+# STEP 4: Container Registry Setup & Image Build/Push
 # ============================================================
+$useGhcr = $DockerImage -like "ghcr.io/*" -or (-not $DockerImage -and $acrLoginServer -eq "ghcr.io")
+
 if (-not $SkipImageBuild) {
   Write-Host ""
-  Write-Host "-- Step 4: ACR Login -------------------------------" -ForegroundColor Gray
+  Write-Host "-- Step 4: Container Registry Login ----------------" -ForegroundColor Gray
 
-  Write-Info "Logging in to ACR: $acrLoginServer"
-  az acr login --name $acrLoginServer.Split('.')[0]
-  Write-Success "ACR login successful"
+  if ($useGhcr) {
+    Write-Info "Using GHCR (ghcr.io)"
+    if (-not $env:GHCR_USERNAME -or -not $env:GHCR_TOKEN) {
+      Write-Fail "GHCR_USERNAME / GHCR_TOKEN env vars not set."
+      Write-Info '  Example: $env:GHCR_USERNAME="hieu182603"; $env:GHCR_TOKEN="<pat-with-write:packages>"'
+      exit 1
+    }
+    $env:GHCR_TOKEN | docker login ghcr.io -u $env:GHCR_USERNAME --password-stdin | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      Write-Fail "GHCR login failed"
+      exit 1
+    }
+    Write-Success "GHCR login successful"
+  } else {
+    Write-Info "Logging in to ACR: $acrLoginServer"
+    az acr login --name $acrLoginServer.Split('.')[0]
+    Write-Success "ACR login successful"
+  }
 
   # ---- Build & Push Docker Image ----
   if (-not $DockerImage) {
@@ -218,8 +286,14 @@ if (-not $SkipImageBuild) {
     Write-Host "-- Step 4b: Build & Push Docker Image --------------" -ForegroundColor Gray
 
     $tagVersion = "v$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-    $imageTag = "$acrLoginServer/hanflix-backend:$tagVersion"
-    $imageLatest = "$acrLoginServer/hanflix-backend:latest"
+
+    if ($useGhcr) {
+      $imageTag = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:$tagVersion"
+      $imageLatest = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:latest"
+    } else {
+      $imageTag = "$acrLoginServer/hanflix-backend:$tagVersion"
+      $imageLatest = "$acrLoginServer/hanflix-backend:latest"
+    }
 
     $backendDir = Split-Path -Parent (Split-Path -Parent $scriptDir)
 
@@ -231,14 +305,14 @@ if (-not $SkipImageBuild) {
     }
     Write-Success "Docker image built: $imageTag"
 
-    Write-Info "Pushing to ACR..."
+    Write-Info "Pushing to registry..."
     docker push $imageTag
     docker push $imageLatest
     if ($LASTEXITCODE -ne 0) {
       Write-Fail "Docker push failed"
       exit 1
     }
-    Write-Success "Image pushed to ACR"
+    Write-Success "Image pushed"
 
     $DockerImage = $imageTag
     Write-Info "Use this image in future deployments: $DockerImage"
@@ -407,6 +481,7 @@ Write-Host "  Resource Group: $rgName" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Useful commands:" -ForegroundColor Yellow
 Write-Host "    View logs:     az containerapp logs --name $($ResourcePrefix)backend --resource-group $rgName -f"
-Write-Host "    Restart:      az containerapp revision restart --name $($ResourcePrefix)backend --resource-group $rgName"
-Write-Host "    Redeploy:     .\deploy.ps1 -ResourcePrefix $ResourcePrefix -DockerImage '$DockerImage' -SkipImageBuild -SkipSecrets"
+Write-Host "    Restart:       az containerapp revision restart --name $($ResourcePrefix)backend --resource-group $rgName"
+Write-Host "    Bind KV:       .\deploy.ps1 -ResourcePrefix $ResourcePrefix -SkipImageBuild -BindKeyVaultSecrets"
+Write-Host "    Full redeploy: .\deploy.ps1 -ResourcePrefix $ResourcePrefix -DockerImage '$DockerImage' -SkipImageBuild -SkipSecrets"
 Write-Host ""
