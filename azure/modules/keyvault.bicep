@@ -19,8 +19,6 @@ param location string
 @maxLength(24)
 param kvName string
 
-@description('Resource prefix for resource naming')
-param resourcePrefix string
 
 @description('Principal ID of Managed Identity that needs READ access')
 param managedIdentityId string

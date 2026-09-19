@@ -84,7 +84,6 @@ module kv 'modules/keyvault.bicep' = {
   params: {
     location: location
     kvName: kvName
-    resourcePrefix: resourcePrefix
     managedIdentityId: managedIdentity.properties.principalId
   }
 }
@@ -123,7 +122,6 @@ module backendApp 'modules/container-app.bicep' = {
     memoryGb: memoryGb
     healthCheckPath: healthCheckPath
     allowedOrigins: allowedOrigins
-    keyVaultUri: kv.outputs.keyVaultUri
     keyVaultName: kvName
   }
 }
