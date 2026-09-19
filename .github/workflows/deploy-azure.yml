@@ -31,7 +31,7 @@ on:
 
 # Only one deployment at a time per environment
 concurrency:
-  group: azure-deploy-${{ inputs.environment || 'production' }}
+  group: azure-deploy-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
 permissions:

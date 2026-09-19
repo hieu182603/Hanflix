@@ -21,9 +21,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
-  # security-events: write is required for the SARIF upload to surface
-  # findings on the Security tab. Without it the run still completes but the
-  # results stay invisible.
+  actions: read
   security-events: write
 
 jobs:

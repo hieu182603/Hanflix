@@ -34,8 +34,8 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
-  BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hanflix-backend
-  FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hanflix-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/hanflix-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/hanflix-frontend
   VITE_API_BASE_URL: /api/v1
 
 jobs:
