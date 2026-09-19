@@ -77,12 +77,12 @@ test('admin upload creates a draft, sends bytes to R2, and confirms processing',
   });
   await mockSession(page, 'admin');
   await page.goto('/');
-  await page.getByRole('button', { name: /Tải video mới/i }).click();
+  await page.getByRole('button', { name: 'Tải video mới', exact: true }).click();
   await page.getByLabel('Video MP4/WebM').setInputFiles({ name: 'lesson.mp4', mimeType: 'video/mp4', buffer: Buffer.from('test-video') });
-  await page.getByLabel('Tiêu đề tiếng Việt').fill('Bài học từ API');
+  await page.getByLabel('Tiêu đề bài học (Tiếng Việt)').fill('Bài học từ API');
   await page.getByLabel('Mô tả').fill('Một bài học thử nghiệm từ API backend.');
-  await page.getByRole('button', { name: 'Tạo bài và tải video' }).click();
-  await expect(page.getByRole('heading', { name: 'Tiến trình xử lý' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tạo Bài Học & Khởi Động AI Pipeline' }).click();
+  await expect(page.getByRole('heading', { name: 'Tiến Trình Xử Lý AI Pipeline' })).toBeVisible();
   expect(draftInput).toMatchObject({ titleVi: 'Bài học từ API', hsk: 3, durationSeconds: 120 });
   expect(r2Uploads).toBe(1);
   expect(confirmed).toEqual({ lessonId, objectKey: `videos/${lessonId}/video.mp4` });

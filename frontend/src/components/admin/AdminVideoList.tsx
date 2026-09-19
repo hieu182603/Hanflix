@@ -20,10 +20,11 @@ import {
   Sparkles,
   Upload,
   Cpu,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import type { AdminLesson } from '../../api/admin';
+import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
+import { useNotification, StatusBadge } from '../notifications';
+import type { NotificationVariant } from '../notifications';
 
 interface AdminVideoListProps {
   lessons: AdminLesson[];
@@ -48,14 +49,14 @@ const TOPIC_LABELS: Record<string, string> = {
   'entertainment': 'Giải trí',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  published: { label: 'Đã xuất bản', bg: 'bg-[#E4F6ED]', text: 'text-[#188A5A]', border: 'border-[#BFE7D3]' },
-  ready_for_review: { label: 'Chờ duyệt', bg: 'bg-[#FFF8E7]', text: 'text-[#B87A00]', border: 'border-[#FDE2A7]' },
-  draft: { label: 'Bản nháp', bg: 'bg-[#F4F4F6]', text: 'text-[#5F6368]', border: 'border-[#E7E7EA]' },
-  processing: { label: 'Đang xử lý AI', bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
-  uploading: { label: 'Đang tải lên', bg: 'bg-[#EFF6FF]', text: 'text-[#1D4ED8]', border: 'border-[#BFDBFE]' },
-  failed: { label: 'Lỗi xử lý', bg: 'bg-[#FEF2F2]', text: 'text-[#DC2626]', border: 'border-[#FECACA]' },
-  hidden: { label: 'Đã ẩn', bg: 'bg-[#F3F4F6]', text: 'text-[#9CA3AF]', border: 'border-[#E5E7EB]' },
+const STATUS_CONFIG: Record<string, { label: string; variant: NotificationVariant }> = {
+  published: { label: 'Đã xuất bản', variant: 'success' },
+  ready_for_review: { label: 'Chờ duyệt', variant: 'warning' },
+  draft: { label: 'Bản nháp', variant: 'neutral' },
+  processing: { label: 'Đang xử lý AI', variant: 'error' },
+  uploading: { label: 'Đang tải lên', variant: 'info' },
+  failed: { label: 'Lỗi xử lý', variant: 'error' },
+  hidden: { label: 'Đã ẩn', variant: 'neutral' },
 };
 
 // Fallback high-quality thumbnail placeholders by HSK tier
@@ -78,6 +79,7 @@ export default function AdminVideoList({
   onDeleteLesson,
   onRetryProcessing,
 }: AdminVideoListProps) {
+  const notify = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [hskFilter, setHskFilter] = useState<string>('all');
@@ -86,7 +88,7 @@ export default function AdminVideoList({
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(DEFAULT_ADMIN_PAGE_SIZE);
 
   // Stats calculation
   const totalCount = lessons.length;
@@ -138,23 +140,6 @@ export default function AdminVideoList({
     return filteredLessons.slice(startIndex, endIndex);
   }, [filteredLessons, startIndex, endIndex]);
 
-  // Smart page numbers calculation (with ellipsis)
-  const pageNumbers = useMemo(() => {
-    const pages: (number | string)[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (safeCurrentPage > 3) pages.push('...');
-      const start = Math.max(2, safeCurrentPage - 1);
-      const end = Math.min(totalPages - 1, safeCurrentPage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (safeCurrentPage < totalPages - 2) pages.push('...');
-      pages.push(totalPages);
-    }
-    return pages;
-  }, [totalPages, safeCurrentPage]);
-
   // Format seconds to mm:ss
   const formatDuration = (sec?: number) => {
     const total = sec || 120;
@@ -167,25 +152,30 @@ export default function AdminVideoList({
   const getHskMeta = (hsk: number) => {
     if (hsk <= 3) {
       return {
-        badge: 'bg-[#E4F6ED] text-[#188A5A] border-[#BFE7D3]',
+        badge: 'bg-[#EAF5F1] text-[#188A5A] border-[#C6E7DA]',
         tier: 'Sơ cấp',
       };
     }
     if (hsk <= 6) {
       return {
-        badge: 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]',
+        badge: 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]',
         tier: 'Trung cấp',
       };
     }
     return {
-      badge: 'bg-[#F3E8FF] text-[#7C3AED] border-[#DDD6FE]',
+      badge: 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]',
       tier: 'Cao cấp (HSK 3.0)',
     };
   };
 
   // Quick Action Handlers
   const handlePublish = async (id: string, titleVi: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn duyệt và xuất bản bài học: "${titleVi}"?`)) return;
+    if (!await notify.confirm({
+      title: 'Duyệt và xuất bản bài học',
+      message: `Bạn có chắc chắn muốn duyệt và xuất bản bài học "${titleVi}"?`,
+      confirmText: 'Xuất bản',
+      tone: 'default',
+    })) return;
     try {
       setActionLoadingId(id);
       await onPublishLesson(id);
@@ -195,7 +185,12 @@ export default function AdminVideoList({
   };
 
   const handleHide = async (id: string, titleVi: string) => {
-    if (!window.confirm(`Ẩn bài học "${titleVi}" khỏi ứng dụng học viên?`)) return;
+    if (!await notify.confirm({
+      title: 'Ẩn bài học',
+      message: `Ẩn bài học "${titleVi}" khỏi ứng dụng học viên?`,
+      confirmText: 'Ẩn',
+      tone: 'default',
+    })) return;
     try {
       setActionLoadingId(id);
       await onHideLesson(id);
@@ -225,9 +220,15 @@ export default function AdminVideoList({
   const handleDelete = async (id: string, titleVi: string, status: string) => {
     const isPublished = status === 'published';
     const message = isPublished
-      ? `XÓA VĨNH VIỄN bài học đã xuất bản "${titleVi}"?\n\nHành động này không thể hoàn tác. Học viên sẽ mất quyền truy cập bài học này.`
+      ? `Xóa vĩnh viễn bài học đã xuất bản "${titleVi}"?\n\nHành động này không thể hoàn tác. Học viên sẽ mất quyền truy cập bài học này.`
       : `Xóa vĩnh viễn bài học "${titleVi}"?\n\nVideo, phụ đề, quiz và tiến trình xử lý liên quan sẽ bị xóa.`;
-    if (!window.confirm(message)) return;
+    if (!await notify.confirm({
+      title: 'Xóa bài học',
+      message: <span className="whitespace-pre-line">{message}</span>,
+      confirmText: 'Xóa vĩnh viễn',
+      cancelText: 'Hủy',
+      tone: 'danger',
+    })) return;
     try {
       setActionLoadingId(id);
       await onDeleteLesson(id);
@@ -251,13 +252,16 @@ export default function AdminVideoList({
   return (
     <div className="space-y-6 pb-12 font-sans">
       {/* 1. Header & Summary Stats Strip */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 md:p-7 rounded-3xl border border-[#E7E7EA] shadow-2xs">
-        <div className="space-y-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 md:p-7 rounded-3xl border border-[#F2E4D8] shadow-2xs relative overflow-hidden">
+        <div className="absolute -right-4 -top-8 text-8xl font-serif font-black text-[#B91B1C]/[0.04] select-none pointer-events-none">
+          视
+        </div>
+        <div className="space-y-1 relative z-10">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-extrabold uppercase tracking-wide border border-[#F7DADA]">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-extrabold uppercase tracking-wide border border-[#F9D2D2]">
               Quản trị Nội dung Video
             </span>
-            <span className="text-xs text-[#8B9097] font-medium">HSK 1 đến HSK 9</span>
+            <span className="text-xs text-[#8B9097] font-semibold">Khung chuẩn HSK 1 đến HSK 9</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
             Kho Bài Học Video
@@ -268,11 +272,11 @@ export default function AdminVideoList({
         </div>
 
         {/* Quick Actions & Total badge */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 relative z-10">
           <button
             type="button"
             onClick={onNavigateToUpload}
-            className="h-11 px-5 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] active:bg-[#8F1719] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
+            className="h-11 px-5 rounded-2xl bg-gradient-to-r from-[#B91B1C] to-[#991415] hover:from-[#A3181A] hover:to-[#8F1719] text-white text-xs font-extrabold flex items-center gap-2 shadow-sm shadow-[#B91B1C]/25 transition-all active:scale-[0.98] cursor-pointer"
           >
             <Plus size={16} strokeWidth={2.5} />
             <span>Thêm video mới</span>
@@ -284,7 +288,7 @@ export default function AdminVideoList({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { id: 'all', label: 'Tất cả bài học', count: totalCount, color: 'text-[#18181B]', bg: 'bg-white' },
-          { id: 'ready_for_review', label: 'Chờ kiểm duyệt', count: readyCount, color: 'text-[#B87A00]', bg: 'bg-[#FFFDF9] border-[#FDE2A7]' },
+          { id: 'ready_for_review', label: 'Chờ kiểm duyệt', count: readyCount, color: 'text-[#B45309]', bg: 'bg-[#FFF8EC] border-[#FDE6BA]' },
           { id: 'published', label: 'Đã xuất bản', count: publishedCount, color: 'text-[#188A5A]', bg: 'bg-white' },
           { id: 'draft', label: 'Bản nháp', count: draftCount, color: 'text-[#5F6368]', bg: 'bg-white' },
           { id: 'processing', label: 'Tiến trình AI', count: processingCount, color: 'text-[#B91B1C]', bg: 'bg-white' },
@@ -296,15 +300,15 @@ export default function AdminVideoList({
               key={item.id}
               type="button"
               onClick={() => setStatusFilter(item.id)}
-              className={`p-3.5 rounded-2xl border text-left transition-all active:scale-[0.98] ${
+              className={`p-3.5 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer shadow-2xs ${
                 item.bg
               } ${
                 isActive
-                  ? 'border-[#B91B1C] ring-2 ring-[#B91B1C]/15 shadow-2xs'
-                  : 'border-[#E7E7EA] hover:border-[#8B9097]'
+                  ? 'border-[#B91B1C] ring-2 ring-[#B91B1C]/20 shadow-xs'
+                  : 'border-[#F2E4D8] hover:border-[#B91B1C]/40'
               }`}
             >
-              <p className="text-[11px] font-bold text-[#8B9097] uppercase tracking-wider truncate">
+              <p className="text-[11px] font-extrabold text-[#8B9097] uppercase tracking-wider truncate">
                 {item.label}
               </p>
               <p className={`text-2xl font-black mt-1 font-mono ${item.color}`}>
@@ -316,7 +320,7 @@ export default function AdminVideoList({
       </div>
 
       {/* 3. Advanced Control Bar: Search + Status Filter + HSK 1-9 Dropdown + View Toggle */}
-      <div className="bg-white p-4 rounded-3xl border border-[#E7E7EA] shadow-2xs space-y-3.5">
+      <div className="bg-white p-4 rounded-3xl border border-[#F2E4D8] shadow-2xs space-y-3.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
@@ -326,13 +330,13 @@ export default function AdminVideoList({
               placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-2xl text-xs outline-none focus:border-[#B91B1C] focus:bg-white transition-colors"
+              className="w-full pl-10 pr-9 py-2.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-2xl text-xs outline-none focus:border-[#B91B1C] focus:bg-white transition-colors text-[#18181B] placeholder:text-[#8B9097]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-3 text-[#8B9097] hover:text-[#18181B]"
+                className="absolute right-3 top-3 text-[#8B9097] hover:text-[#18181B] cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -342,7 +346,7 @@ export default function AdminVideoList({
           {/* Right Controls: HSK 1..9 Selector & View Mode Toggle */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* HSK Filter Dropdown (Supports HSK 1 to 9) */}
-            <div className="flex items-center gap-1.5 bg-[#F7F7F9] px-3 py-1.5 rounded-2xl border border-[#E7E7EA]">
+            <div className="flex items-center gap-1.5 bg-[#FFF9F5] px-3 py-1.5 rounded-2xl border border-[#F2E4D8]">
               <span className="text-xs font-extrabold text-[#18181B]">Trình độ:</span>
               <select
                 value={hskFilter}
@@ -363,14 +367,14 @@ export default function AdminVideoList({
             </div>
 
             {/* View Mode Toggle: Table/List vs Grid */}
-            <div className="flex items-center bg-[#F7F7F9] p-1 rounded-2xl border border-[#E7E7EA]">
+            <div className="flex items-center bg-[#FFF9F5] p-1 rounded-2xl border border-[#F2E4D8]">
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
                 title="Dạng bảng danh sách"
-                className={`p-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`p-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'list'
-                    ? 'bg-white text-[#18181B] shadow-2xs'
+                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
                     : 'text-[#8B9097] hover:text-[#18181B]'
                 }`}
               >
@@ -380,9 +384,9 @@ export default function AdminVideoList({
                 type="button"
                 onClick={() => setViewMode('grid')}
                 title="Dạng lưới thẻ video"
-                className={`p-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`p-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-white text-[#18181B] shadow-2xs'
+                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
                     : 'text-[#8B9097] hover:text-[#18181B]'
                 }`}
               >
@@ -408,10 +412,10 @@ export default function AdminVideoList({
                 key={st.id}
                 type="button"
                 onClick={() => setStatusFilter(st.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
                   isActive
-                    ? 'bg-[#18181B] text-white shadow-2xs'
-                    : 'bg-[#F7F7F9] text-[#5F6368] hover:bg-[#EFEFF2] hover:text-[#18181B]'
+                    ? 'bg-[#B91B1C] text-white border-[#B91B1C] shadow-xs'
+                    : 'bg-[#FFF9F5] text-[#5F6368] border-[#F2E4D8] hover:bg-[#FFF0EB] hover:text-[#B91B1C]'
                 }`}
               >
                 {st.label}
@@ -423,8 +427,8 @@ export default function AdminVideoList({
 
       {/* 4. Lesson Items Rendering (Empty State vs List View vs Grid View) */}
       {filteredLessons.length === 0 ? (
-        <div className="py-16 px-6 text-center space-y-3.5 bg-white rounded-3xl border border-dashed border-[#D9DDE2] shadow-2xs">
-          <div className="w-12 h-12 rounded-2xl bg-[#F7F7F9] text-[#8B9097] flex items-center justify-center mx-auto">
+        <div className="py-16 px-6 text-center space-y-3.5 bg-white rounded-3xl border border-dashed border-[#F2E4D8] shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#FFF9F5] text-[#8B9097] border border-[#F2E4D8] flex items-center justify-center mx-auto">
             <Search size={24} />
           </div>
           <div className="max-w-md mx-auto space-y-1">
@@ -441,14 +445,14 @@ export default function AdminVideoList({
                 setStatusFilter('all');
                 setHskFilter('all');
               }}
-              className="px-4 py-2 rounded-xl bg-[#F7F7F9] hover:bg-[#E7E7EA] text-xs font-bold text-[#18181B] transition-all"
+              className="px-4 py-2 rounded-xl bg-[#FFF9F5] hover:bg-[#FFF0EB] text-xs font-bold text-[#18181B] border border-[#F2E4D8] transition-all cursor-pointer"
             >
               Xóa bộ lọc
             </button>
             <button
               type="button"
               onClick={onNavigateToUpload}
-              className="px-4 py-2 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-xs font-bold text-white transition-all inline-flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-xs font-bold text-white transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Plus size={14} />
               <span>Tải video mới lên</span>
@@ -457,11 +461,11 @@ export default function AdminVideoList({
         </div>
       ) : viewMode === 'list' ? (
         /* LIST / TABLE VIEW */
-        <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-2xs">
+        <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[#F9F9FB] border-b border-[#E7E7EA] text-[#8B9097] uppercase font-extrabold text-[10px] tracking-wider">
+                <tr className="bg-[#FFF9F5] border-b border-[#F2E4D8] text-[#8B9097] uppercase font-extrabold text-[10px] tracking-wider">
                   <th className="py-3.5 px-5">Video & Tiêu đề</th>
                   <th className="py-3.5 px-4">Cấp độ HSK</th>
                   <th className="py-3.5 px-4">Chủ đề</th>
@@ -470,13 +474,11 @@ export default function AdminVideoList({
                   <th className="py-3.5 px-5 text-right">Thao tác Admin</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F0F0F3]">
+              <tbody className="divide-y divide-[#F2E4D8]">
                 {paginatedLessons.map((item) => {
                   const statusInfo = STATUS_CONFIG[item.status] || {
                     label: item.status,
-                    bg: 'bg-slate-100',
-                    text: 'text-slate-700',
-                    border: 'border-slate-200',
+                    variant: 'neutral' as NotificationVariant,
                   };
                   const hskMeta = getHskMeta(item.hsk);
                   const isActionBusy = actionLoadingId === item._id || busy;
@@ -494,11 +496,11 @@ export default function AdminVideoList({
                       : TIER_THUMBNAILS.advanced;
 
                   return (
-                    <tr key={item._id} className="hover:bg-[#FDFDFE] transition-colors group">
+                    <tr key={item._id} className="hover:bg-[#FFFDFB] transition-colors group">
                       {/* Video Thumbnail & Titles */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3.5 min-w-[280px]">
-                          <div className="w-20 h-13 rounded-xl bg-black shrink-0 overflow-hidden relative border border-[#E7E7EA] group-hover:shadow-xs transition-all">
+                          <div className="w-20 h-13 rounded-xl bg-black shrink-0 overflow-hidden relative border border-[#F2E4D8] group-hover:shadow-xs transition-all shadow-2xs">
                             <img
                               src={placeholderImg}
                               alt={item.titleVi}
@@ -507,7 +509,7 @@ export default function AdminVideoList({
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Play size={16} className="text-white fill-white" />
                             </div>
-                            <span className="absolute bottom-1 right-1 text-[9px] font-mono font-extrabold text-white bg-black/70 px-1 rounded">
+                            <span className="absolute bottom-1 right-1 text-[9px] font-mono font-extrabold text-white bg-black/75 px-1 rounded">
                               {formatDuration(item.durationSeconds)}
                             </span>
                           </div>
@@ -550,7 +552,7 @@ export default function AdminVideoList({
                           {(item.topicIds && item.topicIds.length > 0 ? item.topicIds : ['daily-life']).map((t) => (
                             <span
                               key={t}
-                              className="px-2 py-0.5 rounded-md bg-[#F7F7F9] text-[#5F6368] text-[11px] font-medium"
+                              className="px-2 py-0.5 rounded-md bg-[#FFF9F5] text-[#5F6368] border border-[#F2E4D8] text-[11px] font-semibold"
                             >
                               {TOPIC_LABELS[t] || t}
                             </span>
@@ -565,22 +567,15 @@ export default function AdminVideoList({
 
                       {/* Status Badge */}
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              item.status === 'published'
-                                ? 'bg-[#188A5A]'
-                                : item.status === 'ready_for_review'
-                                ? 'bg-[#B87A00]'
-                                : item.status === 'processing'
-                                ? 'bg-[#B91B1C] animate-ping'
-                                : 'bg-[#8B9097]'
-                            }`}
-                          />
-                          <span>{statusInfo.label}</span>
-                        </span>
+                        <StatusBadge
+                          variant={statusInfo.variant}
+                          label={statusInfo.label}
+                          icon={
+                            item.status === 'processing' ? (
+                              <span className="h-1.5 w-1.5 rounded-full bg-current animate-ping" aria-hidden="true" />
+                            ) : undefined
+                          }
+                        />
                       </td>
 
                       {/* Admin Contextual Actions */}
@@ -593,7 +588,7 @@ export default function AdminVideoList({
                                 type="button"
                                 disabled={isActionBusy}
                                 onClick={() => void handlePublish(item._id, item.titleVi)}
-                                className="h-8 px-3 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1"
+                                className="h-8 px-3 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <CheckCircle size={13} />
                                 <span>Duyệt</span>
@@ -601,7 +596,7 @@ export default function AdminVideoList({
                               <button
                                 type="button"
                                 onClick={() => onEditLesson(item._id)}
-                                className="h-8 px-3 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1"
+                                className="h-8 px-3 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <Edit3 size={13} />
                                 <span>Biên tập</span>
@@ -614,7 +609,7 @@ export default function AdminVideoList({
                             <button
                               type="button"
                               onClick={() => onEditLesson(item._id)}
-                              className="h-8 px-3 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1"
+                              className="h-8 px-3 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
                             >
                               <Edit3 size={13} />
                               <span>Biên tập</span>
@@ -627,7 +622,7 @@ export default function AdminVideoList({
                               <button
                                 type="button"
                                 onClick={() => onViewProcessing(item._id)}
-                                className="h-8 px-3 rounded-xl border border-[#E7E7EA] hover:border-[#B91B1C] bg-white text-xs font-bold text-[#B91B1C] transition-all flex items-center gap-1"
+                                className="h-8 px-3 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] bg-white text-xs font-bold text-[#B91B1C] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <Cpu size={13} />
                                 <span>Tiến trình</span>
@@ -637,7 +632,7 @@ export default function AdminVideoList({
                                   type="button"
                                   disabled={isActionBusy}
                                   onClick={() => void handleRetry(item._id)}
-                                  className="h-8 px-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all"
+                                  className="h-8 px-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
                                   title="Thử lại xử lý AI"
                                 >
                                   <RotateCcw size={13} />
@@ -652,7 +647,7 @@ export default function AdminVideoList({
                               <button
                                 type="button"
                                 onClick={() => onEditLesson(item._id)}
-                                className="h-8 px-3 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1"
+                                className="h-8 px-3 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <Edit3 size={13} />
                                 <span>Sửa</span>
@@ -661,7 +656,7 @@ export default function AdminVideoList({
                                 type="button"
                                 disabled={isActionBusy}
                                 onClick={() => void handleHide(item._id, item.titleVi)}
-                                className="h-8 px-2.5 rounded-xl border border-[#E7E7EA] hover:border-red-300 text-xs text-[#5F6368] hover:text-red-700 bg-white transition-all"
+                                className="h-8 px-2.5 rounded-xl border border-[#F2E4D8] hover:border-red-300 text-xs text-[#5F6368] hover:text-red-700 bg-white transition-all cursor-pointer shadow-2xs"
                                 title="Ẩn bài học khỏi app"
                               >
                                 <EyeOff size={13} />
@@ -676,7 +671,7 @@ export default function AdminVideoList({
                                 type="button"
                                 disabled={isActionBusy}
                                 onClick={() => void handleRestore(item._id)}
-                                className="h-8 px-3 rounded-xl border border-[#E7E7EA] hover:border-[#188A5A] text-xs font-bold text-[#188A5A] bg-white transition-all flex items-center gap-1"
+                                className="h-8 px-3 rounded-xl border border-[#F2E4D8] hover:border-[#188A5A] hover:bg-[#EAF5F1] text-xs font-bold text-[#188A5A] bg-white transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <Eye size={13} />
                                 <span>Khôi phục</span>
@@ -721,7 +716,7 @@ export default function AdminVideoList({
             return (
               <div
                 key={item._id}
-                className="bg-white rounded-3xl border border-[#E7E7EA] hover:border-[#B91B1C]/40 hover:shadow-xs transition-all overflow-hidden flex flex-col justify-between group"
+                className="bg-white rounded-3xl border border-[#F2E4D8] hover:border-[#B91B1C]/50 hover:shadow-sm transition-all overflow-hidden flex flex-col justify-between group shadow-2xs"
               >
                 <div>
                   {/* Card Thumbnail */}
@@ -744,12 +739,8 @@ export default function AdminVideoList({
                   {/* Card Body */}
                   <div className="p-4 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusInfo.bg} ${statusInfo.text} ${statusInfo.border}`}
-                      >
-                        {statusInfo.label}
-                      </span>
-                      <span className="text-[10px] text-[#8B9097] font-medium">
+                      <StatusBadge variant={statusInfo.variant} label={statusInfo.label} size="sm" />
+                      <span className="text-[10px] text-[#8B9097] font-semibold">
                         {TOPIC_LABELS[item.topicIds?.[0] || 'daily-life'] || 'Đời sống'}
                       </span>
                     </div>
@@ -767,14 +758,14 @@ export default function AdminVideoList({
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="p-4 pt-0 border-t border-[#F0F0F3] mt-2 flex items-center justify-between gap-2">
+                <div className="p-4 pt-0 border-t border-[#F2E4D8] mt-2 flex items-center justify-between gap-2">
                   {isReady && (
                     <>
                       <button
                         type="button"
                         disabled={isActionBusy}
                         onClick={() => void handlePublish(item._id, item.titleVi)}
-                        className="flex-1 h-9 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <CheckCircle size={13} />
                         <span>Duyệt đăng</span>
@@ -782,7 +773,7 @@ export default function AdminVideoList({
                       <button
                         type="button"
                         onClick={() => onEditLesson(item._id)}
-                        className="flex-1 h-9 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <Edit3 size={13} />
                         <span>Biên tập</span>
@@ -796,7 +787,7 @@ export default function AdminVideoList({
                       <button
                         type="button"
                         onClick={() => onEditLesson(item._id)}
-                        className="flex-1 h-9 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <Edit3 size={13} />
                         <span>Biên tập bài học</span>
@@ -810,7 +801,7 @@ export default function AdminVideoList({
                       <button
                         type="button"
                         onClick={() => onViewProcessing(item._id)}
-                        className="flex-1 h-9 rounded-xl border border-[#E7E7EA] hover:border-[#B91B1C] bg-white text-xs font-bold text-[#B91B1C] transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] bg-white text-xs font-bold text-[#B91B1C] transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <Cpu size={13} />
                         <span>Kiểm tra tiến trình</span>
@@ -820,7 +811,7 @@ export default function AdminVideoList({
                           type="button"
                           disabled={isActionBusy}
                           onClick={() => void handleRetry(item._id)}
-                          className="h-9 px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all flex items-center justify-center"
+                          className="h-9 px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-xs"
                           title="Thử lại xử lý AI"
                         >
                           <RotateCcw size={14} />
@@ -835,19 +826,19 @@ export default function AdminVideoList({
                       <button
                         type="button"
                         onClick={() => onEditLesson(item._id)}
-                        className="flex-1 h-9 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] bg-white text-xs font-bold text-[#18181B] transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <Edit3 size={13} />
-                        <span>Biên tập</span>
+                        <span>Sửa</span>
                       </button>
                       <button
                         type="button"
                         disabled={isActionBusy}
                         onClick={() => void handleHide(item._id, item.titleVi)}
-                        className="h-9 px-3 rounded-xl border border-[#E7E7EA] hover:border-red-300 text-xs text-[#5F6368] hover:text-red-700 bg-white transition-all flex items-center justify-center"
-                        title="Ẩn bài"
+                        className="h-9 px-2.5 rounded-xl border border-[#F2E4D8] hover:border-red-300 text-xs text-[#5F6368] hover:text-red-700 bg-white transition-all flex items-center justify-center cursor-pointer shadow-2xs"
+                        title="Ẩn bài học khỏi app"
                       >
-                        <EyeOff size={14} />
+                        <EyeOff size={13} />
                       </button>
                       {renderDeleteButton(item._id, item.titleVi, item.status)}
                     </>
@@ -859,7 +850,7 @@ export default function AdminVideoList({
                         type="button"
                         disabled={isActionBusy}
                         onClick={() => void handleRestore(item._id)}
-                        className="flex-1 h-9 rounded-xl border border-[#E7E7EA] hover:border-[#188A5A] text-xs font-bold text-[#188A5A] bg-white transition-all flex items-center justify-center gap-1"
+                        className="flex-1 h-9 rounded-xl border border-[#F2E4D8] hover:border-[#188A5A] hover:bg-[#EAF5F1] text-xs font-bold text-[#188A5A] bg-white transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <Eye size={13} />
                         <span>Khôi phục</span>
@@ -874,97 +865,19 @@ export default function AdminVideoList({
         </div>
       )}
 
-      {/* 5. Pagination & Control Bar */}
-      {totalFiltered > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 sm:px-6 rounded-3xl border border-[#E7E7EA] shadow-2xs">
-          {/* Sliced Info */}
-          <div className="text-xs text-[#5F6368]">
-            <span>
-              Hiển thị <strong className="text-[#18181B] font-mono">{startIndex + 1}</strong> -{' '}
-              <strong className="text-[#18181B] font-mono">{endIndex}</strong> trong tổng số{' '}
-              <strong className="text-[#18181B] font-mono">{totalFiltered}</strong> bài học
-            </span>
-          </div>
-
-          {/* Center: Page Size Selector */}
-          <div className="flex items-center gap-2 text-xs text-[#5F6368]">
-            <span className="hidden md:inline font-medium">Mỗi trang:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-[#F7F7F9] border border-[#E7E7EA] text-[#18181B] text-xs font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer hover:border-[#8B9097] transition-colors"
-            >
-              <option value={6}>6 bài / trang</option>
-              <option value={8}>8 bài / trang</option>
-              <option value={12}>12 bài / trang</option>
-              <option value={20}>20 bài / trang</option>
-              <option value={50}>50 bài / trang</option>
-            </select>
-          </div>
-
-          {/* Right: Page Navigation Buttons */}
-          <div className="flex items-center gap-1.5">
-            {/* Prev Button */}
-            <button
-              type="button"
-              disabled={safeCurrentPage <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="h-8 px-3 rounded-xl border border-[#E7E7EA] bg-white text-xs font-bold text-[#18181B] hover:bg-[#F7F7F9] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all active:scale-[0.98]"
-            >
-              <ChevronLeft size={14} />
-              <span className="hidden sm:inline">Trước</span>
-            </button>
-
-            {/* Page numbers */}
-            {pageNumbers.map((page, idx) => {
-              if (page === '...') {
-                return (
-                  <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs text-[#8B9097] font-mono">
-                    …
-                  </span>
-                );
-              }
-              const isCurrent = page === safeCurrentPage;
-              return (
-                <button
-                  key={`page-${page}`}
-                  type="button"
-                  onClick={() => setCurrentPage(Number(page))}
-                  className={`w-8 h-8 rounded-xl text-xs font-black font-mono transition-all active:scale-[0.98] ${
-                    isCurrent
-                      ? 'bg-[#B91B1C] text-white shadow-2xs'
-                      : 'border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-[#18181B]'
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
-
-            {/* Next Button */}
-            <button
-              type="button"
-              disabled={safeCurrentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="h-8 px-3 rounded-xl border border-[#E7E7EA] bg-white text-xs font-bold text-[#18181B] hover:bg-[#F7F7F9] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all active:scale-[0.98]"
-            >
-              <span className="hidden sm:inline">Sau</span>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Footer Info */}
-      <div className="flex items-center justify-between text-xs text-[#8B9097] px-2">
-        <span>
-          Đang hiển thị <strong className="text-[#18181B]">{filteredLessons.length}</strong> / {totalCount} bài học video
-        </span>
-        <span>Hỗ trợ chuẩn giáo trình HSK 1.0, 2.0 và 3.0 (Cấp 1 - 9)</span>
-      </div>
+      <AdminPaginationBar
+        total={totalFiltered}
+        page={safeCurrentPage}
+        pageSize={pageSize}
+        unitLabel="bài học"
+        disabled={loading || busy}
+        ariaLabel="Phân trang danh sách video"
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
+      />
     </div>
   );
 }

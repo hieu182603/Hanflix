@@ -5,8 +5,7 @@ import {
   CheckCircle,
   Clock,
   WarningCircle,
-  ArrowsClockwise,
-  Play,
+  ArrowsClockwise,  Play,
   PencilSimple,
   Sparkle,
   BookBookmark,
@@ -34,6 +33,7 @@ interface AdminOverviewDashboardProps {
   onPublishLesson: (lessonId: string) => Promise<void>;
   onRetryProcessing: (lessonId: string) => Promise<void>;
 }
+import { useNotification } from '../notifications';
 
 export default function AdminOverviewDashboard({
   lessons,
@@ -51,6 +51,8 @@ export default function AdminOverviewDashboard({
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'ready_for_review' | 'draft'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const notify = useNotification();
 
   // Core metrics calculation
   const totalLessons = lessons.length;
@@ -114,7 +116,12 @@ export default function AdminOverviewDashboard({
 
   // Handle direct publish from dashboard
   const handleQuickPublish = async (lessonId: string, titleVi: string) => {
-    if (!window.confirm(`Xác nhận phê duyệt và xuất bản bài học: "${titleVi}"?`)) return;
+    if (!await notify.confirm({
+      title: 'Phê duyệt và xuất bản',
+      message: `Xác nhận phê duyệt và xuất bản bài học: "${titleVi}"?`,
+      confirmText: 'Xuất bản',
+      tone: 'default',
+    })) return;
     try {
       setPublishingId(lessonId);
       await onPublishLesson(lessonId);
@@ -173,29 +180,32 @@ export default function AdminOverviewDashboard({
       )}
 
       {/* 1. Header & Strategic Quick Action Hub */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white p-6 md:p-7 rounded-3xl border border-[#E7E7EA] shadow-2xs relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white p-6 md:p-7 rounded-3xl border border-[#F2E4D8] shadow-2xs relative overflow-hidden">
         {/* Subtle decorative HanFlix oriental watermark background */}
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-gradient-to-l from-[#FFF7F5] to-transparent pointer-events-none opacity-80" />
-        <div className="absolute -right-8 -top-8 text-8xl font-black text-[#F6EBE7]/50 select-none pointer-events-none">
+        <div className="absolute -right-6 -top-10 text-9xl font-serif font-black text-[#B91B1C]/[0.04] select-none pointer-events-none">
           汉
+        </div>
+        <div className="absolute right-32 -bottom-8 text-7xl font-serif font-black text-[#E7A92F]/[0.05] select-none pointer-events-none">
+          审
         </div>
 
         <div className="relative z-10 space-y-1.5 max-w-xl">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-bold tracking-wide uppercase flex items-center gap-1 border border-[#F7DADA]">
-              <ShieldCheck size={14} weight="fill" />
-              <span>Cổng Kiểm Duyệt Độc Quyền</span>
+            <span className="px-2.5 py-1 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-extrabold tracking-wide uppercase flex items-center gap-1.5 border border-[#F9D2D2] shadow-2xs">
+              <ShieldCheck size={14} weight="fill" className="text-[#B91B1C]" />
+              <span>Cổng Kiểm Duyệt & Biên Tập Độc Quyền</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#5F6368]">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#5F6368]">
               <span className={`w-2 h-2 rounded-full ${error ? 'bg-amber-500' : 'bg-[#188A5A] animate-pulse'}`} />
-              {error ? 'Ngoại tuyến' : 'AI Engine Sẵn sàng'}
+              {error ? 'Ngoại tuyến' : 'AI Whisper Sẵn sàng'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
             Tổng quan Kiểm duyệt & Xuất bản
           </h1>
           <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed">
-            Kiểm tra chất lượng phụ đề AI, tinh chỉnh câu hỏi bài tập và phát hành nội dung học tiếng Trung đạt chuẩn HSK.
+            Kiểm tra chất lượng phụ đề AI song ngữ, tinh chỉnh bài tập trắc nghiệm và phát hành nội dung phim học tiếng Trung chuẩn HSK 3.0.
           </p>
         </div>
 
@@ -204,7 +214,7 @@ export default function AdminOverviewDashboard({
           <button
             type="button"
             onClick={() => onNavigateToTab('upload')}
-            className="h-11 px-5 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] active:bg-[#8F1719] text-white text-xs font-extrabold flex items-center gap-2 shadow-xs hover:shadow-sm transition-all active:scale-[0.98]"
+            className="h-11 px-5 rounded-2xl bg-gradient-to-r from-[#B91B1C] to-[#991415] hover:from-[#A3181A] hover:to-[#8F1719] text-white text-xs font-extrabold flex items-center gap-2 shadow-sm shadow-[#B91B1C]/25 transition-all active:scale-[0.98] cursor-pointer"
           >
             <UploadSimple size={16} weight="bold" />
             <span>Thêm video bài học</span>
@@ -213,7 +223,7 @@ export default function AdminOverviewDashboard({
           <button
             type="button"
             onClick={() => onNavigateToTab('vocabulary')}
-            className="h-11 px-4 rounded-2xl bg-[#F7F7F9] hover:bg-[#EFEFF2] active:bg-[#E7E7EA] text-[#18181B] text-xs font-bold flex items-center gap-1.5 border border-[#E7E7EA] transition-all active:scale-[0.98]"
+            className="h-11 px-4 rounded-2xl bg-[#FFF9F5] hover:bg-[#FFF0EB] text-[#18181B] hover:text-[#B91B1C] text-xs font-bold flex items-center gap-2 border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
           >
             <BookBookmark size={15} weight="duotone" className="text-[#B91B1C]" />
             <span>Kho Từ vựng HSK</span>
@@ -222,7 +232,7 @@ export default function AdminOverviewDashboard({
           <button
             type="button"
             onClick={() => onNavigateToTab('quiz')}
-            className="h-11 px-4 rounded-2xl bg-[#F7F7F9] hover:bg-[#EFEFF2] active:bg-[#E7E7EA] text-[#18181B] text-xs font-bold flex items-center gap-1.5 border border-[#E7E7EA] transition-all active:scale-[0.98]"
+            className="h-11 px-4 rounded-2xl bg-[#FFF9F5] hover:bg-[#EAF5F1] text-[#18181B] hover:text-[#2F6E62] text-xs font-bold flex items-center gap-2 border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
           >
             <Exam size={15} weight="duotone" className="text-[#2F6E62]" />
             <span>Bài Luyện Tập</span>
@@ -233,7 +243,7 @@ export default function AdminOverviewDashboard({
             onClick={() => void handleRefresh()}
             disabled={isRefreshing || loading}
             title="Làm mới số liệu"
-            className="h-11 w-11 rounded-2xl bg-[#F7F7F9] hover:bg-[#EFEFF2] text-[#5F6368] hover:text-[#18181B] flex items-center justify-center border border-[#E7E7EA] transition-all active:scale-[0.98]"
+            className="h-11 w-11 rounded-2xl bg-[#FFF9F5] hover:bg-white text-[#5F6368] hover:text-[#B91B1C] flex items-center justify-center border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
           >
             <ArrowsClockwise size={16} className={isRefreshing || loading ? 'animate-spin' : ''} />
           </button>
@@ -242,7 +252,7 @@ export default function AdminOverviewDashboard({
 
       {/* 2. Key Operational Bento Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Chờ Admin kiểm duyệt (TOP PRIORITY) */}
+        {/* Card 1: Chờ Admin kiểm duyệt (TOP PRIORITY - Amber Accent) */}
         <motion.div
           whileHover={{ y: -2 }}
           transition={{ duration: 0.2 }}
@@ -251,52 +261,53 @@ export default function AdminOverviewDashboard({
             const el = document.getElementById('review-queue-section');
             el?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className={`p-5 rounded-3xl bg-white border cursor-pointer transition-all ${
+          className={`p-5 rounded-3xl bg-white border cursor-pointer transition-all shadow-2xs ${
             readyForReviewLessons.length > 0
-              ? 'border-[#F7C678] ring-2 ring-[#F7C678]/20 bg-gradient-to-b from-[#FFFDF9] to-white shadow-xs'
-              : 'border-[#E7E7EA]'
+              ? 'border-[#FDE6BA] ring-2 ring-[#FDE6BA]/30 bg-gradient-to-b from-[#FFFDF8] to-white shadow-sm'
+              : 'border-[#F2E4D8]'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#8B9097] uppercase tracking-wider">Cần kiểm duyệt</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#FFF8E7] text-[#B87A00] text-[11px] font-extrabold flex items-center gap-1 border border-[#FDE2A7]">
+            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Cần kiểm duyệt</span>
+            <span className="px-2 py-0.5 rounded-full bg-[#FFF8EC] text-[#B45309] text-[11px] font-extrabold flex items-center gap-1 border border-[#FDE6BA]">
               <WarningCircle size={13} weight="fill" />
               <span>Ưu tiên số 1</span>
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#B87A00]">{readyForReviewLessons.length}</span>
-            <span className="text-xs font-semibold text-[#5F6368]">video sẵn sàng</span>
+            <span className="text-3xl font-black font-mono text-[#B45309]">{readyForReviewLessons.length}</span>
+            <span className="text-xs font-bold text-[#5F6368]">video sẵn sàng</span>
           </div>
           <p className="text-[11px] text-[#8B9097] mt-2 flex items-center gap-1">
-            <span>+ {draftLessons.length} bản nháp đang soạn</span>
+            <span>+ {draftLessons.length} bản nháp đang soạn thảo</span>
           </p>
         </motion.div>
 
-        {/* Card 2: Đã xuất bản công khai */}
+        {/* Card 2: Đã xuất bản công khai (Jade Accent) */}
         <motion.div
           whileHover={{ y: -2 }}
           transition={{ duration: 0.2 }}
           onClick={() => onNavigateToTab('videos')}
-          className="p-5 rounded-3xl bg-white border border-[#E7E7EA] hover:border-[#8FB9A7] cursor-pointer transition-all shadow-2xs hover:shadow-xs"
+          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#188A5A] cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FAFDFB] to-white"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#8B9097] uppercase tracking-wider">Đã đăng công khai</span>
-            <span className="p-1.5 rounded-xl bg-[#E4F6ED] text-[#188A5A]">
+            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Đã đăng công khai</span>
+            <span className="p-1.5 rounded-xl bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA]">
               <CheckCircle size={15} weight="bold" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#188A5A]">{publishedLessons.length}</span>
-            <span className="text-xs font-semibold text-[#5F6368]">/ {totalLessons} bài</span>
+            <span className="text-3xl font-black font-mono text-[#188A5A]">{publishedLessons.length}</span>
+            <span className="text-xs font-bold text-[#5F6368]">/ {totalLessons} bài</span>
           </div>
-          <p className="text-[11px] text-[#8B9097] mt-2 flex items-center gap-1">
+          <p className="text-[11px] text-[#5F6368] mt-2 flex items-center gap-1">
             <TrendUp size={13} className="text-[#188A5A]" />
-            <span>{totalLessons > 0 ? Math.round((publishedLessons.length / totalLessons) * 100) : 0}% nội dung đã mở</span>
+            <span className="font-semibold text-[#188A5A]">{totalLessons > 0 ? Math.round((publishedLessons.length / totalLessons) * 100) : 0}%</span>
+            <span>nội dung đã phát hành</span>
           </p>
         </motion.div>
 
-        {/* Card 3: Đang xử lý AI & Hàng đợi */}
+        {/* Card 3: Đang xử lý AI & Hàng đợi (Crimson Accent) */}
         <motion.div
           whileHover={{ y: -2 }}
           transition={{ duration: 0.2 }}
@@ -304,49 +315,49 @@ export default function AdminOverviewDashboard({
             const el = document.getElementById('ai-pipeline-section');
             el?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="p-5 rounded-3xl bg-white border border-[#E7E7EA] hover:border-[#B91B1C]/30 cursor-pointer transition-all shadow-2xs hover:shadow-xs"
+          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#B91B1C] cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FFFDFD] to-white"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#8B9097] uppercase tracking-wider">Tiến trình AI</span>
-            <span className={`p-1.5 rounded-xl ${processingLessons.length > 0 ? 'bg-[#FDF1F1] text-[#B91B1C] animate-pulse' : 'bg-[#F7F7F9] text-[#8B9097]'}`}>
+            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Tiến trình AI Whisper</span>
+            <span className={`p-1.5 rounded-xl border ${processingLessons.length > 0 ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2] animate-pulse' : 'bg-[#FFF9F5] text-[#8B9097] border-[#F2E4D8]'}`}>
               <Cpu size={15} weight="bold" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className={`text-3xl font-black ${processingLessons.length > 0 ? 'text-[#B91B1C]' : 'text-[#18181B]'}`}>
+            <span className={`text-3xl font-black font-mono ${processingLessons.length > 0 ? 'text-[#B91B1C]' : 'text-[#18181B]'}`}>
               {processingLessons.length}
             </span>
-            <span className="text-xs font-semibold text-[#5F6368]">đang chạy</span>
+            <span className="text-xs font-bold text-[#5F6368]">đang chạy</span>
           </div>
           <p className="text-[11px] text-[#8B9097] mt-2">
             {failedLessons.length > 0 ? (
-              <span className="text-[#B91B1C] font-semibold">{failedLessons.length} video gặp lỗi cần thử lại</span>
+              <span className="text-[#B91B1C] font-bold">{failedLessons.length} video gặp lỗi cần thử lại</span>
             ) : (
-              <span>Whisper ASR & Quiz Gen tự động</span>
+              <span>Tách phụ đề & nhận diện giọng nói</span>
             )}
           </p>
         </motion.div>
 
-        {/* Card 4: Tổng kho thời lượng & Học viên */}
+        {/* Card 4: Tổng kho thời lượng & Học viên (Sandalwood / Warm Paper) */}
         <motion.div
           whileHover={{ y: -2 }}
           transition={{ duration: 0.2 }}
           onClick={() => onNavigateToTab('users')}
-          className="p-5 rounded-3xl bg-white border border-[#E7E7EA] hover:border-[#2F6E62]/40 cursor-pointer transition-all shadow-2xs hover:shadow-xs"
+          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#B91B1C]/40 cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FFF9F5] to-white"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#8B9097] uppercase tracking-wider">Kho bài & Học viên</span>
-            <span className="p-1.5 rounded-xl bg-[#EAF2F0] text-[#2F6E62]">
+            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Kho bài & Học viên</span>
+            <span className="p-1.5 rounded-xl bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA]">
               <UsersThree size={15} weight="bold" />
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#18181B]">{users.length}</span>
-            <span className="text-xs font-semibold text-[#5F6368]">tài khoản</span>
+            <span className="text-3xl font-black font-mono text-[#18181B]">{users.length}</span>
+            <span className="text-xs font-bold text-[#5F6368]">tài khoản</span>
           </div>
           <p className="text-[11px] text-[#5F6368] mt-2 flex items-center gap-1 font-mono">
-            <Clock size={12} />
-            <span>Tổng thời lượng: {totalMinutes} phút học</span>
+            <Clock size={12} className="text-[#B91B1C]" />
+            <span>Tổng thời lượng: <strong className="text-[#18181B]">{totalMinutes} phút</strong> học</span>
           </p>
         </motion.div>
       </div>
@@ -355,14 +366,14 @@ export default function AdminOverviewDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT / PRIMARY (7 Cols): Hàng chờ kiểm duyệt & Xuất bản */}
         <div id="review-queue-section" className="lg:col-span-7 space-y-4">
-          <div className="bg-white rounded-3xl border border-[#E7E7EA] p-6 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F0F0F3]">
+          <div className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F2E4D8]">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-black text-[#18181B]">
                     Hàng chờ Kiểm duyệt Nội dung
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full bg-[#FFF8E7] text-[#9A6A00] text-xs font-bold">
+                  <span className="px-2 py-0.5 rounded-full bg-[#FFF8EC] text-[#B45309] text-xs font-extrabold border border-[#FDE6BA]">
                     {readyForReviewLessons.length + draftLessons.length}
                   </span>
                 </div>
@@ -372,14 +383,14 @@ export default function AdminOverviewDashboard({
               </div>
 
               {/* Status Filter Pill buttons */}
-              <div className="flex items-center gap-1 bg-[#F7F7F9] p-1 rounded-xl border border-[#E7E7EA] self-start sm:self-auto">
+              <div className="flex items-center gap-1 bg-[#FFF9F5] p-1 rounded-2xl border border-[#F2E4D8] self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={() => setReviewFilter('all')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'all'
-                      ? 'bg-white text-[#18181B] shadow-2xs'
-                      : 'text-[#5F6368] hover:text-[#18181B]'
+                      ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                      : 'text-[#5F6368] hover:text-[#B91B1C]'
                   }`}
                 >
                   Tất cả
@@ -387,10 +398,10 @@ export default function AdminOverviewDashboard({
                 <button
                   type="button"
                   onClick={() => setReviewFilter('ready_for_review')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'ready_for_review'
-                      ? 'bg-[#B91B1C] text-white shadow-2xs'
-                      : 'text-[#5F6368] hover:text-[#18181B]'
+                      ? 'bg-[#B91B1C] text-white shadow-xs'
+                      : 'text-[#5F6368] hover:text-[#B91B1C]'
                   }`}
                 >
                   Chờ duyệt ({readyForReviewLessons.length})
@@ -398,10 +409,10 @@ export default function AdminOverviewDashboard({
                 <button
                   type="button"
                   onClick={() => setReviewFilter('draft')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     reviewFilter === 'draft'
-                      ? 'bg-white text-[#18181B] shadow-2xs'
-                      : 'text-[#5F6368] hover:text-[#18181B]'
+                      ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                      : 'text-[#5F6368] hover:text-[#B91B1C]'
                   }`}
                 >
                   Nháp ({draftLessons.length})
@@ -411,8 +422,8 @@ export default function AdminOverviewDashboard({
 
             {/* List of lessons needing review */}
             {pendingReviewQueue.length === 0 ? (
-              <div className="py-12 px-6 text-center space-y-3 bg-[#FDFEFE] rounded-2xl border border-dashed border-[#D9DDE2]">
-                <div className="w-12 h-12 rounded-2xl bg-[#E4F6ED] text-[#188A5A] flex items-center justify-center mx-auto shadow-2xs">
+              <div className="py-12 px-6 text-center space-y-3 bg-[#FFFDFB] rounded-2xl border border-dashed border-[#F2E4D8]">
+                <div className="w-12 h-12 rounded-2xl bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA] flex items-center justify-center mx-auto shadow-2xs">
                   <CheckCircle size={26} weight="fill" />
                 </div>
                 <div className="max-w-md mx-auto">
@@ -424,14 +435,14 @@ export default function AdminOverviewDashboard({
                 <button
                   type="button"
                   onClick={() => onNavigateToTab('upload')}
-                  className="px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-all inline-flex items-center gap-1.5 shadow-2xs"
+                  className="px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <UploadSimple size={14} weight="bold" />
                   <span>Tải video mới lên</span>
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-[#F0F0F3]">
+              <div className="divide-y divide-[#F2E4D8]">
                 {pendingReviewQueue.map((item) => {
                   const isReady = item.status === 'ready_for_review';
                   const isFailed = item.status === 'failed';
@@ -441,13 +452,13 @@ export default function AdminOverviewDashboard({
                   return (
                     <div
                       key={item._id}
-                      className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FDFDFE] -mx-2 px-2 rounded-xl transition-colors"
+                      className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FFFDFB] -mx-2 px-3 rounded-2xl transition-colors"
                     >
                       <div className="flex items-start gap-3 min-w-0">
                         {/* Video Thumbnail / Placeholder */}
-                        <div className="w-16 h-11 rounded-xl bg-[#18181B] shrink-0 overflow-hidden relative border border-[#E7E7EA] flex items-center justify-center">
+                        <div className="w-16 h-11 rounded-xl bg-[#18181B] shrink-0 overflow-hidden relative border border-[#F2E4D8] flex items-center justify-center shadow-2xs">
                           <Play size={16} weight="fill" className="text-white/70" />
-                          <span className="absolute bottom-0.5 right-1 text-[9px] font-mono font-bold text-white/90 bg-black/60 px-1 rounded">
+                          <span className="absolute bottom-0.5 right-1 text-[9px] font-mono font-bold text-white/90 bg-black/70 px-1 rounded">
                             {formatDuration(item.durationSeconds || 120)}
                           </span>
                         </div>
@@ -457,7 +468,7 @@ export default function AdminOverviewDashboard({
                             <h3 className="font-extrabold text-sm text-[#18181B] truncate" title={item.titleVi}>
                               {item.titleVi}
                             </h3>
-                            <span className="px-1.5 py-0.5 rounded-md bg-[#F4F4F6] text-[#34363A] text-[10px] font-bold font-mono">
+                            <span className="px-1.5 py-0.5 rounded-md bg-[#FFF5F0] text-[#B91B1C] border border-[#F9D2D2] text-[10px] font-black font-mono">
                               HSK {item.hsk}
                             </span>
                           </div>
@@ -470,12 +481,12 @@ export default function AdminOverviewDashboard({
                             )}
                             <span className="text-[11px] text-[#8B9097]">·</span>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                 isReady
-                                  ? 'bg-[#FFF8E7] text-[#9A6A00] border border-[#FCE1A5]'
+                                  ? 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]'
                                   : isFailed
-                                  ? 'bg-[#FFF0F0] text-[#B91B1C] border border-[#FCD2D2]'
-                                  : 'bg-[#F4F4F6] text-[#5F6368]'
+                                  ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]'
+                                  : 'bg-[#FFF9F5] text-[#5F6368] border-[#F2E4D8]'
                               }`}
                             >
                               {isReady ? 'Sẵn sàng duyệt' : isFailed ? 'Lỗi xử lý AI' : 'Bản nháp'}
@@ -490,7 +501,7 @@ export default function AdminOverviewDashboard({
                         <button
                           type="button"
                           onClick={() => onSelectLessonToEdit(item._id)}
-                          className="h-9 px-3.5 rounded-xl border border-[#E7E7EA] hover:border-[#18181B] hover:bg-white text-xs font-bold text-[#18181B] flex items-center gap-1.5 transition-all shadow-2xs active:scale-[0.98]"
+                          className="h-9 px-3.5 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] text-xs font-bold text-[#18181B] flex items-center gap-1.5 transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
                         >
                           <PencilSimple size={14} weight="bold" />
                           <span>Biên tập & Phụ đề</span>
@@ -502,7 +513,7 @@ export default function AdminOverviewDashboard({
                             type="button"
                             disabled={isPublishing}
                             onClick={() => void handleQuickPublish(item._id, item.titleVi)}
-                            className="h-9 px-3.5 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50 active:scale-[0.98]"
+                            className="h-9 px-3.5 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 active:scale-[0.98] cursor-pointer"
                           >
                             <CheckCircle size={14} weight="bold" />
                             <span>{isPublishing ? 'Đang xuất bản…' : 'Duyệt & Đăng'}</span>
@@ -515,7 +526,7 @@ export default function AdminOverviewDashboard({
                             type="button"
                             disabled={isRetrying}
                             onClick={() => void handleRetry(item._id)}
-                            className="h-9 px-3.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50 active:scale-[0.98]"
+                            className="h-9 px-3.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 active:scale-[0.98] cursor-pointer"
                           >
                             <ArrowsClockwise size={14} className={isRetrying ? 'animate-spin' : ''} />
                             <span>Thử lại AI</span>
@@ -536,7 +547,7 @@ export default function AdminOverviewDashboard({
               <button
                 type="button"
                 onClick={() => onNavigateToTab('videos')}
-                className="font-bold text-[#B91B1C] hover:underline flex items-center gap-1"
+                className="font-bold text-[#B91B1C] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>Xem toàn bộ danh sách video ({lessons.length})</span>
                 <CaretRight size={13} weight="bold" />
@@ -548,10 +559,10 @@ export default function AdminOverviewDashboard({
         {/* RIGHT (5 Cols): AI Pipeline Monitor & HSK Distribution */}
         <div className="lg:col-span-5 space-y-6">
           {/* AI Video Processing Pipeline Monitor */}
-          <div id="ai-pipeline-section" className="bg-white rounded-3xl border border-[#E7E7EA] p-6 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#F0F0F3]">
+          <div id="ai-pipeline-section" className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F2E4D8]">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-xl bg-[#FDF1F1] text-[#B91B1C]">
+                <div className="p-1.5 rounded-xl bg-[#FDF1F1] text-[#B91B1C] border border-[#F9D2D2]">
                   <Cpu size={16} weight="bold" />
                 </div>
                 <div>
@@ -559,14 +570,14 @@ export default function AdminOverviewDashboard({
                   <p className="text-[11px] text-[#5F6368]">Whisper ASR, Pinyin & Tự động tạo Quiz</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-[#F4F4F6] text-[#5F6368] text-[11px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-[#FFF9F5] text-[#5F6368] text-[11px] font-bold border border-[#F2E4D8]">
                 {activeJobs.length} tác vụ
               </span>
             </div>
 
             {activeJobs.length === 0 ? (
-              <div className="py-6 px-4 text-center rounded-2xl bg-[#FAFBFB] border border-dashed border-[#E7E7EA] space-y-2">
-                <div className="w-8 h-8 rounded-full bg-[#EAF2F0] text-[#2F6E62] flex items-center justify-center mx-auto">
+              <div className="py-6 px-4 text-center rounded-2xl bg-[#FFFDFB] border border-dashed border-[#F2E4D8] space-y-2">
+                <div className="w-8 h-8 rounded-full bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA] flex items-center justify-center mx-auto">
                   <Broadcast size={18} weight="bold" />
                 </div>
                 <p className="text-xs font-bold text-[#18181B]">Không có tác vụ AI đang chạy</p>
@@ -581,7 +592,7 @@ export default function AdminOverviewDashboard({
                   const progress = job.stageProgress || 50;
 
                   return (
-                    <div key={job._id} className="p-3.5 rounded-2xl bg-[#F9F9FB] border border-[#E7E7EA] space-y-2.5">
+                    <div key={job._id} className="p-3.5 rounded-2xl bg-[#FFF9F5] border border-[#F2E4D8] space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs font-bold text-[#18181B] truncate max-w-[200px]">
@@ -598,9 +609,9 @@ export default function AdminOverviewDashboard({
                       </div>
 
                       {/* Animated Progress Bar */}
-                      <div className="h-2 w-full bg-[#E7E7EA] rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-[#F2E4D8] rounded-full overflow-hidden">
                         <motion.div
-                          className="h-full bg-[#B91B1C] rounded-full"
+                          className="h-full bg-gradient-to-r from-[#B91B1C] to-[#E03A3C] rounded-full"
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
                           transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -618,13 +629,13 @@ export default function AdminOverviewDashboard({
             )}
           </div>
 
-          {/* HSK Level Distribution & Curriculum Health (Redesigned) */}
-          <div className="bg-white rounded-3xl border border-[#E7E7EA] p-6 shadow-2xs space-y-5">
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#F0F0F3]">
+          {/* HSK Level Distribution & Curriculum Health */}
+          <div className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-5">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#F2E4D8]">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-black text-[#18181B]">Độ phủ Giáo trình HSK</h2>
-                  <span className="px-2 py-0.5 rounded-full bg-[#EAF2F0] text-[#2F6E62] text-[10px] font-extrabold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA] text-[10px] font-extrabold">
                     {Object.values(hskDistribution).filter(c => c > 0).length}/9 Cấp độ đã có bài
                   </span>
                 </div>
@@ -666,7 +677,7 @@ export default function AdminOverviewDashboard({
                     </span>
 
                     {/* Bar Track & Fill */}
-                    <div className="w-full max-w-[34px] h-28 bg-[#F7F7F9] rounded-xl p-0.5 sm:p-1 flex flex-col justify-end border border-[#EBEBEF] relative overflow-hidden">
+                    <div className="w-full max-w-[34px] h-28 bg-[#FFF9F5] rounded-xl p-0.5 sm:p-1 flex flex-col justify-end border border-[#F2E4D8] relative overflow-hidden">
                       {count > 0 ? (
                         <motion.div
                           initial={{ height: 0 }}
@@ -676,14 +687,14 @@ export default function AdminOverviewDashboard({
                             isMax
                               ? 'bg-gradient-to-t from-[#B91B1C] to-[#E03A3C]'
                               : lvl <= 3
-                              ? 'bg-gradient-to-t from-[#2F6E62] to-[#468E80]'
+                              ? 'bg-gradient-to-t from-[#2F6E62] to-[#188A5A]'
                               : lvl <= 6
-                              ? 'bg-gradient-to-t from-[#B91B1C] to-[#E03A3C]'
-                              : 'bg-gradient-to-t from-[#6D28D9] to-[#8B5CF6]'
+                              ? 'bg-gradient-to-t from-[#D97706] to-[#F59E0B]'
+                              : 'bg-gradient-to-t from-[#B91B1C] to-[#E03A3C]'
                           }`}
                         />
                       ) : (
-                        <div className="w-full h-1 bg-[#DEDEE4] rounded-full my-0.5" />
+                        <div className="w-full h-1 bg-[#F2E4D8] rounded-full my-0.5" />
                       )}
                     </div>
 
@@ -703,7 +714,7 @@ export default function AdminOverviewDashboard({
                         type="button"
                         onClick={() => onNavigateToTab('upload')}
                         title={`Thêm video HSK ${lvl}`}
-                        className="text-[8px] sm:text-[9px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-0.5 sm:px-1 py-0.5 rounded border border-dashed border-[#F7C678] transition-colors"
+                        className="text-[8px] sm:text-[9px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-0.5 sm:px-1 py-0.5 rounded border border-dashed border-[#F9D2D2] transition-colors cursor-pointer"
                       >
                         +
                       </button>
@@ -716,8 +727,8 @@ export default function AdminOverviewDashboard({
             </div>
 
             {/* Insight Note */}
-            <div className="p-3 rounded-2xl bg-[#F7F7F9] border border-[#E7E7EA] flex items-start gap-2.5 text-xs">
-              <div className="p-1.5 rounded-lg bg-white text-[#B91B1C] border border-[#E7E7EA] shrink-0 mt-0.5 shadow-2xs">
+            <div className="p-3 rounded-2xl bg-[#FFF9F5] border border-[#F2E4D8] flex items-start gap-2.5 text-xs">
+              <div className="p-1.5 rounded-xl bg-white text-[#B91B1C] border border-[#F2E4D8] shrink-0 mt-0.5 shadow-2xs">
                 <Sparkle size={13} weight="fill" />
               </div>
               <div className="text-[11px] text-[#5F6368] leading-relaxed">
@@ -734,7 +745,7 @@ export default function AdminOverviewDashboard({
                     chưa có bài học nào. Bạn nên ưu tiên tải thêm video để học viên có lộ trình liền mạch.
                   </span>
                 ) : (
-                  <span>Toàn bộ các cấp độ HSK 1 - 6 đều đã có bài học đầy đủ!</span>
+                  <span>Toàn bộ các cấp độ HSK 1 - 9 đều đã có bài học đầy đủ!</span>
                 )}
               </div>
             </div>
