@@ -11,6 +11,7 @@ export default defineConfig({
       JWT_ACCESS_SECRET: '01234567890123456789012345678901',
       JWT_REFRESH_SECRET: 'abcdefghijklmnopqrstuvwxyzabcdef',
       REDIS_URL: 'redis://127.0.0.1:6379',
+      GEMINI_API_KEY: 'test-gemini-api-key',
     },
   },
 });
