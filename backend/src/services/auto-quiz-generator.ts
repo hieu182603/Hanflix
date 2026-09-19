@@ -127,30 +127,24 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
       '[auto-quiz] requesting Gemini to generate quiz questions',
     );
 
-    const generated = await generateQuizWithGemini({
+    const generationOptions = {
       hsk: lesson.hsk,
       kinds,
       questionCount,
       cues,
       lessonTitleVi: lesson.titleVi,
-    });
-
-    if (generated.length === 0) {
-      // Gemini responded but every question was filtered out. Don't overwrite
-      // the existing fall-back fill_blank quiz (admin still has a usable draft).
-      await QuizModel.findOneAndUpdate(
-        { lessonId: lessonObjectId, status: 'draft' },
-        {
-          $set: {
-            aiGenerationStatus: 'completed',
-            aiGenerationCompletedAt: new Date(),
-            aiGenerationQuestionCount: 0,
-            aiGenerationError: 'AI trả về rỗng; giữ nguyên bài tập fallback',
-          },
-        },
-        { sort: { revision: -1 } },
-      );
-      return;
+    };
+    let generated: GeneratedQuestion[] = [];
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      generated = await generateQuizWithGemini(generationOptions);
+      generated = generated.filter((q, i, all) => all.findIndex(other => other.questionId === q.questionId || other.prompt === q.prompt) === i);
+      if (generated.length >= questionCount) {
+        generated = generated.slice(0, questionCount);
+        break;
+      }
+    }
+    if (generated.length !== questionCount) {
+      throw new Error(`AI chỉ tạo được ${generated.length}/${questionCount} câu hợp lệ sau 3 lần thử; giữ nguyên bản nháp`);
     }
 
     const mappedQuestions = generated.map((q, index) => mapToQuizQuestion(q, index));
@@ -164,8 +158,8 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
           aiGenerationStatus: 'completed',
           aiGenerationCompletedAt: new Date(),
           aiGenerationQuestionCount: mappedQuestions.length,
-          aiGenerationError: undefined,
         },
+        $unset: { aiGenerationError: 1 },
       },
       { sort: { revision: -1 } },
     );

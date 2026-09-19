@@ -589,6 +589,8 @@ export default function AdminOverviewDashboard({
               <div className="space-y-3">
                 {activeJobs.map((job) => {
                   const lesson = lessons.find(l => l._id === job.lessonId);
+                  // Hide job when lesson metadata is missing — avoids showing raw ObjectIds to admins.
+                  if (!lesson?.titleVi) return null;
                   const progress = job.stageProgress || 50;
 
                   return (
@@ -596,7 +598,7 @@ export default function AdminOverviewDashboard({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs font-bold text-[#18181B] truncate max-w-[200px]">
-                            {lesson?.titleVi || job.lessonId}
+                            {lesson.titleVi}
                           </p>
                           <p className="text-[11px] text-[#B91B1C] font-semibold mt-0.5 flex items-center gap-1">
                             <Sparkle size={12} weight="fill" />
@@ -667,14 +669,16 @@ export default function AdminOverviewDashboard({
 
                 return (
                   <div key={lvl} className="flex flex-col items-center gap-1.5 group">
-                    {/* Top Count Label */}
-                    <span
-                      className={`text-[11px] font-mono font-black transition-colors ${
-                        isMax ? 'text-[#B91B1C]' : count > 0 ? 'text-[#18181B]' : 'text-[#8B9097]'
-                      }`}
-                    >
-                      {count}
-                    </span>
+                    {/* Top Count Label — fixed-height wraps single- and multi-digit values */}
+                    <div className="h-4 flex items-end justify-center">
+                      <span
+                        className={`text-[11px] font-mono font-black transition-colors leading-none ${
+                          isMax ? 'text-[#B91B1C]' : count > 0 ? 'text-[#18181B]' : 'text-[#8B9097]'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </div>
 
                     {/* Bar Track & Fill */}
                     <div className="w-full max-w-[34px] h-28 bg-[#FFF9F5] rounded-xl p-0.5 sm:p-1 flex flex-col justify-end border border-[#F2E4D8] relative overflow-hidden">
@@ -698,8 +702,8 @@ export default function AdminOverviewDashboard({
                       )}
                     </div>
 
-                    {/* HSK Level Name */}
-                    <div className="text-center">
+                    {/* HSK Level Name — fixed-height container so the sm-only sub-label toggling never reflows siblings */}
+                    <div className="text-center min-h-[26px]">
                       <p className="text-[10px] sm:text-[11px] font-extrabold font-mono text-[#18181B] leading-none">
                         H{lvl}
                       </p>
@@ -708,19 +712,22 @@ export default function AdminOverviewDashboard({
                       </p>
                     </div>
 
-                    {/* Status Badge */}
-                    {isZero ? (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateToTab('upload')}
-                        title={`Thêm video HSK ${lvl}`}
-                        className="text-[8px] sm:text-[9px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-0.5 sm:px-1 py-0.5 rounded border border-dashed border-[#F9D2D2] transition-colors cursor-pointer"
-                      >
-                        +
-                      </button>
-                    ) : (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#188A5A]" />
-                    )}
+                    {/* Status Badge — fixed-height row prevents layout reflow when data toggles 0 ↔ >0 */}
+                    <div className="h-5 flex items-center justify-center">
+                      {isZero ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToTab('upload')}
+                          title={`Thêm video HSK ${lvl}`}
+                          aria-label={`Thêm video HSK ${lvl}`}
+                          className="text-[9px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-1 py-0.5 rounded border border-dashed border-[#F9D2D2] transition-colors cursor-pointer leading-none"
+                        >
+                          +
+                        </button>
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#188A5A]" aria-hidden="true" />
+                      )}
+                    </div>
                   </div>
                 );
               })}

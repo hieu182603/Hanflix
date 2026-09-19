@@ -118,6 +118,39 @@ describe('generateQuizWithGemini', () => {
     expect(questions[0]?.cueId).toBeUndefined();
   });
 
+  it.each(['a', ' A '])('normalizes option IDs (%s) together with the correct answer', async (firstId) => {
+    mockHandler = async () => ({
+      text: JSON.stringify({
+        questions: [
+          {
+            questionId: 'ai-q-upper',
+            type: 'multiple_choice',
+            prompt: 'Câu hỏi AI trả correctOptionId viết hoa.',
+            cueId: 'cue-1',
+            options: [
+              { optionId: firstId, text: 'A' },
+              { optionId: ' B ', text: 'B' },
+              { optionId: 'c', text: 'C' },
+              { optionId: 'd', text: 'D' },
+            ],
+            correctOptionId: 'B',
+            explanationVi: 'Giải thích ngắn gọn cho câu hỏi viết hoa này.',
+          },
+        ],
+      }),
+    });
+
+    const questions = await generateQuizWithGemini({
+      hsk: 1,
+      kinds: ['comprehension'],
+      questionCount: 1,
+      cues,
+    });
+
+    expect(questions).toHaveLength(1);
+    expect(questions[0]?.correctOptionId).toBe('b');
+  });
+
   it('drops questions missing required fields per type', async () => {
     mockHandler = async () => ({
       text: JSON.stringify({

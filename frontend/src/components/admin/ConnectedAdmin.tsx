@@ -162,6 +162,27 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, editingId]);
 
+  // Background quiz generation may finish after the editor loaded its draft.
+  // Refresh only the quiz and never replace the administrator's unsaved edits.
+  useEffect(() => {
+    if (tab !== 'editor' || !editingId || dirty.quiz) return;
+    let active = true;
+    let loading = false;
+    const timer = window.setInterval(async () => {
+      if (loading) return;
+      loading = true;
+      try {
+        const latest = await getAdminReview(editingId);
+        if (active) {
+          setQuestions(latest.quiz?.questions ?? []);
+          setReview(previous => previous ? { ...previous, quiz: latest.quiz } : previous);
+        }
+      } catch { /* Keep the current draft on transient polling failures. */ }
+      finally { loading = false; }
+    }, 5000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [tab, editingId, dirty.quiz]);
+
   /**
    * F01: explicit "Tải lại" button allows the user to discard local edits and
    * pull fresh data from the server.

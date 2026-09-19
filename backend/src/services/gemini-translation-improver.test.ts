@@ -141,3 +141,15 @@ describe('improveVietnameseTranslations (batched)', () => {
     }
   });
 });
+
+it('retries truncated JSON and reserves enough tokens for UUIDs and Vietnamese output', async () => {
+  let attempts = 0;
+  mockHandler = async (request) => {
+    expect((request as unknown as { config: { maxOutputTokens: number } }).config.maxOutputTokens).toBeGreaterThanOrEqual(2048);
+    attempts++;
+    if (attempts === 1) return { text: '{"items":[' };
+    return { text: JSON.stringify({items:[{cueId:'c1',vi:'Mình là Peppa.'}]}) };
+  };
+  expect(await improveVietnameseBatch([sampleCues[0]!])).toEqual([{cueId:'c1',vi:'Mình là Peppa.'}]);
+  expect(attempts).toBe(2);
+});

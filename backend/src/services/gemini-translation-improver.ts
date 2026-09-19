@@ -27,9 +27,9 @@ Nguyên tắc bắt buộc (giữ để xử lý nhất quán):
 2. Cấu trúc "X, Y" trong tiếng Trung (ví dụ 弟弟 = em trai, 哥哥 = anh trai) phải dịch chính xác
    theo vai vế — đừng để Azure dịch "em trai" thành "anh trai".
 3. Câu tiếng Việt phải đọc như người Việt nói hàng ngày. Tự nhiên, không máy móc.
-4. Giữ độ dài tương đương bản Azure (≤ 1.4×). Không dài dòng.
+4. Ưu tiên đúng nghĩa tiếng Trung và lời thoại tự nhiên; bản Azure chỉ là tham khảo có thể sai. Không dài dòng.
 5. Mỗi cue trả về ĐÚNG một dòng, không bullet, không số thứ tự, không ký tự đặc biệt.
-6. Nếu bản Azure đã tự nhiên rồi → giữ nguyên, đừng cố đổi.
+6. Dịch lại từ tiếng Trung rồi đối chiếu bản Azure. Kiểm tra vai vế (弟弟 = em trai), đại từ và tên nhân vật nhất quán giữa các câu. Với Peppa Pig: 佩奇 = Peppa, 乔治 = George; lời trẻ nhỏ dùng “mình/con”, tránh “ta”.
 7. Ký tự "..." hay chỗ trống không rõ nghĩa → giữ nguyên dấu "..." để tránh bịa.
 
 Trả về JSON object: { "items": [{ "cueId": "...", "vi": "..." }, ...] }
@@ -43,7 +43,7 @@ const client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
  */
 function buildUserPrompt(batch: readonly CueInput[]): string {
   const lines = batch.map(
-    (cue, i) => `${i + 1}. [${cue.cueId}] zh="${cue.zh}" | azvi="${cue.vi}"`,
+    (cue, i) => `${i + 1}. [${cue.cueId}] zh=${JSON.stringify(cue.zh)} | azvi=${JSON.stringify(cue.vi)}`,
   );
   return `Rewrite the "azvi" version into natural Vietnamese idiomatic prose.\n\n${lines.join('\n')}`;
 }
@@ -101,6 +101,7 @@ function parseImprovementResponse(text: string): CueOutput[] | null {
  */
 export async function improveVietnameseBatch(
   batch: readonly CueInput[],
+  attempt = 0,
 ): Promise<CueOutput[]> {
   if (batch.length === 0) return [];
   if (!env.GEMINI_TRANSLATION_IMPROVE_ENABLED || !env.GEMINI_API_KEY) {
@@ -114,19 +115,26 @@ export async function improveVietnameseBatch(
       config: {
         systemInstruction: SYSTEM_PROMPT,
         temperature: 0.3,
-        maxOutputTokens: Math.max(800, batch.length * 30),
+        // JSON includes UUIDs and Vietnamese text, not just ~30 tokens/cue.
+        maxOutputTokens: Math.max(2048, batch.length * 180 + 1024),
+        httpOptions: { timeout: env.GEMINI_TIMEOUT_MS * 2 },
         responseMimeType: 'application/json',
       },
     });
     const text = response.text ?? '';
     const parsed = parseImprovementResponse(text);
     if (!parsed || parsed.length === 0) {
+      if (attempt < 2) return improveVietnameseBatch(batch, attempt + 1);
       // Empty / malformed response: keep Azure output so the pipeline never breaks.
       return batch.map((c) => ({ cueId: c.cueId, vi: c.vi }));
     }
     // Fill in any cues Gemini skipped (returned empty/oversized string) with
     // the Azure output. Defensive — earlier loop drops malformed items.
     const byId = new Map(parsed.map(item => [item.cueId, item.vi]));
+    const missing = batch.filter(c => !byId.has(c.cueId));
+    if (missing.length && attempt < 2) {
+      for (const item of await improveVietnameseBatch(missing, attempt + 1)) byId.set(item.cueId, item.vi);
+    }
     return batch.map(c => ({
       cueId: c.cueId,
       vi: byId.get(c.cueId) ?? c.vi,
