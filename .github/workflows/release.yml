@@ -98,7 +98,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Login is unconditional so smoke builds on PRs (load-only) still
       # validate against the registry; the `push:` flag on the build step
@@ -153,7 +153,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Login is unconditional so smoke builds on PRs (load-only) still
       # validate the Dockerfile; the `push:` flag on the build step below

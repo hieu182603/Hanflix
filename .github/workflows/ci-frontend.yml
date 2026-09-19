@@ -166,7 +166,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Smoke test only — guarantees the Dockerfile + nginx.conf keep
       # working after changes. Full multi-arch publish happens in release.yml.
