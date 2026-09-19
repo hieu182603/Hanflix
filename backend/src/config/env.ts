@@ -112,11 +112,28 @@ const envSchema = z.object({
   VIDEO_LEASE_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
   // F04: heartbeat interval (seconds). Worker emits heartbeat at this rate.
   VIDEO_HEARTBEAT_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(120).default(20),
+  // F12 fix (2026-09-19): playback derivative MP4 faststart + transcoding.
+  // When enabled, the pipeline runs ffmpeg after audio extraction to either
+  // remux (no re-encode when already H.264/AAC) or transcode to a
+  // web-friendly MP4 with `+faststart`. Set to false to skip the step
+  // entirely (legacy videos keep their original file as the playback URL).
+  PLAYBACK_DERIVATIVE_ENABLED: booleanFromString.default(true),
+  // Maximum output height for the transcoded playback derivative. Source
+  // videos are downscaled to this height without upscaling — keeps the
+  // bundle size small while preserving text legibility for Chinese.
+  PLAYBACK_DERIVATIVE_MAX_HEIGHT: z.coerce.number().int().min(240).max(2160).default(720),
+  // Maximum output bitrate (kbps) for the H.264 encoder. Default 2500
+  // is a sensible middle ground for 720p educational video. Hard floor 500
+  // kbps because anything lower makes Chinese characters unreadable on the
+  // derivative. Hard ceiling 20 mbps because R2 egress costs grow linearly
+  // and we never want the derivative to exceed the source bitrate.
+  PLAYBACK_DERIVATIVE_VIDEO_BITRATE_KBPS: z.coerce.number().int().min(500).max(20000).default(2500),
   GLOBAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
-  GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+  GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(600),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(12),
-  UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(24),
+  UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
   // SECURITY (H-1): Optional Redis URL for shared rate-limit counters across replicas.
   REDIS_URL: optionalString,
   CLOUDINARY_CLOUD_NAME: optionalString,

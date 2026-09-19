@@ -15,10 +15,32 @@
  * any route handler code changes. The Redis packages are optional — if REDIS_URL is unset
  * or the packages are missing, the limiter silently falls back to in-memory.
  */
-import { rateLimit } from 'express-rate-limit';
+import { ipKeyGenerator, rateLimit, type RateLimitRequestHandler } from 'express-rate-limit';
+import type { Request, RequestHandler } from 'express';
 import { env } from '../config/env.js';
+import { verifyAccessToken } from '../services/jwt.js';
 
-const response = { error: { code: 'RATE_LIMITED', message: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.' } };
+const rateLimitHandler: RequestHandler = (_req, res) => {
+  const retryAfterSeconds = Math.max(1, Number(res.getHeader('Retry-After')) || 60);
+  res.status(429).json({ error: {
+    code: 'RATE_LIMITED',
+    message: `Bạn đã gửi nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ${retryAfterSeconds} giây.`,
+    retryAfterSeconds,
+  } });
+};
+
+// Global middleware runs before requireAuth. Only trust a verified JWT subject,
+// never raw tokens or client-supplied user IDs. This does not authorize requests.
+function accountOrIpKey(req: Request): string {
+  if (req.auth) return `user:${req.auth.userId}`;
+  const authorization = req.get('authorization');
+  if (authorization?.startsWith('Bearer ')) {
+    try {
+      return `user:${verifyAccessToken(authorization.slice(7)).sub}`;
+    } catch { /* Anonymous/expired/invalid tokens share the IP budget. */ }
+  }
+  return `ip:${ipKeyGenerator(req.ip ?? req.socket.remoteAddress ?? 'unknown')}`;
+}
 
 type RedisLike = {
   call: (...args: (string | number | Buffer)[]) => Promise<unknown>;
@@ -61,10 +83,11 @@ function sharedStore(prefix: string) {
 export const globalLimiter = rateLimit({
   windowMs: env.GLOBAL_RATE_LIMIT_WINDOW_MS,
   limit: env.GLOBAL_RATE_LIMIT_MAX,
+  keyGenerator: accountOrIpKey,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   store: sharedStore('rl:global:') as never,
-  message: response,
+  handler: rateLimitHandler,
 });
 
 export const authLimiter = rateLimit({
@@ -74,23 +97,35 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   store: sharedStore('rl:auth:') as never,
   skipSuccessfulRequests: true,
-  message: response,
+  handler: rateLimitHandler,
+});
+
+// Background session renewal must not consume the failed-login/OTP budget.
+export const refreshLimiter: RateLimitRequestHandler = rateLimit({
+  windowMs: 60 * 1000,
+  limit: env.REFRESH_RATE_LIMIT_MAX,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  store: sharedStore('rl:refresh:') as never,
+  handler: rateLimitHandler,
 });
 
 export const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: env.AI_RATE_LIMIT_MAX,
+  keyGenerator: accountOrIpKey,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   store: sharedStore('rl:ai:') as never,
-  message: response,
+  handler: rateLimitHandler,
 });
 
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: env.UPLOAD_RATE_LIMIT_MAX,
+  keyGenerator: accountOrIpKey,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   store: sharedStore('rl:upload:') as never,
-  message: response,
+  handler: rateLimitHandler,
 });

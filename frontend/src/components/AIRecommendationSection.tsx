@@ -1,50 +1,103 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles, SlidersHorizontal, RefreshCw, Filter } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAiRecommendations, getRuleBasedRecommendations, type PublishedLesson } from '../api/learning';
 import { InlineBanner } from './notifications';
 import { ApiRequestError } from '../api/client';
 import { useLanguage } from '../i18n';
+import LessonCard from './LessonCard';
+import { learningQueryKeys } from '../api/queryKeys';
+import { perfMarks } from '../lib/perfMarks';
 
 interface AIRecommendationSectionProps {
   onSelectLessonId: (id: string) => void;
   onOpenPreferences: () => void;
 }
 
+const RULE_STALE = 10 * 60 * 1000; // 10 min — recommendations re-shuffle quickly otherwise
+const AI_STALE = 30 * 60 * 1000; // AI is expensive; cache for 30 minutes
+const AI_TIMEOUT_MS = 8000;
+
+interface RecItem {
+  lesson: PublishedLesson;
+  reasonVi: string;
+}
+
+/**
+ * Two-tier rec strategy:
+ *   1. Rule-based recs are CHEAP, fully derived from the user's HSK + saved
+ *      words + preferences. They render immediately from the React Query
+ *      cache when one is available, otherwise the first request is
+ *      background. AI recs layer on top once they return.
+ *   2. AI recs are gated behind an explicit request (button or automatic
+ *      one-shot). They NEVER block the rule-based feed, and any AI failure
+ *      leaves the rule-based list untouched.
+ *
+ * Both query keys are namespaced (`learningQueryKeys.recsRule()` /
+ * `learningQueryKeys.recsAi()`) so other views can subscribe to the same
+ * cached entries without firing duplicate requests.
+ */
 export default function AIRecommendationSection({
   onSelectLessonId,
-  onOpenPreferences
+  onOpenPreferences,
 }: AIRecommendationSectionProps) {
   const { t } = useLanguage();
-  const [lessons, setLessons] = useState<Array<{ lesson: PublishedLesson; reasonVi: string }>>([]);
   const [activeChip, setActiveChip] = useState<string>('all');
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const hasReportedFeedReady = useRef(false);
 
-  const loadRecommendations = async () => {
-    setIsRefreshing(true);
-    setError('');
-    try {
-      const aiResults = await getAiRecommendations();
-      if (aiResults.length > 0) {
-        setLessons(aiResults);
-      } else {
-        const ruleResults = await getRuleBasedRecommendations();
-        setLessons(ruleResults);
-      }
-    } catch (requestError) {
-      try {
-        const ruleResults = await getRuleBasedRecommendations();
-        setLessons(ruleResults);
-      } catch (fallbackError) {
-        setLessons([]);
-        setError(requestError instanceof ApiRequestError ? requestError.message : 'Không thể tải gợi ý lúc này.');
-      }
-    } finally {
-      setIsRefreshing(false);
+  const ruleQuery = useQuery({
+    queryKey: learningQueryKeys.recsRule(),
+    queryFn: ({ signal }) => getRuleBasedRecommendations({ signal } as never).then((data) => data),
+    staleTime: RULE_STALE,
+    retry: 1,
+  });
+
+  const aiQuery = useQuery({
+    queryKey: learningQueryKeys.recsAi(),
+    queryFn: ({ signal }) =>
+      getAiRecommendations({ signal, timeoutMs: AI_TIMEOUT_MS } as never).then((data) => data),
+    staleTime: AI_STALE,
+    retry: 0,
+  });
+
+  useEffect(() => {
+    // Mark feed_list:ready exactly once, the first time EITHER source
+    // produces data. Doing this in render body (the previous bug) would
+    // overwrite the mark on every render and taint the perf trace.
+    if (hasReportedFeedReady.current) return;
+    if (aiQuery.data || ruleQuery.data) {
+      hasReportedFeedReady.current = true;
+      perfMarks.since('feed_list:ready', 'restore_session:ready');
     }
+  }, [aiQuery.data, ruleQuery.data]);
+
+  const refetchAll = async () => {
+    await queryClient.invalidateQueries({ queryKey: learningQueryKeys.recsRule() });
+    await queryClient.invalidateQueries({ queryKey: learningQueryKeys.recsAi() });
   };
 
-  useEffect(() => { void loadRecommendations(); }, []);
+  const lessons: RecItem[] = (() => {
+    if (aiQuery.data && aiQuery.data.length > 0) {
+      return aiQuery.data;
+    }
+    if (ruleQuery.data && ruleQuery.data.length > 0) {
+      return ruleQuery.data;
+    }
+    return [];
+  })();
+
+  const isRefreshing = ruleQuery.isFetching && !ruleQuery.data;
+  const error = (() => {
+    if (aiQuery.error && ruleQuery.data && ruleQuery.data.length > 0) {
+      // AI failed but rule list works — surface as a soft banner
+      return aiQuery.error instanceof ApiRequestError ? aiQuery.error.message : 'Không thể tải gợi ý AI lúc này.';
+    }
+    if (ruleQuery.error && !ruleQuery.data) {
+      return ruleQuery.error instanceof ApiRequestError ? ruleQuery.error.message : 'Không thể tải gợi ý lúc này.';
+    }
+    return '';
+  })();
 
   const filterChips = [
     { id: 'all', label: t.feed.filterAll },
@@ -64,7 +117,6 @@ export default function AIRecommendationSection({
 
   return (
     <section className="bg-white rounded-2xl md:rounded-3xl border border-[#E7E7EA] p-5 md:p-7 shadow-xs">
-      {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#E7E7EA]">
         <div className="flex items-start gap-3.5">
           <div className="w-10 h-10 rounded-2xl bg-[#B91B1C] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -78,6 +130,12 @@ export default function AIRecommendationSection({
               <span className="px-3 py-0.5 rounded-full bg-[#34363A] text-white text-xs font-semibold">
                 {t.feed.basedOnProfile}
               </span>
+              {aiQuery.isFetching && (
+                <span className="px-3 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">AI đang tải…</span>
+              )}
+              {aiQuery.data && aiQuery.data.length > 0 && (
+                <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">Cá nhân hoá bởi AI</span>
+              )}
             </div>
             <p className="text-xs md:text-sm text-[#5F6368] mt-1">
               Bài học đã xuất bản, được xếp theo trình độ, sở thích và mục tiêu học tập của bạn.
@@ -85,7 +143,6 @@ export default function AIRecommendationSection({
           </div>
         </div>
 
-        {/* Right Header Buttons */}
         <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
           <button
             onClick={onOpenPreferences}
@@ -96,7 +153,7 @@ export default function AIRecommendationSection({
           </button>
 
           <button
-            onClick={() => void loadRecommendations()}
+            onClick={() => void refetchAll()}
             disabled={isRefreshing}
             className="w-10 h-10 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] hover:border-[#D1D5DB] text-[#5F6368] hover:text-[#18181B] flex items-center justify-center transition-all shadow-2xs active:scale-95"
             title="Làm mới gợi ý"
@@ -106,7 +163,6 @@ export default function AIRecommendationSection({
         </div>
       </div>
 
-      {/* Filter Chips Bar */}
       <div className="flex items-center gap-2 overflow-x-auto py-4 no-scrollbar">
         <Filter className="w-4 h-4 text-[#8B9097] mr-1 shrink-0" />
         {filterChips.map((chip) => {
@@ -129,22 +185,20 @@ export default function AIRecommendationSection({
         })}
       </div>
 
-      {/* Video Lesson Grid (4 cols >= 1366px, 3 cols 1024-1365px, 2 cols tablet, 1 col mobile) */}
-      {error && <InlineBanner variant="error" message={error} className="mb-4" />}
+      {error && <InlineBanner variant="warning" message={error} className="mb-4" />}
       {!error && !isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Chưa có bài học đã xuất bản để gợi ý.</p>}
       {!error && isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Đang tìm bài học phù hợp…</p>}
       {!error && lessons.length > 0 && filteredLessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Không có bài học phù hợp với bộ lọc này.</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-2">
-        {!error && filteredLessons.map(({ lesson, reasonVi }) => (
-          <button key={lesson._id} type="button" onClick={() => onSelectLessonId(lesson._id)}
-            className="text-left bg-white rounded-2xl border border-[#E7E7EA] p-5 hover:border-[#B91B1C] hover:shadow-md transition-all">
-            <span className="inline-block rounded-md bg-[#34363A] text-white text-xs font-bold px-2 py-1 mb-3">HSK {lesson.hsk}</span>
-            <h3 className="font-bold text-[#18181B] leading-snug">{lesson.titleVi}</h3>
-            {lesson.titleZh && <p className="text-sm text-neutral-500 mt-1">{lesson.titleZh} {lesson.pinyin && `· ${lesson.pinyin}`}</p>}
-            <p className="text-xs text-neutral-600 mt-3">{reasonVi}</p>
-            <p className="text-xs text-[#B91B1C] font-semibold mt-3">Xem bài học · {Math.ceil(lesson.durationSeconds / 60)} phút</p>
-          </button>
-        ))}
+        {!error &&
+          filteredLessons.map(({ lesson, reasonVi }) => (
+            <LessonCard
+              key={lesson._id}
+              lesson={lesson}
+              reasonVi={reasonVi}
+              onClick={() => onSelectLessonId(lesson._id)}
+            />
+          ))}
       </div>
     </section>
   );

@@ -17,7 +17,18 @@ import {
   parseDateKey,
   toTimezoneDateKey,
 } from '../services/study-activity.js';
+import { createVideoDownloadUrl } from '../services/r2.js';
+import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 import { asyncHandler } from '../utils/async-handler.js';
+
+async function safeDownloadUrl(key?: string | null): Promise<string | null> {
+  if (!key) return null;
+  try {
+    return await createVideoDownloadUrl(key);
+  } catch {
+    return null;
+  }
+}
 
 const router = Router();
 router.use(requireAuth);
@@ -89,12 +100,122 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   const averageQuizScore = attempts.length
     ? Math.round(attempts.reduce((sum, item) => sum + item.score, 0) / attempts.length)
     : null;
+
+  const continueItem = progress.find(item => !item.completed) ?? null;
+  let continueLearning: unknown = continueItem;
+  if (continueItem && continueItem.lessonId && typeof continueItem.lessonId === 'object') {
+    const lessonObj = continueItem.lessonId as unknown as Record<string, unknown>;
+    const thumbnailUrl = await safeDownloadUrl(lessonObj.thumbnailKey as string | undefined);
+    continueLearning = {
+      ...continueItem,
+      lessonId: withProcessingCompatibility({
+        ...lessonObj,
+        thumbnailUrl,
+      }),
+    };
+  }
+
   res.json({
     data: {
       metrics: { completedLessons, savedWords: savedCount, dueWords: dueCount, averageQuizScore },
-      continueLearning: progress.find(item => !item.completed) ?? null,
+      continueLearning,
       recentProgress: progress.slice(0, 10),
       recentAttempts: attempts,
+    },
+  });
+}));
+
+router.get('/history', asyncHandler(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 8));
+  const status = req.query.status as string | undefined; // 'completed' | 'in_progress' | 'all'
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
+  const hsk = req.query.hsk ? parseInt(req.query.hsk as string, 10) : undefined;
+
+  // Fetch all user progress items to calculate comprehensive stats and allow search
+  const allProgress = await ProgressModel.find({ userId: req.auth!.userId })
+    .populate('lessonId', 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey descriptionVi')
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  // Valid progress items where lessonId is populated
+  const validProgress = allProgress.filter(
+    (item) => item.lessonId && typeof item.lessonId === 'object' && ((item.lessonId as unknown as Record<string, unknown>).titleVi)
+  );
+
+  // Calculate statistics across all history
+  const completedCount = validProgress.filter((item) => item.completed).length;
+  const inProgressCount = validProgress.length - completedCount;
+  const totalStudySeconds = validProgress.reduce(
+    (sum, item) => sum + (item.activeStudySeconds || item.lastPositionSeconds || 0),
+    0
+  );
+
+  // Fetch quiz attempts for average score
+  const attempts = await QuizAttemptModel.find({ userId: req.auth!.userId }).select('score').lean();
+  const averageQuizScore = attempts.length
+    ? Math.round(attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length)
+    : null;
+
+  // Filter items by status, search query (q), and HSK
+  let filtered = validProgress;
+  if (status === 'completed') {
+    filtered = filtered.filter((item) => item.completed);
+  } else if (status === 'in_progress') {
+    filtered = filtered.filter((item) => !item.completed);
+  }
+
+  if (hsk) {
+    filtered = filtered.filter((item) => {
+      const lesson = item.lessonId as unknown as Record<string, unknown>;
+      return Number(lesson.hsk) === hsk;
+    });
+  }
+
+  if (q) {
+    filtered = filtered.filter((item) => {
+      const lesson = item.lessonId as unknown as Record<string, unknown>;
+      const titleVi = String(lesson.titleVi || '').toLowerCase();
+      const titleZh = String(lesson.titleZh || '').toLowerCase();
+      const pinyin = String(lesson.pinyin || '').toLowerCase();
+      return titleVi.includes(q) || titleZh.includes(q) || pinyin.includes(q);
+    });
+  }
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const startIndex = (page - 1) * limit;
+  const pageItems = filtered.slice(startIndex, startIndex + limit);
+
+  // Resolve thumbnail URLs
+  const itemsWithThumbnails = await Promise.all(
+    pageItems.map(async (item) => {
+      const lessonObj = item.lessonId as unknown as Record<string, unknown>;
+      const thumbnailUrl = await safeDownloadUrl(lessonObj.thumbnailKey as string | undefined);
+      return {
+        ...item,
+        lesson: withProcessingCompatibility({
+          ...lessonObj,
+          thumbnailUrl,
+        }),
+      };
+    })
+  );
+
+  res.json({
+    data: {
+      items: itemsWithThumbnails,
+      total,
+      page,
+      limit,
+      totalPages,
+      stats: {
+        totalLessonsLearned: validProgress.length,
+        completedCount,
+        inProgressCount,
+        totalStudySeconds,
+        averageQuizScore,
+      },
     },
   });
 }));
@@ -140,7 +261,18 @@ router.get('/recommendations', asyncHandler(async (req, res) => {
     }
     return { lesson, score, reasons: reasons.slice(0, 2) };
   }).sort((a, b) => b.score - a.score).slice(0, 12);
-  res.json({ data: { items, source: 'deterministic_profile_rules' } });
+
+  const itemsWithThumbnails = await Promise.all(
+    items.map(async item => {
+      const thumbnailUrl = await safeDownloadUrl(item.lesson.thumbnailKey);
+      return {
+        ...item,
+        lesson: withProcessingCompatibility({ ...item.lesson, thumbnailUrl }),
+      };
+    })
+  );
+
+  res.json({ data: { items: itemsWithThumbnails, source: 'deterministic_profile_rules' } });
 }));
 
 router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
@@ -172,12 +304,21 @@ router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
   const lessonMap = new Map(lessons.map(lesson => [lesson._id.toString(), lesson]));
   const validAiItems = resultItems
     .map(item => ({ lesson: lessonMap.get(item.lessonId), reasonVi: item.reasonVi }))
-    .filter(item => item.lesson != null);
+    .filter((item): item is { lesson: NonNullable<typeof item.lesson>; reasonVi: string } => item.lesson != null);
 
   if (validAiItems.length > 0) {
+    const itemsWithThumbnails = await Promise.all(
+      validAiItems.map(async item => {
+        const thumbnailUrl = await safeDownloadUrl(item.lesson.thumbnailKey);
+        return {
+          ...item,
+          lesson: withProcessingCompatibility({ ...item.lesson, thumbnailUrl }),
+        };
+      })
+    );
     res.json({
       data: {
-        items: validAiItems,
+        items: itemsWithThumbnails,
         source: 'gemini_validated_rerank',
       },
     });
@@ -198,12 +339,19 @@ router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
     })
     .slice(0, 8);
 
+  const fallbackWithThumbnails = await Promise.all(
+    sorted.map(async lesson => {
+      const thumbnailUrl = await safeDownloadUrl(lesson.thumbnailKey);
+      return {
+        lesson: withProcessingCompatibility({ ...lesson, thumbnailUrl }),
+        reasonVi: `Phù hợp với trình độ HSK ${lesson.hsk} và chủ đề học tập của bạn`,
+      };
+    })
+  );
+
   res.json({
     data: {
-      items: sorted.map(lesson => ({
-        lesson,
-        reasonVi: `Phù hợp với trình độ HSK ${lesson.hsk} và chủ đề học tập của bạn`,
-      })),
+      items: fallbackWithThumbnails,
       source: 'profile_deterministic_fallback',
     },
   });

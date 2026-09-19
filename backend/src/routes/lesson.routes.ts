@@ -10,6 +10,8 @@ import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { createVideoDownloadUrl } from '../services/r2.js';
+import { resolvePlaybackKey } from '../services/playback-derivative.js';
+import { getCachedSignedDownloadUrl } from '../services/signed-url-cache.js';
 import { logger } from '../services/logger.js';
 import { recordStudyActivity, type StudyActivityIncrement } from '../services/study-activity.js';
 import { mergeWatchedRanges, watchedCoverage } from '../services/watched-ranges.js';
@@ -59,7 +61,11 @@ async function recordActivitySafely(userId: Types.ObjectId, increment: StudyActi
 async function safeDownloadUrl(key?: string | null): Promise<string | null> {
   if (!key) return null;
   try {
-    return await createVideoDownloadUrl(key);
+    // F12 fix (2026-09-19): prefer the in-memory signed URL cache so we
+    // don't pay a fresh S3 signing call for every list/detail hit. The
+    // cache lives for `R2_DOWNLOAD_URL_TTL_SECONDS - 60s`, well within the
+    // 1h URL validity window — see signed-url-cache.ts for eviction policy.
+    return await getCachedSignedDownloadUrl(key);
   } catch {
     return null;
   }
@@ -97,8 +103,12 @@ router.get('/', validateQuery(listSchema), asyncHandler(async (req, res) => {
 router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  // F12 fix (2026-09-19): prefer the faststart derivative when one exists.
+  // Older lessons without `playbackKey` continue to serve `media.objectKey`
+  // until the migration tool backfills them.
+  const playbackKey = resolvePlaybackKey(lesson);
   const [mediaUrl, thumbnailUrl] = await Promise.all([
-    safeDownloadUrl(lesson.media?.objectKey),
+    safeDownloadUrl(playbackKey),
     safeDownloadUrl(lesson.thumbnailKey),
   ]);
   res.json({ data: withProcessingCompatibility({ ...lesson, thumbnailUrl, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });

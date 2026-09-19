@@ -1,5 +1,8 @@
 import { apiFetch, setAccessToken, ApiRequestError } from './client';
 import type { User } from '../data/hanflixData';
+import { queryClient } from '../lib/queryClient';
+import { createLocalStoragePersister } from '../lib/persistedQueryClient';
+import { lessonQueryKeys, dashboardQueryKeys, learningQueryKeys, vocabularyQueryKeys } from './queryKeys';
 
 interface AuthResponse {
   accessToken: string;
@@ -208,7 +211,40 @@ export async function updateBasicProfile(payload: { name?: string; avatarUrl?: s
 }
 
 /**
- * Logout: revoke refresh token, clear access token.
+ * Cancel every in-flight React Query request so a stale response cannot
+ * leak into the next user's session, then drop every cached entry.
+ *
+ * The cache holds metadata only (catalog, recommendations, progress). Even
+ * though it is not an authorization source, we wipe it on logout AND on
+ * account switch so a leaked HTML frame from a previous user cannot surface
+ * someone else's progress in error messages.
+ *
+ * IMPORTANT: this also wipes the *persisted* localStorage copy. Without
+ * that step, the next page load would rehydrate the previous user's cache
+ * before the auth handshake completes — see queryClient.ts for the
+ * `persistQueryClient` wiring. We deliberately do not depend on the
+ * persister returned there so we can be called outside React.
+ */
+export async function purgeClientCaches(): Promise<void> {
+  await queryClient.cancelQueries({ type: 'all' });
+  for (const keyGroup of [
+    dashboardQueryKeys.root,
+    learningQueryKeys.root,
+    lessonQueryKeys.all,
+    vocabularyQueryKeys.root,
+  ]) {
+    queryClient.removeQueries({ queryKey: keyGroup, exact: false });
+  }
+  queryClient.clear();
+  // Wipe the localStorage-backed cache. The persister is module-level in
+  // queryClient.ts; we instantiate a fresh handle here so logout works even
+  // when called from a context without React.
+  createLocalStoragePersister().removeClient();
+}
+
+/**
+ * Logout: revoke refresh token, clear access token, scrub React Query and
+ * local cache so no data of the signed-out account lingers in this browser.
  */
 export async function logout(): Promise<void> {
   try {
@@ -218,6 +254,7 @@ export async function logout(): Promise<void> {
   }
   setAccessToken(null);
   saveUserCache(null);
+  await purgeClientCaches();
 }
 
 /**

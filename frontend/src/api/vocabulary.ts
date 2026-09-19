@@ -9,14 +9,28 @@ export interface SavedVocabulary {
   intervalDays: number;
 }
 
-export function listSavedWords(): Promise<{ items: SavedVocabulary[]; total: number; dueCount: number }> {
-  return apiFetch('/vocabulary/saved');
+export function listSavedWords(options: { signal?: AbortSignal } = {}): Promise<{ items: SavedVocabulary[]; total: number; dueCount: number }> {
+  return apiFetch('/vocabulary/saved', options);
 }
 
-export function listDueWords(): Promise<{ items: SavedVocabulary[]; count: number }> { return apiFetch('/vocabulary/due'); }
+export function listDueWords(options: { signal?: AbortSignal } = {}): Promise<{ items: SavedVocabulary[]; count: number }> { return apiFetch('/vocabulary/due', options); }
 
 export function saveSubtitleWord(wordId: string, sourceLessonId: string, sourceCueId: string): Promise<SavedVocabulary> {
   return apiFetch('/vocabulary', { method: 'POST', body: JSON.stringify({ wordId, sourceLessonId, sourceCueId }) });
+}
+
+export interface SaveWordInput {
+  wordId?: string;
+  hanzi?: string;
+  pinyin?: string;
+  meaningVi?: string;
+  partOfSpeech?: string;
+  sourceLessonId?: string;
+  sourceCueId?: string;
+}
+
+export function saveVocabularyWord(input: SaveWordInput): Promise<SavedVocabulary> {
+  return apiFetch('/vocabulary', { method: 'POST', body: JSON.stringify(input) });
 }
 
 export function removeSavedWord(wordId: string): Promise<void> {

@@ -1,57 +1,137 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
-import { getLearnerDashboard, getLearningActivity, listPublishedLessons, type LearnerDashboard, type LearningActivity, type LessonList } from '../api/learning';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getLearnerDashboard,
+  getLearningActivity,
+  listPublishedLessons,
+  type LearnerDashboard,
+  type LearningActivity,
+  type LessonList,
+} from '../api/learning';
 import { InlineBanner } from './notifications';
-import { listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, type SavedVocabulary } from '../api/vocabulary';
-import AIRecommendationSection from './AIRecommendationSection';
+import { listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, saveVocabularyWord, type SavedVocabulary } from '../api/vocabulary';import AIRecommendationSection from './AIRecommendationSection';
 import VocabularyPage from './vocabulary/VocabularyPage';
+import SavedWordsPage from './vocabulary/SavedWordsPage';
 import RoadmapPage from './RoadmapPage';
+import LessonCard from './LessonCard';
+import StudyHistoryPage from './history/StudyHistoryPage';
+import { dashboardQueryKeys, learningQueryKeys, lessonQueryKeys, vocabularyQueryKeys } from '../api/queryKeys';
+import { perfMarks } from '../lib/perfMarks';
 
 type Section = 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history';
 
-export default function ConnectedLearner({ section, onSelectLesson, onOpenPreferences }: {
+const LESSONS_LIST_STALE = 60 * 1000; // 1 minute — catalog refetch tolerates a small staleness
+const DASHBOARD_STALE = 30 * 1000;
+
+export default function ConnectedLearner({ section, onSelectLesson, onOpenPreferences, onNavigateSection }: {
   section: Section;
   onSelectLesson: (id: string) => void;
   onOpenPreferences: () => void;
+  onNavigateSection?: (section: string) => void;
 }) {
-  const [catalog, setCatalog] = useState<LessonList | null>(null);
-  const [dashboard, setDashboard] = useState<LearnerDashboard | null>(null);
-  const [activity, setActivity] = useState<LearningActivity | null>(null);
-  const [saved, setSaved] = useState<SavedVocabulary[]>([]);
-  const [due, setDue] = useState<SavedVocabulary[]>([]);
+  // We keep local UI state for search/HSK filter so they survive a remount,
+  // but the data itself comes from React Query. React Query dedupes requests
+  // for the same key, so changing search briefly while a previous response
+  // is still in flight will not produce a stale flash.
   const [search, setSearch] = useState('');
   const [hsk, setHsk] = useState('');
   const [page, setPage] = useState(1);
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
+  const lessonsQuery = useQuery({
+    queryKey: lessonQueryKeys.list({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12 }),
+    queryFn: ({ signal }) => listPublishedLessons({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12, signal } as never).then((data) => data),
+    enabled: section === 'lessons',
+    staleTime: LESSONS_LIST_STALE,
+  });
+
+  const dashboardQuery = useQuery({
+    queryKey: dashboardQueryKeys.detail(),
+    queryFn: ({ signal }) => getLearnerDashboard({ signal } as never).then((data) => data),
+    enabled: section === 'feed' || section === 'roadmap' || section === 'history',
+    staleTime: DASHBOARD_STALE,
+  });
+
+  const activityQuery = useQuery({
+    queryKey: learningQueryKeys.activity({}),
+    queryFn: ({ signal }) => getLearningActivity({ signal } as never).then((data) => data),
+    enabled: section === 'roadmap',
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const savedQuery = useQuery({
+    queryKey: vocabularyQueryKeys.saved(),
+    queryFn: ({ signal }) => listSavedWords({ signal }).then((data) => data.items),
+    enabled: section === 'saved' || section === 'vocabulary',
+    staleTime: 60 * 1000,
+  });
+
+  const dueQuery = useQuery({
+    queryKey: vocabularyQueryKeys.due(),
+    queryFn: ({ signal }) => listDueWords({ signal }).then((data) => data.items),
+    enabled: section === 'saved',
+    staleTime: 30 * 1000,
+  });
+
+  // Track first feed render so perf-marks have a target.
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-    const requests = section === 'feed' || section === 'lessons'
-      ? [listPublishedLessons({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12 }).then(data => { if (active) setCatalog(data); }), ...(section === 'feed' ? [getLearnerDashboard().then(data => { if (active) setDashboard(data); })] : [])]
-      : section === 'saved' || section === 'vocabulary'
-        ? [listSavedWords().then(data => { if (active) setSaved(data.items); }), ...(section === 'saved' ? [listDueWords().then(data => { if (active) setDue(data.items); })] : [])]
-        : section === 'roadmap'
-          ? [getLearningActivity().then(data => { if (active) setActivity(data); }), getLearnerDashboard().then(data => { if (active) setDashboard(data); })]
-          : [getLearnerDashboard().then(data => { if (active) setDashboard(data); })];
-    void Promise.all(requests).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Không thể tải dữ liệu.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [section, search, hsk, page]);
+    if (section === 'feed' && dashboardQuery.data) {
+      perfMarks.since('feed_list:ready', 'restore_session:ready');
+    }
+    if (section === 'lessons' && lessonsQuery.data) {
+      perfMarks.since('feed_list:ready', 'restore_session:ready');
+    }
+  }, [section, dashboardQuery.data, lessonsQuery.data]);
+
+  const queryClient = useQueryClient();
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ wordId, rating }: { wordId: string; rating: 'again' | 'hard' | 'good' | 'easy' }) =>
+      reviewSavedWord(wordId, rating),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.saved() });
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.due() });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (wordId: string) => removeSavedWord(wordId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.saved() });
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.due() });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (word: string) => saveVocabularyWord({ hanzi: word }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.saved() });
+    },
+  });
 
   const mutate = async (action: () => Promise<unknown>) => {
-    setBusy(true); setError('');
     try {
       await action();
-      const [savedResult, dueResult] = await Promise.all([listSavedWords(), listDueWords()]);
-      setSaved(savedResult.items); setDue(dueResult.items); setShowAnswer(false);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Thao tác thất bại.'); }
-    finally { setBusy(false); }
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.saved() });
+      void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.due() });
+    }
   };
+
+  const errorMessage =
+    lessonsQuery.error?.message
+    ?? dashboardQuery.error?.message
+    ?? activityQuery.error?.message
+    ?? savedQuery.error?.message
+    ?? '';
+
+  const isLoading =
+    (section === 'lessons' && lessonsQuery.isPending)
+    || (section === 'feed' && dashboardQuery.isPending)
+    || (section === 'saved' && (savedQuery.isPending || dueQuery.isPending))
+    || (section === 'vocabulary' && savedQuery.isPending)
+    || (section === 'roadmap' && (activityQuery.isPending || dashboardQuery.isPending))
+    || (section === 'history' && dashboardQuery.isPending);
 
   const controls = <div className="flex flex-wrap gap-2">
     <label className="flex items-center gap-2 rounded-xl border bg-white px-3"><Search className="w-4 h-4" /><input className="p-2 text-sm outline-none" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Tìm kiếm" /></label>
@@ -64,43 +144,87 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
     <button type="button" disabled={page >= pages} onClick={() => setPage(page + 1)} className="rounded-lg border bg-white p-2 disabled:opacity-40" aria-label="Trang sau"><ChevronRight className="w-4 h-4" /></button>
   </div>;
 
+  const renderError = errorMessage
+    ? <InlineBanner variant="error" message={errorMessage} />
+    : null;
+
   return <div className="space-y-6">
-    {error && <InlineBanner variant="error" message={error} />}
-    {section === 'feed' && <>
-      <div className="rounded-3xl bg-[#18181B] p-6 text-white md:p-8">
-        <p className="text-sm text-red-300">Tiếp tục hành trình tiếng Trung</p>
-        <h1 className="mt-1 text-2xl font-black">Bài học của bạn</h1>
-        {dashboard?.continueLearning?.lessonId?._id ? <button type="button" onClick={() => onSelectLesson(dashboard.continueLearning!.lessonId!._id)} className="mt-4 rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold">Tiếp tục: {dashboard.continueLearning.lessonId.titleVi}</button>
-          : <p className="mt-3 text-sm text-neutral-300">Chọn một bài học đã xuất bản để bắt đầu.</p>}
-        {dashboard && <div className="mt-5 flex flex-wrap gap-5 text-sm"><span>{dashboard.metrics.completedLessons} bài hoàn thành</span><span>{dashboard.metrics.savedWords} từ đã lưu</span><span>{dashboard.metrics.dueWords} từ cần ôn</span></div>}
-      </div>
-      <AIRecommendationSection onSelectLessonId={onSelectLesson} onOpenPreferences={onOpenPreferences} />
-    </>}
-    {(section === 'feed' || section === 'lessons') && <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-black">Kho bài học đã xuất bản</h2><p className="text-sm text-neutral-500">{catalog?.total ?? 0} bài học</p></div>{controls}</div>
-      {loading && <p className="text-sm">Đang tải bài học…</p>}
-      {!loading && catalog?.items.length === 0 && <p className="rounded-2xl bg-white p-6 text-sm">Chưa có bài học phù hợp.</p>}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{catalog?.items.map(lesson => <button key={lesson._id} type="button" onClick={() => onSelectLesson(lesson._id)} className="rounded-2xl border bg-white p-5 text-left hover:border-[#B91B1C]">
-        <span className="text-xs font-bold text-[#B91B1C]">HSK {lesson.hsk} · {Math.round(lesson.durationSeconds / 60)} phút</span>
-        <h3 className="mt-2 text-lg font-bold">{lesson.titleVi}</h3><p className="text-sm text-neutral-500">{lesson.titleZh} {lesson.pinyin && `· ${lesson.pinyin}`}</p>
-        <p className="mt-2 line-clamp-2 text-sm text-neutral-600">{lesson.descriptionVi}</p>
-      </button>)}</div>{pagination(catalog?.pages ?? 0)}
-    </section>}
-    {section === 'saved' && <section className="space-y-4"><h1 className="text-2xl font-black">Sổ từ và ôn tập</h1>
-      {due.length > 0 && <div className="rounded-2xl border bg-white p-5 space-y-3"><p className="text-sm font-bold text-[#B91B1C]">Đến hạn ôn: {due.length} từ</p><h2 className="text-2xl font-black">{due[0].wordId?.hanzi}</h2>
-        {showAnswer ? <><p className="text-sm">{due[0].wordId?.pinyin} · {due[0].wordId?.meaningVi}</p><div className="flex flex-wrap gap-2">{(['again','hard','good','easy'] as const).map(rating => <button key={rating} disabled={busy} onClick={() => void mutate(() => reviewSavedWord(due[0].wordId._id, rating))} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40">{{ again: 'Chưa nhớ', hard: 'Khó', good: 'Nhớ', easy: 'Dễ' }[rating]}</button>)}</div></>
-          : <button type="button" onClick={() => setShowAnswer(true)} className="rounded-lg bg-[#B91B1C] px-4 py-2 text-sm text-white">Xem đáp án</button>}
-      </div>}
-      {!loading && due.length === 0 && <p className="rounded-2xl bg-white p-5 text-sm">Không có từ đến hạn ôn.</p>}
-      <div className="grid gap-3 sm:grid-cols-2">{saved.map(item => <div key={item._id} className="rounded-xl border bg-white p-4 flex justify-between gap-3"><div><p className="font-bold">{item.wordId?.hanzi}</p><p className="text-sm text-neutral-600">{item.wordId?.pinyin} · {item.wordId?.meaningVi}</p><p className="text-xs text-neutral-500">{item.sourceLessonId?.titleVi}</p></div><button type="button" disabled={busy} onClick={() => void mutate(() => removeSavedWord(item.wordId._id))} className="text-xs text-[#B91B1C]">Bỏ lưu</button></div>)}</div>
-    </section>}
+    {renderError}
+    {section === 'feed' && (
+      <>
+        <div className="rounded-3xl bg-[#18181B] p-6 text-white md:p-8">
+          <p className="text-sm text-red-300">Tiếp tục hành trình tiếng Trung</p>
+          <h1 className="mt-1 text-2xl font-black">Bài học của bạn</h1>
+          {dashboardQuery.data?.continueLearning?.lessonId?._id ? (
+            <button type="button" onClick={() => onSelectLesson(dashboardQuery.data!.continueLearning!.lessonId!._id)} className="mt-4 rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold">Tiếp tục: {dashboardQuery.data.continueLearning!.lessonId!.titleVi}</button>
+          ) : (
+            <p className="mt-3 text-sm text-neutral-300">Chọn một bài học đã xuất bản để bắt đầu.</p>
+          )}
+          {dashboardQuery.data && (
+            <div className="mt-5 flex flex-wrap gap-5 text-sm">
+              <span>{dashboardQuery.data.metrics.completedLessons} bài hoàn thành</span>
+              <span>{dashboardQuery.data.metrics.savedWords} từ đã lưu</span>
+              <span>{dashboardQuery.data.metrics.dueWords} từ cần ôn</span>
+            </div>
+          )}
+        </div>
+        <AIRecommendationSection onSelectLessonId={onSelectLesson} onOpenPreferences={onOpenPreferences} />
+      </>
+    )}
+    {section === 'lessons' && (
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black">Kho bài học đã xuất bản</h2>
+            <p className="text-sm text-neutral-500">{lessonsQuery.data?.total ?? 0} bài học</p>
+          </div>
+          {controls}
+        </div>
+        {isLoading && lessonsQuery.isPending && (
+          <p className="text-sm">Đang tải bài học…</p>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          {lessonsQuery.data?.items?.map((lesson) => (
+            <LessonCard
+              key={lesson._id}
+              lesson={lesson}
+              onClick={() => onSelectLesson(lesson._id)}
+            />
+          ))}
+        </div>
+        {pagination(lessonsQuery.data?.pages ?? 0)}
+      </section>
+    )}
+    {section === 'saved' && (
+      <SavedWordsPage
+        savedWords={savedQuery.data ?? []}
+        dueWords={dueQuery.data ?? []}
+        onReviewWord={(wordId, rating) => mutate(() => reviewMutation.mutateAsync({ wordId, rating }))}
+        onRemoveWord={(wordId) => mutate(() => removeMutation.mutateAsync(wordId))}
+        onNavigateToVocabulary={() => {
+          if (onNavigateSection) {
+            onNavigateSection('vocabulary');
+          } else {
+            window.location.hash = '#vocabulary';
+          }
+        }}
+        busy={reviewMutation.isPending || removeMutation.isPending}
+      />
+    )}
     {section === 'vocabulary' && (
       <VocabularyPage
-        savedWords={saved}
+        savedWords={savedQuery.data ?? []}
         onStartReviewSession={() => {
-          window.location.hash = '#saved';
+          if (onNavigateSection) {
+            onNavigateSection('saved');
+          } else {
+            window.location.hash = '#saved';
+          }
         }}
-        onRemoveWord={(wordId) => void mutate(() => removeSavedWord(wordId))}
+        onSaveWord={async (word) => {
+          await mutate(() => saveMutation.mutateAsync(word.hanzi));
+        }}
+        onRemoveWord={(wordId) => void mutate(() => removeMutation.mutateAsync(wordId))}
       />
     )}
     {section === 'roadmap' && (
@@ -109,7 +233,17 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
         onStartPractice={() => onSelectLesson('17')}
       />
     )}
-    {section === 'history' && <section className="space-y-4"><h1 className="text-2xl font-black">Lịch sử học tập</h1>{dashboard?.recentProgress.length ? dashboard.recentProgress.map((item, index) => <button key={index} type="button" disabled={!item.lessonId?._id} onClick={() => onSelectLesson(item.lessonId!._id)} className="flex w-full items-center justify-between rounded-xl border bg-white p-4 text-left disabled:opacity-60"><span><BookOpen className="mr-2 inline w-4 h-4" />{item.lessonId?.titleVi ?? 'Bài học không còn khả dụng'}</span><span className="text-xs text-neutral-500"><Clock3 className="mr-1 inline w-3 h-3" />{item.completed ? 'Hoàn thành' : `${Math.round(item.lastPositionSeconds)} giây`}</span></button>) : <p className="rounded-xl bg-white p-5 text-sm">Chưa có lịch sử học tập.</p>}</section>}
+    {section === 'history' && (
+      <StudyHistoryPage
+        onSelectLesson={onSelectLesson}
+        onNavigateToLessons={() => {
+          if (onNavigateSection) {
+            onNavigateSection('lessons');
+          } else {
+            window.location.hash = '#lessons';
+          }
+        }}
+      />
+    )}
   </div>;
 }
-

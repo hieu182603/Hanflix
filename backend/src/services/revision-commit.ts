@@ -76,6 +76,14 @@ export interface GenerationCommitInput {
    * cues that came out of the AI pipeline. Defaults to false.
    */
   translationImproved?: boolean;
+  /**
+   * F12 fix (2026-09-19): playback derivative fields. When present, the
+   * lesson doc is updated to point at the new derivative so the next
+   * `/lessons/:id` call returns the faststart URL. Both fields must be set
+   * together — sending only one throws an internal validation error.
+   */
+  playbackKey?: string;
+  playbackVersion?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,7 +177,10 @@ async function withOptionalSession<T>(
  * running without transactions.
  */
 export async function runGenerationCommit(input: GenerationCommitInput): Promise<GenerationCommitResult> {
-  const { lessonId, jobId, durationSeconds, thumbnailKey, cues, questions, leaseToken, translationImproved = false } = input;
+  const { lessonId, jobId, durationSeconds, thumbnailKey, cues, questions, leaseToken, translationImproved = false, playbackKey, playbackVersion } = input;
+  if ((playbackKey && playbackVersion === undefined) || (playbackVersion !== undefined && !playbackKey)) {
+    throw new AppError(500, 'PLAYBACK_DERIVATIVE_INCOMPLETE', 'playbackKey và playbackVersion phải được cung cấp cùng nhau');
+  }
 
   // Pre-flight validations (outside any session — fast to fail).
   const lesson = await LessonModel.findById(lessonId);
@@ -226,6 +237,7 @@ export async function runGenerationCommit(input: GenerationCommitInput): Promise
         $set: {
           durationSeconds: Math.max(60, Math.min(300, Math.round(durationSeconds))),
           ...(thumbnailKey ? { thumbnailKey } : {}),
+          ...(playbackKey ? { playbackKey, playbackVersion, playbackGeneratedAt: new Date() } : {}),
           activeSubtitleRevision: subtitle.revision,
           activeQuizRevision: quiz.revision,
           status: 'ready_for_review',

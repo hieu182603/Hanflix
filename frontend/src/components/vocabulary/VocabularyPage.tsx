@@ -21,13 +21,16 @@ import {
   ChevronRight,
   VolumeX,
   ExternalLink,
+  Layers,
 } from 'lucide-react';
 import { getPublicVocabulary, type SavedVocabulary, type VocabularyItem } from '../../api/vocabulary';
+import TopicFlashcardModal from './TopicFlashcardModal';
 
 export interface VocabularyPageProps {
   savedWords?: SavedVocabulary[];
   onStartReviewSession?: () => void;
-  onRemoveWord?: (wordId: string) => void;
+  onSaveWord?: (word: { wordId?: string; hanzi: string; pinyin: string; meaningVi: string; partOfSpeech?: string }) => Promise<void>;
+  onRemoveWord?: (wordId: string) => void | Promise<void>;
 }
 
 export interface WordExample {
@@ -662,6 +665,7 @@ const TOPICS: TopicConfig[] = [
 export default function VocabularyPage({
   savedWords = [],
   onStartReviewSession,
+  onSaveWord,
   onRemoveWord,
 }: VocabularyPageProps) {
   const [activeTab, setActiveTab] = useState<'topics' | 'notebook'>('topics');
@@ -680,6 +684,7 @@ export default function VocabularyPage({
   const [apiWords, setApiWords] = useState<VocabularyItem[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [justSavedIds, setJustSavedIds] = useState<Set<string>>(new Set());
+  const [savingWordIds, setSavingWordIds] = useState<Set<string>>(new Set());
 
   // Topic mastery percentages
   const topicStats: Record<string, { total: number; progress: number }> = {
@@ -807,23 +812,73 @@ export default function VocabularyPage({
   };
 
   // Toggle save to SRS
-  const handleToggleSave = (wordId: string) => {
-    setJustSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(wordId)) {
-        next.delete(wordId);
+  const handleToggleSave = async (word: DisplayWordItem) => {
+    const isSaved = isWordSaved(word);
+    setSavingWordIds((prev) => new Set(prev).add(word.id));
+    try {
+      if (isSaved) {
+        setJustSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(word.id);
+          return next;
+        });
+        const existing = savedWords.find(
+          (sw) => sw.wordId?._id === word.id || sw.wordId?.hanzi === word.simplified || sw._id === word.id
+        );
+        const idToRemove = existing?.wordId?._id || existing?._id || word.id;
+        if (onRemoveWord) {
+          await onRemoveWord(idToRemove);
+        }
       } else {
-        next.add(wordId);
+        setJustSavedIds((prev) => new Set(prev).add(word.id));
+        if (onSaveWord) {
+          await onSaveWord({
+            wordId: word.id,
+            hanzi: word.simplified,
+            pinyin: word.pinyin,
+            meaningVi: word.meaningVi,
+            partOfSpeech: word.partOfSpeech,
+          });
+        }
       }
-      return next;
-    });
+    } catch {
+      // Revert optimistic state on error
+      setJustSavedIds((prev) => {
+        const next = new Set(prev);
+        if (isSaved) next.add(word.id);
+        else next.delete(word.id);
+        return next;
+      });
+    } finally {
+      setSavingWordIds((prev) => {
+        const next = new Set(prev);
+        next.delete(word.id);
+        return next;
+      });
+    }
   };
 
   const isWordSaved = (word: DisplayWordItem) => {
     return (
       justSavedIds.has(word.id) ||
-      savedWords.some((sw) => sw.wordId?._id === word.id || sw.wordId?.hanzi === word.simplified)
+      savedWords.some(
+        (sw) => sw.wordId?._id === word.id || sw.wordId?.hanzi === word.simplified || sw._id === word.id
+      )
     );
+  };
+
+  // Flashcard practice state for topics
+  const [flashcardTopic, setFlashcardTopic] = useState<TopicConfig | null>(null);
+  const [flashcardWords, setFlashcardWords] = useState<DisplayWordItem[]>([]);
+
+  const handleOpenTopicFlashcards = (topic: TopicConfig) => {
+    setFlashcardTopic(topic);
+    if (selectedTopic && selectedTopic.id === topic.id && activeWordList.length > 0) {
+      setFlashcardWords(activeWordList);
+    } else {
+      const words: DisplayWordItem[] = topic.sampleWords.map((w) => ({ ...w }));
+      setFlashcardWords(words);
+    }
   };
 
   return (
@@ -874,18 +929,6 @@ export default function VocabularyPage({
                 <div className="text-xl font-black text-red-600">{dueCount}</div>
               </div>
             </div>
-
-            {/* Review Button */}
-            {onStartReviewSession && (
-              <button
-                onClick={onStartReviewSession}
-                className="h-11 px-6 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-sm font-bold flex items-center gap-2.5 shadow-md hover:shadow-lg shadow-[#B91B1C]/20 transition-all cursor-pointer whitespace-nowrap"
-              >
-                <Zap className="w-4 h-4 fill-white" />
-                <span>Ôn tập ngay ({dueCount})</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -905,20 +948,6 @@ export default function VocabularyPage({
             }`}
           >
             <span>🗂️ Các Hộp Chủ Đề (Topic Hub)</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('notebook');
-              setSelectedTopic(null);
-            }}
-            className={`pb-3 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
-              activeTab === 'notebook'
-                ? 'border-[#B91B1C] text-[#B91B1C]'
-                : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
-            }`}
-          >
-            <span>📖 Sổ Tay Đã Lưu ({totalSavedCount})</span>
           </button>
 
           {selectedTopic && activeTab === 'topics' && (
@@ -1055,8 +1084,22 @@ export default function VocabularyPage({
                       </span>
                     </div>
 
-                    <div className="w-9 h-9 rounded-full bg-white/10 group-hover:bg-[#B91B1C] border border-white/15 group-hover:border-[#B91B1C] flex items-center justify-center text-white/90 group-hover:text-white group-hover:scale-105 group-hover:translate-x-1 transition-all duration-300 shadow-md">
-                      <ArrowRight className="w-4 h-4" />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenTopicFlashcards(topic);
+                        }}
+                        className="h-8 px-3 rounded-full bg-white/15 hover:bg-[#B91B1C] border border-white/20 hover:border-[#B91B1C] text-white text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                        title="Luyện flashcard chủ đề này"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Luyện thẻ</span>
+                      </button>
+                      <div className="w-8 h-8 rounded-full bg-white/10 group-hover:bg-[#B91B1C] border border-white/15 group-hover:border-[#B91B1C] flex items-center justify-center text-white/90 group-hover:text-white group-hover:scale-105 group-hover:translate-x-1 transition-all duration-300 shadow-md">
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1069,46 +1112,86 @@ export default function VocabularyPage({
       {/* VIEW 2: TOPIC DETAIL & SEQUENTIAL WORD LIST WITH PAGINATION (APPROVED DESIGN 2) */}
       {activeTab === 'topics' && selectedTopic && (
         <div className="space-y-6">
-          {/* Top Filter & Navigation Header */}
-          <div className="bg-white rounded-3xl p-5 border border-[#E7E7EA] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSelectedTopic(null)}
-                className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#18181B] transition-all flex items-center gap-2 text-xs font-bold cursor-pointer hover:border-[#B91B1C]"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Quay lại chủ đề</span>
-              </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-[#18181B] tracking-tight">
-                    {selectedTopic.nameVi} <span className="text-[#8B9097]">/ {selectedTopic.nameZh}</span>
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#F7F7F9] border border-[#E7E7EA] text-[11px] font-bold text-[#5F6368]">
-                    {totalItems} từ vựng
-                  </span>
+          {/* Top Filter & Navigation Header - Redesigned with Design Taste */}
+          <div className="space-y-4">
+            {/* Topic Hero Card */}
+            <div className="bg-white rounded-3xl p-6 md:p-7 border border-[#E7E7EA] shadow-2xs">
+              {/* Back Button */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setSelectedTopic(null)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white hover:border-[#B91B1C]/40 text-[#18181B] text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-[#B91B1C]" />
+                  <span>Quay lại tất cả chủ đề</span>
+                </button>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-4 min-w-0">
+                  {/* Topic Icon Avatar */}
+                  <div className={`w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 ${selectedTopic.bgLight} border border-[#E7E7EA] shadow-2xs`}>
+                    {React.createElement(selectedTopic.icon, { className: `w-6 h-6 ${selectedTopic.color}` })}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
+                        {selectedTopic.nameVi}
+                      </h1>
+                      <span className="text-lg sm:text-xl font-hanzi font-bold text-[#8B9097]">
+                        / {selectedTopic.nameZh}
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/20 text-xs font-bold text-[#B91B1C] whitespace-nowrap shrink-0">
+                        {totalItems} từ vựng
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
+                      {selectedTopic.description || 'Danh sách từ vựng trọng tâm theo bối cảnh thực tế. Bấm vào biểu tượng loa để nghe AI phát âm chuẩn hoặc lưu vào sổ tay SRS để tự động lên lịch ôn tập.'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Danh sách từ vựng trọng tâm. Bấm vào biểu tượng loa để nghe AI phát âm hoặc lưu vào sổ tay.
-                </p>
+
+                <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenTopicFlashcards(selectedTopic)}
+                    className="h-11 px-5 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-md hover:shadow-lg shadow-[#B91B1C]/20 transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Luyện Flashcard ({totalItems} từ)</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Search Input & HSK Filter Chips */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-[#8B9097] absolute left-3 top-3" />
+            {/* Filter & Search Toolbar */}
+            <div className="bg-white rounded-2xl md:rounded-3xl p-3.5 md:p-4 border border-[#E7E7EA] shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5">
+              {/* Search Input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Tìm từ trong chủ đề..."
+                  placeholder="Tìm từ trong chủ đề (chữ Hán, pinyin, nghĩa)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs outline-none focus:border-[#B91B1C] transition-colors"
+                  className="w-full pl-10 pr-9 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs font-medium text-[#18181B] placeholder-[#8B9097] outline-none focus:border-[#B91B1C] focus:bg-white transition-all"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs font-bold p-0.5 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {/* HSK Filter Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <span className="text-[11px] font-bold text-[#8B9097] uppercase tracking-wider mr-1 hidden lg:inline-block shrink-0">
+                  Cấp độ:
+                </span>
                 {[
                   { label: 'Tất cả', value: 'all' },
                   { label: 'HSK 1', value: '1' },
@@ -1117,17 +1200,15 @@ export default function VocabularyPage({
                   { label: 'HSK 4', value: '4' },
                   { label: 'HSK 5', value: '5' },
                   { label: 'HSK 6', value: '6' },
-                  { label: 'HSK 7', value: '7' },
-                  { label: 'HSK 8', value: '8' },
-                  { label: 'HSK 9', value: '9' },
+                  { label: 'HSK 7-9', value: '7-9' },
                 ].map((chip) => (
                   <button
                     key={chip.value}
                     onClick={() => setHskFilter(chip.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                       hskFilter === chip.value
-                        ? 'bg-[#B91B1C] text-white shadow-xs'
-                        : 'bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] border border-[#E7E7EA]'
+                        ? 'bg-[#B91B1C] text-white shadow-xs font-extrabold'
+                        : 'bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] hover:bg-neutral-200/50 border border-[#E7E7EA]'
                     }`}
                   >
                     {chip.label}
@@ -1222,14 +1303,20 @@ export default function VocabularyPage({
                     {/* Right Section: Save to SRS Button */}
                     <div className="shrink-0 w-full md:w-auto flex justify-end">
                       <button
-                        onClick={() => handleToggleSave(word.id)}
+                        onClick={() => void handleToggleSave(word)}
+                        disabled={savingWordIds.has(word.id)}
                         className={`h-9 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                           saved
                             ? 'bg-[#E6F4EA] text-[#137333] border border-[#A8DAB5]'
                             : 'bg-white hover:bg-[#FDF1F1] text-[#18181B] hover:text-[#B91B1C] border border-[#E7E7EA]'
-                        }`}
+                        } ${savingWordIds.has(word.id) ? 'opacity-60 cursor-wait' : ''}`}
                       >
-                        {saved ? (
+                        {savingWordIds.has(word.id) ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            <span>Đang xử lý...</span>
+                          </>
+                        ) : saved ? (
                           <>
                             <CheckCircle2 className="w-3.5 h-3.5 text-[#137333]" />
                             <span>Đã lưu sổ tay</span>
@@ -1426,6 +1513,16 @@ export default function VocabularyPage({
           </div>
         </div>
       )}
+
+      {/* Topic Flashcard Practice Modal */}
+      <TopicFlashcardModal
+        isOpen={Boolean(flashcardTopic)}
+        topic={flashcardTopic}
+        words={flashcardWords}
+        onClose={() => setFlashcardTopic(null)}
+        onToggleSaveWord={handleToggleSave}
+        isWordSaved={isWordSaved}
+      />
     </div>
   );
 }
