@@ -134,6 +134,10 @@ const envSchema = z.object({
   REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(24),
   UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
+  // Limit how often an admin can broadcast notifications. 30 broadcast / 10
+  // minutes is enough for real workflows; tighter bound prevents admin
+  // compromised or buggy script from spamming the notifications collection.
+  BROADCAST_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
   // SECURITY (H-1): Optional Redis URL for shared rate-limit counters across replicas.
   REDIS_URL: optionalString,
   CLOUDINARY_CLOUD_NAME: optionalString,
@@ -204,6 +208,7 @@ const envSchema = z.object({
       ['R2_SECRET_ACCESS_KEY', 'R2 secret key'], ['R2_BUCKET_NAME', 'R2 bucket'],
       ['SMTP_HOST', 'SMTP host'], ['SMTP_FROM', 'SMTP from address'],
       ['METRICS_TOKEN', 'Metrics bearer token'],
+      ['REDIS_URL', 'Redis URL (required for shared rate limiting)'],
     ] as const) requireProduction(name, label);
     if (value.VIDEO_WORKER_MODE !== 'disabled') {
       for (const [name, label] of [

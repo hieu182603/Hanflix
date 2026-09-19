@@ -50,6 +50,8 @@ import { cleanPinyinText, stripTrailingPunctuation } from '../../utils/text';
 import { COMMON_VOCAB_DB, enrichVocabItem } from '../../utils/vocabDict';
 import { lessonQueryKeys } from '../../api/queryKeys';
 import { perfMarks } from '../../lib/perfMarks';
+import { awardXP } from '../../lib/xp';
+import { recordLearningActivity } from '../../lib/streak';
 
 export interface PublishedLessonViewProps {
   lessonId: string;
@@ -251,11 +253,15 @@ export default function PublishedLessonView({
     progressRequest.current = progressRequest.current
       .catch(() => undefined)
       .then(async () => {
-        await updateLessonProgress(lessonId, {
+        const res = await updateLessonProgress(lessonId, {
           positionSeconds: boundedPosition,
           watchedRange: { start: Math.max(0, range.start), end: Math.min(range.end, duration) },
           activeStudyDeltaSeconds: Math.min(120, Math.max(0, Math.round(range.end - range.start))),
         });
+        if (res?.isNewCompletion && (res.xpEarned || 50) > 0) {
+          awardXP(res.xpEarned || 50, 'Hoàn thành bài học video (+50 XP)', 'lesson');
+          recordLearningActivity('video');
+        }
         // Refresh the cached progress in the background so coverage/completed
         // reflects the latest write, without blocking playback.
         void queryClient.invalidateQueries({ queryKey: lessonQueryKeys.progress(lessonId) });
@@ -327,6 +333,9 @@ export default function PublishedLessonView({
         quizAttemptKey.current,
       );
       setQuizResult(result);
+      const earnedXP = result.xpEarned || (result.score === 100 ? 50 : result.score >= 80 ? 40 : 25);
+      awardXP(earnedXP, `Hoàn thành bài tập Quiz (+${earnedXP} XP)`, 'quiz');
+      recordLearningActivity('practice');
       window.dispatchEvent(new Event('hanflix:activity-updated'));
     } catch (requestError) {
       setMessage(requestError instanceof Error ? requestError.message : 'Không thể nộp bài.');

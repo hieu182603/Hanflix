@@ -84,6 +84,10 @@ const lessonSchema = new Schema({
 
 lessonSchema.index({ titleVi: 'text', titleZh: 'text', pinyin: 'text', descriptionVi: 'text' });
 lessonSchema.index({ status: 1, hsk: 1, topicIds: 1, publishedAt: -1 });
+// M-4: Compound index for status + topic filter (khi user không filter theo HSK)
+lessonSchema.index({ status: 1, topicIds: 1, publishedAt: -1 });
+// M-4: Text search + status compound (cho query $text với filter status)
+lessonSchema.index({ status: 1, publishedAt: -1 });
 
 export type Lesson = InferSchemaType<typeof lessonSchema>;
 export const LessonModel = model('Lesson', lessonSchema);

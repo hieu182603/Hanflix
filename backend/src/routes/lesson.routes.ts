@@ -17,6 +17,7 @@ import { recordStudyActivity, type StudyActivityIncrement } from '../services/st
 import { mergeWatchedRanges, watchedCoverage } from '../services/watched-ranges.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
+import { NotificationService } from '../services/notification.service.js';
 
 const router = Router();
 
@@ -182,12 +183,18 @@ router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), v
     },
     { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
   );
+  const isNewCompletion = completed && !existing?.completed;
+  const studySeconds = req.body.activeStudyDeltaSeconds || 0;
+  const studyXp = Math.floor(studySeconds / 60) * 2;
+  const xpEarned = (isNewCompletion ? 50 : 0) + studyXp;
+
   await recordActivitySafely(req.auth!.userId, {
-    activeStudySeconds: req.body.activeStudyDeltaSeconds,
+    activeStudySeconds: studySeconds,
     progressUpdates: 1,
-    completedLessons: completed && !existing?.completed ? 1 : 0,
+    completedLessons: isNewCompletion ? 1 : 0,
+    xpEarned,
   });
-  res.json({ data: { progress, coverage: watchedCoverage(ranges, lesson.durationSeconds) } });
+  res.json({ data: { progress, coverage: watchedCoverage(ranges, lesson.durationSeconds), xpEarned, isNewCompletion } });
 }));
 
 router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), validate(attemptSchema), asyncHandler(async (req, res) => {
@@ -236,7 +243,47 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
     { $max: { bestQuizScore: score }, $setOnInsert: { lastPositionSeconds: 0, watchedRanges: [], activeStudySeconds: 0 } },
     { upsert: true },
   );
-  await recordActivitySafely(req.auth!.userId, { quizAttempts: 1 });
+
+  let quizXpEarned = 25; // 25 XP base for quiz completion
+  if (score === 100) {
+    quizXpEarned = 50; // Perfect score bonus
+  } else if (score >= 80) {
+    quizXpEarned = 40; // High score bonus
+  }
+
+  await recordActivitySafely(req.auth!.userId, {
+    quizAttempts: 1,
+    xpEarned: quizXpEarned,
+  });
+
+  // Gửi thông báo chúc mừng khi đạt điểm cao (>= 80%)
+  if (score >= 80) {
+    const lessonTitle = lesson.titleVi || lesson.titleZh || 'Bài học';
+    // Fire-and-forget: notification không critical cho response. Đăng ký
+    // `.catch` để mọi lỗi vẫn được log nhưng không block response.
+    NotificationService.createNotification({
+      userId: req.auth!.userId,
+      type: 'quiz',
+      category: 'study',
+      title: {
+        vi: `Xuất sắc! Đạt ${score}% điểm Quiz`,
+        en: `Great job! Scored ${score}% on Quiz`,
+        zh: `太棒了！随堂测试获得 ${score}% 高分`,
+      },
+      message: {
+        vi: `Bạn đã trả lời đúng ${correctCount}/${quiz.questions.length} câu hỏi bài học "${lessonTitle}". Hãy tiếp tục phát huy!`,
+        en: `You answered ${correctCount}/${quiz.questions.length} questions correctly in "${lessonTitle}". Keep it up!`,
+        zh: `您在课程《${lessonTitle}》中答对 ${correctCount}/${quiz.questions.length} 题。继续加油！`,
+      },
+      actionUrl: '/history',
+      actionText: {
+        vi: 'Xem lịch sử',
+        en: 'View History',
+        zh: '查看记录',
+      },
+      metadata: { lessonId: lesson._id, score, correctCount, totalCount: quiz.questions.length, xpEarned: quizXpEarned },
+    }).catch(err => logger.error({ err, userId: req.auth!.userId, lessonId: lesson._id }, 'Failed to create quiz success notification'));
+  }
   // SECURITY (H-6): Strip answer keys from the response sent back to learners.
   // The graded answers still contain correct/explanation, but correctOptionId/acceptedAnswers
   // must never be echoed to the client (already filtered out in the persisted attempt above).
@@ -244,7 +291,7 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
     ...answer,
     // Keep `correct` flag so UI can show pass/fail, but do NOT reveal the right answer.
   }));
-  res.status(201).json({ data: { attemptId: attempt._id, score, correctCount, totalCount: quiz.questions.length, answers: safeGraded } });
+  res.status(201).json({ data: { attemptId: attempt._id, score, correctCount, totalCount: quiz.questions.length, answers: safeGraded, xpEarned: quizXpEarned } });
 }));
 
 export default router;

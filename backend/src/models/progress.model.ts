@@ -17,6 +17,9 @@ const progressSchema = new Schema({
 }, { timestamps: true, versionKey: false });
 
 progressSchema.index({ userId: 1, lessonId: 1 }, { unique: true });
+// M-4: Compound indexes cho history queries
+progressSchema.index({ userId: 1, completed: 1, updatedAt: -1 });
+progressSchema.index({ userId: 1, updatedAt: -1 });
 
 export type Progress = InferSchemaType<typeof progressSchema>;
 export const ProgressModel = model('Progress', progressSchema);

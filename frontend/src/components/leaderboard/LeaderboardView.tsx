@@ -19,237 +19,34 @@ import {
   BookOpenCheck,
   Play,
   ArrowUpRight,
+  RotateCcw,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import BurningFlame from '../streak/BurningFlame';
+import { getLeaderboard, type LeaderUser, type LeaderboardPeriod } from '../../api/learning';
+import { learningQueryKeys } from '../../api/queryKeys';
 
 export interface LeaderboardViewProps {
   onStartPractice?: () => void;
   onSelectLesson?: () => void;
 }
 
-interface LeaderUser {
-  rank: number;
-  name: string;
-  avatar: string;
-  xp: number;
-  streakDays: number;
-  hskLevel: string;
-  isMe: boolean;
-  trend: 'up' | 'down' | 'same';
-  trendValue?: number;
-  badge?: string;
+function getAvatarSrc(avatar?: string, name?: string): string {
+  if (avatar && avatar.trim().length > 0) return avatar;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Hoc Vien')}&background=B91B1C&color=fff&size=150`;
 }
 
-const LEADERBOARD_PERIODS: Record<string, LeaderUser[]> = {
-  week: [
-    {
-      rank: 1,
-      name: 'Trần Bảo Ngọc',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces',
-      xp: 3820,
-      streakDays: 42,
-      hskLevel: 'HSK 5',
-      isMe: false,
-      trend: 'same',
-      badge: 'Quán quân tuần trước',
-    },
-    {
-      rank: 2,
-      name: 'Nguyễn Minh Anh',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces',
-      xp: 2450,
-      streakDays: 14,
-      hskLevel: 'HSK 3',
-      isMe: true,
-      trend: 'up',
-      trendValue: 2,
-      badge: 'Đang bứt phá',
-    },
-    {
-      rank: 3,
-      name: 'Lê Hoàng Nam',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces',
-      xp: 2210,
-      streakDays: 28,
-      hskLevel: 'HSK 4',
-      isMe: false,
-      trend: 'down',
-      trendValue: 1,
-      badge: 'Cao thủ HSK 4',
-    },
-    {
-      rank: 4,
-      name: 'Phạm Thu Thảo',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=faces',
-      xp: 1890,
-      streakDays: 19,
-      hskLevel: 'HSK 3',
-      isMe: false,
-      trend: 'up',
-      trendValue: 1,
-    },
-    {
-      rank: 5,
-      name: 'Đặng Việt Anh',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces',
-      xp: 1540,
-      streakDays: 7,
-      hskLevel: 'HSK 2',
-      isMe: false,
-      trend: 'down',
-      trendValue: 2,
-    },
-    {
-      rank: 6,
-      name: 'Vũ Tuấn Kiệt',
-      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&h=150&fit=crop&crop=faces',
-      xp: 1420,
-      streakDays: 12,
-      hskLevel: 'HSK 4',
-      isMe: false,
-      trend: 'up',
-      trendValue: 3,
-    },
-    {
-      rank: 7,
-      name: 'Hoàng Mai Phương',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=faces',
-      xp: 1280,
-      streakDays: 21,
-      hskLevel: 'HSK 3',
-      isMe: false,
-      trend: 'same',
-    },
-    {
-      rank: 8,
-      name: 'Đỗ Quang Huy',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=faces',
-      xp: 980,
-      streakDays: 5,
-      hskLevel: 'HSK 1',
-      isMe: false,
-      trend: 'down',
-      trendValue: 1,
-    },
-  ],
-  month: [
-    {
-      rank: 1,
-      name: 'Lê Hoàng Nam',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces',
-      xp: 11910,
-      streakDays: 28,
-      hskLevel: 'HSK 4',
-      isMe: false,
-      trend: 'up',
-      trendValue: 1,
-      badge: 'Thống trị tháng',
-    },
-    {
-      rank: 2,
-      name: 'Trần Bảo Ngọc',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces',
-      xp: 10820,
-      streakDays: 42,
-      hskLevel: 'HSK 5',
-      isMe: false,
-      trend: 'down',
-      trendValue: 1,
-    },
-    {
-      rank: 3,
-      name: 'Nguyễn Minh Anh',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces',
-      xp: 8450,
-      streakDays: 14,
-      hskLevel: 'HSK 3',
-      isMe: true,
-      trend: 'up',
-      trendValue: 2,
-      badge: 'Top 3 Tháng',
-    },
-    {
-      rank: 4,
-      name: 'Phạm Thu Thảo',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=faces',
-      xp: 7800,
-      streakDays: 19,
-      hskLevel: 'HSK 3',
-      isMe: false,
-      trend: 'same',
-    },
-    {
-      rank: 5,
-      name: 'Đặng Việt Anh',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces',
-      xp: 5540,
-      streakDays: 7,
-      hskLevel: 'HSK 2',
-      isMe: false,
-      trend: 'down',
-      trendValue: 1,
-    },
-  ],
-  all: [
-    {
-      rank: 1,
-      name: 'Trần Bảo Ngọc',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces',
-      xp: 84820,
-      streakDays: 42,
-      hskLevel: 'HSK 5',
-      isMe: false,
-      trend: 'same',
-      badge: 'Huyền thoại',
-    },
-    {
-      rank: 2,
-      name: 'Nguyễn Minh Anh',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=faces',
-      xp: 71450,
-      streakDays: 14,
-      hskLevel: 'HSK 3',
-      isMe: true,
-      trend: 'same',
-    },
-    {
-      rank: 3,
-      name: 'Lê Hoàng Nam',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces',
-      xp: 60910,
-      streakDays: 28,
-      hskLevel: 'HSK 4',
-      isMe: false,
-      trend: 'same',
-    },
-    {
-      rank: 4,
-      name: 'Phạm Thu Thảo',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=faces',
-      xp: 49800,
-      streakDays: 19,
-      hskLevel: 'HSK 3',
-      isMe: false,
-      trend: 'same',
-    },
-    {
-      rank: 5,
-      name: 'Đặng Việt Anh',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=faces',
-      xp: 38540,
-      streakDays: 7,
-      hskLevel: 'HSK 2',
-      isMe: false,
-      trend: 'same',
-    },
-  ],
-};
-
 export default function LeaderboardView({ onStartPractice, onSelectLesson }: LeaderboardViewProps) {
-  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('week');
+  const [period, setPeriod] = useState<LeaderboardPeriod>('week');
   const [isRulesModalOpen, setIsRulesModalOpen] = useState<boolean>(false);
 
-  const leaders = LEADERBOARD_PERIODS[period];
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: learningQueryKeys.leaderboard(period),
+    queryFn: ({ signal }) => getLeaderboard({ period, signal }),
+    staleTime: 30 * 1000,
+  });
+
+  const leaders = data?.items || [];
   const maxXP = leaders[0]?.xp || 1;
 
   // Podium arrangement: [Rank 2 (Silver), Rank 1 (Gold), Rank 3 (Bronze)]
@@ -257,11 +54,11 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
   const top2 = leaders.find((u) => u.rank === 2) || leaders[1];
   const top3 = leaders.find((u) => u.rank === 3) || leaders[2];
 
-  const myUser = leaders.find((u) => u.isMe) || leaders[1];
-  const gapToFirst = top1 && myUser ? top1.xp - myUser.xp : 0;
+  const myUser = data?.currentUserRank || leaders.find((u) => u.isMe) || null;
+  const gapToFirst = top1 && myUser && top1.id !== myUser.id ? Math.max(0, top1.xp - myUser.xp) : 0;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 w-full mx-auto pb-12 animate-in fade-in duration-200">
       {/* 1. HERO LEAGUE BANNER */}
       <div className="relative bg-white rounded-3xl p-6 sm:p-8 border border-[#E7E7EA] overflow-hidden shadow-xs">
         {/* Ambient background decoration */}
@@ -270,255 +67,301 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs">
-                <Crown className="w-3.5 h-3.5 fill-white" />
-                <span>GIẢI ĐẤU KIM CƯƠNG</span>
-              </div>
-              <span className="text-xs font-bold text-neutral-400">•</span>
-              <span className="text-xs font-bold text-neutral-500">Mùa giải 38</span>
-
-              {/* Countdown Timer Pill */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF5F5] border border-rose-200 text-rose-700 text-xs font-bold">
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                <Clock className="w-3.5 h-3.5" />
-                <span>Kết thúc sau: 2 ngày 14 giờ</span>
-              </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
+              <Trophy className="w-3.5 h-3.5 text-amber-600" />
+              <span>Đấu Trường Kim Cương · Mùa 4</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
-              Đấu Trường Xếp Hạng HanFlix
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>
+              Bảng Xếp Hạng Học Tập
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 max-w-xl leading-relaxed font-medium">
-              Tích lũy điểm kinh nghiệm (XP) qua mỗi video bài học, câu trắc nghiệm đúng và chuỗi học tập hàng ngày để thăng hạng Tinh Anh.
+            <p className="text-neutral-500 text-xs sm:text-sm max-w-xl leading-relaxed">
+              Thi đua cùng hàng nghìn học viên HanFlix. Tích lũy điểm kinh nghiệm (XP) qua từng video bài học, làm bài tập và duy trì chuỗi Streak mỗi ngày.
             </p>
           </div>
 
-          {/* Right Header Actions */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Period Switcher Tabs */}
-            <div className="flex items-center bg-neutral-100 p-1 rounded-2xl border border-neutral-200/80">
-              {(
-                [
-                  ['week', 'Tuần này'],
-                  ['month', 'Tháng này'],
-                  ['all', 'Toàn thời gian'],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setPeriod(key)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    period === key
-                      ? 'bg-white text-neutral-900 shadow-xs'
-                      : 'text-neutral-500 hover:text-neutral-900'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Help / Rules Button */}
+          {/* Right Action: Rules & League Tier */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => setIsRulesModalOpen(true)}
-              className="w-10 h-10 rounded-2xl border border-neutral-200 bg-white hover:bg-neutral-50 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors shadow-2xs cursor-pointer"
-              title="Cách tính điểm XP & quy tắc thăng hạng"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
             >
-              <HelpCircle className="w-4 h-4" />
+              <HelpCircle className="w-4 h-4 text-neutral-500" />
+              <span>Quy tắc tính XP</span>
             </button>
+          </div>
+        </div>
+
+        {/* PERIOD TABS (Week / Month / All-time) */}
+        <div className="mt-8 pt-6 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-4">
+          <div className="inline-flex p-1 rounded-2xl bg-neutral-100/90 border border-neutral-200/70 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setPeriod('week')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                period === 'week'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              Tuần này
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriod('month')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                period === 'month'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              Tháng này
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriod('all')}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                period === 'all'
+                  ? 'bg-white text-neutral-900 shadow-sm'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              Mọi lúc
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <Clock className="w-3.5 h-3.5 text-neutral-400" />
+            <span>{period === 'week' ? 'Cập nhật theo thời gian thực' : period === 'month' ? 'Tổng kết trong tháng' : 'Toàn thời gian'}</span>
+            <span className="font-semibold text-neutral-700">• {data?.totalParticipants ?? leaders.length} học viên tham gia</span>
           </div>
         </div>
       </div>
 
-      {/* 2. 3D ILLUMINATED CHAMPIONS PODIUM */}
-      <div className="relative bg-gradient-to-b from-[#FFFDF9] via-[#FAF8F5] to-white rounded-3xl p-6 sm:p-8 border border-amber-100/80 overflow-hidden shadow-xs">
-        {/* Glow Behind First Place */}
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-gradient-to-b from-amber-300/25 to-transparent blur-3xl pointer-events-none" />
+      {/* ERROR STATE */}
+      {isError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 flex items-center justify-between gap-4 text-rose-900 text-sm">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <div>
+              <p className="font-bold">Không thể tải bảng xếp hạng</p>
+              <p className="text-xs text-rose-700 mt-0.5">{error instanceof Error ? error.message : 'Vui lòng kiểm tra kết nối mạng.'}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Thử lại</span>
+          </button>
+        </div>
+      )}
 
-        <div className="relative z-10 flex items-end justify-center gap-3 sm:gap-6 pt-10 pb-2">
-          {/* PODIUM #2 (SILVER - LEFT) */}
-          {top2 && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="flex flex-col items-center flex-1 max-w-[170px]"
-            >
-              {/* Avatar + Badge */}
-              <div className="relative mb-3 flex flex-col items-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-slate-200 to-slate-400 shadow-md">
-                  <img
-                    src={top2.avatar}
-                    alt={top2.name}
-                    className="w-full h-full object-cover rounded-full bg-white"
-                  />
-                </div>
-                <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
-                  2
-                </div>
-              </div>
+      {/* LOADING SKELETON */}
+      {isLoading && (
+        <div className="space-y-6 animate-pulse">
+          <div className="bg-white rounded-3xl p-8 border border-[#E7E7EA] h-80 flex items-end justify-center gap-6">
+            <div className="w-36 h-48 bg-neutral-100 rounded-t-2xl" />
+            <div className="w-44 h-64 bg-amber-50 rounded-t-2xl" />
+            <div className="w-36 h-40 bg-neutral-100 rounded-t-2xl" />
+          </div>
+          <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 bg-neutral-50 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      )}
 
-              {/* Info */}
-              <div className="text-center space-y-0.5 w-full px-1">
-                <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
-                  {top2.name}
-                </div>
-                {top2.isMe && (
-                  <span className="inline-block px-2 py-0.5 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">
-                    Bạn
-                  </span>
-                )}
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
-                  <span className="font-semibold text-neutral-700">{top2.hskLevel}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center text-amber-700 font-bold">
-                    <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
-                    {top2.streakDays}n
-                  </span>
-                </div>
-              </div>
+      {/* 2. THE PODIUM (TOP 3 WINNERS) */}
+      {!isLoading && leaders.length > 0 && (
+        <div className="relative bg-gradient-to-b from-[#FFFDF8] via-white to-white rounded-3xl p-6 sm:p-8 border border-[#E7E7EA] shadow-xs">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-700 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>BỤC VINH DANH TOP 3</span>
+            </div>
+          </div>
 
-              {/* Silver Pillar */}
-              <div className="w-full h-28 sm:h-36 mt-3 rounded-t-3xl bg-gradient-to-b from-slate-100 via-slate-200/90 to-slate-300/80 border-t-2 border-x-2 border-slate-300/80 flex flex-col items-center justify-between py-3 shadow-inner">
-                <span className="font-black text-xs sm:text-sm text-slate-700">
-                  {top2.xp.toLocaleString()} XP
-                </span>
-                <span className="text-3xl sm:text-4xl font-black text-slate-400/40 select-none">
-                  2
-                </span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* PODIUM #1 (GOLD - CENTER) */}
-          {top1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center flex-1 max-w-[200px] z-10"
-            >
-              {/* Floating Crown Animation */}
+          <div className="flex items-end justify-center gap-3 sm:gap-8 md:gap-10 pt-4 max-w-3xl mx-auto">
+            {/* PODIUM #2 (SILVER - LEFT) */}
+            {top2 && (
               <motion.div
-                animate={{ y: [0, -5, 0] }}
-                transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                className="mb-1"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="flex flex-col items-center flex-1 max-w-[180px] sm:max-w-[220px]"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
-                  <Crown className="w-5 h-5 fill-white" />
+                {/* Avatar + Badge */}
+                <div className="relative mb-3 flex flex-col items-center">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500 shadow-md">
+                    <img
+                      src={getAvatarSrc(top2.avatar, top2.name)}
+                      alt={top2.name}
+                      className="w-full h-full object-cover rounded-full bg-white"
+                    />
+                  </div>
+                  <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
+                    2
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="text-center space-y-0.5 w-full px-1">
+                  <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
+                    {top2.name}
+                  </div>
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
+                    <span className="font-semibold text-neutral-700">{top2.hskLevel}</span>
+                    <span>•</span>
+                    <span className="inline-flex items-center text-amber-700 font-bold">
+                      <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
+                      {top2.streakDays}n
+                    </span>
+                  </div>
+                </div>
+
+                {/* Silver Pillar */}
+                <div className="w-full h-28 sm:h-36 mt-3 rounded-t-3xl bg-gradient-to-b from-slate-100 via-slate-200/90 to-slate-300/80 border-t-2 border-x-2 border-slate-300 flex flex-col items-center justify-between py-3 shadow-inner">
+                  <span className="font-black text-xs sm:text-sm text-slate-800">
+                    {top2.xp.toLocaleString()} XP
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-slate-400/40 select-none">
+                    2
+                  </span>
                 </div>
               </motion.div>
+            )}
 
-              {/* Avatar + Golden Ring */}
-              <div className="relative mb-3 flex flex-col items-center">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1.5 bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-xl shadow-amber-400/20">
-                  <img
-                    src={top1.avatar}
-                    alt={top1.name}
-                    className="w-full h-full object-cover rounded-full bg-white"
-                  />
-                </div>
-                <div className="absolute -bottom-2.5 w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-black text-sm flex items-center justify-center border-2 border-white shadow-md">
-                  1
-                </div>
-              </div>
+            {/* PODIUM #1 (GOLD - CENTER HIGHEST) */}
+            {top1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center flex-1 max-w-[210px] sm:max-w-[260px] z-10"
+              >
+                {/* Floating Crown Animation */}
+                <motion.div
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                  className="mb-1"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                    <Crown className="w-5 h-5 fill-white" />
+                  </div>
+                </motion.div>
 
-              {/* Info */}
-              <div className="text-center space-y-0.5 w-full px-1">
-                <div className="font-black text-sm sm:text-base text-neutral-900 truncate">
-                  {top1.name}
+                {/* Avatar + Golden Ring */}
+                <div className="relative mb-3 flex flex-col items-center">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1.5 bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-xl shadow-amber-400/20">
+                    <img
+                      src={getAvatarSrc(top1.avatar, top1.name)}
+                      alt={top1.name}
+                      className="w-full h-full object-cover rounded-full bg-white"
+                    />
+                  </div>
+                  <div className="absolute -bottom-2.5 w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-black text-sm flex items-center justify-center border-2 border-white shadow-md">
+                    1
+                  </div>
                 </div>
-                <span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300/80">
-                  Quán Quân Tuần
-                </span>
-                <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 pt-0.5">
-                  <span className="font-semibold text-neutral-700">{top1.hskLevel}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center text-amber-700 font-bold">
-                    <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 mr-0.5" />
-                    {top1.streakDays} ngày
+
+                {/* Info */}
+                <div className="text-center space-y-0.5 w-full px-1">
+                  <div className="font-black text-sm sm:text-base text-neutral-900 truncate">
+                    {top1.name}
+                  </div>
+                  <span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300/80">
+                    {top1.badge || 'Quán Quân'}
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 pt-0.5">
+                    <span className="font-semibold text-neutral-700">{top1.hskLevel}</span>
+                    <span>•</span>
+                    <span className="inline-flex items-center text-amber-700 font-bold">
+                      <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 mr-0.5" />
+                      {top1.streakDays} ngày
+                    </span>
+                  </div>
+                </div>
+
+                {/* Gold Pillar */}
+                <div className="w-full h-36 sm:h-48 mt-3 rounded-t-3xl bg-gradient-to-b from-amber-200 via-amber-300/90 to-amber-400/90 border-t-2 border-x-2 border-amber-300 flex flex-col items-center justify-between py-3 shadow-lg shadow-amber-400/20">
+                  <span className="font-black text-sm sm:text-base text-amber-950">
+                    {top1.xp.toLocaleString()} XP
+                  </span>
+                  <span className="text-4xl sm:text-5xl font-black text-amber-600/30 select-none">
+                    1
                   </span>
                 </div>
-              </div>
+              </motion.div>
+            )}
 
-              {/* Gold Pillar */}
-              <div className="w-full h-36 sm:h-48 mt-3 rounded-t-3xl bg-gradient-to-b from-amber-200 via-amber-300/90 to-amber-400/90 border-t-2 border-x-2 border-amber-300 flex flex-col items-center justify-between py-3 shadow-lg shadow-amber-400/20">
-                <span className="font-black text-sm sm:text-base text-amber-950">
-                  {top1.xp.toLocaleString()} XP
-                </span>
-                <span className="text-4xl sm:text-5xl font-black text-amber-600/30 select-none">
-                  1
-                </span>
-              </div>
-            </motion.div>
-          )}
+            {/* PODIUM #3 (BRONZE - RIGHT) */}
+            {top3 && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex flex-col items-center flex-1 max-w-[180px] sm:max-w-[220px]"
+              >
+                {/* Avatar + Badge */}
+                <div className="relative mb-3 flex flex-col items-center">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-amber-700 to-amber-900 shadow-md">
+                    <img
+                      src={getAvatarSrc(top3.avatar, top3.name)}
+                      alt={top3.name}
+                      className="w-full h-full object-cover rounded-full bg-white"
+                    />
+                  </div>
+                  <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
+                    3
+                  </div>
+                </div>
 
-          {/* PODIUM #3 (BRONZE - RIGHT) */}
-          {top3 && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex flex-col items-center flex-1 max-w-[170px]"
-            >
-              {/* Avatar + Badge */}
-              <div className="relative mb-3 flex flex-col items-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-amber-700 to-amber-900 shadow-md">
-                  <img
-                    src={top3.avatar}
-                    alt={top3.name}
-                    className="w-full h-full object-cover rounded-full bg-white"
-                  />
+                {/* Info */}
+                <div className="text-center space-y-0.5 w-full px-1">
+                  <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
+                    {top3.name}
+                  </div>
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
+                    <span className="font-semibold text-neutral-700">{top3.hskLevel}</span>
+                    <span>•</span>
+                    <span className="inline-flex items-center text-amber-700 font-bold">
+                      <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
+                      {top3.streakDays}n
+                    </span>
+                  </div>
                 </div>
-                <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
-                  3
-                </div>
-              </div>
 
-              {/* Info */}
-              <div className="text-center space-y-0.5 w-full px-1">
-                <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
-                  {top3.name}
-                </div>
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
-                  <span className="font-semibold text-neutral-700">{top3.hskLevel}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center text-amber-700 font-bold">
-                    <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
-                    {top3.streakDays}n
+                {/* Bronze Pillar */}
+                <div className="w-full h-24 sm:h-32 mt-3 rounded-t-3xl bg-gradient-to-b from-orange-100 via-orange-200/90 to-amber-300/60 border-t-2 border-x-2 border-amber-300/80 flex flex-col items-center justify-between py-3 shadow-inner">
+                  <span className="font-black text-xs sm:text-sm text-amber-950">
+                    {top3.xp.toLocaleString()} XP
+                  </span>
+                  <span className="text-3xl sm:text-4xl font-black text-amber-700/30 select-none">
+                    3
                   </span>
                 </div>
-              </div>
-
-              {/* Bronze Pillar */}
-              <div className="w-full h-24 sm:h-32 mt-3 rounded-t-3xl bg-gradient-to-b from-orange-100 via-orange-200/90 to-amber-300/60 border-t-2 border-x-2 border-amber-300/80 flex flex-col items-center justify-between py-3 shadow-inner">
-                <span className="font-black text-xs sm:text-sm text-amber-950">
-                  {top3.xp.toLocaleString()} XP
-                </span>
-                <span className="text-3xl sm:text-4xl font-black text-amber-700/30 select-none">
-                  3
-                </span>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. YOUR STANDING & PROGRESSION CARD (STICKY / HIGHLIGHT) */}
-      {myUser && (
+      {!isLoading && myUser && (
         <div className="relative bg-gradient-to-r from-[#FFFBF2] via-[#FEF7EC] to-[#FFF5F5] rounded-3xl p-5 sm:p-6 border-2 border-amber-300/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             {/* User Avatar with Rank Pill */}
             <div className="relative shrink-0">
               <img
-                src={myUser.avatar}
+                src={getAvatarSrc(myUser.avatar, myUser.name)}
                 alt={myUser.name}
                 className="w-14 h-14 rounded-2xl object-cover border-2 border-white shadow-sm"
               />
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-700 text-white font-black text-xs flex items-center justify-center border-2 border-white">
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#B91B1C] text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-xs">
                 #{myUser.rank}
               </span>
             </div>
@@ -545,10 +388,10 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 </span>
               </p>
 
-              {gapToFirst > 0 && (
+              {gapToFirst > 0 && top1 && (
                 <div className="text-xs text-amber-800 font-medium mt-1 flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                  <span>Chỉ còn cách vị trí #1 ({top1.name}) <strong>{gapToFirst.toLocaleString()} XP</strong></span>
+                  <span>Cách vị trí #1 ({top1.name}) <strong>{gapToFirst.toLocaleString()} XP</strong></span>
                 </div>
               )}
             </div>
@@ -582,137 +425,146 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
       )}
 
       {/* 4. DETAILED LEADERBOARD ROSTER TABLE */}
-      <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-xs">
-        {/* Table Header Info */}
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
-          <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
-            <Trophy className="w-4 h-4 text-amber-600" />
-            <span>DANH SÁCH XẾP HẠNG CHI TIẾT</span>
+      {!isLoading && (
+        <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-xs">
+          {/* Table Header Info */}
+          <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
+            <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
+              <Trophy className="w-4 h-4 text-amber-600" />
+              <span>DANH SÁCH XẾP HẠNG CHI TIẾT</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
+              <span className="flex items-center gap-1 text-emerald-700">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Top 3 Thăng hạng Tinh Anh</span>
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
-            <span className="flex items-center gap-1 text-emerald-700">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Top 3 Thăng hạng Tinh Anh</span>
-            </span>
-          </div>
-        </div>
 
-        {/* Table Rows */}
-        <div className="divide-y divide-neutral-100">
-          {leaders.map((user) => {
-            const isTop3 = user.rank <= 3;
-            const progressPercent = Math.min(100, Math.round((user.xp / maxXP) * 100));
+          {/* Empty State */}
+          {leaders.length === 0 && (
+            <div className="p-12 text-center text-neutral-500 text-sm">
+              Chưa có dữ liệu học tập trong kỳ này. Hãy xem một bài học để ghi danh đầu tiên!
+            </div>
+          )}
 
-            return (
-              <div
-                key={user.rank}
-                className={`px-5 sm:px-7 py-3.5 flex items-center gap-3 sm:gap-4 transition-colors ${
-                  user.isMe
-                    ? 'bg-amber-50/70 hover:bg-amber-50 border-l-4 border-[#B91B1C]'
-                    : isTop3
-                    ? 'hover:bg-neutral-50/80'
-                    : 'hover:bg-neutral-50'
-                }`}
-              >
-                {/* Rank Badge */}
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs sm:text-sm shrink-0">
-                  {user.rank === 1 ? (
-                    <span className="w-7 h-7 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-black shadow-xs">
-                      1
-                    </span>
-                  ) : user.rank === 2 ? (
-                    <span className="w-7 h-7 rounded-lg bg-slate-300 text-slate-800 flex items-center justify-center font-black shadow-xs">
-                      2
-                    </span>
-                  ) : user.rank === 3 ? (
-                    <span className="w-7 h-7 rounded-lg bg-amber-700 text-white flex items-center justify-center font-black shadow-xs">
-                      3
-                    </span>
-                  ) : (
-                    <span className="text-neutral-400 font-bold">#{user.rank}</span>
-                  )}
-                </div>
+          {/* Table Rows */}
+          <div className="divide-y divide-neutral-100">
+            {leaders.map((user) => {
+              const isTop3 = user.rank <= 3;
+              const progressPercent = Math.min(100, Math.round((user.xp / maxXP) * 100));
 
-                {/* Avatar */}
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-neutral-200 bg-neutral-100 shrink-0"
-                />
-
-                {/* Name & Tags */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
-                      {user.name}
-                    </span>
-                    {user.isMe && (
-                      <span className="px-1.5 py-0.2 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">
-                        Bạn
+              return (
+                <div
+                  key={user.id || user.rank}
+                  className={`px-5 sm:px-7 py-3.5 flex items-center gap-3 sm:gap-4 transition-colors ${
+                    user.isMe
+                      ? 'bg-amber-50/70 hover:bg-amber-50 border-l-4 border-[#B91B1C]'
+                      : isTop3
+                      ? 'hover:bg-neutral-50/80'
+                      : 'hover:bg-neutral-50'
+                  }`}
+                >
+                  {/* Rank Badge */}
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs sm:text-sm shrink-0">
+                    {user.rank === 1 ? (
+                      <span className="w-7 h-7 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-black shadow-xs">
+                        1
                       </span>
-                    )}
-                    {user.badge && (
-                      <span className="px-2 py-0.2 rounded-full bg-amber-100/80 text-amber-900 text-[10px] font-semibold border border-amber-200 hidden sm:inline">
-                        {user.badge}
+                    ) : user.rank === 2 ? (
+                      <span className="w-7 h-7 rounded-lg bg-slate-300 text-slate-800 flex items-center justify-center font-black shadow-xs">
+                        2
                       </span>
+                    ) : user.rank === 3 ? (
+                      <span className="w-7 h-7 rounded-lg bg-amber-700 text-white flex items-center justify-center font-black shadow-xs">
+                        3
+                      </span>
+                    ) : (
+                      <span className="text-neutral-400 font-bold">#{user.rank}</span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 text-[11px] text-neutral-500 mt-0.5">
-                    <span className="font-mono font-medium">{user.hskLevel}</span>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
-                      <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-                      {user.streakDays} ngày liên tiếp
-                    </span>
-                  </div>
-                </div>
+                  {/* Avatar */}
+                  <img
+                    src={getAvatarSrc(user.avatar, user.name)}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-xl object-cover border border-neutral-200 bg-neutral-100 shrink-0"
+                  />
 
-                {/* XP Score & Progress bar */}
-                <div className="text-right shrink-0 w-28 sm:w-44">
-                  <div className="text-xs sm:text-sm font-black text-neutral-900">
-                    {user.xp.toLocaleString()} <span className="text-[10px] text-amber-700 font-bold">XP</span>
-                  </div>
-                  {/* Fluid Progress Bar relative to leader */}
-                  <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden mt-1 hidden sm:block">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        user.rank === 1
-                          ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                          : user.isMe
-                          ? 'bg-gradient-to-r from-rose-500 to-[#B91B1C]'
-                          : 'bg-neutral-300'
-                      }`}
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                </div>
+                  {/* Name & Tags */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
+                        {user.name}
+                      </span>
+                      {user.isMe && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">
+                          Bạn
+                        </span>
+                      )}
+                      {user.badge && (
+                        <span className="px-2 py-0.2 rounded-full bg-amber-100/80 text-amber-900 text-[10px] font-semibold border border-amber-200 hidden sm:inline">
+                          {user.badge}
+                        </span>
+                      )}
+                    </div>
 
-                {/* Trend Indicator */}
-                <div className="w-8 flex items-center justify-center shrink-0">
-                  {user.trend === 'up' && (
-                    <span className="flex items-center text-emerald-600 text-xs font-bold" title={`Tăng ${user.trendValue} bậc`}>
-                      <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
-                      <span className="text-[10px]">+{user.trendValue}</span>
-                    </span>
-                  )}
-                  {user.trend === 'down' && (
-                    <span className="flex items-center text-rose-500 text-xs font-bold" title={`Tụt ${user.trendValue} bậc`}>
-                      <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
-                      <span className="text-[10px]">-{user.trendValue}</span>
-                    </span>
-                  )}
-                  {user.trend === 'same' && (
-                    <span className="text-neutral-300" title="Giữ nguyên vị trí">
-                      <Minus className="w-3.5 h-3.5" />
-                    </span>
-                  )}
+                    <div className="flex items-center gap-3 text-[11px] text-neutral-500 mt-0.5">
+                      <span className="font-mono font-medium">{user.hskLevel}</span>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
+                        <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        {user.streakDays} ngày liên tiếp
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* XP Score & Progress bar */}
+                  <div className="text-right shrink-0 w-28 sm:w-48 md:w-60">
+                    <div className="text-xs sm:text-sm font-black text-neutral-900">
+                      {user.xp.toLocaleString()} <span className="text-[10px] text-amber-700 font-bold">XP</span>
+                    </div>
+                    {/* Fluid Progress Bar relative to leader */}
+                    <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden mt-1 hidden sm:block">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          user.rank === 1
+                            ? 'bg-gradient-to-r from-amber-400 to-orange-500'
+                            : user.isMe
+                            ? 'bg-gradient-to-r from-rose-500 to-[#B91B1C]'
+                            : 'bg-neutral-300'
+                        }`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Trend Indicator */}
+                  <div className="w-8 flex items-center justify-center shrink-0">
+                    {user.trend === 'up' && (
+                      <span className="flex items-center text-emerald-600 text-xs font-bold" title={`Tăng ${user.trendValue} bậc`}>
+                        <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
+                        <span className="text-[10px]">+{user.trendValue}</span>
+                      </span>
+                    )}
+                    {user.trend === 'down' && (
+                      <span className="flex items-center text-rose-500 text-xs font-bold" title={`Tụt ${user.trendValue} bậc`}>
+                        <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
+                        <span className="text-[10px]">-{user.trendValue}</span>
+                      </span>
+                    )}
+                    {user.trend === 'same' && (
+                      <span className="text-neutral-300" title="Giữ nguyên vị trí">
+                        <Minus className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 5. XP RULES & LEAGUE REWARDS MODAL */}
       <AnimatePresence>
@@ -756,23 +608,23 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                     <Play className="w-4 h-4 text-[#B91B1C] shrink-0 fill-current" />
                     <div>
                       <div className="text-xs font-bold text-neutral-900">Xem video bài học</div>
-                      <div className="text-[11px] text-amber-700 font-bold">+20 XP / video</div>
+                      <div className="text-[11px] text-amber-700 font-bold">+50 XP / bài hoàn thành</div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
                     <BookOpenCheck className="w-4 h-4 text-amber-600 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Luyện tập Quizlet</div>
-                      <div className="text-[11px] text-amber-700 font-bold">+50 XP / bộ đề</div>
+                      <div className="text-xs font-bold text-neutral-900">Làm bài tập Quiz</div>
+                      <div className="text-[11px] text-amber-700 font-bold">+25 XP / lần luyện tập</div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
-                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Đạt 100% điểm thi</div>
-                      <div className="text-[11px] text-emerald-700 font-bold">+30 XP thưởng</div>
+                      <div className="text-xs font-bold text-neutral-900">Thời gian chủ động học</div>
+                      <div className="text-[11px] text-blue-700 font-bold">+2 XP / phút học</div>
                     </div>
                   </div>
 
@@ -780,7 +632,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                     <Flame className="w-4 h-4 text-orange-600 shrink-0 fill-current" />
                     <div>
                       <div className="text-xs font-bold text-neutral-900">Duy trì Streak mỗi ngày</div>
-                      <div className="text-[11px] text-orange-700 font-bold">+15 XP / ngày</div>
+                      <div className="text-[11px] text-orange-700 font-bold">+10 XP / ngày streak</div>
                     </div>
                   </div>
                 </div>
@@ -793,7 +645,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   <span>Quy chế thăng & rớt hạng</span>
                 </div>
                 <p className="leading-relaxed text-neutral-700">
-                  Mỗi tuần sẽ tổng kết vào lúc 23:59 Chủ Nhật. <strong>Top 3 học viên</strong> đứng đầu bảng đấu Kim Cương sẽ được vinh danh tại sảnh danh dự và nhận cúp lưu niệm.
+                  Mỗi tuần sẽ tổng kết vào lúc 23:59 Chủ Nhật. <strong>Top 3 học viên</strong> đứng đầu bảng đấu Kim Cương sẽ được vinh danh tại sảnh danh dự và nhận huy hiệu danh giá.
                 </p>
               </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,13 +11,20 @@ import {
 } from '../api/learning';
 import { InlineBanner } from './notifications';
 import { listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, saveVocabularyWord, type SavedVocabulary } from '../api/vocabulary';import AIRecommendationSection from './AIRecommendationSection';
-import VocabularyPage from './vocabulary/VocabularyPage';
-import SavedWordsPage from './vocabulary/SavedWordsPage';
-import RoadmapPage from './RoadmapPage';
+import HanFlixLoadingScreen from './HanFlixLoadingScreen';
+// Heavy sub-pages are lazy: feed/lessons are the critical path and stay
+// eager, but saved/vocabulary/roadmap/history pull in sizable modules
+// (SRS scheduler, flashcard modals, calendar charts) the user may never
+// open in a given session.
+const VocabularyPage = lazy(() => import('./vocabulary/VocabularyPage'));
+const SavedWordsPage = lazy(() => import('./vocabulary/SavedWordsPage'));
+const RoadmapPage = lazy(() => import('./RoadmapPage'));
+const StudyHistoryPage = lazy(() => import('./history/StudyHistoryPage'));
 import LessonCard from './LessonCard';
-import StudyHistoryPage from './history/StudyHistoryPage';
 import { dashboardQueryKeys, learningQueryKeys, lessonQueryKeys, vocabularyQueryKeys } from '../api/queryKeys';
 import { perfMarks } from '../lib/perfMarks';
+import { awardXP } from '../lib/xp';
+import { recordLearningActivity } from '../lib/streak';
 
 type Section = 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history';
 
@@ -88,7 +95,10 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   const reviewMutation = useMutation({
     mutationFn: ({ wordId, rating }: { wordId: string; rating: 'again' | 'hard' | 'good' | 'easy' }) =>
       reviewSavedWord(wordId, rating),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      const earned = (res as { xpEarned?: number })?.xpEarned || 5;
+      awardXP(earned, `Ôn tập từ vựng Flashcard (+${earned} XP)`, 'vocab');
+      recordLearningActivity('review');
       void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.saved() });
       void queryClient.invalidateQueries({ queryKey: vocabularyQueryKeys.due() });
     },
@@ -196,54 +206,45 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
       </section>
     )}
     {section === 'saved' && (
-      <SavedWordsPage
-        savedWords={savedQuery.data ?? []}
-        dueWords={dueQuery.data ?? []}
-        onReviewWord={(wordId, rating) => mutate(() => reviewMutation.mutateAsync({ wordId, rating }))}
-        onRemoveWord={(wordId) => mutate(() => removeMutation.mutateAsync(wordId))}
-        onNavigateToVocabulary={() => {
-          if (onNavigateSection) {
-            onNavigateSection('vocabulary');
-          } else {
-            window.location.hash = '#vocabulary';
-          }
-        }}
-        busy={reviewMutation.isPending || removeMutation.isPending}
-      />
+      <Suspense fallback={<HanFlixLoadingScreen />}>
+        <SavedWordsPage
+          savedWords={savedQuery.data ?? []}
+          dueWords={dueQuery.data ?? []}
+          onReviewWord={(wordId, rating) => mutate(() => reviewMutation.mutateAsync({ wordId, rating }))}
+          onRemoveWord={(wordId) => mutate(() => removeMutation.mutateAsync(wordId))}
+          onNavigateToVocabulary={() => onNavigateSection?.('vocabulary')}
+          busy={reviewMutation.isPending || removeMutation.isPending}
+        />
+      </Suspense>
     )}
     {section === 'vocabulary' && (
-      <VocabularyPage
-        savedWords={savedQuery.data ?? []}
-        onStartReviewSession={() => {
-          if (onNavigateSection) {
-            onNavigateSection('saved');
-          } else {
-            window.location.hash = '#saved';
-          }
-        }}
+      <Suspense fallback={<HanFlixLoadingScreen />}>
+        <VocabularyPage
+          savedWords={savedQuery.data ?? []}
+        onStartReviewSession={() => onNavigateSection?.('saved')}
         onSaveWord={async (word) => {
           await mutate(() => saveMutation.mutateAsync(word.hanzi));
         }}
         onRemoveWord={(wordId) => void mutate(() => removeMutation.mutateAsync(wordId))}
       />
+      </Suspense>
     )}
     {section === 'roadmap' && (
-      <RoadmapPage
-        onSelectLesson={onSelectLesson}
-        onStartPractice={() => onSelectLesson('17')}
-      />
+      <Suspense fallback={<HanFlixLoadingScreen />}>
+        <RoadmapPage
+          onSelectLesson={onSelectLesson}
+          onStartPractice={() => onNavigateSection?.('lessons')}
+          onNavigateToLessons={() => onNavigateSection?.('lessons')}
+        />
+      </Suspense>
     )}
     {section === 'history' && (
-      <StudyHistoryPage
-        onSelectLesson={onSelectLesson}
-        onNavigateToLessons={() => {
-          if (onNavigateSection) {
-            onNavigateSection('lessons');
-          } else {
-            window.location.hash = '#lessons';
-          }
-        }}
+      <Suspense fallback={<HanFlixLoadingScreen />}>
+        <StudyHistoryPage
+          onSelectLesson={onSelectLesson}
+          onNavigateToLessons={() => onNavigateSection?.('lessons')}
       />
+      </Suspense>
     )}
   </div>;
 }

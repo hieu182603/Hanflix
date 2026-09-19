@@ -335,9 +335,13 @@ export default function LessonQuizModal({
                 </p>
 
                 {/* Score Pill Row */}
-                <div className="flex items-center justify-center gap-3 mt-4">
+                <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
                   <span className="px-3.5 py-1.5 rounded-full bg-white/90 font-mono font-black text-sm text-[#18181B] shadow-2xs border border-black/5">
                     Điểm: {quizResult.score}%
+                  </span>
+                  <span className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 font-black text-xs shadow-2xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 fill-amber-950" />
+                    +{quizResult.xpEarned || (quizResult.score === 100 ? 50 : quizResult.score >= 80 ? 40 : 25)} XP Đấu Trường
                   </span>
                   {bestScore !== null && bestScore !== undefined && quizResult.score > bestScore && (
                     <span className="px-3.5 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-2xs flex items-center gap-1">

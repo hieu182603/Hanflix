@@ -37,6 +37,7 @@ const userSchema = new Schema({
   avatarType: { type: String, enum: ['generated', 'custom'], default: 'generated' },
   avatarConfig: { type: Schema.Types.Mixed, default: null },
   avatarPublicId: { type: String, trim: true, default: null },
+  totalXP: { type: Number, min: 0, default: 0 },
   learningProfile: { type: learningProfileSchema, default: () => ({ currentHskSource: 'unknown', subtitlePreference: 'all' }) },
 }, { timestamps: true, versionKey: false });
 

@@ -7,6 +7,8 @@ const studyActivitySchema = new Schema({
   progressUpdates: { type: Number, min: 0, default: 0 },
   quizAttempts: { type: Number, min: 0, default: 0 },
   completedLessons: { type: Number, min: 0, default: 0 },
+  vocabReviews: { type: Number, min: 0, default: 0 },
+  xpEarned: { type: Number, min: 0, default: 0 },
 }, { timestamps: true, versionKey: false });
 
 studyActivitySchema.index({ userId: 1, dateKey: 1 }, { unique: true });

@@ -1,0 +1,357 @@
+name: Deploy to Azure
+
+# Triggers:
+#   • Manual dispatch: chọn environment (staging/production), image tag
+#   • Push tag (v*.*.*): deploy to production
+#   • Push main branch: deploy edge to staging
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      dockerImage:
+        description: 'Full Docker image URL (e.g. ghcr.io/owner/hanflix-backend:v1.0.0)'
+        required: false
+        type: string
+        default: ''
+      skipInfra:
+        description: 'Skip infrastructure deployment (use existing resources)'
+        required: false
+        type: boolean
+        default: false
+
+# Only one deployment at a time per environment
+concurrency:
+  group: azure-deploy-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # Azure OIDC authentication
+
+env:
+  NODE_ENV: production
+
+jobs:
+  resolve-environment:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      dockerImage: ${{ steps.resolve.outputs.dockerImage }}
+      isProduction: ${{ steps.resolve.outputs.isProduction }}
+      resourcePrefix: ${{ steps.resolve.outputs.resourcePrefix }}
+      tagVersion: ${{ steps.resolve.outputs.tagVersion }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: resolve
+        run: |
+          set -euo pipefail
+
+          # 1. Manual dispatch wins
+          if [[ "${{ inputs.environment }}" == "production" ]] || \
+             [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "resourcePrefix=hanflix" >> "$GITHUB_OUTPUT"
+            echo "isProduction=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=staging" >> "$GITHUB_OUTPUT"
+            echo "resourcePrefix=hf-staging" >> "$GITHUB_OUTPUT"
+            echo "isProduction=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 2. Docker image
+          if [[ -n "${{ inputs.dockerImage }}" ]]; then
+            echo "dockerImage=${{ inputs.dockerImage }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "dockerImage=ghcr.io/${{ github.repository_owner }}/hanflix-backend:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "tagVersion=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            SHORT_SHA="${GITHUB_SHA::7}"
+            echo "dockerImage=ghcr.io/${{ github.repository_owner }}/hanflix-backend:edge-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            echo "tagVersion=edge-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Resolved: environment=${{ steps.resolve.outputs.environment }}, image=${{ steps.resolve.outputs.dockerImage }}"
+
+  # ----------------------------------------------------------------
+  # Job 2: Azure Login (OIDC — no secrets, no credentials stored)
+  # ----------------------------------------------------------------
+  azure-login:
+    name: Azure Login
+    needs: resolve-environment
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    steps:
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set Azure CLI context
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          echo "Logged in to Azure Subscription: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+  # ----------------------------------------------------------------
+  # Job 3: Deploy or Update Infrastructure (Bicep)
+  # ----------------------------------------------------------------
+  azure-infrastructure:
+    name: Azure Infrastructure
+    needs: [resolve-environment, azure-login]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    outputs:
+      acrLoginServer: ${{ steps.deploy.outputs.acrLoginServer }}
+      backendFqdn: ${{ steps.deploy.outputs.backendFqdn }}
+      keyVaultName: ${{ steps.deploy.outputs.keyVaultName }}
+      resourceGroup: ${{ steps.deploy.outputs.resourceGroup }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Bicep Infrastructure
+        id: deploy
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-${{ needs.resolve-environment.outputs.resourcePrefix }}
+          location: southeastasia
+          template: azure/main.bicep
+          parameters: azure/main.parameters.json
+          parameters: |
+            resourcePrefix=${{ needs.resolve-environment.outputs.resourcePrefix }}
+            location=southeastasia
+            dockerImage=${{ needs.resolve-environment.outputs.dockerImage }}
+            nodeEnv=production
+            minReplicas=1
+            maxReplicas=${{ needs.resolve-environment.outputs.isProduction == 'true' && '3' || '2' }}
+            cpuCoreCount=0.5
+            memoryGb=1.0
+            healthCheckPath=/health
+            allowedOrigins=${{ vars.AZURE_APP_ORIGINS || '*' }}
+          deploymentMode: Incremental
+          failOnStdErr: false
+
+      - name: Show deployment outputs
+        run: |
+          echo "✅ Infrastructure deployed"
+          echo "  Backend URL: https://${{ steps.deploy.outputs.backendFqdn }}"
+          echo "  ACR Server:  ${{ steps.deploy.outputs.acrLoginServer }}"
+          echo "  Key Vault:   ${{ steps.deploy.outputs.keyVaultName }}"
+          echo "  ResourceGroup: rg-${{ needs.resolve-environment.outputs.resourcePrefix }}"
+
+  # ----------------------------------------------------------------
+  # Job 4: Push image to Azure Container Registry (ACR)
+  # ----------------------------------------------------------------
+  azure-acr-push:
+    name: Push Image to ACR
+    needs: [resolve-environment, azure-infrastructure]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Pull from GHCR
+        run: |
+          # Login to GHCR
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          # Pull the image
+          docker pull ${{ needs.resolve-environment.outputs.dockerImage }}
+          echo "Pulled: ${{ needs.resolve-environment.outputs.dockerImage }}"
+
+      - name: Push to ACR
+        run: |
+          ACR_SERVER="${{ needs.resolve-environment.outputs.acrLoginServer }}"
+          az acr login --name "${ACR_SERVER%%.*}"
+          # Tag for ACR
+          docker tag ${{ needs.resolve-environment.outputs.dockerImage }} "${ACR_SERVER}/hanflix-backend:${{ needs.resolve-environment.outputs.tagVersion }}"
+          docker tag ${{ needs.resolve-environment.outputs.dockerImage }} "${ACR_SERVER}/hanflix-backend:latest"
+          # Push
+          docker push "${ACR_SERVER}/hanflix-backend:${{ needs.resolve-environment.outputs.tagVersion }}"
+          docker push "${ACR_SERVER}/hanflix-backend:latest"
+          echo "✅ Pushed to ACR: ${ACR_SERVER}/hanflix-backend:${{ needs.resolve-environment.outputs.tagVersion }}"
+
+  # ----------------------------------------------------------------
+  # Job 5: Set Key Vault Secrets (only on first deploy)
+  # ----------------------------------------------------------------
+  azure-secrets:
+    name: Configure Key Vault Secrets
+    needs: [resolve-environment, azure-infrastructure]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    # Only run on manual dispatch for security (secrets should be set once)
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set Key Vault Secrets
+        env:
+          KV_NAME: ${{ needs.resolve-environment.outputs.keyVaultName }}
+        run: |
+          echo "Key Vault: $KV_NAME"
+
+          # Grant current user access
+          CURRENT_UPN=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+          az keyvault set-policy --name "$KV_NAME" --upn "$CURRENT_UPN" \
+            --secret-permissions list get set delete 2>/dev/null || true
+
+          # Helper to set secret if not exists
+          set_secret() {
+            local NAME="$1"; local VALUE="$2"
+            if az keyvault secret show --vault-name "$KV_NAME" --name "$NAME" &>/dev/null; then
+              echo "  $NAME: already set (skipping)"
+            else
+              az keyvault secret set --vault-name "$KV_NAME" --name "$NAME" --value "$VALUE" --output none
+              echo "  $NAME: ✅ set"
+            fi
+          }
+
+          # Required secrets (from GitHub Secrets → Key Vault)
+          [[ -n "${{ secrets.AZURE_MONGODB_URI }}" ]] && \
+            set_secret "MONGODB-URI" "${{ secrets.AZURE_MONGODB_URI }}"
+          [[ -n "${{ secrets.AZURE_JWT_ACCESS_SECRET }}" ]] && \
+            set_secret "JWT-ACCESS-SECRET" "${{ secrets.AZURE_JWT_ACCESS_SECRET }}"
+          [[ -n "${{ secrets.AZURE_JWT_REFRESH_SECRET }}" ]] && \
+            set_secret "JWT-REFRESH-SECRET" "${{ secrets.AZURE_JWT_REFRESH_SECRET }}"
+
+          # Optional secrets
+          [[ -n "${{ secrets.AZURE_GEMINI_API_KEY }}" ]] && \
+            set_secret "GEMINI-API-KEY" "${{ secrets.AZURE_GEMINI_API_KEY }}"
+          [[ -n "${{ secrets.AZURE_TRANSLATOR_KEY }}" ]] && \
+            set_secret "AZURE-TRANSLATOR-KEY" "${{ secrets.AZURE_TRANSLATOR_KEY }}"
+          [[ -n "${{ secrets.AZURE_SPEECH_KEY }}" ]] && \
+            set_secret "AZURE-SPEECH-KEY" "${{ secrets.AZURE_SPEECH_KEY }}"
+          [[ -n "${{ secrets.AZURE_R2_ACCOUNT_ID }}" ]] && \
+            set_secret "R2-ACCOUNT-ID" "${{ secrets.AZURE_R2_ACCOUNT_ID }}"
+          [[ -n "${{ secrets.AZURE_R2_ACCESS_KEY_ID }}" ]] && \
+            set_secret "R2-ACCESS-KEY-ID" "${{ secrets.AZURE_R2_ACCESS_KEY_ID }}"
+          [[ -n "${{ secrets.AZURE_R2_SECRET_ACCESS_KEY }}" ]] && \
+            set_secret "R2-SECRET-ACCESS-KEY" "${{ secrets.AZURE_R2_SECRET_ACCESS_KEY }}"
+          [[ -n "${{ secrets.AZURE_R2_BUCKET_NAME }}" ]] && \
+            set_secret "R2-BUCKET-NAME" "${{ secrets.AZURE_R2_BUCKET_NAME }}"
+
+  # ----------------------------------------------------------------
+  # Job 6: Update Container App with new image
+  # ----------------------------------------------------------------
+  azure-deploy-app:
+    name: Deploy Container App
+    needs: [resolve-environment, azure-infrastructure, azure-acr-push]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Update Container App
+        run: |
+          RG="${{ needs.resolve-environment.outputs.resourceGroup }}"
+          ACR="${{ needs.resolve-environment.outputs.acrLoginServer }}"
+          TAG="${{ needs.resolve-environment.outputs.tagVersion }}"
+          IMAGE="${ACR}/hanflix-backend:${TAG}"
+
+          echo "Updating Container App with image: $IMAGE"
+
+          az containerapp update \
+            --name "${{ needs.resolve-environment.outputs.resourcePrefix }}backend" \
+            --resource-group "$RG" \
+            --image "$IMAGE" \
+            --output none
+
+          echo "✅ Container App updated"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting 15 seconds for Container App to start..."
+          sleep 15
+
+      - name: Health check
+        run: |
+          BACKEND_URL="https://${{ needs.resolve-environment.outputs.backendFqdn }}"
+          echo "Checking health: ${BACKEND_URL}/health"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 "${BACKEND_URL}/health" 2>/dev/null) || HTTP_STATUS="000"
+
+          if [[ "$HTTP_STATUS" == "200" ]]; then
+            echo "✅ Backend is healthy! Status: $HTTP_STATUS"
+          else
+            echo "⚠️  Backend responded with status: $HTTP_STATUS"
+            echo "Check logs: az containerapp logs --name ${{ needs.resolve-environment.outputs.resourcePrefix }}backend --resource-group ${{ needs.resolve-environment.outputs.resourceGroup }} -f"
+            exit 1
+          fi
+
+  # ----------------------------------------------------------------
+  # Job 7: Deployment Summary
+  # ----------------------------------------------------------------
+  deploy-summary:
+    name: Deployment Summary
+    needs: [resolve-environment, azure-infrastructure, azure-deploy-app]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          ENV="${{ needs.resolve-environment.outputs.environment }}"
+          FQDN="${{ needs.resolve-environment.outputs.backendFqdn }}"
+          RG="rg-${{ needs.resolve-environment.outputs.resourcePrefix }}"
+
+          echo ""
+          echo "## 🚀 Azure Deployment Summary"
+          echo ""
+          echo "| Property | Value |"
+          echo "|----------|-------|"
+          echo "| Environment | **$ENV** |"
+          echo "| Backend URL | https://$FQDN |"
+          echo "| Resource Group | $RG |"
+          echo "| Docker Image | ${{ needs.resolve-environment.outputs.dockerImage }} |"
+          echo ""
+          echo "### Useful Commands"
+          echo ""
+          echo "```bash"
+          echo "# View logs"
+          echo "az containerapp logs --name ${{ needs.resolve-environment.outputs.resourcePrefix }}backend \\"
+          echo "  --resource-group $RG -f"
+          echo ""
+          echo "# Restart"
+          echo "az containerapp revision restart \\"
+          echo "  --name ${{ needs.resolve-environment.outputs.resourcePrefix }}backend \\"
+          echo "  --resource-group $RG"
+          echo ""
+          echo "# Redeploy (use GitHub Actions)"
+          echo "# Go to: Actions → Deploy to Azure → Run workflow"
+          echo "```"

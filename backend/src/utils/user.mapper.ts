@@ -20,6 +20,7 @@ export interface PublicUserInput {
   avatarType?: 'generated' | 'custom' | null;
   avatarConfig?: unknown;
   avatarPublicId?: string | null;
+  totalXP?: number;
 }
 
 export function publicUser(user: PublicUserInput) {
@@ -31,6 +32,7 @@ export function publicUser(user: PublicUserInput) {
     status: user.status,
     emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequired),
     learningProfile: user.learningProfile,
+    totalXP: user.totalXP ?? 0,
     avatarType: user.avatarType ?? (user.avatarUrl ? 'custom' : 'generated'),
     avatarUrl: user.avatarUrl ?? user.googleAvatarUrl ?? null,
     googleAvatarUrl: user.googleAvatarUrl ?? null,

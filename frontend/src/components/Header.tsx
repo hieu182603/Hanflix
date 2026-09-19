@@ -9,12 +9,17 @@ import {
   Settings,
   LogOut,
   Compass,
+  Sparkles,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import NotificationsDropdown from './notifications/NotificationsDropdown';
 import StreakDropdown from './streak/StreakDropdown';
 import { useLanguage, Language } from '../i18n';
 import { usePandaPet } from './panda-pet';
 import UserAvatar from './common/UserAvatar';
+import { dashboardQueryKeys } from '../api/queryKeys';
+import { getLearnerDashboard } from '../api/learning';
 
 interface HeaderProps {
   onSearchSelect?: (query: string) => void;
@@ -29,6 +34,7 @@ interface HeaderProps {
   currentUser?: {
     name: string;
     email: string;
+    totalXP?: number;
     avatarAsset?: string | null;
     learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null;
   };
@@ -36,6 +42,7 @@ interface HeaderProps {
   streakDays?: number;
   onOpenPractice?: () => void;
   onNavigateToLessons?: () => void;
+  onNotificationAction?: (actionUrl?: string) => void;
 }
 
 export default function Header({
@@ -53,13 +60,23 @@ export default function Header({
   streakDays = 14,
   onOpenPractice,
   onNavigateToLessons,
+  onNotificationAction,
 }: HeaderProps) {
   const { lang, setLang, t } = useLanguage();
   const panda = usePandaPet();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showLangMenu, setShowLanguageMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const dashboardQuery = useQuery({
+    queryKey: dashboardQueryKeys.detail(),
+    queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
+    enabled: Boolean(currentUser),
+    staleTime: 30000,
+  });
+  const liveXP = dashboardQuery.data?.metrics?.totalXP ?? currentUser?.totalXP ?? 0;
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
@@ -227,10 +244,10 @@ export default function Header({
           onNavigateToLessons={onNavigateToLessons}
         />
 
-        {/* Redesigned Notifications Dropdown (Requirement 1) */}
-        <NotificationsDropdown />
+        {/* Notifications Dropdown */}
+        <NotificationsDropdown onSelectAction={onNotificationAction} />
 
-        {/* Real Language Switcher (Requirement 3) */}
+        {/* Language Switcher */}
         <div className="relative" ref={langRef}>
           <button
             onClick={() => setShowLanguageMenu(!showLangMenu)}
@@ -291,10 +308,24 @@ export default function Header({
                 <div className="text-xs text-[#8B9097] mt-0.5 truncate">
                   {currentUser?.email || ''}
                 </div>
-                <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
-                  <span>HSK {currentUser?.learningProfile?.hskLevel || 3}</span>
-                  <span>·</span>
-                  <span className="text-[#E7A92F]">Intermediate</span>
+                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
+                    <span>HSK {currentUser?.learningProfile?.hskLevel || 3}</span>
+                    <span>·</span>
+                    <span className="text-[#E7A92F]">Intermediate</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/leaderboard');
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng"
+                  >
+                    <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+                    <span>{liveXP.toLocaleString('vi-VN')} XP</span>
+                  </button>
                 </div>
               </div>
 

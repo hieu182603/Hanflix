@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import type { PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
@@ -19,6 +20,8 @@ import {
 } from '../services/study-activity.js';
 import { createVideoDownloadUrl } from '../services/r2.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
+import { LeaderboardService } from '../services/leaderboard.service.js';
+import { RoadmapService } from '../services/roadmap.service.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 async function safeDownloadUrl(key?: string | null): Promise<string | null> {
@@ -86,7 +89,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   // For power users with thousands of progress records, use the dedicated
   // /learning/history endpoint with proper pagination.
   const PROGRESS_DASHBOARD_LIMIT = 50;
-  const [progress, savedCount, dueCount, attempts] = await Promise.all([
+  const [progress, savedCount, dueCount, attempts, userXP] = await Promise.all([
     ProgressModel.find({ userId: req.auth!.userId })
       .populate('lessonId', 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey')
       .sort({ updatedAt: -1 })
@@ -95,6 +98,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
     SavedWordModel.countDocuments({ userId: req.auth!.userId }),
     SavedWordModel.countDocuments({ userId: req.auth!.userId, nextReviewAt: { $lte: now } }),
     QuizAttemptModel.find({ userId: req.auth!.userId }).select('score lessonId createdAt').sort({ createdAt: -1 }).limit(20).lean(),
+    LeaderboardService.getUserXP(req.auth!.userId.toString()),
   ]);
   const completedLessons = progress.filter(item => item.completed).length;
   const averageQuizScore = attempts.length
@@ -117,7 +121,15 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 
   res.json({
     data: {
-      metrics: { completedLessons, savedWords: savedCount, dueWords: dueCount, averageQuizScore },
+      metrics: {
+        completedLessons,
+        savedWords: savedCount,
+        dueWords: dueCount,
+        averageQuizScore,
+        totalXP: userXP.totalXP,
+        streakDays: userXP.streakDays,
+      },
+      userXP,
       continueLearning,
       recentProgress: progress.slice(0, 10),
       recentAttempts: attempts,
@@ -128,74 +140,104 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 router.get('/history', asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
   const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 8));
-  const status = req.query.status as string | undefined; // 'completed' | 'in_progress' | 'all'
+  const status = req.query.status as string | undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
   const hsk = req.query.hsk ? parseInt(req.query.hsk as string, 10) : undefined;
+  const userId = req.auth!.userId;
 
-  // Fetch all user progress items to calculate comprehensive stats and allow search
-  const allProgress = await ProgressModel.find({ userId: req.auth!.userId })
-    .populate('lessonId', 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey descriptionVi')
-    .sort({ updatedAt: -1 })
-    .lean();
+  // Build filter conditions
+  const baseFilter: Record<string, unknown> = { userId };
+  if (status === 'completed') baseFilter.completed = true;
+  else if (status === 'in_progress') baseFilter.completed = false;
 
-  // Valid progress items where lessonId is populated
-  const validProgress = allProgress.filter(
-    (item) => item.lessonId && typeof item.lessonId === 'object' && ((item.lessonId as unknown as Record<string, unknown>).titleVi)
-  );
+  // M-3: Use aggregation for stats to avoid fetching all documents
+  const [statsResult] = await ProgressModel.aggregate([
+    { $match: { userId } },
+    {
+      $lookup: {
+        from: 'lessons',
+        localField: 'lessonId',
+        foreignField: '_id',
+        as: 'lesson',
+      },
+    },
+    { $unwind: { path: '$lesson', preserveNullAndEmptyArrays: false } },
+    {
+      $group: {
+        _id: null,
+        totalLessonsLearned: { $sum: 1 },
+        completedCount: { $sum: { $cond: ['$completed', 1, 0] } },
+        totalStudySeconds: { $sum: { $add: ['$activeStudySeconds', '$lastPositionSeconds'] } },
+      },
+    },
+  ]).limit(1);
 
-  // Calculate statistics across all history
-  const completedCount = validProgress.filter((item) => item.completed).length;
-  const inProgressCount = validProgress.length - completedCount;
-  const totalStudySeconds = validProgress.reduce(
-    (sum, item) => sum + (item.activeStudySeconds || item.lastPositionSeconds || 0),
-    0
-  );
+  const validProgress = statsResult ?? { totalLessonsLearned: 0, completedCount: 0, totalStudySeconds: 0 };
 
-  // Fetch quiz attempts for average score
-  const attempts = await QuizAttemptModel.find({ userId: req.auth!.userId }).select('score').lean();
+  // M-3: Fetch quiz attempts separately (lightweight count query)
+  const attempts = await QuizAttemptModel.find({ userId }).select('score').lean();
   const averageQuizScore = attempts.length
     ? Math.round(attempts.reduce((sum, a) => sum + a.score, 0) / attempts.length)
     : null;
 
-  // Filter items by status, search query (q), and HSK
-  let filtered = validProgress;
-  if (status === 'completed') {
-    filtered = filtered.filter((item) => item.completed);
-  } else if (status === 'in_progress') {
-    filtered = filtered.filter((item) => !item.completed);
+  // M-3: Use MongoDB aggregation for paginated items with lookup + filter
+  const matchStage: Record<string, unknown> = { userId };
+  if (status === 'completed') matchStage.completed = true;
+  else if (status === 'in_progress') matchStage.completed = false;
+
+  const lookupAndFilterPipeline: PipelineStage[] = [
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'lessons',
+        localField: 'lessonId',
+        foreignField: '_id',
+        as: 'lesson',
+      },
+    },
+    { $unwind: { path: '$lesson', preserveNullAndEmptyArrays: true } },
+  ];
+
+  // Add text search filter if q is provided
+  if (q || hsk) {
+    const lessonMatch: Record<string, unknown> = {};
+    if (q) {
+      lessonMatch.$or = [
+        { 'lesson.titleVi': { $regex: q, $options: 'i' } },
+        { 'lesson.titleZh': { $regex: q, $options: 'i' } },
+        { 'lesson.pinyin': { $regex: q, $options: 'i' } },
+      ];
+    }
+    if (hsk) lessonMatch['lesson.hsk'] = hsk;
+    lookupAndFilterPipeline.push({ $match: lessonMatch });
   }
 
-  if (hsk) {
-    filtered = filtered.filter((item) => {
-      const lesson = item.lessonId as unknown as Record<string, unknown>;
-      return Number(lesson.hsk) === hsk;
-    });
-  }
-
-  if (q) {
-    filtered = filtered.filter((item) => {
-      const lesson = item.lessonId as unknown as Record<string, unknown>;
-      const titleVi = String(lesson.titleVi || '').toLowerCase();
-      const titleZh = String(lesson.titleZh || '').toLowerCase();
-      const pinyin = String(lesson.pinyin || '').toLowerCase();
-      return titleVi.includes(q) || titleZh.includes(q) || pinyin.includes(q);
-    });
-  }
-
-  const total = filtered.length;
+  // Get total count before pagination
+  const countPipeline: PipelineStage[] = [...lookupAndFilterPipeline, { $count: 'total' }];
+  const countResult = await ProgressModel.aggregate(countPipeline);
+  const total = countResult[0]?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const startIndex = (page - 1) * limit;
-  const pageItems = filtered.slice(startIndex, startIndex + limit);
+
+  // Paginated items with sort
+  const itemsPipeline: PipelineStage[] = [
+    ...lookupAndFilterPipeline,
+    { $sort: { updatedAt: -1 } },
+    { $skip: startIndex },
+    { $limit: limit },
+  ];
+
+  const items = await ProgressModel.aggregate(itemsPipeline);
 
   // Resolve thumbnail URLs
   const itemsWithThumbnails = await Promise.all(
-    pageItems.map(async (item) => {
-      const lessonObj = item.lessonId as unknown as Record<string, unknown>;
-      const thumbnailUrl = await safeDownloadUrl(lessonObj.thumbnailKey as string | undefined);
+    items.map(async (item) => {
+      if (!item.lesson) return item;
+      const thumbnailUrl = await safeDownloadUrl(item.lesson.thumbnailKey);
       return {
         ...item,
         lesson: withProcessingCompatibility({
-          ...lessonObj,
+          ...item.lesson,
           thumbnailUrl,
         }),
       };
@@ -210,10 +252,10 @@ router.get('/history', asyncHandler(async (req, res) => {
       limit,
       totalPages,
       stats: {
-        totalLessonsLearned: validProgress.length,
-        completedCount,
-        inProgressCount,
-        totalStudySeconds,
+        totalLessonsLearned: validProgress.totalLessonsLearned,
+        completedCount: validProgress.completedCount,
+        inProgressCount: validProgress.totalLessonsLearned - validProgress.completedCount,
+        totalStudySeconds: validProgress.totalStudySeconds,
         averageQuizScore,
       },
     },
@@ -355,6 +397,28 @@ router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
       source: 'profile_deterministic_fallback',
     },
   });
+}));
+
+const leaderboardQuerySchema = z.object({
+  period: z.enum(['week', 'month', 'all']).default('week'),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  timezone: z.string().trim().min(1).max(50).optional(),
+});
+
+router.get('/leaderboard', validateQuery(leaderboardQuerySchema), asyncHandler(async (req, res) => {
+  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof leaderboardQuerySchema>;
+  const result = await LeaderboardService.getLeaderboard({
+    period: query.period,
+    currentUserId: req.auth!.userId.toString(),
+    limit: query.limit,
+    timezone: query.timezone,
+  });
+  res.json({ data: result });
+}));
+
+router.get('/roadmap', asyncHandler(async (req, res) => {
+  const result = await RoadmapService.getRoadmap(req.auth!.userId.toString());
+  res.json({ data: result });
 }));
 
 export default router;

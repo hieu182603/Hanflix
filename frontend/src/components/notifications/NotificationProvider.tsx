@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { ToastViewport, type ToastItem } from './Toast';
 import { ConfirmModalViewport, type ConfirmDialogState, type ConfirmTone } from './ConfirmModal';
-import { NOTIFICATION_VARIANTS, type NotificationVariant } from './notification.tokens';
+import type { NotificationVariant } from './notification.tokens';
 
 export interface ToastOptions {
   title?: string;
@@ -75,11 +75,38 @@ export function NotificationProvider({
   const pushToast = useCallback(
     (item: ToastItem) => {
       const id = item.id ?? nextToastId();
+      const variant = item.variant ?? 'neutral';
       const newItem: ToastItem = { ...item, id, duration: item.duration ?? defaultDuration, dismissible: item.dismissible ?? true };
       setToasts((prev) => {
-        const next = [...prev, newItem];
+        // Stack rules:
+        //   1. Errors lên trước — user PHẢI thấy error ngay cả khi có 5 info đang pending
+        //   2. Khi vượt maxToasts, drop toast cũ nhất có priority thấp nhất
+        const priority: Record<NotificationVariant, number> = {
+          error: 5,
+          warning: 4,
+          info: 3,
+          success: 2,
+          neutral: 1,
+        };
+        const next = [...prev, newItem].sort(
+          (a, b) => priority[b.variant ?? 'neutral'] - priority[a.variant ?? 'neutral'],
+        );
         if (next.length > maxToasts) {
-          return next.slice(next.length - maxToasts);
+          // Drop toast cũ nhất trong nhóm priority thấp nhất
+          let dropIndex = next.length - 1;
+          for (let i = next.length - 1; i >= 0; i -= 1) {
+            if (
+              priority[next[i].variant ?? 'neutral'] <= priority[variant]
+            ) {
+              dropIndex = i;
+              break;
+            }
+          }
+          if (dropIndex === next.length - 1 && next[dropIndex].id !== newItem.id) {
+            // Đã ở cuối nhưng id khớp với toast mới → giữ
+            return next;
+          }
+          return next.filter((_, i) => i !== dropIndex);
         }
         return next;
       });
@@ -170,9 +197,6 @@ export function NotificationProvider({
     }),
     [api, toasts, confirmState, pushToast, removeToast, openConfirm, closeConfirm, defaultDuration, maxToasts],
   );
-
-  // Reference used for variant color tokens inside Toast/ConfirmModal
-  void NOTIFICATION_VARIANTS;
 
   return (
     <NotificationContext.Provider value={ctxValue}>

@@ -1,0 +1,236 @@
+name: Release & Publish
+
+# This workflow builds production images for backend + frontend, publishes
+# them to GitHub Container Registry (ghcr.io), and creates a GitHub Release
+# with auto-generated notes.
+#
+# Triggers (mutually exclusive):
+#   • tag push (e.g. v1.0.0) — full release
+#   • workflow_dispatch — manual run with version override (e.g. canary, rc)
+#   • push to main        — publish :edge images for early validation
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to publish (e.g. v1.2.3-rc1). Leave empty for edge/<sha>.'
+        required: false
+        default: ''
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # for creating releases
+  packages: write   # for pushing to ghcr.io
+  pull-requests: read
+  id-token: write   # for sigstore/provenance attestation (optional)
+
+# Reusable env so jobs agree on registry + image names. Override VITE_API_*
+# here if you fork to a different upstream.
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+  BACKEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hanflix-backend
+  FRONTEND_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hanflix-frontend
+  VITE_API_BASE_URL: /api/v1
+
+jobs:
+  resolve-tag:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      # `version` becomes the canonical image tag. Semver tags from `git tag`
+      # win; main pushes get `edge-<sha>`; manual dispatch uses the input.
+      version: ${{ steps.resolve.outputs.version }}
+      is_release: ${{ steps.resolve.outputs.is_release }}
+      platforms: ${{ steps.resolve.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: resolve
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          # 1. Manual dispatch wins if the user supplied a version.
+          if [ -n "${MANUAL_VERSION:-}" ]; then
+            echo "version=${MANUAL_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            echo "manual version=${MANUAL_VERSION}"
+            exit 0
+          fi
+
+          # 2. Tag push: use the pushed ref name minus the leading `v`.
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME#v}"
+            echo "version=${tag}" >> "$GITHUB_OUTPUT"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            echo "tag push version=${tag}"
+            exit 0
+          fi
+
+          # 3. Main branch push: edge tag for canary-style rollout.
+          short_sha="${GITHUB_SHA::7}"
+          echo "version=edge-${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "is_release=false" >> "$GITHUB_OUTPUT"
+          echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
+          echo "edge version=edge-${short_sha}"
+
+  backend-image:
+    name: Publish backend image
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login is unconditional so smoke builds on PRs (load-only) still
+      # validate against the registry; the `push:` flag on the build step
+      # below is what actually controls publishing.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.resolve-tag.outputs.version }}"
+          # The `latest` float-tag only applies to production releases, not
+          # edge / rc builds. Branches never float to `latest`.
+          tags="${{ env.BACKEND_IMAGE }}:${version}"
+          if [ "${{ needs.resolve-tag.outputs.is_release }}" = "true" ] \
+              && [[ "$version" != *-* ]]; then
+            tags="${tags},${{ env.BACKEND_IMAGE }}:latest"
+          fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: ${{ needs.resolve-tag.outputs.platforms }}
+          push: ${{ needs.resolve-tag.outputs.is_release == 'true' || github.event_name == 'push' }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=hanflix-backend
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.resolve-tag.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  frontend-image:
+    name: Publish frontend image
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login is unconditional so smoke builds on PRs (load-only) still
+      # validate the Dockerfile; the `push:` flag on the build step below
+      # is what actually controls publishing.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.resolve-tag.outputs.version }}"
+          tags="${{ env.FRONTEND_IMAGE }}:${version}"
+          if [ "${{ needs.resolve-tag.outputs.is_release }}" = "true" ] \
+              && [[ "$version" != *-* ]]; then
+            tags="${tags},${{ env.FRONTEND_IMAGE }}:latest"
+          fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          platforms: ${{ needs.resolve-tag.outputs.platforms }}
+          build-args: |
+            VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
+          push: ${{ needs.resolve-tag.outputs.is_release == 'true' || github.event_name == 'push' }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=hanflix-frontend
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.resolve-tag.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: Create GitHub Release
+    needs: [resolve-tag, backend-image, frontend-image]
+    if: needs.resolve-tag.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # `secrets.GITHUB_TOKEN` is provided automatically; no extra setup.
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.resolve-tag.outputs.version }}
+          name: "HanFlix v${{ needs.resolve-tag.outputs.version }}"
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(needs.resolve-tag.outputs.version, '-') }}
+          fail_on_unmatched_files: false
+          body: |
+            ## Images
+
+            - `docker pull ${{ env.BACKEND_IMAGE }}:${{ needs.resolve-tag.outputs.version }}`
+            - `docker pull ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-tag.outputs.version }}`
+
+            ## Compose (production)
+
+            ```yaml
+            services:
+              backend:
+                image: ${{ env.BACKEND_IMAGE }}:${{ needs.resolve-tag.outputs.version }}
+              frontend:
+                image: ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve-tag.outputs.version }}
+            ```
