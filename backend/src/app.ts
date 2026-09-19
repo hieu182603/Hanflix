@@ -42,6 +42,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
+  exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));

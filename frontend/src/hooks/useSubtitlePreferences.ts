@@ -10,20 +10,18 @@ export type SubtitlePrefs = {
   top: SubtitleLanguageTrack;
   bottom: SubtitleLanguageTrack;
   style: SubtitleOverlayStyle;
+  scale: number;
 };
 
 const DEFAULT_PREFS: SubtitlePrefs = {
   top: 'zh',
-  bottom: 'pinyin',
-  style: 'modern',
+  bottom: 'vi',
+  style: 'netflix',
+  scale: 100,
 };
 
 function isValidTrack(value: unknown): value is SubtitleLanguageTrack {
   return value === 'zh' || value === 'pinyin' || value === 'vi' || value === 'off';
-}
-
-function isValidStyle(value: unknown): value is SubtitleOverlayStyle {
-  return value === 'modern' || value === 'classic_yellow' || value === 'netflix' || value === 'anime';
 }
 
 function readFromStorage(): SubtitlePrefs {
@@ -32,10 +30,14 @@ function readFromStorage(): SubtitlePrefs {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PREFS;
     const parsed = JSON.parse(raw) as Partial<SubtitlePrefs>;
+    const scale = typeof parsed.scale === 'number' && parsed.scale >= 50 && parsed.scale <= 200
+      ? parsed.scale
+      : DEFAULT_PREFS.scale;
     return {
       top: isValidTrack(parsed.top) ? parsed.top : DEFAULT_PREFS.top,
       bottom: isValidTrack(parsed.bottom) ? parsed.bottom : DEFAULT_PREFS.bottom,
-      style: isValidStyle(parsed.style) ? parsed.style : DEFAULT_PREFS.style,
+      style: 'netflix',
+      scale,
     };
   } catch {
     return DEFAULT_PREFS;
@@ -47,6 +49,7 @@ export function useSubtitlePreferences(): {
   setTop: (top: SubtitleLanguageTrack) => void;
   setBottom: (bottom: SubtitleLanguageTrack) => void;
   setStyle: (style: SubtitleOverlayStyle) => void;
+  setScale: (scale: number) => void;
   reset: () => void;
 } {
   const [prefs, setPrefs] = useState<SubtitlePrefs>(() => readFromStorage());
@@ -72,7 +75,11 @@ export function useSubtitlePreferences(): {
     (style: SubtitleOverlayStyle) => setPrefs((prev) => ({ ...prev, style })),
     [],
   );
+  const setScale = useCallback(
+    (scale: number) => setPrefs((prev) => ({ ...prev, scale })),
+    [],
+  );
   const reset = useCallback(() => setPrefs(DEFAULT_PREFS), []);
 
-  return { prefs, setTop, setBottom, setStyle, reset };
+  return { prefs, setTop, setBottom, setStyle, setScale, reset };
 }

@@ -37,6 +37,7 @@ import ConnectedAdmin from './components/admin/ConnectedAdmin';
 import { PandaPet } from './components/panda-pet';
 import NotFoundPage from './components/NotFoundPage';
 import HanFlixLoadingScreen from './components/HanFlixLoadingScreen';
+import { perfMarks } from './lib/perfMarks';
 
 import {
   VideoLesson,
@@ -237,6 +238,7 @@ export default function App() {
 
   // Try to restore session on mount (silently refreshes token if cached user exists)
   useEffect(() => {
+    perfMarks.mark('restore_session:start');
     authApi.restoreSession().then((user) => {
       if (user) {
         setCurrentUser(user);
@@ -246,6 +248,7 @@ export default function App() {
     }).catch(() => {
       setCurrentUser(null);
     }).finally(() => {
+      perfMarks.since('restore_session:ready', 'restore_session:start');
       setIsRestoringSession(false);
     });
   }, []);
@@ -531,7 +534,13 @@ export default function App() {
         {/* Main content: YouTube Watch Stage or Dashboard Pages */}
         <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden">
           {selectedPublishedLessonId ? (
-            <PublishedLessonView lessonId={selectedPublishedLessonId} onBack={handleBackFromLesson} subtitlePreference={currentUser.learningProfile?.subtitlePreference} />
+            <PublishedLessonView
+              lessonId={selectedPublishedLessonId}
+              onBack={handleBackFromLesson}
+              subtitlePreference={currentUser.learningProfile?.subtitlePreference}
+              onSelectLesson={handleSelectLesson}
+              onAskAI={(prompt) => handleOpenAI(prompt)}
+            />
           ) : (
             <>
               {(['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history'] as const).some(section => section === activeNav) && (
@@ -539,6 +548,7 @@ export default function App() {
                   section={activeNav as 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history'}
                   onSelectLesson={handleSelectLesson}
                   onOpenPreferences={() => setIsSurveyOpen(true)}
+                  onNavigateSection={handleNavChange}
                 />
               )}
               {activeNav === 'exam' && <ExamPrepPage onStartPractice={() => handleNavChange('lessons')} />}

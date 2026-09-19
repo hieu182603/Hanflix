@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rate-limits.js';
+import { authLimiter, refreshLimiter } from '../middleware/rate-limits.js';
 import { validate } from '../middleware/validate.js';
 import { RefreshSessionModel } from '../models/refresh-session.model.js';
 import { UserModel } from '../models/user.model.js';
@@ -303,7 +303,7 @@ router.post('/google/unlink', requireAuth, authLimiter, validate(unlinkGoogleSch
   res.json({ data: { googleLinked: false } });
 }));
 
-router.post('/refresh', authLimiter, asyncHandler(async (req, res) => {
+router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
   const token = req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
   if (!token) throw new AppError(401, 'REFRESH_REQUIRED', 'Không tìm thấy phiên làm mới');
   const claims = verifyRefreshToken(token);

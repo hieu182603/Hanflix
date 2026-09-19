@@ -20,6 +20,11 @@ async function refreshAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
+    if (res.status === 429) {
+      const json = await res.json().catch(() => null);
+      throw new ApiRequestError(429, 'RATE_LIMITED',
+        json?.error?.message || 'Vui lòng đợi một chút trước khi thử lại.');
+    }
     accessToken = null;
     throw new Error('SESSION_EXPIRED');
   }
@@ -59,11 +64,36 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * Lightweight typed wrapper around `fetch` that integrates with React Query's
+ * AbortSignal plumbing.
+ *
+ * Calling pattern:
+ *     queryFn: ({ signal }) => apiFetch<T>('/path', { signal })
+ *
+ * When React Query cancels a query (e.g. because the user switched lessons),
+ * `signal.aborted` becomes true. We surface that as a special
+ * `ApiRequestError` carrying `status: 0` and `code: 'ABORTED'` so consumers
+ * can distinguish cancellation from real network failure.
+ *
+ * Cancellation contract:
+ *   - We always `signal.throwIfAborted()` before reading the body.
+ *   - We propagate the abort event to fetch via the `signal` field.
+ *   - On 401, we attempt a single refresh. If the refresh itself fails, we
+ *     clear the access token and surface the original 401 to the caller —
+ *     we never spin forever.
+ */
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
+  const inboundSignal = (options as { signal?: AbortSignal }).signal;
+  const signal = inboundSignal ?? undefined;
+
+  if (signal?.aborted) {
+    throw new ApiRequestError(0, 'ABORTED', 'Yêu cầu đã bị hủy');
+  }
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
@@ -75,14 +105,23 @@ export async function apiFetch<T = unknown>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  let res = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiRequestError(0, 'ABORTED', 'Yêu cầu đã bị hủy');
+    }
+    throw error;
+  }
 
   // Auto-refresh on 401 (limit to 1 retry per request to prevent infinite loop)
-  if (res.status === 401 && accessToken && !(options as any).__retried) {
+  if (res.status === 401 && accessToken && !(options as Record<string, unknown>).__retried) {
     try {
       if (!isRefreshing) {
         isRefreshing = true;
@@ -105,37 +144,65 @@ export async function apiFetch<T = unknown>(
 
       // Retry with new token (mark as retried to prevent infinite loop)
       headers['Authorization'] = `Bearer ${accessToken}`;
-      res = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include',
-      } as RequestInit);
-      (options as any).__retried = true;
+      try {
+        res = await fetch(url, {
+          ...options,
+          headers,
+          credentials: 'include',
+          signal,
+        } as RequestInit);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new ApiRequestError(0, 'ABORTED', 'Yêu cầu đã bị hủy');
+        }
+        throw error;
+      }
+      (options as Record<string, unknown>).__retried = true;
 
       // SECURITY: If retry still returns 401, clear session to force logout
       // and prevent infinite refresh loops (e.g., when account gets locked)
       if (res.status === 401) {
         accessToken = null;
       }
-    } catch {
-      // Refresh failed - clear token to stop further refresh attempts
+    } catch (error) {
+      // A temporary rate limit is not an expired session. Preserve the token
+      // and show the server's wait time instead of forcing a new login.
+      if (error instanceof ApiRequestError && error.status === 429) throw error;
+      // A refresh cancelled via abort is not a real error — propagate it
+      // so React Query stops retrying, but don't clear the token.
+      if (error instanceof ApiRequestError && error.code === 'ABORTED') throw error;
+      // Refresh failed (real reason: SESSION_EXPIRED, ACCOUNT_LOCKED, ...).
+      // Clear token to stop further refresh attempts.
       accessToken = null;
     }
+  }
+
+  if (signal?.aborted) {
+    throw new ApiRequestError(0, 'ABORTED', 'Yêu cầu đã bị hủy');
   }
 
   if (res.status === 204) {
     return undefined as T;
   }
 
-  const json = await res.json();
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiRequestError(0, 'ABORTED', 'Yêu cầu đã bị hủy');
+    }
+    throw error;
+  }
 
   if (!res.ok) {
+    const errBody = (json as { error?: { code?: string; message?: string } } | null)?.error;
     throw new ApiRequestError(
       res.status,
-      json.error?.code || 'UNKNOWN',
-      json.error?.message || 'Đã xảy ra lỗi không xác định',
+      errBody?.code || 'UNKNOWN',
+      errBody?.message || 'Đã xảy ra lỗi không xác định',
     );
   }
 
-  return json.data as T;
+  return (json as { data: T }).data;
 }

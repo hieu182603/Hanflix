@@ -199,38 +199,20 @@ function ClickableTokens({
         }
 
         return (
-          <span
+          <button
             key={`${token.text}-${index}`}
-            className="inline-flex items-baseline"
+            type="button"
+            className="font-hanzi underline-offset-4 transition hover:underline hover:text-yellow-200 focus:outline-none focus:underline cursor-pointer"
+            onClick={(event) => {
+              event.stopPropagation()
+
+              onTokenClick(cueId, wordIdStr, token.text)
+            }}
+            title={`Giải thích "${token.text}"`}
+            style={style}
           >
-            <button
-              type="button"
-              className="font-mono underline-offset-4 transition hover:underline hover:text-yellow-200 focus:outline-none focus:underline"
-              onClick={(event) => {
-                event.stopPropagation()
-
-                onTokenClick(cueId, wordIdStr, token.text)
-              }}
-              title={`Giải thích "${token.text}"`}
-              style={style}
-            >
-              {token.text}
-            </button>
-            {onSaveWord && (
-              <button
-                type="button"
-                className="ml-0.5 text-[0.7em] font-bold text-yellow-200/90 transition hover:text-yellow-100"
-                onClick={(event) => {
-                  event.stopPropagation()
-
-                  onSaveWord(cueId, wordIdStr)
-                }}
-                title={`Lưu "${token.text}" vào sổ từ`}
-              >
-                ＋
-              </button>
-            )}
-          </span>
+            {token.text}
+          </button>
         )
       })}
     </span>

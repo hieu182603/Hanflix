@@ -20,6 +20,7 @@ import { runGenerationCommit } from './revision-commit.js';
 import { autoGenerateQuizForLesson, resolveQuestionCount } from './auto-quiz-generator.js';
 import { improveVietnameseTranslations } from './gemini-translation-improver.js';
 import { generateLearningTips } from './gemini-learning-tips.js';
+import { generatePlaybackDerivative } from './playback-derivative.js';
 
 export type PipelineStage = 'inspect_media' | 'transcribe_zh' | 'generate_pinyin' | 'translate_vi' | 'extract_vocabulary' | 'generate_quiz' | 'finalize';
 
@@ -249,6 +250,28 @@ export async function processLessonVideoPipeline(
     ensureNotAborted(signal, 'finalize');
     await updateStage('finalize', 96);
 
+    // F12 fix (2026-09-19): build a `+faststart` playback derivative so the
+    // browser can begin painting before downloading the whole file. This
+    // step is idempotent — if the lesson already has the same
+    // `playbackVersion` we skip it. Failure is non-fatal: the lesson still
+    // publishes against the original media key.
+    let playbackKey: string | undefined;
+    let playbackVersion: number | undefined;
+    if (env.PLAYBACK_DERIVATIVE_ENABLED) {
+      const existing = await LessonModel.findById(lessonId).select('playbackVersion').lean();
+      const currentVersion = existing?.playbackVersion ?? 0;
+      const derivative = await generatePlaybackDerivative({
+        lessonId,
+        sourcePath: videoLocalPath,
+        currentVersion,
+        signal,
+      });
+      if (derivative) {
+        playbackKey = derivative.playbackKey;
+        playbackVersion = derivative.playbackVersion;
+      }
+    }
+
     // F11 fix (2026-09-18): atomic commit of Subtitle + Quiz + Lesson + Job.
     // Previously these were four independent writes; a partial failure could
     // leave the lesson pointing at a subtitle revision whose quiz was never
@@ -260,6 +283,7 @@ export async function processLessonVideoPipeline(
       jobId: processingJobId,
       durationSeconds: metadata.durationSeconds,
       thumbnailKey,
+      ...(playbackKey && playbackVersion ? { playbackKey, playbackVersion } : {}),
       cues: finalCues.map(cue => ({
         cueId: cue.cueId,
         startMs: cue.startMs,

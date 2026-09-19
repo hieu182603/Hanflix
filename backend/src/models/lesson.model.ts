@@ -49,6 +49,26 @@ const lessonSchema = new Schema({
   media: { type: mediaSchema },
   pendingUploadObjectKey: { type: String, trim: true, select: false },
   thumbnailKey: { type: String, trim: true },
+  /**
+   * F12 fix (2026-09-19): playback derivative metadata.
+   *
+   *   - `playbackKey`     — R2 object key for the faststart-friendly MP4 we
+   *                         generated during pipeline processing. When
+   *                         defined, the lesson endpoint returns the
+   *                         derivative URL; when undefined, the original
+   *                         `media.objectKey` is served (backward compat).
+   *   - `playbackVersion` — monotonically increasing integer. Used by the
+   *                         migration tool to skip lessons whose derivative
+   *                         already matches the current encoder version,
+   *                         and by the route layer to pick the latest
+   *                         derivative when multiple exist.
+   *
+   * Never assume `playbackKey` exists: lessons ingested before F12 still
+   * rely on `media.objectKey` until the migration runs.
+   */
+  playbackKey: { type: String, trim: true },
+  playbackVersion: { type: Number, min: 1 },
+  playbackGeneratedAt: { type: Date },
   activeSubtitleRevision: { type: Number, min: 1 },
   activeQuizRevision: { type: Number, min: 1 },
   publishedAt: { type: Date, index: true },

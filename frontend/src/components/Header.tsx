@@ -136,12 +136,17 @@ export default function Header({
             <Menu className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex items-center gap-2 cursor-pointer select-none">
-          <span className="font-extrabold text-xl tracking-tight text-[#18181B]">
-            Han<span className="text-[#B91B1C]">Flix</span>
-          </span>
-          <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
-            HSK 3
+        <div
+          onClick={() => onNavigateToLessons?.()}
+          className="flex items-center gap-2.5 cursor-pointer select-none py-1"
+        >
+          <img
+            src="/assets/logo.png"
+            alt="HanFlix Logo"
+            className="h-8 sm:h-9 md:h-10 w-auto max-w-[160px] sm:max-w-[190px] object-contain hover:scale-105 transition-transform drop-shadow-xs"
+          />
+          <span className="hidden sm:inline-block px-2.5 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
+            HSK {currentUser?.learningProfile?.hskLevel || 3}
           </span>
         </div>
       </div>

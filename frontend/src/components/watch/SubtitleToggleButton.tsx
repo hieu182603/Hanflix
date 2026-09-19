@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Captions, CaptionsOff, ChevronUp } from 'lucide-react';
+import { Captions, CaptionsOff, Settings } from 'lucide-react';
 import type { SubtitleLanguageTrack } from './SubtitleOverlay';
 
 interface SubtitleToggleButtonProps {
@@ -65,9 +65,10 @@ export default function SubtitleToggleButton({
   return (
     <div
       ref={rootRef}
-      className="absolute right-3 top-3 z-20 flex items-center gap-1"
-      // Don't block the native controls bar at the bottom.
-      // Only top-right is reserved for the overlay chrome.
+      // Placed in the bottom-right corner beside the native video controls (volume, etc).
+      // pointer-events-none on the wrapper keeps the underlying <video controls> clickable
+      // except where the actual buttons sit (re-enabled via pointer-events-auto below).
+      className="absolute bottom-12 right-12 z-20 flex items-center gap-1 pointer-events-none"
     >
       <button
         type="button"
@@ -77,7 +78,7 @@ export default function SubtitleToggleButton({
         }}
         aria-label={anyOn ? 'Tắt phụ đề' : 'Bật phụ đề'}
         title={anyOn ? 'Tắt phụ đề (CC)' : 'Bật phụ đề (CC)'}
-        className={`flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-sm transition shadow-lg ${
+        className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-sm transition shadow-lg ${
           anyOn
             ? 'border-white/30 bg-black/55 text-white hover:bg-black/75'
             : 'border-white/20 bg-black/35 text-white/55 hover:text-white hover:bg-black/55'
@@ -92,17 +93,17 @@ export default function SubtitleToggleButton({
           event.stopPropagation();
           setOpen((value) => !value);
         }}
-        aria-label="Chọn loại phụ đề"
-        title="Chọn loại phụ đề"
-        className={`flex h-9 w-7 items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition shadow-lg hover:bg-black/75 ${
-          open ? 'rotate-180' : ''
+        aria-label="Tuỳ chỉnh phụ đề"
+        title="Tuỳ chỉnh phụ đề"
+        className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition shadow-lg hover:bg-black/75 ${
+          open ? 'bg-black/75 ring-2 ring-white/30' : ''
         }`}
       >
-        <ChevronUp size={14} />
+        <Settings size={16} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-30 w-64 rounded-xl border border-neutral-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+        <div className="absolute bottom-11 right-0 z-30 w-64 rounded-xl border border-neutral-200 bg-white/95 p-3 shadow-xl backdrop-blur">
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
             Chọn dòng phụ đề
           </p>

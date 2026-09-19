@@ -22,10 +22,11 @@ export interface LessonList {
   pages: number;
 }
 
-export function listPublishedLessons(params: { q?: string; hsk?: number; topic?: string; page?: number; limit?: number } = {}): Promise<LessonList> {
+export function listPublishedLessons(params: { q?: string; hsk?: number; topic?: string; page?: number; limit?: number; signal?: AbortSignal } = {}): Promise<LessonList> {
+  const { signal, ...rest } = params;
   const query = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)); });
-  return apiFetch(`/lessons?${query}`);
+  Object.entries(rest).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)); });
+  return apiFetch(`/lessons?${query}`, { signal });
 }
 
 export interface LessonProgress {
@@ -37,8 +38,8 @@ export interface LessonProgress {
   bestQuizScore: number | null;
 }
 
-export function getLessonProgress(id: string): Promise<LessonProgress> {
-  return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`);
+export function getLessonProgress(id: string, options: { signal?: AbortSignal } = {}): Promise<LessonProgress> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`, options);
 }
 
 export function updateLessonProgress(id: string, input: { positionSeconds: number; watchedRange?: { start: number; end: number }; activeStudyDeltaSeconds?: number }): Promise<{ coverage: number }> {
@@ -52,8 +53,8 @@ export interface PublicQuestion {
   options: Array<{ optionId: string; text: string }>;
 }
 
-export function getLessonQuiz(id: string): Promise<{ questions: PublicQuestion[] }> {
-  return apiFetch(`/lessons/${encodeURIComponent(id)}/quiz`);
+export function getLessonQuiz(id: string, options: { signal?: AbortSignal } = {}): Promise<{ questions: PublicQuestion[] }> {
+  return apiFetch(`/lessons/${encodeURIComponent(id)}/quiz`, options);
 }
 
 export interface QuizResult {
@@ -77,7 +78,7 @@ export interface LearnerDashboard {
   recentProgress: Array<{ lessonId?: PublishedLesson; completed: boolean; lastPositionSeconds: number }>;
 }
 
-export function getLearnerDashboard(): Promise<LearnerDashboard> { return apiFetch('/learning/dashboard'); }
+export function getLearnerDashboard(options: { signal?: AbortSignal } = {}): Promise<LearnerDashboard> { return apiFetch('/learning/dashboard', options); }
 
 export interface LearningActivity {
   days: Array<{ date: string; activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number }>;
@@ -85,7 +86,7 @@ export interface LearningActivity {
   timezone?: string;
 }
 
-export function getLearningActivity(): Promise<LearningActivity> { return apiFetch('/learning/activity'); }
+export function getLearningActivity(options: { signal?: AbortSignal } = {}): Promise<LearningActivity> { return apiFetch('/learning/activity', options); }
 
 export interface SubtitleCue {
   cueId: string;
@@ -94,7 +95,7 @@ export interface SubtitleCue {
   zh: string;
   pinyin: string;
   vi: string;
-  tokens: Array<{ text: string; wordId?: { _id: string; hanzi: string; pinyin?: string; meaningVi?: string } | null }>;
+  tokens: Array<{ text: string; wordId?: { _id: string; hanzi: string; pinyin?: string; meaningVi?: string; partOfSpeech?: string } | null }>;
 }
 
 export interface LearningTip {
@@ -122,14 +123,51 @@ export interface WordExplanation {
   cautionVi?: string;
 }
 
-export async function getAiRecommendations(): Promise<Array<{ lesson: PublishedLesson; reasonVi: string }>> {
-  const data = await apiFetch<{ items: Array<{ lesson: PublishedLesson; reasonVi: string }> }>('/learning/recommendations/ai', { method: 'POST' });
+export async function getAiRecommendations(options: { signal?: AbortSignal; timeoutMs?: number } = {}): Promise<Array<{ lesson: PublishedLesson; reasonVi: string }>> {
+  const { signal, timeoutMs } = options;
+  let timedSignal: AbortSignal | undefined = signal;
+  let timeoutController: AbortController | undefined;
+  if (timeoutMs && timeoutMs > 0 && typeof AbortController !== 'undefined') {
+    timeoutController = new AbortController();
+    const tid = setTimeout(() => timeoutController!.abort(), timeoutMs);
+    const combined = signal
+      ? composeAbortSignals([signal, timeoutController.signal])
+      : timeoutController.signal;
+    timedSignal = combined;
+    if (timedSignal && 'addEventListener' in timedSignal) {
+      const onAbort = () => clearTimeout(tid);
+      timedSignal.addEventListener('abort', onAbort, { once: true });
+    } else {
+      clearTimeout(tid);
+    }
+  }
+  try {
+    const data = await apiFetch<{ items: Array<{ lesson: PublishedLesson; reasonVi: string }> }>('/learning/recommendations/ai', { method: 'POST', signal: timedSignal });
+    return data.items;
+  } finally {
+    timeoutController?.abort();
+  }
+}
+
+export async function getRuleBasedRecommendations(options: { signal?: AbortSignal } = {}): Promise<Array<{ lesson: PublishedLesson; reasonVi: string }>> {
+  const data = await apiFetch<{ items: Array<{ lesson: PublishedLesson; reasonVi: string }> }>('/learning/recommendations', options);
   return data.items;
 }
 
-export async function getRuleBasedRecommendations(): Promise<Array<{ lesson: PublishedLesson; reasonVi: string }>> {
-  const data = await apiFetch<{ items: Array<{ lesson: PublishedLesson; reasonVi: string }> }>('/learning/recommendations');
-  return data.items;
+/**
+ * Compose multiple AbortSignals into one. The first abort propagates.
+ * Avoids a dependency on `abort-controller` polyfill.
+ */
+function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
+  const controller = new AbortController();
+  for (const sig of signals) {
+    if (sig.aborted) {
+      controller.abort(sig.reason);
+      return controller.signal;
+    }
+    sig.addEventListener('abort', () => controller.abort(sig.reason), { once: true });
+  }
+  return controller.signal;
 }
 
 
@@ -138,12 +176,12 @@ export async function askPanda(question: string): Promise<string> {
   return data.answerVi;
 }
 
-export async function getPublishedLesson(id: string): Promise<PublishedLesson> {
-  return apiFetch<PublishedLesson>(`/lessons/${encodeURIComponent(id)}`);
+export async function getPublishedLesson(id: string, options: { signal?: AbortSignal } = {}): Promise<PublishedLesson> {
+  return apiFetch<PublishedLesson>(`/lessons/${encodeURIComponent(id)}`, options);
 }
 
-export async function getPublishedSubtitles(id: string): Promise<SubtitleTrackMeta> {
-  return apiFetch<SubtitleTrackMeta>(`/lessons/${encodeURIComponent(id)}/subtitles`);
+export async function getPublishedSubtitles(id: string, options: { signal?: AbortSignal } = {}): Promise<SubtitleTrackMeta> {
+  return apiFetch<SubtitleTrackMeta>(`/lessons/${encodeURIComponent(id)}/subtitles`, options);
 }
 
 export async function explainWord(lessonId: string, cueId: string, wordId: string): Promise<WordExplanation> {
@@ -171,3 +209,48 @@ export async function saveLearningProfile(payload: LearningProfilePayload): Prom
     body: JSON.stringify(payload),
   });
 }
+
+export interface HistoryProgressItem {
+  _id: string;
+  lessonId?: PublishedLesson;
+  lesson?: PublishedLesson;
+  lastPositionSeconds: number;
+  activeStudySeconds?: number;
+  completed: boolean;
+  completedAt?: string;
+  bestQuizScore?: number | null;
+  updatedAt?: string;
+  createdAt?: string;
+}
+
+export interface HistoryStats {
+  totalLessonsLearned: number;
+  completedCount: number;
+  inProgressCount: number;
+  totalStudySeconds: number;
+  averageQuizScore: number | null;
+}
+
+export interface LearningHistoryResponse {
+  items: HistoryProgressItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  stats: HistoryStats;
+}
+
+export function getLearningHistory(params: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  q?: string;
+  hsk?: number;
+} = {}): Promise<LearningHistoryResponse> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  });
+  return apiFetch(`/learning/history?${query}`);
+}
+

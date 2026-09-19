@@ -15,9 +15,15 @@ import { asyncHandler } from '../utils/async-handler.js';
 const router = Router();
 
 const saveSchema = z.object({
-  wordId: z.string().refine(Types.ObjectId.isValid),
-  sourceLessonId: z.string().refine(Types.ObjectId.isValid),
-  sourceCueId: z.string().min(1).max(100),
+  wordId: z.string().optional(),
+  sourceLessonId: z.string().refine(Types.ObjectId.isValid).optional(),
+  sourceCueId: z.string().min(1).max(100).optional(),
+  hanzi: z.string().trim().min(1).max(50).optional(),
+  pinyin: z.string().trim().min(1).max(100).optional(),
+  meaningVi: z.string().trim().max(500).optional(),
+  partOfSpeech: z.string().trim().max(50).optional(),
+}).refine(data => Boolean(data.wordId || data.hanzi), {
+  message: 'Cần cung cấp wordId hoặc chữ Hán để lưu từ',
 });
 const wordParam = z.object({ wordId: z.string().refine(Types.ObjectId.isValid) });
 const reviewSchema = z.object({ rating: z.enum(['again', 'hard', 'good', 'easy']) });
@@ -126,33 +132,90 @@ router.get('/:id', asyncHandler(async (req, res, next) => {
 
 // POST /api/vocabulary (Save word to notebook)
 router.post('/', requireAuth, validate(saveSchema), asyncHandler(async (req, res) => {
-  const [wordExists, cueSource] = await Promise.all([
-    WordModel.exists({ _id: req.body.wordId }),
-    SubtitleTrackModel.exists({
-      lessonId: req.body.sourceLessonId,
-      status: 'published',
-      cues: { $elemMatch: { cueId: req.body.sourceCueId, 'tokens.wordId': new Types.ObjectId(req.body.wordId) } },
-    }),
-  ]);
+  const { wordId, sourceLessonId, sourceCueId, hanzi, pinyin, meaningVi, partOfSpeech } = req.body;
+  let targetWordId: Types.ObjectId | null = null;
 
-  if (!wordExists || !cueSource) {
-    throw new AppError(422, 'INVALID_WORD_SOURCE', 'Từ vựng không thuộc câu phụ đề đã chọn');
+  // Case 1: Subtitle track cue word
+  if (sourceLessonId && sourceCueId && wordId && Types.ObjectId.isValid(wordId)) {
+    const [wordExists, cueSource] = await Promise.all([
+      WordModel.exists({ _id: wordId }),
+      SubtitleTrackModel.exists({
+        lessonId: sourceLessonId,
+        status: 'published',
+        cues: { $elemMatch: { cueId: sourceCueId, 'tokens.wordId': new Types.ObjectId(wordId) } },
+      }),
+    ]);
+
+    if (!wordExists || !cueSource) {
+      throw new AppError(422, 'INVALID_WORD_SOURCE', 'Từ vựng không thuộc câu phụ đề đã chọn');
+    }
+    targetWordId = new Types.ObjectId(wordId);
+  } else {
+    // Case 2: General vocabulary save (from Topic Hub / HSK Catalog)
+    if (wordId && Types.ObjectId.isValid(wordId)) {
+      const existingWord = await WordModel.findById(wordId);
+      if (existingWord) {
+        targetWordId = existingWord._id;
+      } else {
+        const vocabItem = await VocabularyModel.findById(wordId);
+        if (vocabItem) {
+          let matchedWord = await WordModel.findOne({ hanzi: vocabItem.simplified });
+          if (!matchedWord) {
+            matchedWord = await WordModel.create({
+              hanzi: vocabItem.simplified,
+              pinyin: vocabItem.pinyin,
+              meaningVi: vocabItem.meanings?.vi?.[0] || 'Từ vựng HSK',
+              partOfSpeech: vocabItem.partOfSpeech?.[0] || undefined,
+            });
+          }
+          targetWordId = matchedWord._id;
+        }
+      }
+    }
+
+    // If still no targetWordId, use hanzi / pinyin to find or create in WordModel
+    if (!targetWordId && hanzi) {
+      let matchedWord = await WordModel.findOne({ hanzi });
+      if (!matchedWord) {
+        matchedWord = await WordModel.create({
+          hanzi,
+          pinyin: pinyin || '',
+          meaningVi: meaningVi || 'Từ vựng theo chủ đề',
+          partOfSpeech: partOfSpeech || undefined,
+        });
+      }
+      targetWordId = matchedWord._id;
+    }
   }
 
-  let saved = await SavedWordModel.findOne({ userId: req.auth!.userId, wordId: req.body.wordId });
+  if (!targetWordId) {
+    throw new AppError(422, 'INVALID_WORD', 'Không thể xác định từ vựng để lưu');
+  }
+
+  let saved = await SavedWordModel.findOne({ userId: req.auth!.userId, wordId: targetWordId });
   saved ??= await SavedWordModel.create({
     userId: req.auth!.userId,
-    wordId: req.body.wordId,
-    sourceLessonId: req.body.sourceLessonId,
-    sourceCueId: req.body.sourceCueId,
+    wordId: targetWordId,
+    sourceLessonId: sourceLessonId || undefined,
+    sourceCueId: sourceCueId || undefined,
     nextReviewAt: new Date(),
   });
-  res.status(201).json({ data: saved });
+
+  const populated = await SavedWordModel.findById(saved._id)
+    .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
+    .populate('sourceLessonId', 'titleVi titleZh slug')
+    .lean();
+
+  res.status(201).json({ data: populated ?? saved });
 }));
 
 // DELETE /api/vocabulary/:wordId (Remove from notebook)
 router.delete('/:wordId', requireAuth, validate(wordParam, 'params'), asyncHandler(async (req, res) => {
-  await SavedWordModel.deleteOne({ userId: req.auth!.userId, wordId: req.params.wordId });
+  const targetId = new Types.ObjectId(req.params.wordId as string);
+  await SavedWordModel.deleteOne({
+    userId: req.auth!.userId,
+    $or: [{ wordId: targetId }, { _id: targetId }],
+  });
   res.status(204).send();
 }));
 

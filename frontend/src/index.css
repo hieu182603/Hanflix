@@ -320,3 +320,30 @@
     max-height: clamp(135px, 20vh, 180px) !important;
   }
 }
+
+/* Quizlet-style 3D Card Flip Dynamics */
+.perspective-1000 {
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+}
+
