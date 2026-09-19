@@ -18,6 +18,12 @@ let isInitialized = false;
 export function initGA(): void {
   if (isInitialized) return;
 
+  // If already initialized via index.html script tag
+  if (typeof window.gtag === 'function') {
+    isInitialized = true;
+    return;
+  }
+
   const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
 
   // If key is empty or not provided, gracefully do nothing
