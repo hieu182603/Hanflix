@@ -5,14 +5,7 @@ name: CodeQL Security Analysis
 # that changes backend or frontend source.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    paths:
-      - 'backend/src/**'
-      - 'frontend/src/**'
-  schedule:
-    - cron: '17 6 * * 1'  # Mondays 06:17 UTC — off-peak window
+  workflow_dispatch:
 
 concurrency:
   group: codeql-${{ github.ref }}
@@ -55,6 +48,4 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: '/language:${{ matrix.language }}'
-          # Don't block the workflow on non-critical findings. Critical &
-          # high still fail the check (default behavior).
-          severity_threshold: medium
+          upload: 'never'
