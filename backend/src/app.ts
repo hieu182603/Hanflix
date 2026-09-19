@@ -20,11 +20,17 @@ import lessonRoutes from './routes/lesson.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import vocabularyRoutes from './routes/vocabulary.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 export const app = express();
 
 app.disable('x-powered-by');
-if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
+// SECURITY (H-5): Enable trust proxy for any environment where a reverse proxy
+// (Azure Container Apps ingress, nginx, Vercel, Cloudflare) sits in front of the
+// API. Without this, `req.ip` is the proxy IP and rate-limits become useless.
+// Disabled only in local unit tests (vitest) where there is no proxy and we
+// want deterministic IPs.
+if (env.NODE_ENV !== 'test') app.set('trust proxy', 1);
 
 app.use(requestId);
 app.use(metricsMiddleware);
@@ -36,8 +42,15 @@ app.use(helmet({
 }));
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || env.APP_ORIGINS.includes(origin)) callback(null, true);
-    else callback(null, false);
+    // SECURITY (C-1): Same-origin / non-browser requests (no Origin header) are allowed.
+    // Browsers always send Origin on cross-origin requests. The 'null' origin is sent
+    // by sandboxed iframes / file:// and is rejected — accepting it allows CSRF from
+    // attacker-controlled sandboxes. Empty string (some tools / curl) is allowed so
+    // health checks and server-to-server callers still work.
+    if (origin === undefined || origin === '') return callback(null, true);
+    if (origin === 'null') return callback(new Error('CORS policy: null origin is not allowed'));
+    if (!env.APP_ORIGINS.includes(origin)) return callback(new Error(`CORS policy: origin ${origin} is not allowed`));
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -112,6 +125,7 @@ app.use(`${env.API_PREFIX}/uploads`, uploadRoutes);
 app.use(`${env.API_PREFIX}/lessons`, lessonRoutes);
 app.use(`${env.API_PREFIX}/vocabulary`, vocabularyRoutes);
 app.use(`${env.API_PREFIX}/learning`, learningRoutes);
+app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);
 app.use(`${env.API_PREFIX}/ai`, aiRoutes);
 app.use(`${env.API_PREFIX}/admin`, adminRoutes);
 app.use(`${env.API_PREFIX}/admin`, adminGrammarRoutes);

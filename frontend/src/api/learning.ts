@@ -42,7 +42,7 @@ export function getLessonProgress(id: string, options: { signal?: AbortSignal } 
   return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`, options);
 }
 
-export function updateLessonProgress(id: string, input: { positionSeconds: number; watchedRange?: { start: number; end: number }; activeStudyDeltaSeconds?: number }): Promise<{ coverage: number }> {
+export function updateLessonProgress(id: string, input: { positionSeconds: number; watchedRange?: { start: number; end: number }; activeStudyDeltaSeconds?: number }): Promise<{ coverage: number; progress?: LessonProgress; xpEarned?: number; isNewCompletion?: boolean }> {
   return apiFetch(`/lessons/${encodeURIComponent(id)}/progress`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
@@ -62,6 +62,7 @@ export interface QuizResult {
   correctCount: number;
   totalCount: number;
   answers: Array<{ questionId: string; correct: boolean; explanationVi: string; correctOptionId?: string; acceptedAnswers?: string[] }>;
+  xpEarned?: number;
 }
 
 export function submitLessonQuiz(id: string, answers: Array<{ questionId: string; selectedOptionId?: string; textAnswer?: string }>, idempotencyKey: string): Promise<QuizResult> {
@@ -73,7 +74,22 @@ export function submitLessonQuiz(id: string, answers: Array<{ questionId: string
 }
 
 export interface LearnerDashboard {
-  metrics: { completedLessons: number; savedWords: number; dueWords: number; averageQuizScore: number | null };
+  metrics: {
+    completedLessons: number;
+    savedWords: number;
+    dueWords: number;
+    averageQuizScore: number | null;
+    totalXP?: number;
+    streakDays?: number;
+  };
+  userXP?: {
+    totalXP: number;
+    streakDays: number;
+    completedLessons: number;
+    quizAttempts: number;
+    vocabReviews: number;
+    minutesStudied: number;
+  };
   continueLearning: { lessonId?: PublishedLesson; lastPositionSeconds: number } | null;
   recentProgress: Array<{ lessonId?: PublishedLesson; completed: boolean; lastPositionSeconds: number }>;
 }
@@ -252,5 +268,73 @@ export function getLearningHistory(params: {
     if (value !== undefined && value !== '') query.set(key, String(value));
   });
   return apiFetch(`/learning/history?${query}`);
+}
+
+export type LeaderboardPeriod = 'week' | 'month' | 'all';
+
+export interface LeaderUser {
+  rank: number;
+  id: string;
+  name: string;
+  avatar: string;
+  xp: number;
+  streakDays: number;
+  hskLevel: string;
+  isMe: boolean;
+  trend: 'up' | 'down' | 'same';
+  trendValue?: number;
+  badge?: string;
+}
+
+export interface LeaderboardResponse {
+  period: LeaderboardPeriod;
+  items: LeaderUser[];
+  currentUserRank: LeaderUser | null;
+  totalParticipants: number;
+}
+
+export function getLeaderboard(params: {
+  period?: LeaderboardPeriod;
+  limit?: number;
+  signal?: AbortSignal;
+} = {}): Promise<LeaderboardResponse> {
+  const query = new URLSearchParams();
+  if (params.period) query.set('period', params.period);
+  if (params.limit) query.set('limit', String(params.limit));
+  return apiFetch(`/learning/leaderboard?${query}`, { signal: params.signal });
+}
+
+export interface ModuleTopic {
+  id: string;
+  nameVi: string;
+  progress: number;
+  status: 'completed' | 'in_progress' | 'not_started';
+  totalLessons?: number;
+  completedLessons?: number;
+}
+
+export interface RoadmapStage {
+  id: string;
+  level: string;
+  title: string;
+  description: string;
+  status: 'completed' | 'in_progress' | 'locked';
+  progress: number;
+  wordCount: string;
+  grammarCount: string;
+  totalLessons: number;
+  completedLessons: number;
+  topics: ModuleTopic[];
+}
+
+export interface RoadmapResponse {
+  currentHsk: number;
+  targetHsk: number;
+  overallProgress: number;
+  stages: RoadmapStage[];
+}
+
+export function getRoadmap(options: { signal?: AbortSignal } = {}): Promise<RoadmapResponse> {
+  return apiFetch('/learning/roadmap', { signal: options.signal });
 }
 

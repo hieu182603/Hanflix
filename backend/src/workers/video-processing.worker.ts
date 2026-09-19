@@ -17,6 +17,7 @@ import {
 import { downloadR2Object } from '../services/r2.js';
 import { logger } from '../services/logger.js';
 import { processLessonVideoPipeline } from '../services/subtitle-pipeline.js';
+import { NotificationService } from '../services/notification.service.js';
 
 const workerId = `${process.pid}-${randomUUID()}`;
 let timer: NodeJS.Timeout | undefined;
@@ -110,6 +111,35 @@ async function processNextJob(): Promise<boolean> {
         rearmDeadline: armDeadline,
       });
       logger.info({ videoId: lease.lessonId, jobId: lease.jobId, status: 'SUCCESS', durationMs: Date.now() - startedAt }, '[VideoProcessing]');
+
+      // Notify admins that video processing completed
+      try {
+        const lessonDoc = await LessonModel.findById(lease.lessonId).select('titleVi titleZh').lean();
+        const lessonTitle = lessonDoc?.titleVi || lessonDoc?.titleZh || 'Bài học mới';
+        await NotificationService.notifyAdmins({
+          type: 'video_pipeline',
+          category: 'system',
+          title: {
+            vi: `Video "${lessonTitle}" đã xử lý hoàn tất!`,
+            en: `Video "${lessonTitle}" processing finished!`,
+            zh: `视频 "${lessonTitle}" 自动处理已完成！`,
+          },
+          message: {
+            vi: 'Phụ đề AI, phiên âm Pinyin và bộ câu hỏi trắc nghiệm đã được sinh thành công. Vui lòng duyệt xuất bản.',
+            en: 'Subtitles, Pinyin, and interactive quiz generated successfully. Please review and publish.',
+            zh: 'AI 字幕提取、拼音标注及随堂测试已生成完毕，请审核并发布课程。',
+          },
+          actionUrl: `/admin/lessons/${lease.lessonId}`,
+          actionText: {
+            vi: 'Duyệt bài học',
+            en: 'Review Lesson',
+            zh: '审核课程',
+          },
+          metadata: { lessonId: lease.lessonId, jobId: lease.jobId },
+        });
+      } catch (notifyErr) {
+        logger.error({ err: notifyErr }, '[VideoProcessing] Failed to send admin completion notification');
+      }
     } catch (error) {
       if (signal.aborted) {
         const reason = signal.reason instanceof Error ? signal.reason.message : 'aborted';
@@ -131,6 +161,30 @@ async function processNextJob(): Promise<boolean> {
         ? { $set: { status: 'failed', processingStatus: 'FAILED', processingStep: 'FAILED', processingError: message } }
         : { $set: { status: 'processing', processingStatus: 'QUEUED', processingStep: 'QUEUED', processingError: message } });
       logger.error({ videoId: lease.lessonId, jobId: lease.jobId, step: 'pipeline', status: 'FAILED', error: message }, '[VideoProcessing]');
+
+      // Notify admins if job permanently failed
+      if (updated?.status === 'failed') {
+        try {
+          await NotificationService.notifyAdmins({
+            type: 'video_pipeline',
+            category: 'system',
+            title: {
+              vi: 'Xử lý video thất bại',
+              en: 'Video processing failed',
+              zh: '视频自动处理失败',
+            },
+            message: {
+              vi: `Tiến trình xử lý video gặp lỗi: ${message}`,
+              en: `Video processing pipeline failed: ${message}`,
+              zh: `视频处理流水线遇到错误：${message}`,
+            },
+            actionUrl: `/admin/lessons/${lease.lessonId}`,
+            metadata: { lessonId: lease.lessonId, jobId: lease.jobId, code },
+          });
+        } catch (notifyErr) {
+          logger.error({ err: notifyErr }, '[VideoProcessing] Failed to send admin failure notification');
+        }
+      }
     } finally {
       heartbeatStopped = true;
       if (deadlineTimer) clearTimeout(deadlineTimer);

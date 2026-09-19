@@ -11,7 +11,11 @@ import {
   X,
   BookMarked,
   History,
+  Sparkles,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardQueryKeys } from '../api/queryKeys';
+import { getLearnerDashboard } from '../api/learning';
 import { UserProfile } from '../data/hanflixData';
 import { useLanguage } from '../i18n';
 import UserAvatar from './common/UserAvatar';
@@ -78,6 +82,14 @@ export default function Sidebar({
 }: SidebarProps) {
   const { t } = useLanguage();
 
+  const dashboardQuery = useQuery({
+    queryKey: dashboardQueryKeys.detail(),
+    queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
+    enabled: Boolean(userProfile?.id),
+    staleTime: 30000,
+  });
+  const liveXP = dashboardQuery.data?.metrics?.totalXP ?? userProfile?.totalXP ?? 0;
+
   const navItems = [
     { id: 'feed', label: t.nav.feed, icon: Home },
     { id: 'lessons', label: t.nav.lessons, icon: BookOpen },
@@ -124,9 +136,26 @@ export default function Sidebar({
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#188A5A] rounded-full border-2 border-white" />
             </div>
             <h3 className="font-bold text-sm text-[#18181B] tracking-tight truncate max-w-full">{userProfile.name}</h3>
-            <div className="mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
-              {userProfile.level}
+            
+            {/* Badges row: HSK Level + XP points */}
+            <div className="mt-1.5 flex items-center justify-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold shadow-2xs">
+                {userProfile.level}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavChange('leaderboard');
+                  onCloseDrawer?.();
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 hover:border-amber-300 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                title="Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng"
+              >
+                <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+                <span>{liveXP.toLocaleString('vi-VN')} XP</span>
+              </button>
             </div>
+
             {userProfile.hskProgress > 0 && <div className="w-full mt-3 text-left">
               <div className="flex justify-between items-center text-[11px] font-semibold mb-1">
                 <span className="text-[#5F6368]">{userProfile.hskLevel}</span>
@@ -155,7 +184,7 @@ export default function Sidebar({
             </div>
             {/* Tooltip on mini avatar */}
             <div className="hidden lg:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-              {userProfile.name} ({userProfile.hskLevel})
+              {userProfile.name} ({userProfile.hskLevel}) · {liveXP.toLocaleString('vi-VN')} XP
               <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#18181B]" />
             </div>
           </div>

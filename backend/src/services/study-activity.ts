@@ -1,5 +1,6 @@
 import type { Types } from 'mongoose';
 import { StudyActivityModel } from '../models/study-activity.model.js';
+import { UserModel } from '../models/user.model.js';
 
 export const DEFAULT_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
@@ -54,6 +55,8 @@ export interface StudyActivityIncrement {
   progressUpdates?: number;
   quizAttempts?: number;
   completedLessons?: number;
+  vocabReviews?: number;
+  xpEarned?: number;
 }
 
 export async function recordStudyActivity(
@@ -67,6 +70,11 @@ export async function recordStudyActivity(
     Object.entries(increment).filter(([, value]) => typeof value === 'number' && value > 0),
   );
   if (Object.keys(safeIncrement).length === 0) return null;
+
+  if (typeof increment.xpEarned === 'number' && increment.xpEarned > 0) {
+    UserModel.updateOne({ _id: userId }, { $inc: { totalXP: increment.xpEarned } }).catch(() => {});
+  }
+
   return StudyActivityModel.findOneAndUpdate(
     { userId, dateKey },
     { $inc: safeIncrement, $setOnInsert: { userId, dateKey } },

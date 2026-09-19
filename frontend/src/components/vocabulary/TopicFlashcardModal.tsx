@@ -13,6 +13,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { DisplayWordItem, TopicConfig } from './VocabularyPage';
+import { awardXP } from '../../lib/xp';
+import { recordLearningActivity } from '../../lib/streak';
 
 export interface TopicFlashcardModalProps {
   isOpen: boolean;
@@ -73,6 +75,8 @@ export default function TopicFlashcardModal({
       setCurrentIndex((prev) => prev + 1);
     } else {
       setIsCompleted(true);
+      awardXP(20, 'Hoàn thành bộ thẻ từ vựng (+20 XP)', 'vocab');
+      recordLearningActivity('review');
     }
   }, [currentIndex, deck.length]);
 

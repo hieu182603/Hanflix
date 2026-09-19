@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0",
+  "parameters": {
+    "resourcePrefix": {
+      "value": "hanflix"
+    },
+    "location": {
+      "value": "southeastasia"
+    },
+    "dockerImage": {
+      "value": ""
+    },
+    "nodeEnv": {
+      "value": "production"
+    },
+    "minReplicas": {
+      "value": 1
+    },
+    "maxReplicas": {
+      "value": 3
+    },
+    "cpuCoreCount": {
+      "value": "0.5"
+    },
+    "memoryGb": {
+      "value": "1.0"
+    },
+    "healthCheckPath": {
+      "value": "/health"
+    },
+    "allowedOrigins": {
+      "value": "https://hanflix.com,https://www.hanflix.com"
+    }
+  }
+}

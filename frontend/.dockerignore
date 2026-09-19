@@ -1,0 +1,23 @@
+# Keep the build context lean — only what's needed to run `vite build`.
+node_modules
+dist
+.vite
+.vscode
+.idea
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+coverage
+.playwright
+playwright-report
+test-results
+src/**/__tests__
+src/**/*.test.ts
+src/**/*.test.tsx
+src/test
+nginx.conf
+Dockerfile
+.dockerignore
+README.md

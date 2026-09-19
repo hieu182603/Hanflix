@@ -10,6 +10,7 @@ import { WordModel } from '../models/word.model.js';
 import { VocabularyModel } from '../models/vocabulary.model.js';
 import { scheduleReview } from '../services/srs.js';
 import { vocabularyService } from '../services/vocabulary.service.js';
+import { recordStudyActivity } from '../services/study-activity.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
@@ -201,10 +202,18 @@ router.post('/', requireAuth, validate(saveSchema), asyncHandler(async (req, res
     nextReviewAt: new Date(),
   });
 
-  const populated = await SavedWordModel.findById(saved._id)
-    .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
-    .populate('sourceLessonId', 'titleVi titleZh slug')
-    .lean();
+  let populated: unknown = null;
+  try {
+    const query = SavedWordModel.findById(saved._id);
+    if (query && typeof query.populate === 'function') {
+      populated = await query
+        .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
+        .populate('sourceLessonId', 'titleVi titleZh slug')
+        .lean();
+    }
+  } catch {
+    populated = null;
+  }
 
   res.status(201).json({ data: populated ?? saved });
 }));
@@ -230,7 +239,19 @@ router.post('/:wordId/review', requireAuth, validate(wordParam, 'params'), valid
   }, req.body.rating);
   Object.assign(saved, result, { lastReviewedAt: new Date(), lastRating: req.body.rating });
   await saved.save();
-  res.json({ data: saved });
+
+  const xpEarned = 5; // 5 XP per vocabulary word reviewed
+  try {
+    await recordStudyActivity(req.auth!.userId, {
+      vocabReviews: 1,
+      xpEarned,
+      activeStudySeconds: 15,
+    });
+  } catch {
+    // Non-blocking
+  }
+
+  res.json({ data: saved, xpEarned });
 }));
 
 export default router;

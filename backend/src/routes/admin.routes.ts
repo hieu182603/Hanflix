@@ -24,6 +24,7 @@ import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 import { pinyinService } from '../services/pinyin.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { NotificationService } from '../services/notification.service.js';
 import adminVocabularyRoutes from './admin-vocabulary.routes.js';
 import adminGrammarRoutes from './admin-grammar.routes.js';
 
@@ -690,7 +691,11 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
   ).client?.topology?.description?.type === 'ReplicaSetWithPrimary';
 
   const session = supportsTransactions ? await mongoose.startSession() : null;
-  let publishedLesson;
+  // `unknown` thay vì `Record<string, unknown>`: Mongoose Document có nhiều
+  // internal symbols không match index signature, nhưng code dưới đây
+  // chỉ đọc các field cụ thể (`hsk`, `titleVi`, `titleZh`, `_id`) qua
+  // bracket access — nên `any` được biện minh cho ergonomic.
+  let publishedLesson: unknown = null;
   try {
     const runInSession = async (op: (s: mongoose.ClientSession | null) => Promise<void>) => {
       if (session) {
@@ -755,6 +760,36 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
   } finally {
     if (session) await session.endSession();
   }
+
+  if (publishedLesson) {
+    const hskLevel = (publishedLesson as any).hsk || 1;
+    const lessonTitle = (publishedLesson as any).titleVi || (publishedLesson as any).titleZh || 'Bài học mới';
+    // Fire-and-forget: broadcast tới toàn bộ learners. Trước đây bug #4
+    // quên `.catch` nên unhandled rejection có thể kill process. Giờ đăng
+    // ký catch + log context (hskLevel, lessonId) để debug dễ hơn.
+    NotificationService.notifyLearnersByHsk(hskLevel, {
+      type: 'lesson',
+      category: 'study',
+      title: {
+        vi: `Bài học mới HSK ${hskLevel}: "${lessonTitle}"`,
+        en: `New HSK ${hskLevel} lesson: "${lessonTitle}"`,
+        zh: `全新 HSK ${hskLevel} 级课程上线："${lessonTitle}"`,
+      },
+      message: {
+        vi: 'Khám phá video bài học mới với phụ đề song ngữ và bài tập tương tác ngay hôm nay!',
+        en: 'Explore the new video lesson with bilingual subtitles and interactive exercises today!',
+        zh: '立即体验全新双语互动视频与随堂测试！',
+      },
+      actionUrl: '/lessons',
+      actionText: {
+        vi: 'Xem bài học',
+        en: 'View Lesson',
+        zh: '查看课程',
+      },
+      metadata: { lessonId: (publishedLesson as any)._id, hsk: hskLevel },
+    }).catch(err => logger.error({ err, hskLevel, lessonId: (publishedLesson as any)._id }, 'Failed to notify learners on lesson publish'));
+  }
+
   res.json({ data: publishedLesson });
 }));
 

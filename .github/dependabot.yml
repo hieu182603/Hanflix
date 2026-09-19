@@ -1,0 +1,97 @@
+# Dependabot configuration.
+#
+# We let Dependabot open PRs for npm and pnpm updates separately per package
+# so each is reviewable in isolation. We group minor + patch bumps because
+# those don't break SemVer, and we treat major bumps as individual PRs.
+
+version: 2
+
+updates:
+  # ──────────────────────────────────────────────────────────────────────
+  # Backend (npm)
+  # ──────────────────────────────────────────────────────────────────────
+  - package-ecosystem: 'npm'
+    directory: '/backend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      # Avoid the early-morning window where npm registry has historically
+      # had incidents; spread across the workday so humans are around.
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 8
+    labels:
+      - 'dependencies'
+      - 'backend'
+    # Group minor + patch into a single `bump` PR to keep PR noise down;
+    # major upgrades get their own PR so they can be reviewed closely.
+    groups:
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Frontend (pnpm)
+  # ──────────────────────────────────────────────────────────────────────
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 8
+    labels:
+      - 'dependencies'
+      - 'frontend'
+    groups:
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # ──────────────────────────────────────────────────────────────────────
+  # GitHub Actions
+  # ──────────────────────────────────────────────────────────────────────
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'ci'
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Docker
+  # ──────────────────────────────────────────────────────────────────────
+  - package-ecosystem: 'docker'
+    directory: '/backend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 3
+    labels:
+      - 'dependencies'
+      - 'docker'
+  - package-ecosystem: 'docker'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 3
+    labels:
+      - 'dependencies'
+      - 'docker'

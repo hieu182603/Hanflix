@@ -34,10 +34,19 @@ export const learningQueryKeys = {
     [...learningQueryKeys.root, 'activity', params] as const,
   recsRule: () => [...learningQueryKeys.root, 'recs', 'rule'] as const,
   recsAi: () => [...learningQueryKeys.root, 'recs', 'ai'] as const,
+  leaderboard: (period?: string) => [...learningQueryKeys.root, 'leaderboard', period || 'week'] as const,
+  roadmap: () => [...learningQueryKeys.root, 'roadmap'] as const,
 };
 
 export const vocabularyQueryKeys = {
   root: ['vocabulary'] as const,
   saved: () => [...vocabularyQueryKeys.root, 'saved'] as const,
   due: () => [...vocabularyQueryKeys.root, 'due'] as const,
+};
+
+export const notificationQueryKeys = {
+  root: ['notifications'] as const,
+  list: (params?: { filter?: string; page?: number; limit?: number }) =>
+    [...notificationQueryKeys.root, 'list', params || {}] as const,
+  unreadCount: () => [...notificationQueryKeys.root, 'unreadCount'] as const,
 };

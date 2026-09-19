@@ -1,0 +1,62 @@
+name: CodeQL Security Analysis
+
+# GitHub's built-in SAST scanner for JavaScript / TypeScript. Runs weekly to
+# catch newly-discovered vulnerabilities in our own code, plus on every PR
+# that changes backend or frontend source.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'backend/src/**'
+      - 'frontend/src/**'
+  schedule:
+    - cron: '17 6 * * 1'  # Mondays 06:17 UTC — off-peak window
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  # security-events: write is required for the SARIF upload to surface
+  # findings on the Security tab. Without it the run still completes but the
+  # results stay invisible.
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            paths: frontend/src
+          - language: javascript-typescript
+            paths: backend/src
+    steps:
+      - uses: actions/checkout@v4
+
+      # Initialize CodeQL with the languages we care about
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # 'security-and-quality' includes additional taint / dataflow rules
+          # beyond 'security' — better coverage at the cost of slightly more
+          # false positives.
+          queries: security-and-quality
+          paths: ${{ matrix.paths }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'
+          # Don't block the workflow on non-critical findings. Critical &
+          # high still fail the check (default behavior).
+          severity_threshold: medium

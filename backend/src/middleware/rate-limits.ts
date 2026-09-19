@@ -129,3 +129,18 @@ export const uploadLimiter = rateLimit({
   store: sharedStore('rl:upload:') as never,
   handler: rateLimitHandler,
 });
+
+/**
+ * Limit broadcast notifications: admin duy nhất có thể gọi route này
+ * nhưng cần giới hạn để phòng admin compromised spam DB. 30 broadcast
+ * mỗi 10 phút / account là đủ cho workflow broadcast thực tế.
+ */
+export const broadcastLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: env.BROADCAST_RATE_LIMIT_MAX,
+  keyGenerator: accountOrIpKey,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  store: sharedStore('rl:broadcast:') as never,
+  handler: rateLimitHandler,
+});
