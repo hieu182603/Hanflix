@@ -49,3 +49,6 @@ tmp/
 .agents/
 .claude/
 skills-lock.json
+
+# Cursor Agent Store (local only - không push lên git)
+.cursor/

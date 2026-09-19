@@ -4,7 +4,7 @@ import {
   deleteAdminLesson, hideAdminLesson, listAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
   presignVideo, publishAdminLesson, restoreAdminLesson, retryProcessing, saveAdminQuiz,
   saveAdminSubtitles, setAdminUserStatus, uploadVideoToR2,
-  type AdminCue, type AdminLesson, type AdminQuestion, type AdminReview, type AdminUser,
+  type AdminCue, type AdminLesson, type AdminQuestion, type AdminReview, type AdminUser, type LearningTip,
   type ProcessingJob, type ProcessingStatus, type UploadProgressEvent,
 } from '../../api/admin';
 import AdminQuizManager from './AdminQuizManager';
@@ -13,6 +13,9 @@ import AdminVideoList from './AdminVideoList';
 import AdminUserManager from './AdminUserManager';
 import AdminVideoUploader from './AdminVideoUploader';
 import AdminLessonReviewStudio from './AdminLessonReviewStudio';
+import { useNotification } from '../notifications';
+import { InlineBanner } from '../notifications';
+import { Spinner } from '../notifications';
 
 type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'quiz' | 'vocabulary' | 'grammar';
 
@@ -43,6 +46,7 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   editingId: string | null;
   setEditingId: (id: string | null) => void;
 }) {
+  const notify = useNotification();
   const [lessons, setLessons] = useState<AdminLesson[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
@@ -51,11 +55,15 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   const [media, setMedia] = useState<{ url: string; mimeType: string; sizeBytes: number } | null>(null);
   const [cues, setCues] = useState<AdminCue[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
+  const [translationImproved, setTranslationImproved] = useState(false);
+  const [learningTips, setLearningTips] = useState<LearningTip[]>([]);
+  const [drillWords, setDrillWords] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [titleVi, setTitleVi] = useState('');
   const [titleZh, setTitleZh] = useState('');
   const [descriptionVi, setDescriptionVi] = useState('');
   const [hsk, setHsk] = useState(3);
+  const [autoGenerateQuizCount, setAutoGenerateQuizCount] = useState<number | ''>('');
   const [topic, setTopic] = useState('daily-life');
   const [duration, setDuration] = useState(120);
   const [busy, setBusy] = useState(false);
@@ -121,13 +129,26 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     setReview(null); setMedia(null); setError('');
     // Reset dirty when switching lessons
     setDirty({ metadata: false, subtitles: false, quiz: false });
+    setTranslationImproved(false);
+    setLearningTips([]);
+    setDrillWords([]);
     void getAdminReview(editingId).then(data => {
       if (!active) return;
       setReview(data);
-      setCues(data.subtitle?.cues ?? []);
+      const subtitle = data.subtitle;
+      setCues(subtitle?.cues ?? []);
+      setTranslationImproved(Boolean(subtitle?.translationImproved));
+      setLearningTips(subtitle?.learningTips ?? []);
+      setDrillWords(subtitle?.drillWords ?? []);
       setQuestions(data.quiz?.questions ?? []);
       const lesson = lessons.find(item => item._id === editingId);
-      if (lesson) { setTitleVi(lesson.titleVi); setTitleZh(lesson.titleZh ?? ''); setDescriptionVi(lesson.descriptionVi); }
+      if (lesson) {
+        setTitleVi(lesson.titleVi);
+        setTitleZh(lesson.titleZh ?? '');
+        setDescriptionVi(lesson.descriptionVi);
+        setHsk(lesson.hsk);
+        setAutoGenerateQuizCount(lesson.autoGenerateQuizCount ?? '');
+      }
       initialLoadDone.current = editingId;
     }).catch(reason => { if (active) setError(errorText(reason)); });
 
@@ -148,7 +169,12 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   const reloadEditor = async () => {
     if (!editingId) return;
     if (dirty.metadata || dirty.subtitles || dirty.quiz) {
-      const confirmed = window.confirm('Có thay đổi chưa lưu. Tải lại sẽ mất các thay đổi đó. Tiếp tục?');
+      const confirmed = await notify.confirm({
+        title: 'Có thay đổi chưa lưu',
+        message: 'Tải lại sẽ mất các thay đổi đó. Tiếp tục?',
+        confirmText: 'Tải lại',
+        tone: 'danger',
+      });
       if (!confirmed) return;
     }
     initialLoadDone.current = null;
@@ -156,11 +182,21 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     try {
       const [reviewData, mediaData] = await Promise.all([getAdminReview(editingId), getAdminMedia(editingId)]);
       setReview(reviewData);
-      setCues(reviewData.subtitle?.cues ?? []);
+      const subtitle = reviewData.subtitle;
+      setCues(subtitle?.cues ?? []);
+      setTranslationImproved(Boolean(subtitle?.translationImproved));
+      setLearningTips(subtitle?.learningTips ?? []);
+      setDrillWords(subtitle?.drillWords ?? []);
       setQuestions(reviewData.quiz?.questions ?? []);
       setMedia(mediaData.media);
       const lesson = lessons.find(item => item._id === editingId);
-      if (lesson) { setTitleVi(lesson.titleVi); setTitleZh(lesson.titleZh ?? ''); setDescriptionVi(lesson.descriptionVi); }
+      if (lesson) {
+        setTitleVi(lesson.titleVi);
+        setTitleZh(lesson.titleZh ?? '');
+        setDescriptionVi(lesson.descriptionVi);
+        setHsk(lesson.hsk);
+        setAutoGenerateQuizCount(lesson.autoGenerateQuizCount ?? '');
+      }
       setDirty({ metadata: false, subtitles: false, quiz: false });
       initialLoadDone.current = editingId;
       setMessage('Đã tải lại nội dung.');
@@ -173,13 +209,18 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
    * F01: navigate-with-warning. Before switching lessons while edits exist, prompt
    * the user to confirm.
    */
-  const requestSwitchLesson = (newId: string | null) => {
+  const requestSwitchLesson = async (newId: string | null) => {
     if (!newId || newId === editingId) {
       setEditingId(newId);
       return;
     }
     if (dirty.metadata || dirty.subtitles || dirty.quiz) {
-      const confirmed = window.confirm('Có thay đổi chưa lưu. Rời đi sẽ mất các thay đổi đó. Tiếp tục?');
+      const confirmed = await notify.confirm({
+        title: 'Có thay đổi chưa lưu',
+        message: 'Rời đi sẽ mất các thay đổi đó. Tiếp tục?',
+        confirmText: 'Rời đi',
+        tone: 'danger',
+      });
       if (!confirmed) return;
     }
     initialLoadDone.current = null;
@@ -234,7 +275,18 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     try {
       const slug = titleVi.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) || 'bai-hoc';
       setUploadStage('presigning');
-      const draft = await createAdminLesson({ slug: `${slug}-${crypto.randomUUID().slice(0, 8)}`, titleVi, titleZh, descriptionVi, hsk, topicIds: [topic], goalTags: [], durationSeconds: duration, pinyin: '' });
+      const draft = await createAdminLesson({
+        slug: `${slug}-${crypto.randomUUID().slice(0, 8)}`,
+        titleVi,
+        titleZh,
+        descriptionVi,
+        hsk,
+        topicIds: [topic],
+        goalTags: [],
+        durationSeconds: duration,
+        pinyin: '',
+        autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number' ? autoGenerateQuizCount : undefined,
+      });
       lessonId = draft._id;
       const signed = await presignVideo(draft._id, file);
       uploadStarted = true;
@@ -295,9 +347,18 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   const statusLabel: Record<string, string> = { draft: 'Bản nháp', uploading: 'Đang tải lên', processing: 'Đang xử lý', ready_for_review: 'Chờ duyệt', published: 'Đã đăng', hidden: 'Đã ẩn', failed: 'Lỗi xử lý' };
 
   return <div className="space-y-5">
-    {tab !== 'overview' && error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-    {message && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{message}</p>}
-    {tab !== 'overview' && loading && <p className="text-sm">Đang tải dữ liệu quản trị…</p>}
+    {tab !== 'overview' && error && (
+      <InlineBanner variant="error" message={error} />
+    )}
+    {message && (
+      <InlineBanner variant="success" message={message} />
+    )}
+    {tab !== 'overview' && loading && (
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3.5 text-xs font-bold text-[#8C827A] shadow-2xs">
+        <Spinner size="sm" tone="brand" />
+        <span>Đang tải dữ liệu quản trị…</span>
+      </div>
+    )}
     {tab === 'overview' && (
       <AdminOverviewDashboard
         lessons={lessons}
@@ -308,7 +369,7 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         onReload={reload}
         onNavigateToTab={(targetTab) => setTab(targetTab as AdminTab)}
         onSelectLessonToEdit={(lessonId) => {
-          requestSwitchLesson(lessonId);
+          void requestSwitchLesson(lessonId);
           setTab('editor');
         }}
         onPublishLesson={async (lessonId) => {
@@ -326,7 +387,7 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         busy={busy}
         onNavigateToUpload={() => setTab('upload')}
         onEditLesson={(id) => {
-          requestSwitchLesson(id);
+          void requestSwitchLesson(id);
           setTab('editor');
         }}
         onViewProcessing={(id) => {
@@ -368,6 +429,8 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
         hsk={hsk}
         setHsk={setHsk}
+        autoGenerateQuizCount={autoGenerateQuizCount}
+        setAutoGenerateQuizCount={(v) => { setAutoGenerateQuizCount(v); setDirty(d => ({ ...d, metadata: true })); }}
         topic={topic}
         setTopic={setTopic}
         duration={duration}
@@ -403,6 +466,9 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         review={review}
         cues={cues}
         questions={questions}
+        translationImproved={translationImproved}
+        learningTips={learningTips}
+        drillWords={drillWords}
         dirty={dirty}
         busy={busy}
         titleVi={titleVi}
@@ -415,7 +481,14 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         onQuestionsChange={(next) => { setQuestions(next); setDirty(d => ({ ...d, quiz: true })); }}
         onSaveMetadata={async () => {
           await action(async () => {
-            await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
+            await patchAdminLesson(selected._id, {
+              titleVi,
+              titleZh,
+              descriptionVi,
+              autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number'
+                ? autoGenerateQuizCount
+                : null,
+            });
             setDirty(d => ({ ...d, metadata: false }));
           }, 'Đã lưu thông tin bài học.');
         }}

@@ -18,6 +18,8 @@ import { logger } from '../services/logger.js';
 import { addVideoProcessingJob, retryVideoProcessingJob } from '../queue/video.queue.js';
 import { purgeAdminLesson } from '../services/lesson-delete.js';
 import { runEditorCommit } from '../services/revision-commit.js';
+import { generateQuizWithGemini, type QuestionKind } from '../services/quiz-generator.js';
+import { autoGenerateQuizForLesson } from '../services/auto-quiz-generator.js';
 import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
 import { pinyinService } from '../services/pinyin.js';
@@ -40,6 +42,9 @@ const lessonInput = z.object({
   topicIds: z.array(z.string().trim().min(1).max(50)).min(1).max(5),
   goalTags: z.array(z.enum(['daily', 'travel', 'work', 'hsk', 'culture', 'other'])).max(6).default([]),
   durationSeconds: z.number().min(60).max(300),
+  // Optional override for AI-generated quiz question count (1-15).
+  // Undefined / null = use HSK-based heuristic.
+  autoGenerateQuizCount: z.number().int().min(1).max(15).optional().nullable(),
 });
 const lessonIdSchema = z.object({ lessonId: z.string().refine(Types.ObjectId.isValid) });
 const presignSchema = z.object({
@@ -102,6 +107,11 @@ const quizDraftSchema = z.object({ questions: z.array(quizQuestionInput).min(1).
   });
 });
 
+const quizGenerationInput = z.object({
+  kinds: z.array(z.enum(['comprehension', 'vocabulary', 'grammar', 'cloze'])).min(1).max(4),
+  questionCount: z.number().int().min(1).max(15).default(5),
+});
+
 router.post('/lessons', validate(lessonInput), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.create({ ...req.body, createdBy: req.auth!.userId, status: 'draft' });
   res.status(201).json({ data: lesson });
@@ -119,9 +129,28 @@ router.get('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandle
 }));
 
 router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(lessonInput.partial()), asyncHandler(async (req, res) => {
+  // Handle the optional override separately:
+  //   - undefined or missing → leave untouched.
+  //   - null → $unset the field (return to HSK heuristic).
+  //   - number in [1,15] → store as override.
+  const { autoGenerateQuizCount, ...rest } = req.body as {
+    autoGenerateQuizCount?: number | null;
+    [k: string]: unknown;
+  };
+  const setOps: Record<string, unknown> = { ...rest };
+  const unsetOps: Record<string, 1> = {};
+  if (autoGenerateQuizCount === null) {
+    unsetOps.autoGenerateQuizCount = 1;
+  } else if (typeof autoGenerateQuizCount === 'number') {
+    setOps.autoGenerateQuizCount = autoGenerateQuizCount;
+  }
+  const ops =
+    Object.keys(setOps).length || Object.keys(unsetOps).length
+      ? { $set: setOps, ...(Object.keys(unsetOps).length ? { $unset: unsetOps } : {}) }
+      : { $set: setOps };
   const lesson = await LessonModel.findOneAndUpdate(
     { _id: req.params.lessonId, status: { $in: ['draft', 'ready_for_review', 'failed'] } },
-    { $set: req.body },
+    ops,
     { returnDocument: 'after', runValidators: true },
   );
   if (!lesson) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Bài học không ở trạng thái có thể sửa');
@@ -496,6 +525,143 @@ router.put('/lessons/:lessonId/quiz', validate(lessonIdSchema, 'params'), valida
     },
   });
   res.json({ data: result.quiz });
+}));
+
+/**
+ * POST /lessons/:lessonId/quiz/generate
+ *
+ * Generates quiz questions using Gemini based on the lesson's subtitle cues.
+ * Returns generated questions as a draft-only preview — does NOT save to DB.
+ * Admin can then edit/select and save via the existing PUT /quiz endpoint.
+ */
+router.post('/lessons/:lessonId/quiz/generate', validate(lessonIdSchema, 'params'), validate(quizGenerationInput), asyncHandler(async (req, res) => {
+  const lessonId = String(req.params.lessonId);
+  const { kinds, questionCount } = (req.body as z.infer<typeof quizGenerationInput>);
+  const lesson = await LessonModel.findById(lessonId)
+    .select('hsk titleVi activeSubtitleRevision status')
+    .lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (lesson.status === 'uploading' || lesson.status === 'processing') {
+    throw new AppError(409, 'LESSON_NOT_READY', 'Bài học đang xử lý video, chưa có phụ đề');
+  }
+  const subtitle = await SubtitleTrackModel.findOne({
+    lessonId: lesson._id,
+    status: 'published',
+  }).sort({ revision: -1}).select('cues').lean()
+    ?? await SubtitleTrackModel.findOne({
+      lessonId: lesson._id,
+      status: 'draft',
+    }).sort({ revision: -1 }).select('cues').lean();
+  if (!subtitle || subtitle.cues.length === 0) {
+    throw new AppError(422, 'NO_SUBTITLES', 'Bài học chưa có phụ đề để sinh câu hỏi');
+  }
+  const cuesForPrompt = subtitle.cues
+    .filter((cue) => cue.zh && cue.vi)
+    .slice(0, 80)
+    .map((cue) => ({
+      cueId: cue.cueId,
+      startMs: cue.startMs,
+      endMs: cue.endMs,
+      zh: cue.zh,
+      pinyin: cue.pinyin,
+      vi: cue.vi,
+    }));
+  const generated = await generateQuizWithGemini({
+    hsk: lesson.hsk,
+    kinds: kinds as QuestionKind[],
+    questionCount,
+    cues: cuesForPrompt,
+    lessonTitleVi: lesson.titleVi,
+  });
+
+  // F-fix (2026-09-19): clear any stale aiGenerationError from a previous
+  // failed attempt so the admin UI's red banner stops showing once the new
+  // generation succeeded. Without this the modal-based generator leaves the
+  // prior error in the Quiz doc forever (it only saves to DB via the modal's
+  // "Import" flow, not on the API call itself).
+  await QuizModel.findOneAndUpdate(
+    { lessonId: lesson._id, status: 'draft' },
+    {
+      $set: {
+        aiGenerationStatus: 'completed',
+        aiGenerationCompletedAt: new Date(),
+        aiGenerationError: undefined,
+        aiGenerationQuestionCount: generated.length,
+      },
+    },
+    { sort: { revision: -1 } },
+  );
+
+  res.json({
+    data: {
+      questions: generated,
+      kinds,
+      hsk: lesson.hsk,
+      lessonTitleVi: lesson.titleVi,
+      cueCount: cuesForPrompt.length,
+    },
+  });
+}));
+
+/**
+ * GET /lessons/:lessonId/quiz/ai-status
+ *
+ * Returns the AI generation status for the current draft quiz. Used by the
+ * admin UI to surface "Generating…", "Completed", "Failed" badges.
+ */
+router.get('/lessons/:lessonId/quiz/ai-status', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const quiz = await QuizModel.findOne({ lessonId: req.params.lessonId, status: 'draft' })
+    .sort({ revision: -1 })
+    .select('aiGenerationStatus aiGenerationStartedAt aiGenerationCompletedAt aiGenerationError aiGenerationKinds aiGenerationQuestionCount revision')
+    .lean();
+  if (!quiz) {
+    // Keep the shape aligned with AdminQuizAiStatus so the frontend never has
+    // to guess field names. `aiGenerationStatus: 'not_found'` matches the union
+    // type so AI_STATUS_STYLES[status] returns a styled entry rather than
+    // crashing the admin screen with "AI-improved" badge code that expects the
+    // field to always be present.
+    res.json({ data: { aiGenerationStatus: 'not_found', revision: null } });
+    return;
+  }
+  res.json({ data: quiz });
+}));
+
+/**
+ * POST /lessons/:lessonId/quiz/regenerate
+ *
+ * Re-fires the AI quiz auto-generation. Used when the auto-trigger failed or
+ * the admin wants a fresh set of questions. Runs in background — the response
+ * returns immediately with the new "pending" status; the admin UI polls the
+ * ai-status endpoint above.
+ */
+router.post('/lessons/:lessonId/quiz/regenerate', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
+  const lessonId = String(req.params.lessonId);
+  const lesson = await LessonModel.findById(lessonId).select('status').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (lesson.status === 'uploading' || lesson.status === 'processing') {
+    throw new AppError(409, 'LESSON_NOT_READY', 'Bài học đang xử lý video, vui lòng đợi');
+  }
+  const quiz = await QuizModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 });
+  if (!quiz) throw new AppError(409, 'NO_DRAFT_QUIZ', 'Bài học chưa có bài tập nháp');
+
+  // Mark pending so the admin UI sees the new attempt immediately.
+  quiz.aiGenerationStatus = 'pending';
+  quiz.aiGenerationError = undefined;
+  quiz.aiGenerationStartedAt = new Date();
+  quiz.aiGenerationCompletedAt = undefined;
+  await quiz.save();
+
+  // Fire-and-forget.
+  setImmediate(() => {
+    void autoGenerateQuizForLesson(lessonId).catch((err) => {
+      logger.error(
+        { lessonId, error: err instanceof Error ? err.message : String(err) },
+        '[admin] manual regenerate threw unexpectedly',
+      );
+    });
+  });
+
+  res.json({ data: { lessonId, status: 'pending' } });
 }));
 
 const retryProcessing = asyncHandler(async (req, res) => {

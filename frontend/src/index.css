@@ -103,6 +103,27 @@
   100% { transform: translate(0, 0); }
 }
 
+@keyframes progress-indeterminate {
+  0%   { left: -33%; }
+  100% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-subtle,
+  .animate-lantern,
+  .animate-lantern-delayed,
+  .animate-float,
+  .animate-mascot-float,
+  .animate-cloud,
+  .animate-cloud-slow,
+  .animate-cloud-reverse,
+  [class*="animate-["],
+  [class*="animate-spin"] {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 .animate-pulse-subtle {
   animation: pulse-subtle 3s infinite ease-in-out;
 }

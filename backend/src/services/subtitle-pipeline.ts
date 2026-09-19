@@ -14,8 +14,12 @@ import { uploadR2File } from './r2.js';
 import { pinyinService } from './pinyin.js';
 import { translationService } from './translator.js';
 import { resolveLearningWordIds } from './learning-word.js';
+import { splitLongPhraseIntoCues } from './subtitle-splitter.js';
 import { STAGE_DEADLINES_MS, transitionStage, type VideoProcessingJobLease } from '../queue/video.queue.js';
 import { runGenerationCommit } from './revision-commit.js';
+import { autoGenerateQuizForLesson } from './auto-quiz-generator.js';
+import { improveVietnameseTranslations } from './gemini-translation-improver.js';
+import { generateLearningTips } from './gemini-learning-tips.js';
 
 export type PipelineStage = 'inspect_media' | 'transcribe_zh' | 'generate_pinyin' | 'translate_vi' | 'extract_vocabulary' | 'generate_quiz' | 'finalize';
 
@@ -26,8 +30,7 @@ const frontendStep: Record<PipelineStage, string> = {
   translate_vi: 'TRANSLATING',
   extract_vocabulary: 'SAVING',
   generate_quiz: 'SAVING',
-  finalize: 'SAVING',
-};
+  finalize: 'SAVING',};
 
 export interface PipelineOptions {
   lease: VideoProcessingJobLease;
@@ -133,17 +136,46 @@ export async function processLessonVideoPipeline(
     if (signal.aborted) throw signal.reason ?? new Error('aborted');
     if (segments.length === 0) throw new AppError(502, 'FAILED_TRANSCRIPTION_EMPTY', 'Azure Speech không trả về câu thoại');
 
+    const beforeSplit = segments.length;
+    const videoDurationMs = metadata.durationSeconds * 1000;
+    const sanitizedSegments = segments
+      .map((segment) => ({
+        ...segment,
+        startMs: Math.max(0, Math.min(segment.startMs, videoDurationMs)),
+        endMs: Math.max(0, Math.min(segment.endMs, videoDurationMs)),
+      }))
+      .filter((segment) => segment.endMs > segment.startMs);
+    const rawCues = sanitizedSegments.flatMap(segment => splitLongPhraseIntoCues({
+      startMs: segment.startMs,
+      endMs: segment.endMs,
+      text: segment.zh,
+      confidence: segment.confidence,
+      words: segment.words,
+    }));
+    const sanitizedCues = rawCues
+      .map((cue) => ({
+        ...cue,
+        startMs: Math.max(0, Math.min(cue.startMs, videoDurationMs)),
+        endMs: Math.max(0, Math.min(cue.endMs, videoDurationMs)),
+      }))
+      .filter((cue) => cue.endMs > cue.startMs);
+    const afterSplit = sanitizedCues.length;
+    logger.info(
+      { videoId: lessonId, jobId: processingJobId, beforeSplit, afterSplit, ratio: afterSplit / Math.max(beforeSplit, 1), videoDurationMs },
+      '[VideoProcessing] Subtitle splitter: phrases → cues',
+    );
+
     ensureNotAborted(signal, 'generate_pinyin');
     await updateStage('generate_pinyin', 60);
     let cuesWithPinyin;
     try {
-      cuesWithPinyin = segments.map(segment => ({
+      cuesWithPinyin = sanitizedCues.map(cue => ({
         cueId: randomUUID(),
-        startMs: segment.startMs,
-        endMs: segment.endMs,
-        zh: segment.zh,
-        pinyin: pinyinService.convert(segment.zh),
-        tokens: pinyinService.tokenize(segment.zh).map(token => ({ text: token.text, wordId: null as Types.ObjectId | null })),
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+        zh: cue.zh,
+        pinyin: pinyinService.convert(cue.zh),
+        tokens: pinyinService.tokenize(cue.zh).map(token => ({ text: token.text, wordId: null as Types.ObjectId | null })),
       }));
     } catch (error) {
       if (signal.aborted) throw error;
@@ -152,9 +184,40 @@ export async function processLessonVideoPipeline(
 
     ensureNotAborted(signal, 'translate_vi');
     await updateStage('translate_vi', 75);
-    const translations = await translationService.translateChineseToVietnamese(cuesWithPinyin.map(cue => cue.zh));
+    const translations = await translationService.translateChineseToVietnamese(cuesWithPinyin.map(cue => cue.zh), signal);
     if (signal.aborted) throw signal.reason ?? new Error('aborted');
-    const finalCues = cuesWithPinyin.map((cue, index) => ({ ...cue, vi: translations[index]! }));
+
+    // Apply Azure's literal translation first so downstream stages always
+    // have a working .vi to operate on.
+    const azureCues = cuesWithPinyin.map((cue, index) => ({ ...cue, vi: translations[index]! }));
+
+    // Optional Gemini polish: send each batch through Gemini to rewrite a more
+    // natural / idiomatic Vietnamese version while preserving meaning.
+    // Falls back to Azure output on failure — never blocks the pipeline.
+    const improvementMap = await improveVietnameseTranslations(
+      azureCues.map(cue => ({ cueId: cue.cueId, zh: cue.zh, vi: cue.vi })),
+    );
+    const finalCues = azureCues.map(cue => ({
+      ...cue,
+      vi: improvementMap.get(cue.cueId) ?? cue.vi,
+    }));
+    const azureOnly = azureCues.map(c => c.vi);
+    const improvedCount = finalCues.reduce(
+      (count, c, i) => (c.vi !== azureOnly[i] ? count + 1 : count),
+      0,
+    );
+    // True only if Gemini actually rewrote at least one cue — empty/disabled
+    // cases should not get flagged as "AI-improved".
+    const translationImproved = improvedCount > 0;
+    logger.info(
+      {
+        lessonId,
+        cueCount: finalCues.length,
+        improvedCount,
+        translationImproved,
+      },
+      '[pipeline] translation_vi completed (azure + gemini polish)',
+    );
 
     ensureNotAborted(signal, 'extract_vocabulary');
     await updateStage('extract_vocabulary', 85);
@@ -218,9 +281,67 @@ export async function processLessonVideoPipeline(
         relatedWordIds: question.relatedWordIds,
       })),
       leaseToken: lease.leaseToken,
+      translationImproved,
+    });
+
+    // Fire-and-forget: generate learning tips once the track is committed.
+    // Saves directly via SubtitleTrackModel so we don't disturb the F11
+    // transaction shape.
+    setImmediate(() => {
+      void generateLearningTipsAndSave({
+        lessonId,
+        lessonTitleVi: lesson.titleVi,
+        hsk: lesson.hsk,
+        cues: finalCues,
+      }).catch((err) => {
+        logger.error(
+          { lessonId, error: err instanceof Error ? err.message : String(err) },
+          '[subtitle-pipeline] generateLearningTipsAndSave threw unexpectedly',
+        );
+      });
+    });
+    // committing the basic fill_blank fallback above so admin always has a
+    // usable draft. AI generation adds multiple_choice/vocabulary/grammar
+    // questions when Gemini responds successfully. Status is tracked on the
+    // Quiz document so the admin UI can show progress.
+    setImmediate(() => {
+      void autoGenerateQuizForLesson(lessonId).catch((err) => {
+        logger.error(
+          { lessonId, error: err instanceof Error ? err.message : String(err) },
+          '[subtitle-pipeline] autoGenerateQuizForLesson threw unexpectedly',
+        );
+      });
     });
   } finally {
     clearInterval(heartbeat);
     await fs.unlink(audioPath).catch(() => undefined);
   }
+}
+
+/**
+ * Run Gemini to produce learning tips + drill words, then persist them onto
+ * the latest draft subtitle track. Saves outside the F11 transaction so
+ * failures here can never break the main pipeline.
+ */
+async function generateLearningTipsAndSave(params: {
+  lessonId: string;
+  lessonTitleVi: string;
+  hsk: number;
+  cues: ReadonlyArray<{ cueId: string; zh: string; vi: string; pinyin?: string }>;
+}): Promise<void> {
+  const { lessonId, lessonTitleVi, hsk, cues } = params;
+  const result = await generateLearningTips({ lessonTitleVi, hsk, cues });
+  if (result.tips.length === 0 && result.drillWords.length === 0) {
+    logger.info({ lessonId }, '[learning-tips] empty result, skipping save');
+    return;
+  }
+  await SubtitleTrackModel.findOneAndUpdate(
+    { lessonId, status: 'draft' },
+    { $set: { learningTips: result.tips, drillWords: result.drillWords } },
+    { sort: { revision: -1 } },
+  );
+  logger.info(
+    { lessonId, tipCount: result.tips.length, drillCount: result.drillWords.length },
+    '[learning-tips] saved to draft subtitle track',
+  );
 }

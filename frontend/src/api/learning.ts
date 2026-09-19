@@ -97,6 +97,22 @@ export interface SubtitleCue {
   tokens: Array<{ text: string; wordId?: { _id: string; hanzi: string; pinyin?: string; meaningVi?: string } | null }>;
 }
 
+export interface LearningTip {
+  title: string;
+  detail: string;
+  cueId?: string;
+}
+
+export interface SubtitleTrackMeta {
+  cues: SubtitleCue[];
+  /** True when Vietnamese was polished by Gemini after Azure. */
+  translationImproved?: boolean;
+  /** AI-generated study tips tailored to this track's content. */
+  learningTips?: LearningTip[];
+  /** Words worth drilling after watching, in priority order. */
+  drillWords?: string[];
+}
+
 export interface WordExplanation {
   meaningVi: string;
   usageVi: string;
@@ -126,9 +142,8 @@ export async function getPublishedLesson(id: string): Promise<PublishedLesson> {
   return apiFetch<PublishedLesson>(`/lessons/${encodeURIComponent(id)}`);
 }
 
-export async function getPublishedSubtitles(id: string): Promise<SubtitleCue[]> {
-  const data = await apiFetch<{ cues: SubtitleCue[] }>(`/lessons/${encodeURIComponent(id)}/subtitles`);
-  return data.cues;
+export async function getPublishedSubtitles(id: string): Promise<SubtitleTrackMeta> {
+  return apiFetch<SubtitleTrackMeta>(`/lessons/${encodeURIComponent(id)}/subtitles`);
 }
 
 export async function explainWord(lessonId: string, cueId: string, wordId: string): Promise<WordExplanation> {

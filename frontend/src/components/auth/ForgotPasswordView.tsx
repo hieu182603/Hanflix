@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Mail, CheckCircle2, ShieldCheck, Send, Headphones, ArrowRight, ArrowLeft, Info, Sparkles } from 'lucide-react';
 import * as auth from '../../api/auth';
 import AuthLayout from './AuthLayout';
+import { InlineBanner } from '../notifications';
+import { Spinner } from '../notifications';
 
 interface ForgotPasswordViewProps {
   onNavigateToLogin: () => void;
@@ -186,9 +188,8 @@ export default function ForgotPasswordView({ onNavigateToLogin, onNavigateToRese
       </p>
 
       {errorMsg && (
-        <div className="mb-4 p-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 bg-[#FFF0F0] border border-[#F5CACA] text-[#E50914]">
-          <div className="w-2 h-2 rounded-full bg-[#E50914] shrink-0" />
-          {errorMsg}
+        <div className="mb-4">
+          <InlineBanner variant="error" message={errorMsg} />
         </div>
       )}
 
@@ -220,7 +221,7 @@ export default function ForgotPasswordView({ onNavigateToLogin, onNavigateToRese
           className="w-full h-11 sm:h-12 rounded-full text-white font-bold text-[14px] sm:text-[15px] bg-[#E50914] hover:bg-[#CC0813] active:scale-[0.99] disabled:opacity-60 transition-all flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(229,9,20,0.25)] cursor-pointer auth-btn-primary"
         >
           {isLoading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <Spinner size="md" tone="white" />
           ) : (
             <>
               <span>Gửi mã xác thực OTP</span>

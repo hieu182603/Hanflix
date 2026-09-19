@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
 import { getLearnerDashboard, getLearningActivity, listPublishedLessons, type LearnerDashboard, type LearningActivity, type LessonList } from '../api/learning';
+import { InlineBanner } from './notifications';
 import { listDueWords, listSavedWords, removeSavedWord, reviewSavedWord, type SavedVocabulary } from '../api/vocabulary';
 import AIRecommendationSection from './AIRecommendationSection';
 import VocabularyPage from './vocabulary/VocabularyPage';
@@ -64,7 +65,7 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   </div>;
 
   return <div className="space-y-6">
-    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+    {error && <InlineBanner variant="error" message={error} />}
     {section === 'feed' && <>
       <div className="rounded-3xl bg-[#18181B] p-6 text-white md:p-8">
         <p className="text-sm text-red-300">Tiếp tục hành trình tiếng Trung</p>

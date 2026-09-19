@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNotification } from '../notifications';
 import {
   Video,
   Play,
@@ -24,20 +25,23 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import type { AdminCue, AdminLesson, AdminQuestion, AdminReview } from '../../api/admin';
+import { SubtitleOverlay } from '../watch/SubtitleOverlay';
+import LearningTipsPanel from '../watch/LearningTipsPanel';
+import AiImprovedBadge from '../watch/AiImprovedBadge';
+import type { AdminCue, AdminLesson, AdminQuestion, AdminReview, LearningTip } from '../../api/admin';
 
 const HSK_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 const HSK_COLORS: Record<number, { bg: string; text: string; border: string }> = {
-  1: { bg: 'bg-[#E6F4EA]', text: 'text-[#137333]', border: 'border-[#CEEAD6]' },
-  2: { bg: 'bg-[#E8F0FE]', text: 'text-[#1A73E8]', border: 'border-[#D2E3FC]' },
-  3: { bg: 'bg-[#F3E8FD]', text: 'text-[#9334E6]', border: 'border-[#E9D5FF]' },
-  4: { bg: 'bg-[#FEF7E0]', text: 'text-[#B06000]', border: 'border-[#FEEFC3]' },
-  5: { bg: 'bg-[#FFF0E6]', text: 'text-[#EA580C]', border: 'border-[#FED7AA]' },
-  6: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#FAD2CF]' },
-  7: { bg: 'bg-[#F1F5F9]', text: 'text-[#475569]', border: 'border-[#CBD5E1]' },
-  8: { bg: 'bg-[#F8FAFC]', text: 'text-[#334155]', border: 'border-[#94A3B8]' },
-  9: { bg: 'bg-[#0F172A]', text: 'text-white', border: 'border-[#1E293B]' },
+  1: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  2: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  3: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  4: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  5: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  6: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  7: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  8: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  9: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
 };
 
 function formatMs(ms: number): string {
@@ -53,6 +57,12 @@ export interface AdminLessonReviewStudioProps {
   review: AdminReview | null;
   cues: AdminCue[];
   questions: AdminQuestion[];
+  /** True when Gemini polished the .vi of the subtitle cues (Azure → Gemini). */
+  translationImproved: boolean;
+  /** AI-generated study tips tailored to this lesson. */
+  learningTips: LearningTip[];
+  /** Words worth drilling after watching this lesson. */
+  drillWords: string[];
   dirty: { metadata: boolean; subtitles: boolean; quiz: boolean };
   busy: boolean;
   titleVi: string;
@@ -77,6 +87,9 @@ export default function AdminLessonReviewStudio({
   review,
   cues,
   questions,
+  translationImproved,
+  learningTips,
+  drillWords,
   dirty,
   busy,
   titleVi,
@@ -94,6 +107,7 @@ export default function AdminLessonReviewStudio({
   onReload,
   onBackToVideos,
 }: AdminLessonReviewStudioProps) {
+  const notify = useNotification();
   // Tabs: 'subtitles' vs 'quiz'
   const [activeTab, setActiveTab] = useState<'subtitles' | 'quiz'>('subtitles');
 
@@ -171,8 +185,13 @@ export default function AdminLessonReviewStudio({
     onCuesChange(next);
   };
 
-  const handleRemoveCue = (index: number) => {
-    if (!window.confirm(`Xóa câu thoại #${index + 1}?`)) return;
+  const handleRemoveCue = async (index: number) => {
+    if (!await notify.confirm({
+      title: 'Xóa câu thoại',
+      message: `Xóa câu thoại #${index + 1}?`,
+      confirmText: 'Xóa',
+      tone: 'danger',
+    })) return;
     onCuesChange(cues.filter((_, i) => i !== index));
   };
 
@@ -206,12 +225,15 @@ export default function AdminLessonReviewStudio({
   return (
     <div className="space-y-6">
       {/* Studio Header Bar */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3">
+      <div className="bg-white rounded-3xl p-6 border border-[#F2E4D8] flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs relative overflow-hidden">
+        <div className="absolute -right-4 -top-8 text-8xl font-serif font-black text-[#B91B1C]/[0.03] select-none pointer-events-none">
+          录
+        </div>
+        <div className="flex items-center gap-3.5 relative z-10">
           <button
             type="button"
             onClick={onBackToVideos}
-            className="p-2.5 rounded-2xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#5F6368] hover:text-[#18181B] transition-colors"
+            className="p-2.5 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] text-[#5F6368] hover:text-[#B91B1C] transition-all cursor-pointer shadow-2xs"
             title="Quay lại danh sách video"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -219,16 +241,16 @@ export default function AdminLessonReviewStudio({
 
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded font-black text-[10px] bg-[#18181B] text-white">
+              <span className="px-2.5 py-0.5 rounded-md font-black text-[10px] font-mono bg-[#B91B1C] text-white shadow-2xs">
                 HSK {lesson.hsk}
               </span>
               <span
-                className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
                   lesson.status === 'published'
-                    ? 'bg-[#E6F4EA] text-[#137333]'
+                    ? 'bg-[#EAF5F1] text-[#188A5A] border-[#C6E7DA]'
                     : lesson.status === 'ready_for_review'
-                    ? 'bg-[#FEF7E0] text-[#B06000]'
-                    : 'bg-[#F1F3F4] text-[#5F6368]'
+                    ? 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]'
+                    : 'bg-[#FFF9F5] text-[#5F6368] border-[#F2E4D8]'
                 }`}
               >
                 {lesson.status === 'published'
@@ -239,7 +261,7 @@ export default function AdminLessonReviewStudio({
               </span>
 
               {hasAnyDirty && (
-                <span className="px-2.5 py-0.5 rounded-full bg-[#FEF7E0] text-[#B06000] text-[10px] font-bold animate-pulse border border-[#FEEFC3]">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#FFF8EC] text-[#B45309] text-[10px] font-extrabold animate-pulse border border-[#FDE6BA]">
                   Chưa lưu thay đổi
                 </span>
               )}
@@ -250,12 +272,12 @@ export default function AdminLessonReviewStudio({
         </div>
 
         {/* Global Studio Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 relative z-10">
           <button
             type="button"
             onClick={onReload}
             disabled={busy}
-            className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#5F6368] text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-40"
+            className="h-10 px-4 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] hover:text-[#B91B1C] text-[#5F6368] text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-40 cursor-pointer shadow-2xs"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Tải lại từ máy chủ</span>
@@ -269,9 +291,9 @@ export default function AdminLessonReviewStudio({
               if (dirty.subtitles) await onSaveSubtitles();
               if (dirty.quiz) await onSaveQuiz();
             }}
-            className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#18181B] text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-40 shadow-2xs"
+            className="h-10 px-4 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] text-[#18181B] hover:text-[#B91B1C] text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-40 shadow-2xs cursor-pointer"
           >
-            <Save className="w-4 h-4 text-[#5F6368]" />
+            <Save className="w-4 h-4 text-[#B91B1C]" />
             <span>Lưu bản nháp</span>
           </button>
 
@@ -279,7 +301,7 @@ export default function AdminLessonReviewStudio({
             type="button"
             disabled={busy}
             onClick={onPublishAll}
-            className="h-10 px-5 rounded-xl bg-[#188A5A] hover:bg-[#137333] text-white text-xs font-black flex items-center gap-2 transition-colors shadow-2xs disabled:opacity-40"
+            className="h-10 px-5 rounded-xl bg-gradient-to-r from-[#188A5A] to-[#13734B] hover:from-[#13734B] hover:to-[#0F5A3B] text-white text-xs font-black flex items-center gap-2 transition-all shadow-xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Lưu & Xuất Bản Bài Học</span>
@@ -292,18 +314,18 @@ export default function AdminLessonReviewStudio({
         {/* Left Column: Video Preview Player + Synced Subtitles + Metadata Form */}
         <div className="lg:col-span-5 space-y-6">
           {/* Video Player Card with Live Subtitle Overlay */}
-          <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-2xs">
-            <div className="p-4 border-b border-[#E7E7EA] flex items-center justify-between">
-              <span className="font-bold text-xs text-[#18181B] flex items-center gap-1.5">
+          <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
+            <div className="p-4 border-b border-[#F2E4D8] flex items-center justify-between bg-[#FFF9F5]">
+              <span className="font-extrabold text-xs text-[#18181B] flex items-center gap-1.5">
                 <Video className="w-4 h-4 text-[#B91B1C]" />
                 Xem trước video & phụ đề trực tiếp
               </span>
-              <span className="font-mono text-xs font-bold text-[#8B9097]">
+              <span className="font-mono text-xs font-bold text-[#8B9097] bg-white px-2 py-0.5 rounded-md border border-[#F2E4D8]">
                 {formatMs(currentTimeMs)}
               </span>
             </div>
 
-            <div className="relative aspect-video bg-black flex items-center justify-center">
+            <div className="relative aspect-video bg-[#121214] ring-1 ring-[#222226] flex items-center justify-center">
               {media?.url ? (
                 <video
                   ref={videoRef}
@@ -325,7 +347,7 @@ export default function AdminLessonReviewStudio({
               {/* Real-time Subtitle Overlay (Chinese on top, Vietnamese below) */}
               {activeCue && isPlaying && (
                 <div className="absolute bottom-12 inset-x-4 pointer-events-none text-center animate-in fade-in duration-100">
-                  <div className="inline-block bg-black/80 backdrop-blur-xs px-4 py-2 rounded-2xl border border-white/10 text-white max-w-md">
+                  <div className="inline-block bg-[#18181B]/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-[#F2E4D8]/25 text-white max-w-md shadow-lg">
                     <p className="font-serif text-base font-black text-amber-300 tracking-wide drop-shadow-md">
                       {activeCue.zh}
                     </p>
@@ -339,11 +361,13 @@ export default function AdminLessonReviewStudio({
           </div>
 
           {/* Lesson Metadata Form */}
-          <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] shadow-2xs space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E7E7EA]">
+          <div className="bg-white rounded-3xl p-6 border border-[#F2E4D8] shadow-2xs space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F2E4D8]">
               <span className="font-black text-sm text-[#18181B]">Thông tin chung bài học</span>
               {dirty.metadata && (
-                <span className="text-[10px] text-[#B06000] font-bold">Chưa lưu metadata</span>
+                <span className="text-[10px] text-[#B45309] font-extrabold px-2 py-0.5 rounded-full bg-[#FFF8EC] border border-[#FDE6BA]">
+                  Chưa lưu metadata
+                </span>
               )}
             </div>
 
@@ -352,7 +376,7 @@ export default function AdminLessonReviewStudio({
               <input
                 value={titleVi}
                 onChange={(e) => setTitleVi(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] font-bold text-xs"
+                className="w-full px-3 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-bold text-xs text-[#18181B] transition-colors"
               />
             </div>
 
@@ -361,7 +385,7 @@ export default function AdminLessonReviewStudio({
               <input
                 value={titleZh}
                 onChange={(e) => setTitleZh(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] font-serif font-bold text-xs"
+                className="w-full px-3 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-serif font-bold text-xs text-[#B91B1C] transition-colors"
               />
             </div>
 
@@ -371,7 +395,7 @@ export default function AdminLessonReviewStudio({
                 rows={3}
                 value={descriptionVi}
                 onChange={(e) => setDescriptionVi(e.target.value)}
-                className="w-full p-2.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] resize-none leading-relaxed"
+                className="w-full p-2.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] resize-none leading-relaxed text-xs text-[#18181B] transition-colors"
               />
             </div>
 
@@ -379,7 +403,7 @@ export default function AdminLessonReviewStudio({
               type="button"
               disabled={busy || !dirty.metadata}
               onClick={onSaveMetadata}
-              className="px-4 py-2 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#18181B] font-bold disabled:opacity-40 transition-colors"
+              className="px-4 py-2 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] hover:text-[#B91B1C] text-[#18181B] font-bold disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
             >
               Lưu thông tin bài học
             </button>
@@ -388,17 +412,17 @@ export default function AdminLessonReviewStudio({
 
         {/* Right Column: Studio Workspace (Subtitles & Quiz Tabs) */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-2xs">
+          <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
             {/* Studio Workspace Header & Tab Toggle */}
-            <div className="p-4 border-b border-[#E7E7EA] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 border-b border-[#F2E4D8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFF9F5]">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveTab('subtitles')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${
                     activeTab === 'subtitles'
-                      ? 'bg-[#18181B] text-white shadow-2xs'
-                      : 'text-[#5F6368] hover:text-[#18181B]'
+                      ? 'bg-[#B91B1C] text-white border-[#B91B1C] shadow-xs'
+                      : 'bg-white text-[#5F6368] border-[#F2E4D8] hover:text-[#B91B1C] hover:bg-[#FFF0EB]'
                   }`}
                 >
                   <Subtitles className="w-3.5 h-3.5" />
@@ -407,10 +431,10 @@ export default function AdminLessonReviewStudio({
                 <button
                   type="button"
                   onClick={() => setActiveTab('quiz')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border ${
                     activeTab === 'quiz'
-                      ? 'bg-[#18181B] text-white shadow-2xs'
-                      : 'text-[#5F6368] hover:text-[#18181B]'
+                      ? 'bg-[#B91B1C] text-white border-[#B91B1C] shadow-xs'
+                      : 'bg-white text-[#5F6368] border-[#F2E4D8] hover:text-[#B91B1C] hover:bg-[#FFF0EB]'
                   }`}
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
@@ -423,7 +447,7 @@ export default function AdminLessonReviewStudio({
                   <button
                     type="button"
                     onClick={handleAddCue}
-                    className="h-8 px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-2xs"
+                    className="h-8 px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Thêm câu thoại</span>
@@ -432,7 +456,7 @@ export default function AdminLessonReviewStudio({
                     type="button"
                     disabled={busy || !dirty.subtitles}
                     onClick={onSaveSubtitles}
-                    className="h-8 px-3 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-xs font-bold disabled:opacity-40"
+                    className="h-8 px-3 rounded-xl border border-[#F2E4D8] bg-white hover:bg-[#FFF0EB] hover:text-[#B91B1C] text-xs font-bold disabled:opacity-40 cursor-pointer transition-colors shadow-2xs"
                   >
                     Lưu phụ đề
                   </button>
@@ -443,6 +467,20 @@ export default function AdminLessonReviewStudio({
             {/* TAB 1: SUBTITLE CUE EDITOR */}
             {activeTab === 'subtitles' && (
               <div className="p-5 space-y-4">
+                {/* AI metadata badges + learning tips for this track */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <AiImprovedBadge visible={translationImproved} size="sm" />
+                  {(learningTips.length > 0 || drillWords.length > 0) && (
+                    <span className="rounded-full bg-[#EAF5F1] px-2 py-0.5 text-[10px] font-bold text-[#188A5A] ring-1 ring-[#C6E7DA]">
+                      {learningTips.length} mẹo AI · {drillWords.length} từ ôn tập
+                    </span>
+                  )}
+                </div>
+
+                {learningTips.length > 0 && (
+                  <LearningTipsPanel tips={learningTips} drillWords={drillWords} audience="admin" />
+                )}
+
                 {/* Search cues */}
                 <div className="relative">
                   <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-3" />
@@ -454,7 +492,7 @@ export default function AdminLessonReviewStudio({
                       setCueSearch(e.target.value);
                       setCuePage(1);
                     }}
-                    className="w-full pl-9 pr-4 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs outline-none focus:border-[#B91B1C]"
+                    className="w-full pl-9 pr-4 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl text-xs outline-none focus:border-[#B91B1C] text-[#18181B] placeholder:text-[#8B9097]"
                   />
                 </div>
 
@@ -476,20 +514,20 @@ export default function AdminLessonReviewStudio({
                         key={cue.cueId}
                         className={`p-4 rounded-2xl border transition-all text-xs space-y-2.5 ${
                           isCueActive
-                            ? 'bg-[#FFFAF0] border-[#E7A92F] shadow-xs'
-                            : 'bg-white border-[#E7E7EA] hover:border-[#CBD5E1]'
+                            ? 'bg-[#FFF8EC] border-[#E7A92F] ring-1 ring-[#E7A92F]/40 shadow-xs'
+                            : 'bg-white border-[#F2E4D8] hover:border-[#B91B1C]/40 shadow-2xs'
                         }`}
                       >
                         {/* Cue Header (Timestamp + Actions) */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-[#8B9097] text-[11px]">
+                            <span className="font-mono font-extrabold text-[#8B9097] text-[11px]">
                               #{realIndex + 1}
                             </span>
                             <button
                               type="button"
                               onClick={() => jumpToTime(cue.startMs)}
-                              className="px-2.5 py-1 rounded-lg bg-[#F7F7F9] hover:bg-[#18181B] hover:text-white text-[#18181B] font-mono text-[11px] font-bold border border-[#E7E7EA] flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1 rounded-lg bg-[#FFF9F5] hover:bg-[#B91B1C] hover:text-white text-[#18181B] font-mono text-[11px] font-bold border border-[#F2E4D8] flex items-center gap-1 transition-colors cursor-pointer"
                               title="Nhảy tới mốc video này"
                             >
                               <Play className="w-3 h-3" />
@@ -497,7 +535,7 @@ export default function AdminLessonReviewStudio({
                                 {formatMs(cue.startMs)} – {formatMs(cue.endMs)}
                               </span>
                             </button>
-                            <span className="text-[10px] text-[#8B9097]">
+                            <span className="text-[10px] text-[#8B9097] font-mono">
                               ({((cue.endMs - cue.startMs) / 1000).toFixed(1)}s)
                             </span>
                           </div>
@@ -506,7 +544,7 @@ export default function AdminLessonReviewStudio({
                             <button
                               type="button"
                               onClick={() => playTTS(cue.zh)}
-                              className="p-1 rounded-lg border border-[#E7E7EA] hover:bg-[#F7F7F9] text-[#5F6368]"
+                              className="p-1 rounded-lg border border-[#F2E4D8] hover:bg-[#FFF0EB] text-[#5F6368] hover:text-[#B91B1C] cursor-pointer"
                               title="Nghe phát âm Hán tự"
                             >
                               <Volume2 className="w-3.5 h-3.5" />
@@ -514,7 +552,7 @@ export default function AdminLessonReviewStudio({
                             <button
                               type="button"
                               onClick={() => handleDuplicateCue(realIndex)}
-                              className="p-1 rounded-lg border border-[#E7E7EA] hover:bg-[#F7F7F9] text-[#5F6368]"
+                              className="p-1 rounded-lg border border-[#F2E4D8] hover:bg-[#FFF0EB] text-[#5F6368] hover:text-[#B91B1C] cursor-pointer"
                               title="Sao chép câu thoại này"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -522,7 +560,7 @@ export default function AdminLessonReviewStudio({
                             <button
                               type="button"
                               onClick={() => handleRemoveCue(realIndex)}
-                              className="p-1 rounded-lg border border-[#E7E7EA] hover:bg-[#FDF1F1] text-[#B91B1C]"
+                              className="p-1 rounded-lg border border-[#FECACA] hover:bg-red-50 text-red-600 cursor-pointer"
                               title="Xóa câu thoại"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -530,18 +568,16 @@ export default function AdminLessonReviewStudio({
                           </div>
                         </div>
 
-                        {/* Input Fields (Zh, Pinyin, Vi) */}
-                        <div className="space-y-1.5">
-                          {/* Chinese Hanzi */}
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={cue.zh}
-                              onChange={(e) => handlePatchCue(realIndex, { zh: e.target.value })}
-                              placeholder="Câu thoại chữ Hán..."
-                              className="w-full px-3 py-1.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] font-serif font-bold text-sm text-[#18181B]"
-                            />
-                          </div>
+                        {/* Cue Input Fields */}
+                        <div className="space-y-2">
+                          {/* Chinese Text */}
+                          <input
+                            type="text"
+                            value={cue.zh}
+                            onChange={(e) => handlePatchCue(realIndex, { zh: e.target.value })}
+                            placeholder="Chữ Hán giản thể..."
+                            className="w-full px-3 py-1.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-serif font-black text-sm text-[#18181B]"
+                          />
 
                           {/* Pinyin */}
                           <input
@@ -549,7 +585,7 @@ export default function AdminLessonReviewStudio({
                             value={cue.pinyin}
                             onChange={(e) => handlePatchCue(realIndex, { pinyin: e.target.value })}
                             placeholder="Phiên âm Pinyin..."
-                            className="w-full px-3 py-1.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] font-mono text-xs text-[#B91B1C]"
+                            className="w-full px-3 py-1.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-mono text-xs text-[#B91B1C]"
                           />
 
                           {/* Vietnamese Translation */}
@@ -558,7 +594,7 @@ export default function AdminLessonReviewStudio({
                             value={cue.vi}
                             onChange={(e) => handlePatchCue(realIndex, { vi: e.target.value })}
                             placeholder="Bản dịch nghĩa tiếng Việt..."
-                            className="w-full px-3 py-1.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl outline-none focus:border-[#B91B1C] text-xs text-[#18181B]"
+                            className="w-full px-3 py-1.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] text-xs text-[#18181B]"
                           />
                         </div>
                       </div>
@@ -568,16 +604,16 @@ export default function AdminLessonReviewStudio({
 
                 {/* Subtitles Pagination */}
                 {totalCuePages > 1 && (
-                  <div className="flex items-center justify-between pt-3 border-t border-[#E7E7EA] text-xs text-[#5F6368]">
+                  <div className="flex items-center justify-between pt-3 border-t border-[#F2E4D8] text-xs text-[#5F6368]">
                     <span>
-                      Trang {cuePage} / {totalCuePages}
+                      Trang <strong className="text-[#18181B]">{cuePage}</strong> / {totalCuePages}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         disabled={cuePage <= 1}
                         onClick={() => setCuePage((p) => Math.max(1, p - 1))}
-                        className="px-3 py-1 rounded-lg border border-[#E7E7EA] bg-white font-bold disabled:opacity-40"
+                        className="px-3 py-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] hover:text-[#B91B1C] font-bold disabled:opacity-40 transition-colors cursor-pointer"
                       >
                         Trước
                       </button>
@@ -585,7 +621,7 @@ export default function AdminLessonReviewStudio({
                         type="button"
                         disabled={cuePage >= totalCuePages}
                         onClick={() => setCuePage((p) => Math.min(totalCuePages, p + 1))}
-                        className="px-3 py-1 rounded-lg border border-[#E7E7EA] bg-white font-bold disabled:opacity-40"
+                        className="px-3 py-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] hover:text-[#B91B1C] font-bold disabled:opacity-40 transition-colors cursor-pointer"
                       >
                         Tiếp
                       </button>
@@ -598,9 +634,9 @@ export default function AdminLessonReviewStudio({
             {/* TAB 2: QUIZ QUESTIONS REVIEW */}
             {activeTab === 'quiz' && (
               <div className="p-5 space-y-4 text-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-[#E7E7EA]">
+                <div className="flex items-center justify-between pb-2 border-b border-[#F2E4D8]">
                   <div>
-                    <h4 className="font-bold text-sm text-[#18181B]">Câu hỏi củng cố bài học ({questions.length})</h4>
+                    <h4 className="font-extrabold text-sm text-[#18181B]">Câu hỏi củng cố bài học ({questions.length})</h4>
                     <p className="text-[11px] text-[#8B9097]">
                       Câu hỏi được tự động hiển thị cho học viên sau khi hoàn thành xem video.
                     </p>
@@ -609,14 +645,14 @@ export default function AdminLessonReviewStudio({
                     type="button"
                     disabled={busy || !dirty.quiz}
                     onClick={onSaveQuiz}
-                    className="h-8 px-3 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-xs font-bold disabled:opacity-40"
+                    className="h-8 px-3 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-[#FFF0EB] hover:text-[#B91B1C] text-xs font-bold disabled:opacity-40 cursor-pointer shadow-2xs transition-colors"
                   >
                     Lưu câu hỏi
                   </button>
                 </div>
 
                 {questions.length === 0 ? (
-                  <div className="p-8 text-center text-[#8B9097]">
+                  <div className="p-8 text-center text-[#8B9097] bg-[#FFFDFB] rounded-2xl border border-dashed border-[#F2E4D8]">
                     <HelpCircle className="w-8 h-8 mx-auto mb-2 text-[#CBD5E1]" />
                     <p className="font-bold text-xs text-[#18181B]">Bài học này chưa có câu hỏi luyện tập</p>
                     <p className="text-[11px] mt-0.5">
@@ -626,34 +662,34 @@ export default function AdminLessonReviewStudio({
                 ) : (
                   <div className="space-y-3 max-h-[640px] overflow-y-auto">
                     {questions.map((q, idx) => (
-                      <div key={q.questionId || idx} className="p-4 rounded-2xl border border-[#E7E7EA] bg-[#F7F7F9] space-y-2">
+                      <div key={q.questionId || idx} className="p-4 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] space-y-2.5 shadow-2xs">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-[#18181B]">Câu hỏi #{idx + 1}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-[#5F6368] border border-[#E7E7EA]">
+                          <span className="font-extrabold text-[#18181B]">Câu hỏi #{idx + 1}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-white text-[#5F6368] border border-[#F2E4D8]">
                             {q.type === 'multiple_choice' ? 'Trắc nghiệm' : 'Điền từ'}
                           </span>
                         </div>
-                        <p className="font-semibold text-xs text-[#18181B]">{q.prompt}</p>
+                        <p className="font-bold text-xs text-[#18181B]">{q.prompt}</p>
                         {q.type === 'multiple_choice' && (
-                          <div className="grid grid-cols-2 gap-1.5 pt-1">
+                          <div className="grid grid-cols-2 gap-2 pt-1">
                             {q.options.map((opt) => (
                               <div
                                 key={opt.optionId}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] border flex items-center gap-1.5 ${
+                                className={`px-3 py-1.5 rounded-xl text-[11px] border flex items-center gap-2 transition-all ${
                                   opt.optionId === q.correctOptionId
-                                    ? 'bg-[#E6F4EA] border-[#188A5A] text-[#137333] font-bold'
-                                    : 'bg-white border-[#E7E7EA] text-[#5F6368]'
+                                    ? 'bg-[#EAF5F1] border-[#188A5A] text-[#188A5A] font-extrabold shadow-2xs'
+                                    : 'bg-white border-[#F2E4D8] text-[#5F6368]'
                                 }`}
                               >
-                                <span>{opt.optionId.toUpperCase()}.</span>
+                                <span className="font-mono">{opt.optionId.toUpperCase()}.</span>
                                 <span className="truncate">{opt.text}</span>
                               </div>
                             ))}
                           </div>
                         )}
                         {q.explanationVi && (
-                          <p className="text-[11px] text-[#5F6368] bg-white p-2 rounded-xl border border-[#E7E7EA]">
-                            <strong>Giải thích:</strong> {q.explanationVi}
+                          <p className="text-[11px] text-[#5F6368] bg-white p-2.5 rounded-xl border border-[#F2E4D8]">
+                            <strong className="text-[#18181B]">Giải thích:</strong> {q.explanationVi}
                           </p>
                         )}
                       </div>

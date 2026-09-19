@@ -14,6 +14,10 @@ const lessonSchema = new Schema({
   pinyin: { type: String, trim: true, maxlength: 240 },
   descriptionVi: { type: String, required: true, trim: true, maxlength: 1000 },
   hsk: { type: Number, required: true, min: 1, max: 9, index: true },
+  // Optional override for AI-generated quiz question count. When set (1-15),
+  // the auto-trigger uses this value instead of the HSK-based heuristic.
+  // Undefined / null → use HSK heuristic.
+  autoGenerateQuizCount: { type: Number, min: 1, max: 15 },
   topicIds: [{ type: String, required: true, trim: true, index: true }],
   goalTags: [{ type: String, enum: ['daily', 'travel', 'work', 'hsk', 'culture', 'other'] }],
   durationSeconds: { type: Number, required: true, min: 60, max: 300 },

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNotification } from '../notifications';
+import { Spinner } from '../notifications';
 import {
   Users,
   Shield,
@@ -7,8 +9,6 @@ import {
   Lock,
   Unlock,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   AlertCircle,
   Eye,
@@ -24,19 +24,20 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { listAdminUsers, setAdminUserStatus, type AdminUser } from '../../api/admin';
+import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
 
 const HSK_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
 const HSK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  '1': { bg: 'bg-[#E6F4EA]', text: 'text-[#137333]', border: 'border-[#CEEAD6]' },
-  '2': { bg: 'bg-[#E8F0FE]', text: 'text-[#1A73E8]', border: 'border-[#D2E3FC]' },
-  '3': { bg: 'bg-[#F3E8FD]', text: 'text-[#9334E6]', border: 'border-[#E9D5FF]' },
-  '4': { bg: 'bg-[#FEF7E0]', text: 'text-[#B06000]', border: 'border-[#FEEFC3]' },
-  '5': { bg: 'bg-[#FFF0E6]', text: 'text-[#EA580C]', border: 'border-[#FED7AA]' },
-  '6': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#FAD2CF]' },
-  '7': { bg: 'bg-[#F1F5F9]', text: 'text-[#475569]', border: 'border-[#CBD5E1]' },
-  '8': { bg: 'bg-[#F8FAFC]', text: 'text-[#334155]', border: 'border-[#94A3B8]' },
-  '9': { bg: 'bg-[#0F172A]', text: 'text-white', border: 'border-[#1E293B]' },
+  '1': { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  '2': { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  '3': { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
+  '4': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  '5': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  '6': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  '7': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  '8': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  '9': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
 };
 
 function getInitials(name: string): string {
@@ -48,13 +49,12 @@ function getInitials(name: string): string {
 
 const AVATAR_COLORS = [
   'bg-[#B91B1C] text-white',
+  'bg-[#188A5A] text-white',
+  'bg-[#B45309] text-white',
+  'bg-[#8F1719] text-white',
   'bg-[#2F6E62] text-white',
-  'bg-[#E7A92F] text-[#18181B]',
-  'bg-[#1D4ED8] text-white',
-  'bg-[#7C3AED] text-white',
-  'bg-[#059669] text-white',
-  'bg-[#D97706] text-white',
-  'bg-[#374151] text-white',
+  'bg-[#78350F] text-white',
+  'bg-[#2B2826] text-white',
 ];
 
 function getAvatarColor(id: string): string {
@@ -77,10 +77,10 @@ function formatDate(dateStr?: string): string {
 }
 
 export default function AdminUserManager() {
+  const notify = useNotification();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,7 +90,7 @@ export default function AdminUserManager() {
 
   // Pagination
   const [page, setPage] = useState(1);
-  const pageSize = 15;
+  const [pageSize, setPageSize] = useState(DEFAULT_ADMIN_PAGE_SIZE);
 
   // Selected User Detail Modal
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -114,8 +114,7 @@ export default function AdminUserManager() {
   }, []);
 
   const showMsg = (type: 'success' | 'error', text: string) => {
-    setStatusMsg({ type, text });
-    setTimeout(() => setStatusMsg(null), 4000);
+    notify.toast(type, text);
   };
 
   const handleCopy = (text: string, fieldId: string) => {
@@ -133,7 +132,12 @@ export default function AdminUserManager() {
     const nextStatus = user.status === 'active' ? 'locked' : 'active';
     const actionName = nextStatus === 'locked' ? 'khóa' : 'mở khóa';
 
-    if (!window.confirm(`Bạn có chắc chắn muốn ${actionName} tài khoản "${user.name}" (${user.email})?`)) {
+    if (!await notify.confirm({
+      title: `${actionName.charAt(0).toUpperCase() + actionName.slice(1)} tài khoản`,
+      message: `Bạn có chắc chắn muốn ${actionName} tài khoản "${user.name}" (${user.email})?`,
+      confirmText: actionName.charAt(0).toUpperCase() + actionName.slice(1),
+      tone: nextStatus === 'locked' ? 'danger' : 'default',
+    })) {
       return;
     }
 
@@ -173,12 +177,17 @@ export default function AdminUserManager() {
     });
   }, [users, roleFilter, statusFilter, hskFilter, searchQuery]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, roleFilter, statusFilter, hskFilter, pageSize]);
+
   // Pagination slice
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize) || 1);
+  const safePage = Math.min(Math.max(1, page), totalPages);
   const currentUsers = useMemo(() => {
-    const start = (page - 1) * pageSize;
+    const start = (safePage - 1) * pageSize;
     return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, page, pageSize]);
+  }, [filteredUsers, safePage, pageSize]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -196,112 +205,99 @@ export default function AdminUserManager() {
   return (
     <div className="space-y-6">
       {/* Top Banner & Title */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E7EA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center font-bold">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-[#18181B] tracking-tight">Quản Lý Người Dùng & Học Viên</h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-black uppercase tracking-wider">
-                User Directory
-              </span>
-            </div>
-            <p className="text-xs text-[#5F6368] mt-0.5">
-              Theo dõi danh sách học viên, phân bổ trình độ HSK 1 đến 9, mục tiêu học tập và kiểm soát trạng thái tài khoản.
-            </p>
-          </div>
+      <div className="relative overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white p-6 shadow-2xs">
+        <div className="pointer-events-none absolute -right-6 -bottom-8 select-none font-serif text-8xl font-black text-[#B91B1C]/5">
+          生
         </div>
+        <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FDF1F1] text-[#B91B1C] shadow-2xs ring-1 ring-[#B91B1C]/20">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight text-[#2B2826]">Quản Lý Người Dùng & Học Viên</h1>
+                <span className="rounded-full border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-[#B91B1C]">
+                  User Directory
+                </span>
+              </div>
+              <p className="mt-0.5 text-xs text-[#8C827A]">
+                Theo dõi danh sách học viên, phân bổ trình độ HSK 1 đến 9, mục tiêu học tập và kiểm soát trạng thái tài khoản.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => fetchUsers(searchQuery)}
-            disabled={loading}
-            className="h-10 px-4 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#18181B] text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-40 shadow-2xs"
-          >
-            <RefreshCw className={`w-4 h-4 text-[#5F6368] ${loading ? 'animate-spin' : ''}`} />
-            <span>Làm mới danh sách</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <button
+              onClick={() => fetchUsers(searchQuery)}
+              disabled={loading}
+              className="flex h-10 items-center gap-2 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 text-xs font-bold text-[#2B2826] shadow-2xs transition-all hover:border-[#B91B1C]/30 hover:bg-white disabled:opacity-40 active:scale-[0.98]"
+            >
+              <RefreshCw className={`h-4 w-4 text-[#8C827A] ${loading ? 'animate-spin' : ''}`} />
+              <span>Làm mới danh sách</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Toast Notification */}
-      {statusMsg && (
-        <div
-          className={`rounded-2xl p-4 flex items-center gap-3 text-xs font-bold border animate-in fade-in slide-in-from-top-2 duration-200 ${
-            statusMsg.type === 'success'
-              ? 'bg-[#E6F4EA] border-[#CEEAD6] text-[#137333]'
-              : 'bg-[#FDF1F1] border-[#FAD2CF] text-[#B91B1C]'
-          }`}
-        >
-          {statusMsg.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0" />
-          )}
-          <span>{statusMsg.text}</span>
-        </div>
-      )}
-
       {/* Bento Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         {/* Total Users */}
-        <div className="p-4 bg-white rounded-3xl border border-[#E7E7EA] shadow-2xs space-y-1">
+        <div className="space-y-1.5 rounded-3xl border border-[#F2E4D8] bg-white p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-[#8B9097] tracking-wider">Tổng Học Viên</span>
-            <div className="w-7 h-7 rounded-xl bg-[#F7F7F9] flex items-center justify-center text-[#5F6368]">
-              <Users className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#8C827A]">Tổng Học Viên</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#FFF9F5] text-[#8C827A] border border-[#F2E4D8]">
+              <Users className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#18181B]">{stats.total.toLocaleString()}</div>
-          <div className="text-[11px] text-[#5F6368]">Tài khoản đã đăng ký trên hệ thống</div>
+          <div className="text-2xl font-black text-[#2B2826]">{stats.total.toLocaleString()}</div>
+          <div className="text-[11px] text-[#8C827A]">Tài khoản đã đăng ký trên hệ thống</div>
         </div>
 
         {/* Active Accounts */}
-        <div className="p-4 bg-white rounded-3xl border border-[#E7E7EA] shadow-2xs space-y-1">
+        <div className="space-y-1.5 rounded-3xl border border-[#C6E7DA] bg-[#EAF5F1]/30 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-[#188A5A] tracking-wider">Tài Khoản Hoạt Động</span>
-            <div className="w-7 h-7 rounded-xl bg-[#E6F4EA] flex items-center justify-center text-[#188A5A]">
-              <UserCheck className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#188A5A]">Tài Khoản Hoạt Động</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA]">
+              <UserCheck className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#18181B]">{stats.active.toLocaleString()}</div>
-          <div className="text-[11px] text-[#188A5A] font-bold">
+          <div className="text-2xl font-black text-[#2B2826]">{stats.active.toLocaleString()}</div>
+          <div className="text-[11px] font-bold text-[#188A5A]">
             {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% trên tổng người dùng
           </div>
         </div>
 
         {/* Locked Accounts */}
-        <div className="p-4 bg-white rounded-3xl border border-[#E7E7EA] shadow-2xs space-y-1">
+        <div className="space-y-1.5 rounded-3xl border border-[#F9D2D2] bg-[#FDF1F1]/30 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-[#B91B1C] tracking-wider">Tài Khoản Bị Khóa</span>
-            <div className="w-7 h-7 rounded-xl bg-[#FDF1F1] flex items-center justify-center text-[#B91B1C]">
-              <UserX className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#B91B1C]">Tài Khoản Bị Khóa</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#FDF1F1] text-[#B91B1C] border border-[#F9D2D2]">
+              <UserX className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#18181B]">{stats.locked.toLocaleString()}</div>
-          <div className="text-[11px] text-[#5F6368]">Tạm khóa hoặc vi phạm chính sách</div>
+          <div className="text-2xl font-black text-[#2B2826]">{stats.locked.toLocaleString()}</div>
+          <div className="text-[11px] text-[#8C827A]">Tạm khóa hoặc vi phạm chính sách</div>
         </div>
 
-        {/* Admins & HSK Distribution */}
-        <div className="p-4 bg-white rounded-3xl border border-[#E7E7EA] shadow-2xs space-y-1">
+        {/* Admins */}
+        <div className="space-y-1.5 rounded-3xl border border-[#FDE6BA] bg-[#FFF8EC]/40 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-[#2563EB] tracking-wider">Quản Trị Viên</span>
-            <div className="w-7 h-7 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[#2563EB]">
-              <Shield className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#B45309]">Quản Trị Viên</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#FFF8EC] text-[#B45309] border border-[#FDE6BA]">
+              <Shield className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="text-2xl font-black text-[#18181B]">{stats.admins.toLocaleString()}</div>
-          <div className="text-[11px] text-[#5F6368]">Tài khoản có quyền quản trị tối cao</div>
+          <div className="text-2xl font-black text-[#2B2826]">{stats.admins.toLocaleString()}</div>
+          <div className="text-[11px] text-[#8C827A]">Tài khoản có quyền quản trị hệ thống</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-3xl border border-[#E7E7EA] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
+      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs md:flex-row">
         {/* Search */}
         <div className="relative w-full md:max-w-md">
-          <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-3" />
+          <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#8C827A]" />
           <input
             type="text"
             placeholder="Tìm theo tên học viên, email hoặc mục tiêu học..."
@@ -310,43 +306,41 @@ export default function AdminUserManager() {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs outline-none focus:border-[#B91B1C] transition-colors"
+            className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] py-2 pr-4 pl-9 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
           />
         </div>
 
         {/* Filters Group */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
-          {/* Role Filter Pills */}
-          <div className="flex items-center gap-1 bg-[#F7F7F9] p-1 rounded-xl border border-[#E7E7EA]">
-            {(['all', 'user', 'admin'] as const).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  setRoleFilter(r);
-                  setPage(1);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  roleFilter === r
-                    ? 'bg-[#18181B] text-white shadow-2xs'
-                    : 'text-[#5F6368] hover:text-[#18181B]'
-                }`}
-              >
-                {r === 'all' ? 'Tất cả vai trò' : r === 'admin' ? 'Quản trị' : 'Học viên'}
-              </button>
-            ))}
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end">
+          {/* Role Filter */}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5 text-[#8C827A]" />
+            <select
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as 'all' | 'user' | 'admin');
+                setPage(1);
+              }}
+              aria-label="Lọc theo vai trò"
+              className="h-8 min-w-[140px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+            >
+              <option value="all">Tất cả vai trò</option>
+              <option value="user">Học viên</option>
+              <option value="admin">Quản trị</option>
+            </select>
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-[#8B9097]" />
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
+            <Filter className="h-3.5 w-3.5 text-[#8C827A]" />
             <select
               value={statusFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value as any);
+                setStatusFilter(e.target.value as 'all' | 'active' | 'locked');
                 setPage(1);
               }}
-              className="h-8 px-2.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs font-bold text-[#18181B] outline-none cursor-pointer"
+              aria-label="Lọc theo trạng thái"
+              className="h-8 min-w-[160px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang hoạt động</option>
@@ -355,28 +349,32 @@ export default function AdminUserManager() {
           </div>
 
           {/* HSK Level Filter */}
-          <select
-            value={hskFilter}
-            onChange={(e) => {
-              setHskFilter(e.target.value);
-              setPage(1);
-            }}
-            className="h-8 px-2.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs font-bold text-[#18181B] outline-none cursor-pointer"
-          >
-            <option value="">Tất cả HSK</option>
-            {HSK_LEVELS.map((lvl) => (
-              <option key={lvl} value={lvl}>
-                HSK {lvl}
-              </option>
-            ))}
-          </select>
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
+            <GraduationCap className="h-3.5 w-3.5 text-[#8C827A]" />
+            <select
+              value={hskFilter}
+              onChange={(e) => {
+                setHskFilter(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Lọc theo cấp độ HSK"
+              className="h-8 min-w-[120px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+            >
+              <option value="">Tất cả HSK</option>
+              {HSK_LEVELS.map((lvl) => (
+                <option key={lvl} value={lvl}>
+                  HSK {lvl}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Users Data Table */}
-      <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-2xs">
+      <div className="overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xs">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#F7F7F9] border-b border-[#E7E7EA] text-[#8B9097] uppercase font-bold text-[10px] tracking-wider">
+          <thead className="border-b border-[#F2E4D8] bg-[#FFF9F5] text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
             <tr>
               <th className="p-4 w-[260px]">Người dùng</th>
               <th className="p-4 w-[240px]">Email</th>
@@ -387,19 +385,19 @@ export default function AdminUserManager() {
               <th className="p-4 text-right w-[120px]">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E7E7EA]">
+          <tbody className="divide-y divide-[#F2E4D8]">
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-[#8B9097]">
+                <td colSpan={7} className="p-12 text-center text-[#8C827A]">
                   <div className="inline-flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#B91B1C]" />
+                    <Spinner size="sm" tone="brand" />
                     <span>Đang tải danh sách người dùng...</span>
                   </div>
                 </td>
               </tr>
             ) : currentUsers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-[#8B9097]">
+                <td colSpan={7} className="p-12 text-center text-[#8C827A]">
                   Không tìm thấy người dùng nào phù hợp với bộ lọc.
                 </td>
               </tr>
@@ -411,21 +409,21 @@ export default function AdminUserManager() {
                 const styling = hskKey ? HSK_COLORS[hskKey] || HSK_COLORS['1'] : null;
 
                 return (
-                  <tr key={user._id} className="hover:bg-[#F7F7F9]/60 transition-colors group">
+                  <tr key={user._id} className="transition-colors hover:bg-[#FFF9F5]/70 group">
                     {/* User Profile info */}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs shrink-0 shadow-2xs ${getAvatarColor(
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-black shadow-2xs ${getAvatarColor(
                             user._id
                           )}`}
                         >
                           {getInitials(user.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-sm text-[#18181B] truncate">{user.name}</p>
-                          <span className="text-[10px] text-[#8B9097] flex items-center gap-1 mt-0.5">
-                            <Calendar className="w-3 h-3" />
+                          <p className="truncate font-bold text-sm text-[#2B2826]">{user.name}</p>
+                          <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[#8C827A]">
+                            <Calendar className="h-3 w-3" />
                             <span>Gia nhập: {formatDate(user.createdAt)}</span>
                           </span>
                         </div>
@@ -433,19 +431,19 @@ export default function AdminUserManager() {
                     </td>
 
                     {/* Email */}
-                    <td className="p-4 font-medium text-[#5F6368]">
+                    <td className="p-4 font-medium text-[#6E655F]">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate">{user.email}</span>
                         <button
                           type="button"
                           onClick={() => handleCopy(user.email, `email-${user._id}`)}
-                          className="text-[#8B9097] hover:text-[#18181B] p-0.5 rounded"
+                          className="rounded p-0.5 text-[#8C827A] hover:text-[#2B2826]"
                           title="Sao chép email"
                         >
                           {copiedField === `email-${user._id}` ? (
-                            <Check className="w-3 h-3 text-[#137333]" />
+                            <Check className="h-3 w-3 text-[#188A5A]" />
                           ) : (
-                            <Copy className="w-3 h-3" />
+                            <Copy className="h-3 w-3" />
                           )}
                         </button>
                       </div>
@@ -454,12 +452,12 @@ export default function AdminUserManager() {
                     {/* Role badge */}
                     <td className="p-4">
                       {isUserAdmin ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-[#18181B] text-white tracking-wide">
-                          <Shield className="w-3 h-3 text-[#E7A92F]" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#2B2826] px-2.5 py-1 text-[10px] font-black tracking-wide text-white">
+                          <Shield className="h-3 w-3 text-[#B45309]" />
                           <span>Admin</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#F7F7F9] text-[#5F6368] border border-[#E7E7EA]">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 py-1 text-[10px] font-bold text-[#6E655F]">
                           <span>Học viên</span>
                         </span>
                       )}
@@ -469,24 +467,24 @@ export default function AdminUserManager() {
                     <td className="p-4">
                       {styling ? (
                         <span
-                          className={`px-2.5 py-1 rounded-md font-black text-[10px] border ${styling.bg} ${styling.text} ${styling.border}`}
+                          className={`rounded-md px-2.5 py-1 text-[10px] font-black border ${styling.bg} ${styling.text} ${styling.border}`}
                         >
                           HSK {hskLevel}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-[#8B9097] italic">Chưa đặt</span>
+                        <span className="italic text-[11px] text-[#8C827A]">Chưa đặt</span>
                       )}
                     </td>
 
                     {/* Learning Goal */}
                     <td className="p-4">
                       {user.learningProfile?.goal ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FEF7E0] text-[#B06000] border border-[#FEEFC3] text-[11px] font-bold">
-                          <Target className="w-3 h-3" />
-                          <span className="truncate max-w-[200px]">{user.learningProfile.goal}</span>
+                        <span className="inline-flex items-center gap-1 rounded-xl border border-[#FDE6BA] bg-[#FFF8EC] px-2.5 py-1 text-[11px] font-bold text-[#B45309]">
+                          <Target className="h-3 w-3" />
+                          <span className="max-w-[200px] truncate">{user.learningProfile.goal}</span>
                         </span>
                       ) : (
-                        <span className="text-[#8B9097] text-[11px] italic">—</span>
+                        <span className="italic text-[11px] text-[#8C827A]">—</span>
                       )}
                     </td>
 
@@ -496,11 +494,11 @@ export default function AdminUserManager() {
                         type="button"
                         disabled={isUserAdmin || actionBusy}
                         onClick={() => handleToggleStatus(user)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide uppercase transition-all ${
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black tracking-wide uppercase transition-all border ${
                           user.status === 'active'
-                            ? 'bg-[#E6F4EA] text-[#137333] hover:bg-[#CEEAD6]'
-                            : 'bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#FAD2CF]'
-                        } ${isUserAdmin ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                            ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A] hover:bg-[#D4EFE4]'
+                            : 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#FAD2CF]'
+                        } ${isUserAdmin ? 'cursor-not-allowed opacity-70' : 'cursor-pointer active:scale-[0.98]'}`}
                         title={
                           isUserAdmin
                             ? 'Không thể khóa tài khoản quản trị'
@@ -510,7 +508,7 @@ export default function AdminUserManager() {
                         }
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
+                          className={`h-1.5 w-1.5 rounded-full ${
                             user.status === 'active' ? 'bg-[#188A5A]' : 'bg-[#B91B1C]'
                           }`}
                         />
@@ -524,27 +522,27 @@ export default function AdminUserManager() {
                         <button
                           type="button"
                           onClick={() => setSelectedUser(user)}
-                          className="p-1.5 rounded-lg border border-[#E7E7EA] bg-white text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors"
+                          className="rounded-lg border border-[#F2E4D8] bg-white p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
                           title="Xem hồ sơ chi tiết"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="h-3.5 w-3.5" />
                         </button>
                         {!isUserAdmin && (
                           <button
                             type="button"
                             disabled={actionBusy}
                             onClick={() => handleToggleStatus(user)}
-                            className={`p-1.5 rounded-lg border border-[#E7E7EA] bg-white transition-colors ${
+                            className={`rounded-lg border border-[#F2E4D8] bg-white p-1.5 transition-colors ${
                               user.status === 'active'
-                                ? 'text-[#5F6368] hover:text-[#B91B1C] hover:bg-[#FDF1F1]'
-                                : 'text-[#188A5A] hover:bg-[#E6F4EA]'
+                                ? 'text-[#8C827A] hover:bg-[#FDF1F1] hover:text-[#B91B1C]'
+                                : 'text-[#188A5A] hover:bg-[#EAF5F1]'
                             }`}
                             title={user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa'}
                           >
                             {user.status === 'active' ? (
-                              <Lock className="w-3.5 h-3.5" />
+                              <Lock className="h-3.5 w-3.5" />
                             ) : (
-                              <Unlock className="w-3.5 h-3.5" />
+                              <Unlock className="h-3.5 w-3.5" />
                             )}
                           </button>
                         )}
@@ -556,127 +554,115 @@ export default function AdminUserManager() {
             )}
           </tbody>
         </table>
-
-        {/* Pagination Strip */}
-        <div className="p-4 bg-[#F7F7F9] border-t border-[#E7E7EA] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#5F6368]">
-          <div>
-            Hiển thị <span className="font-bold text-[#18181B]">{currentUsers.length}</span> /{' '}
-            <span className="font-bold text-[#18181B]">{filteredUsers.length}</span> người dùng (Trang{' '}
-            <span className="font-bold text-[#18181B]">{page}</span> / {totalPages})
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              className="h-8 px-3 rounded-lg border border-[#E7E7EA] bg-white text-[#18181B] font-bold text-xs flex items-center gap-1 disabled:opacity-40 hover:bg-[#F7F7F9] transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Trước</span>
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              className="h-8 px-3 rounded-lg border border-[#E7E7EA] bg-white text-[#18181B] font-bold text-xs flex items-center gap-1 disabled:opacity-40 hover:bg-[#F7F7F9] transition-colors"
-            >
-              <span>Tiếp</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
       </div>
+
+      <AdminPaginationBar
+        total={filteredUsers.length}
+        page={safePage}
+        pageSize={pageSize}
+        visibleCount={currentUsers.length}
+        unitLabel="người dùng"
+        disabled={loading}
+        ariaLabel="Phân trang người dùng"
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
       {/* User Detail Modal */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E7E7EA] shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md space-y-5 rounded-3xl border border-[#F2E4D8] bg-white p-6 shadow-2xl">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E7E7EA]">
+            <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-3">
               <div className="flex items-center gap-2.5">
                 <div
-                  className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-xs ${getAvatarColor(
+                  className={`flex h-10 w-10 items-center justify-center rounded-2xl font-black text-xs shadow-2xs ${getAvatarColor(
                     selectedUser._id
                   )}`}
                 >
                   {getInitials(selectedUser.name)}
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-[#18181B]">{selectedUser.name}</h3>
-                  <span className="text-[11px] text-[#8B9097]">{selectedUser.email}</span>
+                  <h3 className="text-base font-black text-[#2B2826]">{selectedUser.name}</h3>
+                  <span className="text-[11px] text-[#8C827A]">{selectedUser.email}</span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedUser(null)}
-                className="p-1.5 rounded-lg hover:bg-[#F7F7F9] text-[#8B9097] transition-colors"
+                className="rounded-lg p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Profile Information List */}
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] flex items-center justify-between">
-                <span className="text-[#5F6368] font-bold">Mã định danh (User ID):</span>
-                <span className="font-mono text-[11px] font-bold text-[#18181B]">{selectedUser._id}</span>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="font-bold text-[#8C827A]">Mã định danh (User ID):</span>
+                <span className="font-mono text-[11px] font-bold text-[#2B2826]">{selectedUser._id}</span>
               </div>
 
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] flex items-center justify-between">
-                <span className="text-[#5F6368] font-bold">Vai trò:</span>
+              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="font-bold text-[#8C827A]">Vai trò:</span>
                 {selectedUser.role === 'admin' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#18181B] text-white">
-                    <Shield className="w-3 h-3 text-[#E7A92F]" />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#2B2826] px-2.5 py-0.5 text-[10px] font-black text-white shadow-2xs">
+                    <Shield className="h-3 w-3 text-[#E7A92F]" />
                     <span>Quản trị viên (Admin)</span>
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-[#5F6368] border border-[#E7E7EA]">
+                  <span className="rounded-full border border-[#F2E4D8] bg-white px-2.5 py-0.5 text-[10px] font-bold text-[#5F5852]">
                     Học viên thông thường
                   </span>
                 )}
               </div>
 
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] flex items-center justify-between">
-                <span className="text-[#5F6368] font-bold">Trạng thái tài khoản:</span>
+              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="font-bold text-[#8C827A]">Trạng thái tài khoản:</span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black tracking-wide uppercase ${
                     selectedUser.status === 'active'
-                      ? 'bg-[#E6F4EA] text-[#137333]'
-                      : 'bg-[#FDF1F1] text-[#B91B1C]'
+                      ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                      : 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
                   }`}
                 >
                   {selectedUser.status === 'active' ? 'Đang hoạt động' : 'Tài khoản bị khóa'}
                 </span>
               </div>
 
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] flex items-center justify-between">
-                <span className="text-[#5F6368] font-bold">Trình độ HSK hiện tại:</span>
+              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="font-bold text-[#8C827A]">Trình độ HSK hiện tại:</span>
                 {selectedUser.learningProfile?.currentHsk ? (
-                  <span className="px-2.5 py-0.5 rounded-md font-black text-[10px] bg-[#E6F4EA] text-[#137333] border border-[#CEEAD6]">
+                  <span className="rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-2.5 py-0.5 text-[10px] font-black text-[#188A5A]">
                     HSK {selectedUser.learningProfile.currentHsk}
                   </span>
                 ) : (
-                  <span className="text-[#8B9097] italic">Chưa thiết lập</span>
+                  <span className="text-[#8C827A] italic">Chưa thiết lập</span>
                 )}
               </div>
 
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] space-y-1">
-                <span className="text-[#5F6368] font-bold block">Mục tiêu học tập:</span>
-                <p className="text-[#18181B] font-semibold text-xs">
+              <div className="space-y-1 rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="block font-bold text-[#8C827A]">Mục tiêu học tập:</span>
+                <p className="text-xs font-semibold text-[#2B2826]">
                   {selectedUser.learningProfile?.goal || 'Chưa đặt mục tiêu học'}
                 </p>
               </div>
 
-              <div className="p-3 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA] flex items-center justify-between">
-                <span className="text-[#5F6368] font-bold">Ngày đăng ký tham gia:</span>
-                <span className="text-[#18181B] font-bold">{formatDate(selectedUser.createdAt)}</span>
+              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                <span className="font-bold text-[#8C827A]">Ngày đăng ký tham gia:</span>
+                <span className="font-bold text-[#2B2826]">{formatDate(selectedUser.createdAt)}</span>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E7E7EA]">
+            <div className="flex items-center justify-end gap-2.5 border-t border-[#F2E4D8] pt-3">
               <button
                 type="button"
                 onClick={() => setSelectedUser(null)}
-                className="px-4 py-2 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white text-[#5F6368] text-xs font-bold transition-colors"
+                className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 py-2 text-xs font-bold text-[#5F5852] transition-colors hover:bg-white hover:text-[#2B2826]"
               >
                 Đóng
               </button>
@@ -685,7 +671,7 @@ export default function AdminUserManager() {
                   type="button"
                   disabled={actionBusy}
                   onClick={() => handleToggleStatus(selectedUser)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-colors shadow-2xs ${
+                  className={`rounded-xl px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] ${
                     selectedUser.status === 'active'
                       ? 'bg-[#B91B1C] hover:bg-[#A3181A]'
                       : 'bg-[#188A5A] hover:bg-[#137333]'

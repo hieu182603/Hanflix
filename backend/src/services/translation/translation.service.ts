@@ -1,3 +1,3 @@
 export interface TranslationService {
-  translateChineseToVietnamese(texts: string[]): Promise<string[]>;
+  translateChineseToVietnamese(texts: string[], signal?: AbortSignal): Promise<string[]>;
 }
