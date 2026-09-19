@@ -67,6 +67,7 @@ describe('environment configuration', () => {
       SMTP_FROM: 'HanFlix <no-reply@hanflix.test>',
       METRICS_TOKEN: 'm'.repeat(32),
       SEED_ADMIN_PASSWORD: 'NonDefaultAdminPassword123!',
+      REDIS_URL: 'redis://redis.hanflix.test:6379',
     });
     expect(result.COOKIE_SECURE).toBe(true);
   });
@@ -87,6 +88,7 @@ describe('environment configuration', () => {
       SMTP_FROM: 'HanFlix <no-reply@hanflix.test>',
       METRICS_TOKEN: 'm'.repeat(32),
       SEED_ADMIN_PASSWORD: 'NonDefaultAdminPassword123!',
+      REDIS_URL: 'redis://redis.hanflix.test:6379',
     };
     expect(() => parseEnvironment(production)).toThrow();
     const result = parseEnvironment({

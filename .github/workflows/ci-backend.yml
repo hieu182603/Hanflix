@@ -23,6 +23,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
+  actions: write
 
 jobs:
   typecheck:
@@ -137,4 +138,4 @@ jobs:
           load: true
           tags: hanflix-backend:ci-${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: ${{ github.actor != 'dependabot[bot]' && 'type=gha,mode=max' || '' }}
