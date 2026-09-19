@@ -25,7 +25,10 @@ param containerAppName string
 param containerAppsEnvName string
 
 @description('Full Docker image URL (e.g. myacr.azurecr.io/hanflix-backend:v1.0.0)')
-param dockerImage string
+param dockerImage string = ''
+
+var defaultImage = 'mcr.microsoft.com/azuredocs/aci-helloworld:latest'
+var actualImage = !empty(dockerImage) ? dockerImage : defaultImage
 
 @description('ACR login server')
 param acrLoginServer string
@@ -55,8 +58,6 @@ param healthCheckPath string = '/health'
 @description('Comma-separated CORS allowed origins')
 param allowedOrigins string = ''
 
-@description('Key Vault URI')
-param keyVaultUri string
 
 @description('Key Vault name')
 param keyVaultName string
@@ -144,7 +145,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
       containers: [
         {
           name: 'hanflix-backend'
-          image: dockerImage
+          image: actualImage
           resources: {
             cpu: json('"${cpuCoreCount}"')
             memory: '${memoryGb}Gi'

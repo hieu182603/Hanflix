@@ -19,7 +19,7 @@
   Unique prefix for all Azure resources (lowercase, max 15 chars). Default: "hanflix"
 
 .PARAMETER Location
-  Azure region. Default: "southeastasia"
+  Azure region. Default: "japaneast"
 
 .PARAMETER DockerImage
   Full Docker image URL (e.g. ghcr.io/owner/hanflix-backend:v1.0.0).
@@ -47,7 +47,7 @@
 
 param(
   [string] $ResourcePrefix = "hanflix",
-  [string] $Location = "southeastasia",
+  [string] $Location = "japaneast",
   [string] $DockerImage = "",
   [switch] $SkipImageBuild,
   [switch] $SkipSecrets,
