@@ -304,7 +304,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           }
           {
             name: 'cpu-scaling'
-            cpu: {
+            custom: {
+              type: 'cpu'
               metadata: {
                 type: 'Utilization'
                 value: '70'
@@ -313,7 +314,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           }
           {
             name: 'memory-scaling'
-            memory: {
+            custom: {
+              type: 'memory'
               metadata: {
                 type: 'Utilization'
                 value: '80'

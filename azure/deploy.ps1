@@ -147,7 +147,7 @@ if (-not $SkipInfra) {
   # Build deployment parameters
   $params = @(
     "--template-file", $bicepFile,
-    "--parameter", "@$paramsFile",
+    "--parameters", "@$paramsFile",
     "--parameters", "resourcePrefix=$ResourcePrefix",
     "--parameters", "location=$Location",
     "--parameters", "nodeEnv=production",
