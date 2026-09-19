@@ -54,7 +54,7 @@ param(
   [switch] $SkipInfra
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $ProgressPreference = "Continue"
 
 # ---- Color helpers ----
@@ -96,8 +96,8 @@ if ($missingTools.Count -gt 0) {
   exit 1
 }
 
-$azVersion = az version --query "platformTools[?name=='aks'].version" -o tsv 2>$null
-Write-Success "Azure CLI: $(az version --query '["core"]' -o tsv 2>$null)"
+$cliVer = (az version --output json 2>$null | ConvertFrom-Json).'azure-cli'
+Write-Success "Azure CLI: $cliVer"
 Write-Success "Docker: $(docker --version 2>$null)"
 
 # ============================================================
@@ -124,9 +124,9 @@ Write-Host ""
 Write-Host "-- Step 2: Resource Group ------------------------" -ForegroundColor Gray
 
 $rgName = "rg-$ResourcePrefix"
-$rgExists = az group show --name $rgName --query "name" -o tsv 2>$null
+$rgExists = az group exists --name $rgName
 
-if (-not $rgExists) {
+if ($rgExists -ne "true") {
   Write-Info "Creating resource group: $rgName ($Location)"
   az group create --name $rgName --location $Location --output none
   Write-Success "Resource group created"
@@ -165,16 +165,18 @@ if (-not $SkipInfra) {
   }
 
   Write-Info "Deploying Bicep templates..."
-  $deployResult = az deployment group create `
+  $deployOutput = az deployment group create `
     --resource-group $rgName `
     --name "hanflix-deploy-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
     @params `
-    --output jsonc 2>&1 | ConvertFrom-Json
+    --output json
 
-  if ($LASTEXITCODE -ne 0) {
+  if ($LASTEXITCODE -ne 0 -or -not $deployOutput) {
     Write-Fail "Bicep deployment failed"
     exit 1
   }
+
+  $deployResult = $deployOutput | ConvertFrom-Json
 
   $outputs = $deployResult.properties.outputs
   $acrLoginServer = $outputs.acrLoginServer.value
@@ -257,21 +259,24 @@ if (-not $SkipSecrets) {
 
   Write-Info "Key Vault: $keyVaultName"
 
-  # Get current user (for Key Vault access)
-  $currentUser = az ad signed-in-user show --query "id" -o tsv 2>$null
-
   # Check if user has Key Vault permissions
   Write-Info "Granting Key Vault permissions to current user..."
-  az keyvault set-policy `
-    --name $keyVaultName `
-    --upn (az ad signed-in-user show --query "userPrincipalName" -o tsv) `
-    --secret-permissions list get set delete 2>$null | Out-Null
+  $upn = az ad signed-in-user show --query "userPrincipalName" -o tsv 2>$null
+  if ($upn) {
+    az keyvault set-policy `
+      --name $keyVaultName `
+      --upn $upn `
+      --secret-permissions list get set delete 2>$null | Out-Null
+  }
+
+  # Fetch all existing secrets in one call
+  $existingSecrets = az keyvault secret list --vault-name $keyVaultName --query "[].name" -o tsv 2>$null
+  if (-not $existingSecrets) { $existingSecrets = @() }
 
   function Set-SecretIfMissing {
     param($Name, $Prompt, $IsPath = $false)
 
-    $existing = az keyvault secret show --vault-name $keyVaultName --name $Name --query "value" -o tsv 2>$null
-    if ($existing) {
+    if ($existingSecrets -contains $Name) {
       Write-Info "  ${Name}: already set (skipping)"
       return
     }
