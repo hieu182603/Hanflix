@@ -53,7 +53,7 @@ jobs:
       resourcePrefix: ${{ steps.resolve.outputs.resourcePrefix }}
       tagVersion: ${{ steps.resolve.outputs.tagVersion }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: resolve
         run: |
@@ -120,7 +120,7 @@ jobs:
       keyVaultName: ${{ steps.deploy.outputs.keyVaultName }}
       resourceGroup: ${{ steps.deploy.outputs.resourceGroup }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Deploy Bicep Infrastructure
         id: deploy
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.resolve-environment.outputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Azure login
         uses: azure/login@v2
@@ -203,7 +203,7 @@ jobs:
     # Only run on manual dispatch for security (secrets should be set once)
     if: github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Azure login
         uses: azure/login@v2
@@ -267,7 +267,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.resolve-environment.outputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Azure login
         uses: azure/login@v2
