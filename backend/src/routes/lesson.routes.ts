@@ -105,7 +105,7 @@ router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, 
 }));
 
 router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeSubtitleRevision').lean();
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeSubtitleRevision subtitleStyle').lean();
   if (!lesson?.activeSubtitleRevision) throw new AppError(404, 'SUBTITLES_NOT_FOUND', 'Bài học chưa có phụ đề đã xuất bản');
   const track = await SubtitleTrackModel.findOne({
     lessonId: lesson._id,
@@ -113,7 +113,9 @@ router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(as
     status: 'published',
   }).populate('cues.tokens.wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey').lean();
   if (!track) throw new AppError(404, 'SUBTITLES_NOT_FOUND', 'Không tìm thấy phụ đề');
-  res.json({ data: track });
+  // Surface the per-lesson appearance config so the learner player renders
+  // the same font sizes the admin approved in the Subtitle Review workspace.
+  res.json({ data: { ...track, style: lesson.subtitleStyle } });
 }));
 
 router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (req, res) => {

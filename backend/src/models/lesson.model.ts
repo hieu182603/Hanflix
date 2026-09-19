@@ -7,6 +7,12 @@ const mediaSchema = new Schema({
   etag: { type: String },
 }, { _id: false });
 
+const subtitleStyleSchema = new Schema({
+  chineseFontSize: { type: Number, min: 16, max: 96, default: 34 },
+  pinyinFontSize: { type: Number, min: 12, max: 64, default: 20 },
+  vietnameseFontSize: { type: Number, min: 12, max: 64, default: 22 },
+}, { _id: false });
+
 const lessonSchema = new Schema({
   slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
   titleVi: { type: String, required: true, trim: true, maxlength: 160 },
@@ -14,6 +20,7 @@ const lessonSchema = new Schema({
   pinyin: { type: String, trim: true, maxlength: 240 },
   descriptionVi: { type: String, required: true, trim: true, maxlength: 1000 },
   hsk: { type: Number, required: true, min: 1, max: 9, index: true },
+  subtitleStyle: { type: subtitleStyleSchema },
   // Optional override for AI-generated quiz question count. When set (1-15),
   // the auto-trigger uses this value instead of the HSK-based heuristic.
   // Undefined / null → use HSK heuristic.
