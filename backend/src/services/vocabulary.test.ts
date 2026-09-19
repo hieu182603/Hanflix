@@ -78,7 +78,8 @@ describe('Vocabulary Database & Bulk Lookup', () => {
   beforeAll(async () => {
     try {
       await connectDatabase();
-      hasDb = true;
+      const count = await VocabularyModel.countDocuments();
+      hasDb = count > 10000;
     } catch {
       hasDb = false;
     }
