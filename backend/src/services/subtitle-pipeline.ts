@@ -17,7 +17,7 @@ import { resolveLearningWordIds } from './learning-word.js';
 import { splitLongPhraseIntoCues } from './subtitle-splitter.js';
 import { STAGE_DEADLINES_MS, transitionStage, type VideoProcessingJobLease } from '../queue/video.queue.js';
 import { runGenerationCommit } from './revision-commit.js';
-import { autoGenerateQuizForLesson } from './auto-quiz-generator.js';
+import { autoGenerateQuizForLesson, resolveQuestionCount } from './auto-quiz-generator.js';
 import { improveVietnameseTranslations } from './gemini-translation-improver.js';
 import { generateLearningTips } from './gemini-learning-tips.js';
 
@@ -235,7 +235,7 @@ export async function processLessonVideoPipeline(
 
     ensureNotAborted(signal, 'generate_quiz');
     await updateStage('generate_quiz', 92);
-    const questions = finalCues.slice(0, 3).map((cue, index) => ({
+    const questions = finalCues.slice(0, resolveQuestionCount(lesson.hsk, lesson.autoGenerateQuizCount)).map((cue, index) => ({
       questionId: `q-${index + 1}`,
       type: 'fill_blank' as const,
       prompt: `Nhập lại câu tiếng Trung: ${cue.vi}`,

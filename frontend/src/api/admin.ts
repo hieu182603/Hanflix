@@ -236,6 +236,62 @@ export function getAdminMedia(id: string): Promise<{ media: { url: string; mimeT
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/media`);
 }
 
+export type SubtitleReviewStatus = 'pending' | 'in_progress' | 'approved';
+
+export interface AdminSubtitleStyle {
+  chineseFontSize: number;
+  pinyinFontSize: number;
+  vietnameseFontSize: number;
+}
+
+export interface AdminSubtitleReviewPayload {
+  lesson: Pick<AdminLesson, '_id' | 'status' | 'titleVi' | 'titleZh' | 'pinyin' | 'hsk' | 'durationSeconds'> & {
+    subtitleStyle?: AdminSubtitleStyle | null;
+    subtitleReviewStatus?: SubtitleReviewStatus;
+    subtitleApprovedAt?: string;
+    subtitleApprovedBy?: string;
+  };
+  subtitle: {
+    cues: AdminCue[];
+    revision: number;
+  } & Partial<AdminSubtitleMeta> | null;
+}
+
+export interface AdminApproveSubtitleResult {
+  subtitleReviewStatus: SubtitleReviewStatus;
+  subtitleApprovedAt: string;
+  style: AdminSubtitleStyle;
+}
+
+export function getAdminSubtitleReview(id: string): Promise<AdminSubtitleReviewPayload> {
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitle-review`);
+}
+
+export function approveAdminSubtitles(id: string, style?: AdminSubtitleStyle): Promise<AdminApproveSubtitleResult> {
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitles/approve`, {
+    method: 'POST',
+    body: JSON.stringify(style ? { style } : {}),
+  });
+}
+
+export function reopenAdminSubtitles(id: string): Promise<{ subtitleReviewStatus: SubtitleReviewStatus }> {
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitles/reopen`, {
+    method: 'POST',
+  });
+}
+
+export interface AdminSubtitleStyleResult {
+  style: AdminSubtitleStyle;
+  subtitleReviewStatus: SubtitleReviewStatus;
+}
+
+export function saveAdminSubtitleStyle(id: string, style: AdminSubtitleStyle): Promise<AdminSubtitleStyleResult> {
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitle-style`, {
+    method: 'PATCH',
+    body: JSON.stringify(style),
+  });
+}
+
 export function saveAdminSubtitles(id: string, cues: AdminCue[]): Promise<unknown> {
   return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitles`, { method: 'PUT', body: JSON.stringify({ cues }) });
 }

@@ -416,15 +416,14 @@ export default function AdminVideoUploader({
                         Số câu hỏi AI Quiz
                       </label>
                       <p className="text-[11px] leading-relaxed text-[#7A6F66]">
-                        Để trống = tự động theo HSK (HSK 1-2: 3, HSK 3-4: 5, HSK 5-6: 6, HSK 7-9: 7).
-                        Nhập số cụ thể (1-15) để override.
+                        Để trống = theo HSK (1-2: 3 câu, 3-4: 5, 5-6: 6, 7-9: 7). Nhập 1-15 để override.
                       </p>
                     </div>
                     <input
                       type="number"
                       min={1}
                       max={15}
-                      placeholder="Mặc định"
+                      placeholder="Số"
                       value={autoGenerateQuizCount}
                       onChange={(e) => {
                         const raw = e.target.value;
@@ -433,7 +432,7 @@ export default function AdminVideoUploader({
                         if (!Number.isFinite(n)) return;
                         setAutoGenerateQuizCount(Math.min(15, Math.max(1, n)));
                       }}
-                      className="w-20 rounded-lg border border-[#F2E4D8] bg-white px-2.5 py-2 text-center text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                      className="w-28 rounded-lg border border-[#F2E4D8] bg-white px-2.5 py-2 text-center text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
                     />
                   </div>
                 </div>

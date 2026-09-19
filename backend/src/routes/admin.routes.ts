@@ -703,7 +703,9 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
       const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'ready_for_review' }).session(sess);
       if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để đăng');
       const subtitle = await SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(sess);
-      const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).session(sess);
+      const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
+        .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi')
+        .session(sess);
 
       // F07 fix: unified publish-time validator. Same rules as the
       // individual save endpoints so direct API calls to /publish cannot bypass

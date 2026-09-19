@@ -32,6 +32,24 @@ const DEFAULT_MODEL = env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
 
 let quizClient: GoogleGenAI | undefined;
 
+/**
+ * Normalize Gemini's correctOptionId to the canonical lowercase a/b/c/d form.
+ * Gemini sometimes returns uppercase A/B/C/D despite prompt guidance; persisting
+ * the raw value breaks the publish-time validator in admin.routes.ts which
+ * compares question.correctOptionId against option.optionId by strict equality.
+ */
+function normalizeCorrectOptionId(question: GeneratedQuestion): GeneratedQuestion {
+  if (question.type !== 'multiple_choice') return question;
+  return {
+    ...question,
+    options: question.options.map(option => ({
+      ...option,
+      optionId: option.optionId.trim().toLowerCase(),
+    })),
+    correctOptionId: question.correctOptionId?.trim().toLowerCase(),
+  };
+}
+
 function getQuizClient(): GoogleGenAI {
   if (!env.GEMINI_API_KEY) {
     throw new AppError(503, 'GEMINI_NOT_CONFIGURED', 'Gemini API chưa được cấu hình');
@@ -103,11 +121,14 @@ function buildPrompt(options: QuizGenerationOptions): string {
     )
     .join('\n');
 
+  const countFor = (kind: QuestionKind) => Math.floor(options.questionCount / options.kinds.length)
+    + (options.kinds.indexOf(kind) < options.questionCount % options.kinds.length ? 1 : 0);
+
   const sectionsByKind: Record<QuestionKind, string> = {
-    comprehension: `Loại COMPREHENSION: tạo ${Math.ceil(options.questionCount / options.kinds.length)} câu trắc nghiệm. prompt phải là CÂU HỎI / ĐOẠN VĂN bằng TIẾNG TRUNG (giữ nguyên chữ Hán, kèm Pinyin trong ngoặc nếu cần). 4 đáp án A,B,C,D phải là CÂU/ĐOẠN TIẾNG VIỆT — học viên đọc tiếng Trung rồi chọn nghĩa tiếng Việt đúng. correctAnswer ∈ {A,B,C,D}. Mỗi câu phải liên kết với cueId cụ thể trong dữ liệu.`,
-    vocabulary: `Loại VOCABULARY: tạo ${Math.ceil(options.questionCount / options.kinds.length)} câu trắc nghiệm. prompt phải là TỪ/CỤM TỪ TIẾNG TRUNG (kèm Pinyin trong ngoặc) lấy từ cue (trừ từ chức năng 的/了/是/在/有/和). 4 đáp án A,B,C,D là 4 NGHĨA TIẾNG VIỆT khác nhau của từ đó (1 đúng, 3 nhiễu). correctAnswer ∈ {A,B,C,D}. Mỗi câu phải liên kết với cueId cụ thể.`,
-    grammar: `Loại GRAMMAR: tạo ${Math.ceil(options.questionCount / options.kinds.length)} câu trắc nghiệm. prompt là CÂU TIẾNG TRUNG (có thể highlight cấu trúc ngữ pháp trong ngoặc vuông [了/的/得/把/被/是…的/虽然…但是…]). 4 đáp án A,B,C,D là 4 CÂU GIẢI THÍCH TIẾNG VIỆT về ngữ pháp (1 đúng, 3 nhiễu). correctAnswer ∈ {A,B,C,D}. Mỗi câu phải liên kết với cueId cụ thể.`,
-    cloze: `Loại FILL_BLANK: tạo ${Math.ceil(options.questionCount / options.kinds.length)} câu điền từ vào chỗ trống. prompt là CÂU TIẾNG TRUNG có một từ bị thay bằng '___'. acceptedAnswers chứa từ đúng (tiếng Trung). Liên kết cueId cụ thể.`,
+    comprehension: `Loại COMPREHENSION: tạo ${countFor('comprehension')} câu trắc nghiệm. prompt phải là CÂU HỎI / ĐOẠN VĂN bằng TIẾNG TRUNG (giữ nguyên chữ Hán, kèm Pinyin trong ngoặc nếu cần). 4 đáp án là 4 CÂU/ĐOẠN TIẾNG VIỆT. correctOptionId là optionId của đáp án đúng, phải nằm trong {a,b,c,d} (lowercase). Mỗi câu phải liên kết với cue cụ thể.`,
+    vocabulary: `Loại VOCABULARY: tạo ${countFor('vocabulary')} câu trắc nghiệm. prompt phải là TỪ/CỤM TỪ TIẾNG TRUNG (kèm Pinyin trong ngoặc) lấy từ cue (trừ từ chức năng 的/了/是/在/有/和). 4 đáp án là 4 NGHĨA TIẾNG VIỆT khác nhau (1 đúng, 3 nhiễu). correctOptionId là optionId của đáp án đúng, phải nằm trong {a,b,c,d} (lowercase). Mỗi câu phải liên kết với cue cụ thể.`,
+    grammar: `Loại GRAMMAR: tạo ${countFor('grammar')} câu trắc nghiệm. prompt là CÂU TIẾNG TRUNG (có thể highlight cấu trúc ngữ pháp trong ngoặc vuông [了/的/得/把/被/是…的/虽然…但是…]). 4 đáp án là 4 CÂU GIẢI THÍCH TIẾNG VIỆT về ngữ pháp (1 đúng, 3 nhiễu). correctOptionId là optionId của đáp án đúng, phải nằm trong {a,b,c,d} (lowercase). Mỗi câu phải liên kết với cue cụ thể.`,
+    cloze: `Loại FILL_BLANK: tạo ${countFor('cloze')} câu điền từ vào chỗ trống. prompt là CÂU TIẾNG TRUNG có một từ bị thay bằng '___'. acceptedAnswers chứa từ đúng (tiếng Trung). Liên kết cue cụ thể.`,
   };
 
   const kindsInstructions = options.kinds
@@ -117,10 +138,10 @@ function buildPrompt(options: QuizGenerationOptions): string {
   const guidelines = `Yêu cầu chung:
 - Trình độ HSK ${options.hsk}, không dùng từ vựng vượt HSK ${options.hsk + 1}.
 - Mỗi câu questionId chỉ chứa [a-z0-9-_], unique.
-- Loại câu hỏi: 'multiple_choice' (A-D) hoặc 'fill_blank'.
-- multiple_choice: đúng 4 đáp án, correctOptionId ∈ {a,b,c,d}, đáp án đúng phải khớp optionId a/b/c/d.
+- Loại câu hỏi: 'multiple_choice' (optionId là a/b/c/d) hoặc 'fill_blank'.
+- multiple_choice: options[].optionId phải là một trong {a, b, c, d} (lowercase). correctOptionId là optionId của đáp án đúng, BẮT BUỘC viết thường (lowercase a/b/c/d). Hệ thống tự động chấp nhận uppercase A/B/C/D khi normalize, nhưng vẫn ưu tiên viết đúng chữ thường.
 - fill_blank: prompt có '___', acceptedAnswers mảng 1-5 đáp án synonym tiếng Trung.
-- explanationVi: giải thích ngắn gọn lý do đúng bằng tiếng Việt (tối thiểu 20 ký tự, có dẫn chứng từ cue).
+- explanationVi: giải thích ngắn gọn lý do đúng bằng tiếng Việt (tối thiểu 20 ký tự, có dẫn chứng từ cue). Tham chiếu cue bằng MÃ CỤM (ví dụ "C3 @ 12s") hoặc TRÍCH CHỮ HÁN ngắn gọn từ cue, KHÔNG copy cueId thô (UUID/hex dài) vào explanation.
 - cueId phải là cueId thật trong dữ liệu.
 - CHỈ trả về JSON, không có text khác ngoài JSON.
 
@@ -240,6 +261,7 @@ export async function generateQuizWithGemini(
 
     const validCueIds = new Set(options.cues.map((c) => c.cueId));
     return verified
+      .map((question) => normalizeCorrectOptionId(question))
       .map((question) => {
         if (question.cueId && !validCueIds.has(question.cueId)) {
           return { ...question, cueId: undefined };
@@ -250,6 +272,7 @@ export async function generateQuizWithGemini(
         if (question.type === 'multiple_choice') {
           return (
             question.options.length >= 2 &&
+            new Set(question.options.map(o => o.optionId)).size === question.options.length &&
             Boolean(question.correctOptionId) &&
             question.options.some((o) => o.optionId === question.correctOptionId)
           );
