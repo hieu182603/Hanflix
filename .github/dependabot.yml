@@ -69,6 +69,13 @@ updates:
     labels:
       - 'dependencies'
       - 'ci'
+    groups:
+      actions:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
 
   # ──────────────────────────────────────────────────────────────────────
   # Docker
@@ -84,6 +91,10 @@ updates:
     labels:
       - 'dependencies'
       - 'docker'
+    ignore:
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: 'docker'
     directory: '/frontend'
     schedule:
@@ -95,3 +106,6 @@ updates:
     labels:
       - 'dependencies'
       - 'docker'
+    ignore:
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']
