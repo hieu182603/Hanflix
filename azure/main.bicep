@@ -75,7 +75,7 @@ module acr 'modules/acr.bicep' = {
   params: {
     location: location
     acrName: acrName
-    managedIdentityId: managedIdentity.outputs.id
+    managedIdentityId: managedIdentity.id
   }
 }
 
@@ -85,7 +85,7 @@ module kv 'modules/keyvault.bicep' = {
     location: location
     kvName: kvName
     resourcePrefix: resourcePrefix
-    managedIdentityId: managedIdentity.outputs.principalId
+    managedIdentityId: managedIdentity.properties.principalId
   }
 }
 
@@ -115,7 +115,7 @@ module backendApp 'modules/container-app.bicep' = {
     containerAppsEnvName: containerAppsEnvName
     dockerImage: dockerImage
     acrLoginServer: acrLoginServerVal
-    managedIdentityId: managedIdentity.outputs.id
+    managedIdentityId: managedIdentity.id
     nodeEnv: nodeEnv
     minReplicas: minReplicas
     maxReplicas: maxReplicas
