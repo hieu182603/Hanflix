@@ -171,7 +171,7 @@ jobs:
       # Smoke test only — guarantees the Dockerfile + nginx.conf keep
       # working after changes. Full multi-arch publish happens in release.yml.
       - name: Build frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           file: frontend/Dockerfile
