@@ -15,6 +15,9 @@ param acrName string
 @description('User-Assigned Managed Identity resource ID')
 param managedIdentityId string
 
+@description('User-Assigned Managed Identity Principal ID (GUID). Used for role assignments.')
+param managedIdentityPrincipalId string
+
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: acrName
   location: location
@@ -24,19 +27,18 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   properties: {
     adminUserEnabled: false // Security: use Managed Identity, not admin user
     publicNetworkAccess: 'Enabled'
-    networkRuleSet: {
-      defaultAction: 'Allow' // Restrict via firewall rules in production
-    }
+    // Note: networkRuleSet is NOT supported on Basic SKU.
+    // It requires Standard or Premium tier. Omit it on Basic.
   }
 }
 
 // Role Assignment: let Managed Identity pull images from ACR
 resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, managedIdentityId, 'acrpull')
+  name: guid(acr.id, managedIdentityPrincipalId, 'acrpull')
   scope: acr
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalId: managedIdentityId
+    principalId: managedIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

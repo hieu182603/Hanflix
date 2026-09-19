@@ -10,6 +10,7 @@ import {
   LogOut,
   Compass,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -34,6 +35,7 @@ interface HeaderProps {
   currentUser?: {
     name: string;
     email: string;
+    role?: string;
     totalXP?: number;
     avatarAsset?: string | null;
     learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null;
@@ -331,6 +333,20 @@ export default function Header({
 
               {/* Menu items */}
               <div className="py-1">
+                {/* Admin Dashboard */}
+                {currentUser?.role === 'admin' && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/admin');
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-[#B91B1C] hover:bg-[#FDF1F1] flex items-center gap-3 transition-colors cursor-pointer border-b border-[#E7E7EA]"
+                  >
+                    <Shield className="w-4 h-4 text-[#B91B1C]" />
+                    <span>Trang Quản Trị</span>
+                  </button>
+                )}
+
                 {/* Account Settings */}
                 <button
                   onClick={() => {

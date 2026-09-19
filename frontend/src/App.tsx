@@ -71,6 +71,7 @@ function pathToActiveNav(pathname: string): string | null {
 }
 
 function activeNavToPath(navId: string): string {
+  if (navId === 'admin') return '/admin';
   return navId === 'feed' ? '/' : `/${navId}`;
 }
 
@@ -203,16 +204,22 @@ export default function App() {
     <Routes>
       {/* Auth routes */}
       <Route path="/auth/login" element={
-        currentUser ? <Navigate to="/" replace /> : (
+        currentUser ? (
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />
+        ) : (
           <LoginView
             onLoginSuccess={(user) => {
               setCurrentUser(user);
               setSelectedLesson(null);
-              navigate('/', { replace: true });
-              const serverSideCompleted = user.learningProfile?.surveyVersion != null;
-              const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
-              if (!serverSideCompleted && !localCompleted && user.role === 'user') {
-                setIsSurveyOpen(true);
+              if (user.role === 'admin') {
+                navigate('/admin', { replace: true });
+              } else {
+                navigate('/', { replace: true });
+                const serverSideCompleted = user.learningProfile?.surveyVersion != null;
+                const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
+                if (!serverSideCompleted && !localCompleted && user.role === 'user') {
+                  setIsSurveyOpen(true);
+                }
               }
             }}
             onNavigateToSignup={() => navigate('/auth/signup')}
@@ -221,17 +228,23 @@ export default function App() {
         )
       } />
       <Route path="/auth/signup" element={
-        currentUser ? <Navigate to="/" replace /> : (
+        currentUser ? (
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />
+        ) : (
           <SignupView
             onNavigateToLogin={() => navigate('/auth/login')}
             onGoogleSuccess={(user) => {
               setCurrentUser(user);
               setSelectedLesson(null);
-              navigate('/', { replace: true });
-              const serverSideCompleted = user.learningProfile?.surveyVersion != null;
-              const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
-              if (!serverSideCompleted && !localCompleted && user.role === 'user') {
-                setIsSurveyOpen(true);
+              if (user.role === 'admin') {
+                navigate('/admin', { replace: true });
+              } else {
+                navigate('/', { replace: true });
+                const serverSideCompleted = user.learningProfile?.surveyVersion != null;
+                const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
+                if (!serverSideCompleted && !localCompleted && user.role === 'user') {
+                  setIsSurveyOpen(true);
+                }
               }
             }}
           />
@@ -482,6 +495,7 @@ function LearnerRouteShell({
   const userProfile: UserProfile = {
     id: currentUser.id,
     name: currentUser.name,
+    role: currentUser.role,
     avatar: currentUser.avatarUrl || currentUser.googleAvatarUrl || currentUser.avatarAsset || '',
     avatarConfig: currentUser.avatarConfig || null,
     level: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,

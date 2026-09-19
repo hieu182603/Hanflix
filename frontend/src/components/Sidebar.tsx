@@ -12,6 +12,7 @@ import {
   BookMarked,
   History,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardQueryKeys } from '../api/queryKeys';
@@ -204,6 +205,21 @@ export default function Sidebar({
               isCollapsed={collapsed}
             />
           ))}
+
+          {/* Admin Navigation Quick Link */}
+          {userProfile?.role === 'admin' && (
+            <div className="pt-2 border-t border-[#E7E7EA]">
+              <NavButton
+                item={{ id: 'admin', label: 'Trang Quản Trị', icon: Shield }}
+                isActive={activeNav === 'admin'}
+                onNavChange={(id) => {
+                  onNavChange(id);
+                  onCloseDrawer?.();
+                }}
+                isCollapsed={collapsed}
+              />
+            </div>
+          )}
         </nav>
       </div>
 

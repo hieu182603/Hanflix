@@ -20,8 +20,11 @@ param location string
 param kvName string
 
 
-@description('Principal ID of Managed Identity that needs READ access')
+@description('User-Assigned Managed Identity resource ID')
 param managedIdentityId string
+
+@description('User-Assigned Managed Identity Principal ID (GUID). Used for role assignments.')
+param managedIdentityPrincipalId string
 
 resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: kvName
@@ -34,22 +37,20 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     enableRbacAuthorization: true // RBAC, not access policies
     enableSoftDelete: true
-    enablePurgeProtection: false // Disabled on free tier
+    // enablePurgeProtection omitted: Azure requires it to be true (and immutable)
+    // for new vaults. Default is true since 2024 — explicitly omitting it removes
+    // the terminal "BadRequest: cannot set enablePurgeProtection to false" error.
     publicNetworkAccess: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
-    }
   }
 }
 
 // Role: Key Vault Secrets User — Container App reads secrets at runtime
 resource secretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kv.id, managedIdentityId, 'secretsuser')
+  name: guid(kv.id, managedIdentityPrincipalId, 'secretsuser')
   scope: kv
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
-    principalId: managedIdentityId
+    principalId: managedIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

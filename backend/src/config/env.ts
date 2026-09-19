@@ -208,7 +208,11 @@ const envSchema = z.object({
       ['R2_SECRET_ACCESS_KEY', 'R2 secret key'], ['R2_BUCKET_NAME', 'R2 bucket'],
       ['SMTP_HOST', 'SMTP host'], ['SMTP_FROM', 'SMTP from address'],
       ['METRICS_TOKEN', 'Metrics bearer token'],
-      ['REDIS_URL', 'Redis URL (required for shared rate limiting)'],
+      // REDIS_URL is intentionally NOT required in production — the rate-limit
+      // middleware transparently falls back to in-memory when REDIS_URL is unset
+      // (see backend/src/middleware/rate-limits.ts). For multi-replica deployments
+      // where shared counters matter, set REDIS_URL to a real Redis/Upstash URL.
+      // ['REDIS_URL', 'Redis URL (required for shared rate limiting)'],
     ] as const) requireProduction(name, label);
     if (value.VIDEO_WORKER_MODE !== 'disabled') {
       for (const [name, label] of [
