@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Sparkles, BookOpen, Calendar, Clock, Edit2 } from 'lucide-react';
 import { UserLearningProfile } from '../../data/hanflixData';
+import { InlineBanner } from '../notifications';
 import { saveLearningProfile } from '../../api/learning';
 
 interface SurveyDraft {
@@ -302,7 +303,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                 {saving ? 'Đang lưu…' : 'Xác nhận lộ trình'}
               </button>
             </div>
-            {saveError && <p role="alert" className="text-sm text-red-700">{saveError}</p>}
+            {saveError && <InlineBanner variant="error" message={saveError} className="mb-3" />}
             
             <div className="text-center">
                <button onClick={() => { sessionStorage.removeItem(DRAFT_KEY); if (onSkip) onSkip(); }} className="text-xs text-[#8B9097] hover:text-[#5F6368] underline">

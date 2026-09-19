@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sparkles, SlidersHorizontal, RefreshCw, Filter } from 'lucide-react';
 import { getAiRecommendations, getRuleBasedRecommendations, type PublishedLesson } from '../api/learning';
+import { InlineBanner } from './notifications';
 import { ApiRequestError } from '../api/client';
 import { useLanguage } from '../i18n';
 
@@ -129,7 +130,7 @@ export default function AIRecommendationSection({
       </div>
 
       {/* Video Lesson Grid (4 cols >= 1366px, 3 cols 1024-1365px, 2 cols tablet, 1 col mobile) */}
-      {error && <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-800" role="alert">{error}</div>}
+      {error && <InlineBanner variant="error" message={error} className="mb-4" />}
       {!error && !isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Chưa có bài học đã xuất bản để gợi ý.</p>}
       {!error && isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Đang tìm bài học phù hợp…</p>}
       {!error && lessons.length > 0 && filteredLessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Không có bài học phù hợp với bộ lọc này.</p>}

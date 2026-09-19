@@ -31,6 +31,7 @@ import { saveLearningProfile } from '../../api/learning';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { User, UserProfile } from '../../data/hanflixData';
 import UserAvatar from '../common/UserAvatar';
+import { InlineBanner } from '../notifications';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -497,24 +498,10 @@ export default function SettingsModal({
                 >
                   {/* Status Alerts */}
                   {profileSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{profileSuccess}</span>
-                    </motion.div>
+                    <InlineBanner variant="success" message={profileSuccess} />
                   )}
                   {profileError && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                      <span>{profileError}</span>
-                    </motion.div>
+                    <InlineBanner variant="error" message={profileError} />
                   )}
 
                   {/* Visual Identity & Avatar Studio Bento Card */}
@@ -773,24 +760,10 @@ export default function SettingsModal({
                 >
                   {/* Status Alerts */}
                   {prefSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{prefSuccess}</span>
-                    </motion.div>
+                    <InlineBanner variant="success" message={prefSuccess} />
                   )}
                   {prefError && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                      <span>{prefError}</span>
-                    </motion.div>
+                    <InlineBanner variant="error" message={prefError} />
                   )}
 
                   <div className="space-y-5">
@@ -975,24 +948,10 @@ export default function SettingsModal({
                 >
                   {/* Status Alerts */}
                   {passError && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                      <span>{passError}</span>
-                    </motion.div>
+                    <InlineBanner variant="error" message={passError} />
                   )}
                   {passSuccess && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5 shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{passSuccess}</span>
-                    </motion.div>
+                    <InlineBanner variant="success" message={passSuccess} />
                   )}
 
                   {/* Change Password Bento Card */}

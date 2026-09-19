@@ -6,6 +6,7 @@ import { queryClient } from './lib/queryClient'
 import { initGA } from './lib/analytics'
 import { PandaPet, PandaPetProvider, PandaPlayground } from './components/panda-pet'
 import { LanguageProvider } from './i18n'
+import { NotificationProvider } from './components/notifications'
 import './index.css'
 
 // Initialize Google Analytics (gracefully no-ops if key is empty)
@@ -16,14 +17,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <PandaPetProvider>
-          {window.location.pathname === '/dev/panda'
-            ? import.meta.env.DEV ? (
-                <>
-                  <PandaPlayground />
-                  <PandaPet />
-                </>
-              ) : <div>Trang này chỉ có trong môi trường phát triển.</div>
-            : <App />}
+          <NotificationProvider>
+            {window.location.pathname === '/dev/panda'
+              ? import.meta.env.DEV ? (
+                  <>
+                    <PandaPlayground />
+                    <PandaPet />
+                  </>
+                ) : <div>Trang này chỉ có trong môi trường phát triển.</div>
+              : <App />}
+          </NotificationProvider>
         </PandaPetProvider>
       </LanguageProvider>
     </QueryClientProvider>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from '../../data/hanflixData';
 import { saveLearningProfile } from '../../api/learning';
+import { InlineBanner } from '../notifications';
 
 interface LearningSurveyModalProps {
   isOpen: boolean;
@@ -563,7 +564,7 @@ export default function LearningSurveyModal({
           )}
         </div>
 
-        {saveError && <p role="alert" className="px-6 text-sm text-red-700">{saveError}</p>}
+        {saveError && <div className="px-6 mb-3"><InlineBanner variant="error" message={saveError} /></div>}
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0">
           <div>
