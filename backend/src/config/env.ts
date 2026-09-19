@@ -65,6 +65,15 @@ const envSchema = z.object({
   GEMINI_API_KEY: optionalString,
   GEMINI_MODEL: z.string().trim().regex(/^gemini-[a-z0-9.-]+$/, 'Use a Gemini API model ID, for example gemini-3.5-flash-lite').default('gemini-3.5-flash-lite'),
   GEMINI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(15000),
+  QUIZ_AUTO_GENERATION_ENABLED: booleanFromString.default(true),
+  QUIZ_AUTO_GENERATION_KINDS: z.string().default('comprehension,vocabulary,grammar,cloze'),
+  // After Azure Translator returns the literal Vietnamese translation, send
+  // each batch of cues through Gemini to rewrite a more natural, idiomatic
+  // Vietnamese version. Set false to fall back to raw Azure output.
+  GEMINI_TRANSLATION_IMPROVE_ENABLED: booleanFromString.default(true),
+  // How many cues to send per Gemini rewrite request. Larger = cheaper (fewer
+  // requests) but slower per request. Default 25 works well for 5-minute videos.
+  GEMINI_TRANSLATION_BATCH_SIZE: z.coerce.number().int().min(5).max(60).default(25),
   AZURE_TRANSLATOR_KEY: optionalString,
   AZURE_TRANSLATOR_REGION: optionalString,
   AZURE_TRANSLATOR_ENDPOINT: z.string().url().default('https://api.cognitive.microsofttranslator.com'),

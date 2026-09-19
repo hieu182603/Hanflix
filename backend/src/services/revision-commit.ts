@@ -70,6 +70,12 @@ export interface GenerationCommitInput {
   cues: SubtitleCueInput[];
   questions: QuizQuestionInput[];
   leaseToken: string;
+  /**
+   * If true, marks the committed SubtitleTrack as having had its Vietnamese
+   * cues polished by Gemini (Azure → Gemini rewrite). Lets the admin UI badge
+   * cues that came out of the AI pipeline. Defaults to false.
+   */
+  translationImproved?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +169,7 @@ async function withOptionalSession<T>(
  * running without transactions.
  */
 export async function runGenerationCommit(input: GenerationCommitInput): Promise<GenerationCommitResult> {
-  const { lessonId, jobId, durationSeconds, thumbnailKey, cues, questions, leaseToken } = input;
+  const { lessonId, jobId, durationSeconds, thumbnailKey, cues, questions, leaseToken, translationImproved = false } = input;
 
   // Pre-flight validations (outside any session — fast to fail).
   const lesson = await LessonModel.findById(lessonId);
@@ -200,7 +206,7 @@ export async function runGenerationCommit(input: GenerationCommitInput): Promise
     // Step 3: write subtitle (upsert by unique lessonId+revision index).
     const subtitle = await SubtitleTrackModel.findOneAndUpdate(
       { lessonId, revision: nextSubtitleRevision },
-      { $set: { lessonId, revision: nextSubtitleRevision, status: 'draft', cues, generatedBy: 'pipeline' } },
+      { $set: { lessonId, revision: nextSubtitleRevision, status: 'draft', cues, generatedBy: 'pipeline', translationImproved } },
       { upsert: true, returnDocument: 'after', session: sess as any },
     );
     if (!subtitle) throw new AppError(500, 'SUBTITLE_WRITE_FAILED', 'Không thể lưu phụ đề');

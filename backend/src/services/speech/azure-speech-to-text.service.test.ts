@@ -33,15 +33,34 @@ describe('AzureSpeechToTextService', () => {
         durationMilliseconds: 900,
         text: '你好',
         confidence: 0.97,
+        words: [
+          { text: '你好', offsetMilliseconds: 100, durationMilliseconds: 900 },
+        ],
       }],
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
     const { AzureSpeechToTextService } = await import('./azure-speech-to-text.service.js');
     const service = new AzureSpeechToTextService(fetchMock);
 
     await expect(service.transcribeFile(audioPath)).resolves.toEqual([
-      { startMs: 100, endMs: 1000, text: '你好', confidence: 0.97 },
+      {
+        startMs: 100,
+        endMs: 1000,
+        text: '你好',
+        confidence: 0.97,
+        words: [{ text: '你好', startMs: 100, endMs: 1000 }],
+      },
     ]);
     expect(fetchMock).toHaveBeenCalledOnce();
+
+    const callArgs = fetchMock.mock.calls[0]!;
+    const requestInit = callArgs[1] as RequestInit & { body: FormData };
+    const body = requestInit.body;
+    expect(body).toBeInstanceOf(FormData);
+    const definitionValue = body.get('definition');
+    expect(JSON.parse(String(definitionValue))).toMatchObject({
+      locales: ['zh-CN'],
+      wordLevelTimestampsEnabled: true,
+    });
   });
 
   it('rejects invalid successful responses instead of creating sample subtitles', async () => {

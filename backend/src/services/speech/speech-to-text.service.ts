@@ -3,6 +3,11 @@ export type SpeechSegment = {
   endMs: number;
   text: string;
   confidence?: number;
+  words?: Array<{
+    text: string;
+    startMs: number;
+    endMs: number;
+  }>;
 };
 
 export interface SpeechToTextService {

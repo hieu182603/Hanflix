@@ -11,6 +11,11 @@ const responseSchema = z.object({
     durationMilliseconds: z.number().nonnegative(),
     text: z.string().trim().min(1),
     confidence: z.number().optional(),
+    words: z.array(z.object({
+      text: z.string(),
+      offsetMilliseconds: z.number().nonnegative(),
+      durationMilliseconds: z.number().nonnegative(),
+    })).optional(),
   })).min(1),
 });
 
@@ -35,7 +40,10 @@ export class AzureSpeechToTextService implements SpeechToTextService {
       try {
         const form = new FormData();
         form.append('audio', new Blob([new Uint8Array(audio)], { type: 'audio/wav' }), path.basename(filePath));
-        form.append('definition', JSON.stringify({ locales: [env.AZURE_SPEECH_LOCALE] }));
+        form.append('definition', JSON.stringify({
+          locales: [env.AZURE_SPEECH_LOCALE],
+          wordLevelTimestampsEnabled: true,
+        }));
         const response = await this.fetchImpl(url, {
           method: 'POST',
           headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY },
@@ -60,6 +68,11 @@ export class AzureSpeechToTextService implements SpeechToTextService {
             endMs: phrase.offsetMilliseconds + phrase.durationMilliseconds,
             text: phrase.text,
             confidence: phrase.confidence,
+            words: phrase.words?.map(word => ({
+              text: word.text,
+              startMs: word.offsetMilliseconds,
+              endMs: word.offsetMilliseconds + word.durationMilliseconds,
+            })),
           }));
         }
       } catch (error) {

@@ -200,15 +200,24 @@ export async function claimNextVideoProcessingJob(workerId: string): Promise<Vid
         leaseToken,
         leaseExpiresAt,
         stage: 'inspect_media',
+        stageProgress: 0,
         stageStartedAt: new Date(),
         stageDeadlineAt: new Date(Date.now() + STAGE_DEADLINES_MS.inspect_media),
         startedAt: new Date(),
       },
       $inc: { attempts: 1 },
+      $unset: { errorCode: 1, errorMessage: 1 },
     },
     { returnDocument: 'after', sort: { createdAt: 1 } },
   );
   if (!claimed) return null;
+  await LessonModel.updateOne(
+    { _id: claimed.lessonId, status: { $in: ['processing', 'failed'] } },
+    {
+      $set: { status: 'processing', processingStatus: 'PROCESSING', processingStep: 'DOWNLOADING', processingProgress: 0 },
+      $unset: { processingError: 1 },
+    },
+  );
   return {
     jobId: claimed._id.toString(),
     lessonId: claimed.lessonId.toString(),

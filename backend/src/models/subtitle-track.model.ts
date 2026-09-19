@@ -22,6 +22,21 @@ const subtitleTrackSchema = new Schema({
   cues: { type: [cueSchema], default: [] },
   generatedBy: { type: String, enum: ['manual', 'pipeline', 'fixture'], default: 'manual' },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  // Gemini-generated learning tips tailored to this track's cues.
+  // Empty array means tips have not been generated yet.
+  learningTips: {
+    type: [{
+      title: { type: String, required: true, maxlength: 60 },
+      detail: { type: String, required: true, maxlength: 300 },
+      cueId: { type: String, maxlength: 64 },
+    }],
+    default: [],
+  },
+  // Words worth drilling after watching this lesson, in priority order.
+  drillWords: { type: [String], default: [] },
+  // Set true once Gemini has polished the .vi fields (Azure → Gemini).
+  // Lets the admin UI badge cues that were rewritten by AI.
+  translationImproved: { type: Boolean, default: false },
 }, { timestamps: true, versionKey: false });
 
 subtitleTrackSchema.index({ lessonId: 1, revision: 1 }, { unique: true });
