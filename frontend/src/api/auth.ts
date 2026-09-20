@@ -97,9 +97,11 @@ export async function register(
 const USER_STORAGE_KEY = 'hanflix_user';
 // SECURITY (H-7): localStorage is XSS-readable. We store ONLY the minimum data needed
 // for offline UI rendering (id + avatar display fields). Sensitive fields like email
-// and role MUST come from /auth/me on every app load — never trust the cached blob
+// and learningProfile MUST come from /auth/me on every app load — never trust the cached blob
 // for authorization decisions.
-const USER_CACHE_FIELDS = ['id', 'name', 'avatarUrl', 'avatarType', 'avatarConfig'] as const;
+// NOTE: role is included in cache to prevent redirect loops during session restore,
+// but authorization still requires fresh data from /auth/me.
+const USER_CACHE_FIELDS = ['id', 'name', 'avatarUrl', 'avatarType', 'avatarConfig', 'role'] as const;
 
 export function getCachedUser(): User | null {
   if (typeof window === 'undefined') return null;
