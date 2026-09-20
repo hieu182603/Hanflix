@@ -36,13 +36,13 @@ function isYesterday(dateStr: string): boolean {
  */
 export function getStreakState(): StreakState {
   if (typeof window === 'undefined') {
-    return { streakCount: 14, isCompletedToday: false, lastActiveDate: null, freezeCount: 1 };
+    return { streakCount: 0, isCompletedToday: false, lastActiveDate: null, freezeCount: 0 };
   }
 
   const today = getLocalDateString();
   const lastActiveDate = localStorage.getItem(STORAGE_KEYS.LAST_DATE);
   const rawCount = localStorage.getItem(STORAGE_KEYS.COUNT);
-  const streakCount = rawCount ? parseInt(rawCount, 10) : 14;
+  const streakCount = rawCount ? parseInt(rawCount, 10) : 0;
   const freezeCount = parseInt(localStorage.getItem(STORAGE_KEYS.FREEZE) || '1', 10);
 
   // Check if today is completed
@@ -65,7 +65,7 @@ export interface ActivityResult {
  */
 export function recordLearningActivity(source: LearningActivityType = 'video'): ActivityResult {
   if (typeof window === 'undefined') {
-    return { updated: false, streakCount: 14, source };
+    return { updated: false, streakCount: 0, source };
   }
 
   const today = getLocalDateString();
