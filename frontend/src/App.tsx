@@ -12,6 +12,7 @@ import SettingsModal from './components/settings/SettingsModal';
 import LearningSurveyModal from './components/onboarding/LearningSurveyModal';
 import StreakCelebrationToast from './components/streak/StreakCelebrationToast';
 import XpCelebrationToast from './components/xp/XpCelebrationToast';
+import { getStreakState } from './lib/streak';
 
 // Watch Views
 const PublishedLessonView = lazy(() => import('./components/watch/PublishedLessonView'));
@@ -25,6 +26,7 @@ const ConnectedAdmin = lazy(() => import('./components/admin/ConnectedAdmin'));
 const AdminVocabularyManager = lazy(() => import('./components/admin/AdminVocabularyManager'));
 const AdminGrammarManager = lazy(() => import('./components/admin/AdminGrammarManager'));
 const AdminQuizManager = lazy(() => import('./components/admin/AdminQuizManager'));
+const AdminUserManager = lazy(() => import('./components/admin/AdminUserManager'));
 
 // Auth, Vocabulary & Review — login/signup/forgot/verify/reset stay eager
 // because they are the first screens after the marketing landing page.
@@ -56,9 +58,14 @@ import {
 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+function VideoToWatchRedirect() {
+  const { lessonId } = useParams<{ lessonId: string }>();
+  return <Navigate to={lessonId ? `/watch/${lessonId}` : '/lessons'} replace />;
+}
+
 type AuthView = 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
 
-const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'community'] as const;
+const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'community', 'settings', 'profile'] as const;
 type NavSection = typeof NAV_SECTIONS[number];
 
 // Map URL pathname → activeNav id (for learner pages).
@@ -72,7 +79,7 @@ function pathToActiveNav(pathname: string): string | null {
 
 function activeNavToPath(navId: string): string {
   if (navId === 'admin') return '/admin';
-  return navId === 'feed' ? '/' : `/${navId}`;
+  return `/${navId}`;
 }
 
 function authPathFor(view: AuthView): string {
@@ -205,7 +212,7 @@ export default function App() {
       {/* Auth routes */}
       <Route path="/auth/login" element={
         currentUser ? (
-          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/feed" replace />
         ) : (
           <LoginView
             onLoginSuccess={(user) => {
@@ -214,7 +221,7 @@ export default function App() {
               if (user.role === 'admin') {
                 navigate('/admin', { replace: true });
               } else {
-                navigate('/', { replace: true });
+                navigate('/feed', { replace: true });
                 const serverSideCompleted = user.learningProfile?.surveyVersion != null;
                 const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
                 if (!serverSideCompleted && !localCompleted && user.role === 'user') {
@@ -229,7 +236,7 @@ export default function App() {
       } />
       <Route path="/auth/signup" element={
         currentUser ? (
-          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/feed" replace />
         ) : (
           <SignupView
             onNavigateToLogin={() => navigate('/auth/login')}
@@ -239,7 +246,7 @@ export default function App() {
               if (user.role === 'admin') {
                 navigate('/admin', { replace: true });
               } else {
-                navigate('/', { replace: true });
+                navigate('/feed', { replace: true });
                 const serverSideCompleted = user.learningProfile?.surveyVersion != null;
                 const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
                 if (!serverSideCompleted && !localCompleted && user.role === 'user') {
@@ -354,7 +361,17 @@ export default function App() {
               </LazyRouteBoundary>
       } />
 
-      {/* Learner top-level pages */}
+      {/* Dedicated Landing Page routes */}
+      <Route path="/landing" element={
+        <LandingRoute onSelectSample={(id) => {
+          const lesson = SAMPLE_LESSONS.find(l => l.id === id) || SAMPLE_LESSONS[0];
+          setSelectedLesson(lesson as unknown as VideoLesson);
+          navigate(`/watch/${lesson.id}`);
+        }} />
+      } />
+      <Route path="/welcome" element={<Navigate to="/landing" replace />} />
+
+      {/* Root route: Guest sees Landing page, Learner redirects to /feed, Admin redirects to /admin */}
       <Route path="/" element={
         !currentUser
           ? <LandingRoute onSelectSample={(id) => {
@@ -362,34 +379,16 @@ export default function App() {
               setSelectedLesson(lesson as unknown as VideoLesson);
               navigate(`/watch/${lesson.id}`);
             }} />
-          : <LearnerRouteShell
-              currentUser={currentUser}
-              setCurrentUser={setCurrentUser}
-              selectedLesson={selectedLesson}
-              setSelectedLesson={setSelectedLesson}
-              isAIOpen={isAIOpen}
-              setIsAIOpen={setIsAIOpen}
-              aiPrompt={aiPrompt}
-              setAiPrompt={setAiPrompt}
-              isPreferencesOpen={isPreferencesOpen}
-              setIsPreferencesOpen={setIsPreferencesOpen}
-              isSettingsOpen={isSettingsOpen}
-              setIsSettingsOpen={setIsSettingsOpen}
-              isSurveyOpen={isSurveyOpen}
-              setIsSurveyOpen={setIsSurveyOpen}
-              handleOpenAI={handleOpenAI}
-              handleSavePreferences={handleSavePreferences}
-              handleLogout={handleLogout}
-              activeNav="feed"
-            >
-              <ConnectedLearner
-                section="feed"
-                onSelectLesson={(id) => navigate(`/watch/${id}`)}
-                onOpenPreferences={() => setIsSurveyOpen(true)}
-                onNavigateSection={(s) => navigate(activeNavToPath(s))}
-              />
-            </LearnerRouteShell>
+          : currentUser.role === 'admin'
+            ? <Navigate to="/admin" replace />
+            : <Navigate to="/feed" replace />
       } />
+
+      {/* Route Aliases & Redirects */}
+      <Route path="/videos" element={<Navigate to="/lessons" replace />} />
+      <Route path="/videos/:lessonId" element={<VideoToWatchRedirect />} />
+      <Route path="/favorites" element={<Navigate to="/saved" replace />} />
+
       <Route path="/:section" element={
         !currentUser
           ? <Navigate to="/auth/login" replace />
@@ -483,6 +482,13 @@ function LearnerRouteShell({
   // Derive activeNav from URL pathname.
   const activeNav = activeNavProp ?? pathToActiveNav(location.pathname) ?? 'feed';
 
+  // Auto-open settings modal if URL is /settings or /profile
+  useEffect(() => {
+    if (location.pathname === '/settings' || location.pathname === '/profile') {
+      setIsSettingsOpen(true);
+    }
+  }, [location.pathname, setIsSettingsOpen]);
+
   const { t } = useLanguage();
   const bottomNavItems = [
     { id: 'feed', label: t.nav.feed, icon: Home },
@@ -491,6 +497,20 @@ function LearnerRouteShell({
     { id: 'vocabulary', label: t.nav.vocabulary, icon: BookMarked },
     { id: 'roadmap', label: t.nav.roadmap, icon: Map },
   ];
+
+  const [streakDays, setStreakDays] = useState(() => getStreakState().streakCount);
+
+  useEffect(() => {
+    const handleStreakUpdate = () => {
+      setStreakDays(getStreakState().streakCount);
+    };
+    window.addEventListener('hanflix:streak-updated', handleStreakUpdate);
+    window.addEventListener('storage', handleStreakUpdate);
+    return () => {
+      window.removeEventListener('hanflix:streak-updated', handleStreakUpdate);
+      window.removeEventListener('storage', handleStreakUpdate);
+    };
+  }, []);
 
   const userProfile: UserProfile = {
     id: currentUser.id,
@@ -501,7 +521,7 @@ function LearnerRouteShell({
     level: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
     hskProgress: 0,
     hskLevel: `HSK ${currentUser.learningProfile?.hskLevel || 3}`,
-    streakDays: 0,
+    streakDays: streakDays,
     targetGoal: currentUser.learningProfile?.goal || 'daily',
     interests: currentUser.learningProfile?.topics || [],
   };
@@ -513,7 +533,7 @@ function LearnerRouteShell({
         currentLang={useLanguage().lang}
         onLanguageChange={useLanguage().setLang}
         onOpenPreferences={() => setIsSurveyOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => navigate('/settings')}
         onSearchSelect={(query) => handleOpenAI(`Tìm kiếm: ${query}`)}
         onOpenMenu={() => setIsSidebarOpen(true)}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => {
@@ -581,7 +601,12 @@ function LearnerRouteShell({
 
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+          if (location.pathname === '/settings' || location.pathname === '/profile') {
+            navigate('/', { replace: true });
+          }
+        }}
         currentUser={currentUser}
         userProfile={userProfile}
         onSavePreferences={handleSavePreferences}
@@ -630,10 +655,10 @@ function LearnerSectionRoute(props: ShellProps) {
 
   let content: React.ReactNode;
   if (activeNav === 'saved' || activeNav === 'vocabulary' || activeNav === 'roadmap' || activeNav === 'history' ||
-      activeNav === 'feed' || activeNav === 'lessons') {
+      activeNav === 'feed' || activeNav === 'lessons' || activeNav === 'settings' || activeNav === 'profile') {
     content = (
       <ConnectedLearner
-        section={activeNav as 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history'}
+        section={activeNav === 'settings' || activeNav === 'profile' ? 'feed' : (activeNav as 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history')}
         onSelectLesson={(id) => navigate(`/watch/${id}`)}
         onOpenPreferences={() => props.setIsSurveyOpen(true)}
         onNavigateSection={(s) => navigate(activeNavToPath(s))}
@@ -746,50 +771,135 @@ function WatchRoute() {
   );
 }
 
-/** Admin shell with URL-driven activeTab + editingId. */
+/** Admin shell with URL-driven activeTab + dynamic subroutes. */
 function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogout: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Parse /admin, /admin/<tab>, /admin/editor/<id>
-  const parts = location.pathname.replace(/^\/admin\/?/, '').split('/').filter(Boolean);
-  const tabParam = parts[0] || 'overview';
-  const validTabs = ['overview', 'videos', 'upload', 'processing', 'users', 'vocabulary', 'grammar', 'quiz'] as const;
-  type AdminRouteTab = typeof validTabs[number] | 'editor';
-  const tab: AdminRouteTab = (validTabs as readonly string[]).includes(tabParam) ? (tabParam as AdminRouteTab) : (tabParam === 'editor' ? 'editor' : 'overview');
-  const editingId = tab === 'editor' && parts[1] ? parts[1] : null;
+  // Parse /admin, /admin/<tab>, /admin/videos/<id>/edit, /admin/processing/<id>, /admin/quiz/<id>, /admin/users/<id>
+  const pathAfterAdmin = location.pathname.replace(/^\/admin\/?/, '');
+  const parts = pathAfterAdmin.split('/').filter(Boolean);
 
-  const handleTabChange = (t: string) => {
-    if (t === 'editor') {
-      navigate('/admin/videos');
-    } else if (t === 'overview') {
+  let tab: 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'quiz' | 'users' | 'vocabulary' | 'grammar' | 'not_found' = 'overview';
+  let editingId: string | null = null;
+  let processingId: string | null = null;
+  let quizLessonId: string | null = null;
+  let userId: string | null = null;
+
+  if (parts.length === 0 || (parts.length === 1 && parts[0] === 'overview')) {
+    tab = 'overview';
+  } else if (parts[0] === 'videos') {
+    if (parts.length === 1) {
+      tab = 'videos';
+    } else if (parts[1] === 'upload') {
+      tab = 'upload';
+    } else if (parts[1] === 'processing') {
+      tab = 'processing';
+      processingId = parts[2] || null;
+    } else {
+      // /admin/videos/:id/edit, /admin/videos/:id/subtitles, /admin/videos/:id/processing, /admin/videos/:id
+      const id = parts[1];
+      if (parts[2] === 'processing') {
+        tab = 'processing';
+        processingId = id;
+      } else {
+        tab = 'editor';
+        editingId = id;
+      }
+    }
+  } else if (parts[0] === 'upload') {
+    tab = 'upload';
+  } else if (parts[0] === 'editor') {
+    tab = 'editor';
+    editingId = parts[1] || null;
+  } else if (parts[0] === 'processing') {
+    tab = 'processing';
+    processingId = parts[1] || null;
+  } else if (parts[0] === 'quiz') {
+    tab = 'quiz';
+    quizLessonId = parts[1] || null;
+  } else if (parts[0] === 'users') {
+    tab = 'users';
+    userId = parts[1] || null;
+  } else if (parts[0] === 'vocabulary') {
+    tab = 'vocabulary';
+  } else if (parts[0] === 'grammar') {
+    tab = 'grammar';
+  } else {
+    tab = 'not_found';
+  }
+
+  type ShellTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz';
+  const shellTab: ShellTab = 
+    (tab === 'editor' || tab === 'processing' || tab === 'videos') ? 'videos' :
+    (tab === 'upload') ? 'upload' :
+    (tab === 'overview') ? 'overview' :
+    (tab === 'quiz') ? 'quiz' :
+    (tab === 'users') ? 'users' :
+    (tab === 'vocabulary') ? 'vocabulary' :
+    (tab === 'grammar') ? 'grammar' : 'overview';
+
+  const handleTabChange = (t: ShellTab) => {
+    if (t === 'overview') {
       navigate('/admin');
+    } else if (t === 'upload') {
+      navigate('/admin/videos/upload');
     } else {
       navigate(`/admin/${t}`);
     }
   };
 
-  type ShellTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz';
-  const shellTab: ShellTab = (tab === 'editor' || tab === 'processing' || tab === 'videos') ? 'videos' : (tab as ShellTab);
+  if (tab === 'not_found') {
+    return (
+      <AdminShell
+        activeTab="overview"
+        onTabChange={handleTabChange}
+        currentUser={currentUser}
+        onLogout={onLogout}
+      >
+        <NotFoundPage
+          showHeader={false}
+          currentUser={currentUser}
+          onNavigateHome={() => navigate('/admin')}
+          onNavigateLessons={() => navigate('/admin/videos')}
+        />
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell
       activeTab={shellTab}
-      onTabChange={handleTabChange as (t: ShellTab) => void}
+      onTabChange={handleTabChange}
       currentUser={currentUser}
       onLogout={onLogout}
     >
       {tab === 'vocabulary' && <AdminVocabularyManager />}
       {tab === 'grammar' && <AdminGrammarManager />}
-      {tab === 'quiz' && <AdminQuizManager />}
-      {(tab === 'overview' || tab === 'videos' || tab === 'upload' || tab === 'processing' || tab === 'users' || tab === 'editor') && (
+      {tab === 'quiz' && <AdminQuizManager lessonId={quizLessonId || undefined} />}
+      {tab === 'users' && <AdminUserManager userId={userId || undefined} />}
+      {(tab === 'overview' || tab === 'videos' || tab === 'upload' || tab === 'processing' || tab === 'editor') && (
         <ConnectedAdmin
           tab={tab}
-          setTab={(t) => handleTabChange(t)}
+          setTab={(t) => {
+            if (t === 'overview') navigate('/admin');
+            else if (t === 'videos') navigate('/admin/videos');
+            else if (t === 'upload') navigate('/admin/videos/upload');
+            else if (t === 'processing') navigate('/admin/processing');
+            else if (t === 'quiz') navigate('/admin/quiz');
+            else if (t === 'users') navigate('/admin/users');
+            else if (t === 'vocabulary') navigate('/admin/vocabulary');
+            else if (t === 'grammar') navigate('/admin/grammar');
+          }}
           editingId={editingId}
+          processingId={processingId}
           setEditingId={(id) => {
-            if (id) navigate(`/admin/editor/${id}`);
+            if (id) navigate(`/admin/videos/${id}/edit`);
             else navigate('/admin/videos');
+          }}
+          onSelectProcessingLesson={(id) => {
+            if (id) navigate(id ? `/admin/processing/${id}` : '/admin/processing');
+            else navigate('/admin/processing');
           }}
         />
       )}

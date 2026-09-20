@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
@@ -25,6 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import BurningFlame from '../streak/BurningFlame';
 import { getLeaderboard, type LeaderUser, type LeaderboardPeriod } from '../../api/learning';
 import { learningQueryKeys } from '../../api/queryKeys';
+import { getStreakState } from '../../lib/streak';
 
 export interface LeaderboardViewProps {
   onStartPractice?: () => void;
@@ -47,6 +48,18 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
   });
 
   const leaders = data?.items || [];
+  const [localStreakCount, setLocalStreakCount] = useState(() => getStreakState().streakCount);
+
+  useEffect(() => {
+    const handleUpdate = () => setLocalStreakCount(getStreakState().streakCount);
+    window.addEventListener('hanflix:streak-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('hanflix:streak-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
   const maxXP = leaders[0]?.xp || 1;
 
   // Podium arrangement: [Rank 2 (Silver), Rank 1 (Gold), Rank 3 (Bronze)]
@@ -54,7 +67,13 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
   const top2 = leaders.find((u) => u.rank === 2) || leaders[1];
   const top3 = leaders.find((u) => u.rank === 3) || leaders[2];
 
-  const myUser = data?.currentUserRank || leaders.find((u) => u.isMe) || null;
+  const rawMyUser = data?.currentUserRank || leaders.find((u) => u.isMe) || null;
+  const myUser = rawMyUser
+    ? {
+        ...rawMyUser,
+        streakDays: Math.max(rawMyUser.streakDays || 0, localStreakCount),
+      }
+    : null;
   const gapToFirst = top1 && myUser && top1.id !== myUser.id ? Math.max(0, top1.xp - myUser.xp) : 0;
 
   return (
@@ -514,7 +533,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                       <span>•</span>
                       <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
                         <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        {user.streakDays} ngày liên tiếp
+                        {user.isMe ? Math.max(user.streakDays || 0, localStreakCount) : user.streakDays} ngày liên tiếp
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ListChecks,
   Plus,
@@ -95,10 +96,13 @@ function makeEmptyQuestion(cueId?: string): AdminQuestion {
   };
 }
 
-export default function AdminQuizManager() {
+export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?: string } = {}) {
+  const params = useParams<{ lessonId?: string }>();
+  const activeParamLessonId = propLessonId || params.lessonId || '';
+  const navigate = useNavigate();
   const notify = useNotification();
   const [lessons, setLessons] = useState<AdminLesson[]>([]);
-  const [selectedLessonId, setSelectedLessonId] = useState('');
+  const [selectedLessonId, setSelectedLessonId] = useState(activeParamLessonId);
   const [quizData, setQuizData] = useState<QuizItem | null>(null);
   const [localQuestions, setLocalQuestions] = useState<AdminQuestion[]>([]);
 
@@ -132,6 +136,13 @@ export default function AdminQuizManager() {
   useEffect(() => {
     loadLessons();
   }, []);
+
+  // Sync with route param if it changes
+  useEffect(() => {
+    if (activeParamLessonId && activeParamLessonId !== selectedLessonId) {
+      loadLessonQuiz(activeParamLessonId);
+    }
+  }, [activeParamLessonId]);
 
   // F-load AI generation status: refresh whenever the selected lesson changes,
   // and poll every 4s while the background job is pending/running so the badge
@@ -183,9 +194,10 @@ export default function AdminQuizManager() {
     try {
       const items = await listAdminLessons();
       setLessons(items);
-      // Auto-select first lesson if none selected
-      if (!selectedLessonId && items.length > 0) {
-        loadLessonQuiz(items[0]._id);
+      // Auto-select param lesson or first lesson if none selected
+      const targetId = activeParamLessonId || selectedLessonId || (items.length > 0 ? items[0]._id : '');
+      if (targetId) {
+        loadLessonQuiz(targetId);
       }
     } catch (err) {
       console.error(err);
@@ -495,41 +507,59 @@ export default function AdminQuizManager() {
                   <span>{saving ? 'Đang lưu...' : hasUnsavedChanges ? 'Lưu thay đổi *' : 'Đã lưu'}</span>
                 </button>
 
-                <button
-                  onClick={handlePublish}
-                  disabled={saving || localQuestions.length === 0}
-                  className="flex h-10 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Xuất bản</span>
-                </button>
+                {quizData?.lesson.status === 'published' ? (
+                  <span className="flex h-10 items-center gap-1.5 rounded-xl border border-[#C6E7DA] bg-[#EAF5F1] px-4 text-xs font-bold text-[#188A5A]">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Đã xuất bản</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={handlePublish}
+                    disabled={saving || localQuestions.length === 0}
+                    className="flex h-10 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Xuất bản</span>
+                  </button>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs md:flex-row">
-        <div className="relative w-full md:max-w-md">
-          <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#8C827A]" />
+      {/* Filter and Search Bar - 1 row */}
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
           <input
             type="text"
             placeholder="Tìm bài học theo tên Việt, Trung hoặc mô tả..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] py-2 pr-4 pl-9 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#2B2826] transition-colors"
+              title="Xóa tìm kiếm"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end">
-          <div className="flex shrink-0 items-center gap-1.5">
-            <BookOpen className="h-3.5 w-3.5 text-[#8C827A]" />
+        <div className="flex shrink-0 items-center gap-2">
+          {/* HSK Level Filter */}
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={hskFilter}
               onChange={(e) => setHskFilter(e.target.value)}
               aria-label="Lọc theo cấp độ HSK"
-              className="h-8 min-w-[160px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
             >
               <option value="">Tất cả cấp độ (HSK 1–9)</option>
               {HSK_LEVELS.map((lvl) => (
@@ -540,13 +570,14 @@ export default function AdminQuizManager() {
             </select>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
-            <Filter className="h-3.5 w-3.5 text-[#8C827A]" />
+          {/* Status Filter */}
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <Filter className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               aria-label="Lọc theo trạng thái bài học"
-              className="h-8 min-w-[160px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="published">Đã xuất bản</option>
@@ -554,6 +585,22 @@ export default function AdminQuizManager() {
               <option value="draft">Bản nháp</option>
             </select>
           </div>
+
+          {(searchQuery || hskFilter || statusFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setHskFilter('');
+                setStatusFilter('all');
+              }}
+              className="flex h-9 items-center gap-1 rounded-xl border border-[#F2E4D8] bg-[#FDF1F1] px-2.5 text-xs font-bold text-[#B91B1C] transition-colors hover:bg-[#FAD2CF]"
+              title="Đặt lại bộ lọc"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Đặt lại</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -583,7 +630,10 @@ export default function AdminQuizManager() {
                 return (
                   <button
                     key={lesson._id}
-                    onClick={() => loadLessonQuiz(lesson._id)}
+                    onClick={() => {
+                      navigate(`/admin/quiz/${lesson._id}`);
+                      loadLessonQuiz(lesson._id);
+                    }}
                     className={`flex w-full items-start justify-between gap-3 p-4 text-left transition-all ${
                       isSelected
                         ? 'border-l-4 border-l-[#B91B1C] bg-[#FDF1F1]'

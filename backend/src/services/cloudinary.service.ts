@@ -86,11 +86,15 @@ export class CloudinaryService {
         uploadOptions,
         (error, result: UploadApiResponse | undefined) => {
           if (error || !result) {
+            let message = error?.message || 'Không thể tải ảnh lên Cloudinary';
+            if (error?.http_code === 403 || message.includes('403')) {
+              message = 'Cloudinary API Key thiếu quyền tải ảnh (403 Forbidden - missing "create" permission). Vui lòng kiểm tra quyền Access Key trong Cloudinary Console.';
+            }
             reject(
               new AppError(
                 502,
                 'CLOUDINARY_UPLOAD_FAILED',
-                error?.message || 'Không thể tải ảnh lên Cloudinary'
+                message
               )
             );
             return;

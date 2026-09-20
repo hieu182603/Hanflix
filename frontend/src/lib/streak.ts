@@ -46,7 +46,7 @@ export function getStreakState(): StreakState {
   const freezeCount = parseInt(localStorage.getItem(STORAGE_KEYS.FREEZE) || '1', 10);
 
   // Check if today is completed
-  const isCompletedToday = lastActiveDate === today || localStorage.getItem(STORAGE_KEYS.COMPLETED_TODAY) === 'true';
+  const isCompletedToday = lastActiveDate === today;
 
   return { streakCount, isCompletedToday, lastActiveDate, freezeCount };
 }

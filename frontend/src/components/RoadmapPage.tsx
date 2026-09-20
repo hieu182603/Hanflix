@@ -56,7 +56,19 @@ export default function RoadmapPage({
 
   const selectedStage = stages.find((s) => s.id === selectedStageId) || stages[0];
   const completedStagesCount = stages.filter((s) => s.status === 'completed').length;
-  const streakState = getStreakState();
+  const [streakState, setStreakState] = useState(() => getStreakState());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setStreakState(getStreakState());
+    };
+    window.addEventListener('hanflix:streak-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('hanflix:streak-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
 
   const handleStartLearning = (stage?: RoadmapStage) => {
     const hskLevelNumber = stage ? parseInt(stage.level.replace(/\D/g, ''), 10) : currentHsk;

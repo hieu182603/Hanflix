@@ -60,7 +60,7 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
   );
 
   // Mark "running" before doing any I/O so admin UI sees the status change.
-  const runningResult = await QuizModel.findOneAndUpdate(
+  const runningResult = (await QuizModel.findOneAndUpdate(
     { lessonId: lessonObjectId, status: 'draft' },
     {
       $set: {
@@ -72,9 +72,22 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
       },
     },
     { sort: { revision: -1 } },
-  ).lean();
+  ).lean())
+  ?? (await QuizModel.findOneAndUpdate(
+    { lessonId: lessonObjectId },
+    {
+      $set: {
+        aiGenerationStatus: 'running',
+        aiGenerationStartedAt: startedAt,
+        aiGenerationKinds: kinds,
+        aiGenerationQuestionCount: targetQuestionCount,
+        aiGenerationError: undefined,
+      },
+    },
+    { sort: { revision: -1 } },
+  ).lean());
   if (!runningResult) {
-    logger.warn({ lessonId }, '[auto-quiz] no draft quiz to enrich, skipping');
+    logger.warn({ lessonId }, '[auto-quiz] no quiz to enrich, skipping');
     return;
   }
 
@@ -83,10 +96,14 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
       LessonModel.findById(lessonObjectId)
         .select('hsk titleVi autoGenerateQuizCount')
         .lean(),
-      SubtitleTrackModel.findOne({ lessonId: lessonObjectId, status: 'draft' })
+      (await SubtitleTrackModel.findOne({ lessonId: lessonObjectId, status: 'draft' })
         .sort({ revision: -1 })
         .select('cues')
-        .lean(),
+        .lean())
+        ?? (await SubtitleTrackModel.findOne({ lessonId: lessonObjectId })
+          .sort({ revision: -1 })
+          .select('cues')
+          .lean()),
     ]);
 
     if (!lesson) {
@@ -149,9 +166,21 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
 
     const mappedQuestions = generated.map((q, index) => mapToQuizQuestion(q, index));
 
-    // Replace the existing draft questions. Keep revision/status untouched.
+    // Replace the existing questions. Keep revision/status untouched.
     await QuizModel.findOneAndUpdate(
       { lessonId: lessonObjectId, status: 'draft' },
+      {
+        $set: {
+          questions: mappedQuestions,
+          aiGenerationStatus: 'completed',
+          aiGenerationCompletedAt: new Date(),
+          aiGenerationQuestionCount: mappedQuestions.length,
+        },
+        $unset: { aiGenerationError: 1 },
+      },
+      { sort: { revision: -1 } },
+    ) ?? await QuizModel.findOneAndUpdate(
+      { lessonId: lessonObjectId },
       {
         $set: {
           questions: mappedQuestions,
@@ -166,13 +195,23 @@ export async function autoGenerateQuizForLesson(lessonId: string): Promise<void>
 
     logger.info(
       { lessonId, generatedCount: mappedQuestions.length },
-      '[auto-quiz] successfully replaced draft questions with AI output',
+      '[auto-quiz] successfully replaced questions with AI output',
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ lessonId, error: message }, '[auto-quiz] generation failed');
     await QuizModel.findOneAndUpdate(
       { lessonId: lessonObjectId, status: 'draft' },
+      {
+        $set: {
+          aiGenerationStatus: 'failed',
+          aiGenerationCompletedAt: new Date(),
+          aiGenerationError: message.slice(0, 1000),
+        },
+      },
+      { sort: { revision: -1 } },
+    ) ?? await QuizModel.findOneAndUpdate(
+      { lessonId: lessonObjectId },
       {
         $set: {
           aiGenerationStatus: 'failed',

@@ -40,11 +40,20 @@ function errorText(error: unknown): string { return error instanceof Error ? err
  */
 type DirtyMap = { metadata: boolean; subtitles: boolean; quiz: boolean };
 
-export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }: {
+export default function ConnectedAdmin({
+  tab,
+  setTab,
+  editingId,
+  processingId,
+  setEditingId,
+  onSelectProcessingLesson,
+}: {
   tab: AdminTab;
   setTab: (tab: AdminTab) => void;
   editingId: string | null;
+  processingId?: string | null;
   setEditingId: (id: string | null) => void;
+  onSelectProcessingLesson?: (id: string | null) => void;
 }) {
   const notify = useNotification();
   const [lessons, setLessons] = useState<AdminLesson[]>([]);
@@ -249,18 +258,19 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
   };
 
   useEffect(() => {
-    if (tab !== 'processing' || !editingId) return;
+    const activeProcessingLessonId = processingId || editingId;
+    if (tab !== 'processing' || !activeProcessingLessonId) return;
     let active = true;
     const poll = async () => {
       try {
-        const [status, lessonItems, jobItems] = await Promise.all([getProcessingStatus(editingId), listAdminLessons(), listProcessingJobs()]);
+        const [status, lessonItems, jobItems] = await Promise.all([getProcessingStatus(activeProcessingLessonId), listAdminLessons(), listProcessingJobs()]);
         if (active) { setProcessing(status); setLessons(lessonItems); setJobs(jobItems.items); }
       } catch (reason) { if (active) setError(errorText(reason)); }
     };
     void poll();
     const timer = window.setInterval(() => void poll(), 5000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [tab, editingId]);
+  }, [tab, editingId, processingId]);
 
   /**
    * F01: action() no longer calls reload() globally. It only refreshes the lessons
@@ -388,10 +398,14 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         loading={loading}
         error={error}
         onReload={reload}
-        onNavigateToTab={(targetTab) => setTab(targetTab as AdminTab)}
+        onNavigateToTab={(targetTab) => {
+          if (targetTab === 'upload') setTab('upload');
+          else if (targetTab === 'users') setTab('users');
+          else if (targetTab === 'videos') setTab('videos');
+          else setTab(targetTab as AdminTab);
+        }}
         onSelectLessonToEdit={(lessonId) => {
           void requestSwitchLesson(lessonId);
-          setTab('editor');
         }}
         onPublishLesson={async (lessonId) => {
           await action(() => publishAdminLesson(lessonId), 'Đã xuất bản bài học.');
@@ -409,11 +423,14 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         onNavigateToUpload={() => setTab('upload')}
         onEditLesson={(id) => {
           void requestSwitchLesson(id);
-          setTab('editor');
         }}
         onViewProcessing={(id) => {
-          requestSwitchLesson(id);
-          setTab('processing');
+          if (onSelectProcessingLesson) {
+            onSelectProcessingLesson(id);
+          } else {
+            requestSwitchLesson(id);
+            setTab('processing');
+          }
         }}
         onPublishLesson={async (id) => {
           await action(() => publishAdminLesson(id), 'Đã xuất bản bài học.');
@@ -429,7 +446,6 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
             await deleteAdminLesson(id);
             if (editingId === id) {
               setEditingId(null);
-              setTab('videos');
             }
           }, 'Đã xóa bài học vĩnh viễn.');
         }}
@@ -441,7 +457,15 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
     {(tab === 'upload' || tab === 'processing') && (
       <AdminVideoUploader
         activeTab={tab}
-        onTabChange={(t) => setTab(t)}
+        onTabChange={(t) => {
+          if (t === 'upload') setTab('upload');
+          else if (t === 'processing') {
+            if (onSelectProcessingLesson) onSelectProcessingLesson(null);
+            else setTab('processing');
+          } else {
+            setTab(t as AdminTab);
+          }
+        }}
         titleVi={titleVi}
         setTitleVi={(v) => { setTitleVi(v); setDirty(d => ({ ...d, metadata: true })); }}
         titleZh={titleZh}
@@ -464,13 +488,17 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         uploadError={uploadError}
         onSubmitUpload={submitUpload}
         onCancelUpload={cancelInFlightUpload}
-        selectedLesson={selected}
+        selectedLesson={lessons.find(item => item._id === (processingId || editingId)) || selected}
         processingStatus={processing}
         jobs={jobs}
         lessons={lessons}
         onSelectLesson={(id) => {
-          requestSwitchLesson(id);
-          setTab('processing');
+          if (onSelectProcessingLesson) {
+            onSelectProcessingLesson(id);
+          } else {
+            requestSwitchLesson(id);
+            setTab('processing');
+          }
         }}
         onRetryProcessing={async (id) => {
           await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');
@@ -480,65 +508,72 @@ export default function ConnectedAdmin({ tab, setTab, editingId, setEditingId }:
         }}
       />
     )}
-    {tab === 'editor' && selected && (
-      <AdminLessonReviewStudio
-        lesson={selected}
-        media={media}
-        review={review}
-        cues={cues}
-        questions={questions}
-        translationImproved={translationImproved}
-        learningTips={learningTips}
-        drillWords={drillWords}
-        dirty={dirty}
-        busy={busy}
-        titleVi={titleVi}
-        setTitleVi={(v) => { setTitleVi(v); setDirty(d => ({ ...d, metadata: true })); }}
-        titleZh={titleZh}
-        setTitleZh={(v) => { setTitleZh(v); setDirty(d => ({ ...d, metadata: true })); }}
-        descriptionVi={descriptionVi}
-        setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
-        onCuesChange={(next) => { setCues(next); setDirty(d => ({ ...d, subtitles: true })); }}
-        onQuestionsChange={(next) => { setQuestions(next); setDirty(d => ({ ...d, quiz: true })); }}
-        onSaveMetadata={async () => {
-          await action(async () => {
-            await patchAdminLesson(selected._id, {
-              titleVi,
-              titleZh,
-              descriptionVi,
-              autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number'
-                ? autoGenerateQuizCount
-                : null,
-            });
-            setDirty(d => ({ ...d, metadata: false }));
-          }, 'Đã lưu thông tin bài học.');
-        }}
-        onSaveSubtitles={async () => {
-          await action(async () => {
-            await saveAdminSubtitles(selected._id, cues);
-            setDirty(d => ({ ...d, subtitles: false }));
-          }, 'Đã lưu phụ đề song ngữ.');
-        }}
-        onSaveQuiz={async () => {
-          await action(async () => {
-            await saveAdminQuiz(selected._id, questions);
-            setDirty(d => ({ ...d, quiz: false }));
-          }, 'Đã lưu bộ câu hỏi.');
-        }}
-        onPublishAll={async () => {
-          await action(async () => {
-            await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
-            await saveAdminSubtitles(selected._id, cues);
-            await saveAdminQuiz(selected._id, questions);
-            await publishAdminLesson(selected._id);
-            setDirty({ metadata: false, subtitles: false, quiz: false });
-            initialLoadDone.current = null;
-            setTab('videos');
-          }, 'Đã xuất bản bài học thành công!');
-        }}
-        onReload={reloadEditor}
-        onBackToVideos={() => setTab('videos')}
-      />
+    {tab === 'editor' && (
+      selected ? (
+        <AdminLessonReviewStudio
+          lesson={selected}
+          media={media}
+          review={review}
+          cues={cues}
+          questions={questions}
+          translationImproved={translationImproved}
+          learningTips={learningTips}
+          drillWords={drillWords}
+          dirty={dirty}
+          busy={busy}
+          titleVi={titleVi}
+          setTitleVi={(v) => { setTitleVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+          titleZh={titleZh}
+          setTitleZh={(v) => { setTitleZh(v); setDirty(d => ({ ...d, metadata: true })); }}
+          descriptionVi={descriptionVi}
+          setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+          onCuesChange={(next) => { setCues(next); setDirty(d => ({ ...d, subtitles: true })); }}
+          onQuestionsChange={(next) => { setQuestions(next); setDirty(d => ({ ...d, quiz: true })); }}
+          onSaveMetadata={async () => {
+            await action(async () => {
+              await patchAdminLesson(selected._id, {
+                titleVi,
+                titleZh,
+                descriptionVi,
+                autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number'
+                  ? autoGenerateQuizCount
+                  : null,
+              });
+              setDirty(d => ({ ...d, metadata: false }));
+            }, 'Đã lưu thông tin bài học.');
+          }}
+          onSaveSubtitles={async () => {
+            await action(async () => {
+              await saveAdminSubtitles(selected._id, cues);
+              setDirty(d => ({ ...d, subtitles: false }));
+            }, 'Đã lưu phụ đề song ngữ.');
+          }}
+          onSaveQuiz={async () => {
+            await action(async () => {
+              await saveAdminQuiz(selected._id, questions);
+              setDirty(d => ({ ...d, quiz: false }));
+            }, 'Đã lưu bộ câu hỏi.');
+          }}
+          onPublishAll={async () => {
+            await action(async () => {
+              await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
+              await saveAdminSubtitles(selected._id, cues);
+              await saveAdminQuiz(selected._id, questions);
+              await publishAdminLesson(selected._id);
+              setDirty({ metadata: false, subtitles: false, quiz: false });
+              initialLoadDone.current = null;
+              setEditingId(null);
+            }, 'Đã xuất bản bài học thành công!');
+          }}
+          onReload={reloadEditor}
+          onBackToVideos={() => setEditingId(null)}
+        />
+      ) : (
+        <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-[#F2E4D8]">
+          <Spinner size="md" tone="brand" />
+          <span className="ml-3 text-sm font-semibold text-[#8B9097]">Đang tải dữ liệu bài học…</span>
+        </div>
+      )
     )}
     {tab === 'users' && <AdminUserManager />}
     {tab === 'quiz' && <AdminQuizManager />}

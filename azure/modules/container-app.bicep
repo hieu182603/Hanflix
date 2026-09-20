@@ -40,8 +40,8 @@ param managedIdentityId string
 @allowed(['production', 'development'])
 param nodeEnv string = 'production'
 
-@description('Min replicas. Set to 0 for scale-to-zero (no cost when idle; cold start ~5-10s on first request).')
-param minReplicas int = 0
+@description('Min replicas. Set to 1 so background queue worker keeps running.')
+param minReplicas int = 1
 
 @description('Max replicas')
 param maxReplicas int = 3
@@ -442,6 +442,10 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'COOKIE_SECURE'
               value: nodeEnv == 'production' ? 'true' : 'false'
+            }
+            {
+              name: 'COOKIE_SAME_SITE'
+              value: 'none'
             }
             {
               name: 'DISABLE_TRANSACTIONS'

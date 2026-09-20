@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   List,
   Filter,
+  GraduationCap,
   Layers,
   Sparkles,
   Upload,
@@ -319,109 +320,116 @@ export default function AdminVideoList({
         })}
       </div>
 
-      {/* 3. Advanced Control Bar: Search + Status Filter + HSK 1-9 Dropdown + View Toggle */}
-      <div className="bg-white p-4 rounded-3xl border border-[#F2E4D8] shadow-2xs space-y-3.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-3.5" />
-            <input
-              type="text"
-              placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-2xl text-xs outline-none focus:border-[#B91B1C] focus:bg-white transition-colors text-[#18181B] placeholder:text-[#8B9097]"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-3 text-[#8B9097] hover:text-[#18181B] cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Right Controls: HSK 1..9 Selector & View Mode Toggle */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* HSK Filter Dropdown (Supports HSK 1 to 9) */}
-            <div className="flex items-center gap-1.5 bg-[#FFF9F5] px-3 py-1.5 rounded-2xl border border-[#F2E4D8]">
-              <span className="text-xs font-extrabold text-[#18181B]">Trình độ:</span>
-              <select
-                value={hskFilter}
-                onChange={(e) => setHskFilter(e.target.value)}
-                className="bg-transparent text-xs font-bold text-[#B91B1C] outline-none cursor-pointer"
-              >
-                <option value="all">Tất cả HSK (1-9)</option>
-                <option value="1">HSK 1 (Sơ cấp)</option>
-                <option value="2">HSK 2 (Sơ cấp)</option>
-                <option value="3">HSK 3 (Sơ cấp)</option>
-                <option value="4">HSK 4 (Trung cấp)</option>
-                <option value="5">HSK 5 (Trung cấp)</option>
-                <option value="6">HSK 6 (Trung cấp)</option>
-                <option value="7">HSK 7 (Cao cấp 3.0)</option>
-                <option value="8">HSK 8 (Cao cấp 3.0)</option>
-                <option value="9">HSK 9 (Chuyên gia)</option>
-              </select>
-            </div>
-
-            {/* View Mode Toggle: Table/List vs Grid */}
-            <div className="flex items-center bg-[#FFF9F5] p-1 rounded-2xl border border-[#F2E4D8]">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                title="Dạng bảng danh sách"
-                className={`p-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                    : 'text-[#8B9097] hover:text-[#18181B]'
-                }`}
-              >
-                <List size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                title="Dạng lưới thẻ video"
-                className={`p-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                    : 'text-[#8B9097] hover:text-[#18181B]'
-                }`}
-              >
-                <LayoutGrid size={16} />
-              </button>
-            </div>
-          </div>
+      {/* 3. Advanced Control Bar: Search + Status + HSK + View Mode - All in 1 row */}
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
+        {/* Search Box */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
+          <input
+            type="text"
+            placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#2B2826] transition-colors"
+              title="Xóa tìm kiếm"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Status Filter Horizontal Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none">
-          {[
-            { id: 'all', label: `Tất cả (${totalCount})` },
-            { id: 'ready_for_review', label: `Chờ duyệt (${readyCount})`, badge: true },
-            { id: 'published', label: `Đã xuất bản (${publishedCount})` },
-            { id: 'draft', label: `Bản nháp (${draftCount})` },
-            { id: 'processing', label: `Đang xử lý (${processingCount})` },
-            { id: 'hidden', label: `Đã ẩn (${hiddenCount})` },
-          ].map((st) => {
-            const isActive = statusFilter === st.id;
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setStatusFilter(st.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border ${
-                  isActive
-                    ? 'bg-[#B91B1C] text-white border-[#B91B1C] shadow-xs'
-                    : 'bg-[#FFF9F5] text-[#5F6368] border-[#F2E4D8] hover:bg-[#FFF0EB] hover:text-[#B91B1C]'
-                }`}
-              >
-                {st.label}
-              </button>
-            );
-          })}
+        {/* Right Controls Group */}
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Status Filter Dropdown */}
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <Filter className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Lọc theo trạng thái bài học"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
+            >
+              <option value="all">Tất cả bài học ({totalCount})</option>
+              <option value="ready_for_review">Chờ duyệt ({readyCount})</option>
+              <option value="published">Đã xuất bản ({publishedCount})</option>
+              <option value="draft">Bản nháp ({draftCount})</option>
+              <option value="processing">Đang xử lý ({processingCount})</option>
+              <option value="hidden">Đã ẩn ({hiddenCount})</option>
+            </select>
+          </div>
+
+          {/* HSK Level Filter */}
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <GraduationCap className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
+            <select
+              value={hskFilter}
+              onChange={(e) => setHskFilter(e.target.value)}
+              aria-label="Lọc theo cấp độ HSK"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
+            >
+              <option value="all">Tất cả HSK (1-9)</option>
+              <option value="1">HSK 1 (Sơ cấp)</option>
+              <option value="2">HSK 2 (Sơ cấp)</option>
+              <option value="3">HSK 3 (Sơ cấp)</option>
+              <option value="4">HSK 4 (Trung cấp)</option>
+              <option value="5">HSK 5 (Trung cấp)</option>
+              <option value="6">HSK 6 (Trung cấp)</option>
+              <option value="7">HSK 7 (Cao cấp 3.0)</option>
+              <option value="8">HSK 8 (Cao cấp 3.0)</option>
+              <option value="9">HSK 9 (Chuyên gia)</option>
+            </select>
+          </div>
+
+          {/* View Mode Toggle: Table/List vs Grid */}
+          <div className="flex h-9 items-center rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              title="Dạng bảng danh sách"
+              className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                  : 'text-[#8B9097] hover:text-[#18181B]'
+              }`}
+            >
+              <List size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              title="Dạng lưới thẻ video"
+              className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                  : 'text-[#8B9097] hover:text-[#18181B]'
+              }`}
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+
+          {/* Reset button if filter active */}
+          {(searchQuery || statusFilter !== 'all' || hskFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+                setHskFilter('all');
+              }}
+              className="flex h-9 items-center gap-1 rounded-xl border border-[#F2E4D8] bg-[#FDF1F1] px-2.5 text-xs font-bold text-[#B91B1C] transition-colors hover:bg-[#FAD2CF]"
+              title="Đặt lại bộ lọc"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Đặt lại</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -494,6 +502,7 @@ export default function AdminVideoList({
                       : item.hsk <= 6
                       ? TIER_THUMBNAILS.intermediate
                       : TIER_THUMBNAILS.advanced;
+                  const thumbnailSrc = item.thumbnailUrl || placeholderImg;
 
                   return (
                     <tr key={item._id} className="hover:bg-[#FFFDFB] transition-colors group">
@@ -502,8 +511,13 @@ export default function AdminVideoList({
                         <div className="flex items-center gap-3.5 min-w-[280px]">
                           <div className="w-20 h-13 rounded-xl bg-black shrink-0 overflow-hidden relative border border-[#F2E4D8] group-hover:shadow-xs transition-all shadow-2xs">
                             <img
-                              src={placeholderImg}
+                              src={thumbnailSrc}
                               alt={item.titleVi}
+                              onError={(e) => {
+                                if (e.currentTarget.src !== placeholderImg) {
+                                  e.currentTarget.src = placeholderImg;
+                                }
+                              }}
                               className="w-full h-full object-cover opacity-85 group-hover:opacity-95 group-hover:scale-105 transition-all duration-300"
                             />
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -712,6 +726,7 @@ export default function AdminVideoList({
                 : item.hsk <= 6
                 ? TIER_THUMBNAILS.intermediate
                 : TIER_THUMBNAILS.advanced;
+            const thumbnailSrc = item.thumbnailUrl || placeholderImg;
 
             return (
               <div
@@ -722,8 +737,13 @@ export default function AdminVideoList({
                   {/* Card Thumbnail */}
                   <div className="aspect-video w-full bg-black relative overflow-hidden">
                     <img
-                      src={placeholderImg}
+                      src={thumbnailSrc}
                       alt={item.titleVi}
+                      onError={(e) => {
+                        if (e.currentTarget.src !== placeholderImg) {
+                          e.currentTarget.src = placeholderImg;
+                        }
+                      }}
                       className="w-full h-full object-cover opacity-85 group-hover:opacity-95 group-hover:scale-105 transition-all duration-300"
                     />
                     <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">

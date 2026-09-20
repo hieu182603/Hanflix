@@ -22,6 +22,7 @@ import { generateQuizWithGemini, type QuestionKind } from '../services/quiz-gene
 import { autoGenerateQuizForLesson } from '../services/auto-quiz-generator.js';
 import { wakeVideoProcessingWorker } from '../workers/video-processing.worker.js';
 import { withProcessingCompatibility } from '../services/lesson-presentation.js';
+import { getCachedSignedDownloadUrl } from '../services/signed-url-cache.js';
 import { pinyinService } from '../services/pinyin.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { NotificationService } from '../services/notification.service.js';
@@ -118,15 +119,31 @@ router.post('/lessons', validate(lessonInput), asyncHandler(async (req, res) => 
   res.status(201).json({ data: lesson });
 }));
 
+async function safeDownloadUrl(key?: string | null): Promise<string | null> {
+  if (!key) return null;
+  try {
+    return await getCachedSignedDownloadUrl(key);
+  } catch {
+    return null;
+  }
+}
+
 router.get('/lessons', asyncHandler(async (_req, res) => {
   const items = await LessonModel.find().select('-media.objectKey').sort({ createdAt: -1 }).limit(100).lean();
-  res.json({ data: { items: items.map(item => withProcessingCompatibility(item)) } });
+  const itemsWithThumbnails = await Promise.all(
+    items.map(async item => {
+      const thumbnailUrl = await safeDownloadUrl(item.thumbnailKey);
+      return withProcessingCompatibility({ ...item, thumbnailUrl });
+    })
+  );
+  res.json({ data: { items: itemsWithThumbnails } });
 }));
 
 router.get('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findById(req.params.lessonId).select('-media.objectKey').lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
-  res.json({ data: withProcessingCompatibility(lesson) });
+  const thumbnailUrl = await safeDownloadUrl(lesson.thumbnailKey);
+  res.json({ data: withProcessingCompatibility({ ...lesson, thumbnailUrl }) });
 }));
 
 router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(lessonInput.partial()), asyncHandler(async (req, res) => {
@@ -379,12 +396,19 @@ router.get('/processing-jobs/reconcile', asyncHandler(async (_req, res) => {
 }));
 
 router.get('/lessons/:lessonId/review', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.findById(req.params.lessonId).select('status titleVi durationSeconds').lean();
+  const lesson = await LessonModel.findById(req.params.lessonId)
+    .select('status titleVi titleZh hsk durationSeconds activeSubtitleRevision activeQuizRevision media thumbnailKey')
+    .lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   const [subtitle, quiz] = await Promise.all([
-    SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).lean(),
+    SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 }).lean()
+      .then(async (draft) => draft ?? SubtitleTrackModel.findOne({ lessonId: lesson._id, status: 'published' }).sort({ revision: -1 }).lean() ?? SubtitleTrackModel.findOne({ lessonId: lesson._id }).sort({ revision: -1 }).lean()),
     QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
-      .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').lean(),
+      .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').lean()
+      .then(async (draft) => draft ?? QuizModel.findOne({ lessonId: lesson._id, status: 'published' }).sort({ revision: -1 })
+        .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').lean()
+        ?? QuizModel.findOne({ lessonId: lesson._id }).sort({ revision: -1 })
+        .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').lean()),
   ]);
   res.json({ data: { lesson, subtitle, quiz } });
 }));
@@ -484,11 +508,13 @@ router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), v
 
 router.put('/lessons/:lessonId/quiz', validate(lessonIdSchema, 'params'), validate(quizDraftSchema), asyncHandler(async (req, res) => {
   const lessonId = String(req.params.lessonId);
-  const lesson = await LessonModel.findOne({ _id: lessonId, status: 'ready_for_review' }).select('_id').lean();
-  if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học chưa sẵn sàng để duyệt');
-  const quiz = await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
-    .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi');
-  if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập nháp');
+  const lesson = await LessonModel.findOne({ _id: lessonId, status: { $in: ['ready_for_review', 'published', 'draft'] } }).select('_id status').lean();
+  if (!lesson) throw new AppError(409, 'LESSON_NOT_READY', 'Bài học không hợp lệ hoặc chưa sẵn sàng để chỉnh sửa');
+  const quiz = (await QuizModel.findOne({ lessonId: lesson._id, status: 'draft' }).sort({ revision: -1 })
+    .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi'))
+    ?? (await QuizModel.findOne({ lessonId: lesson._id }).sort({ revision: -1 })
+      .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi'));
+  if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập');
 
   // F06 fix (2026-09-18): preserve previously resolved relatedWordIds when the
   // admin did not change the question. Drop them only when the prompt or options
@@ -611,10 +637,14 @@ router.post('/lessons/:lessonId/quiz/generate', validate(lessonIdSchema, 'params
  * admin UI to surface "Generating…", "Completed", "Failed" badges.
  */
 router.get('/lessons/:lessonId/quiz/ai-status', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
-  const quiz = await QuizModel.findOne({ lessonId: req.params.lessonId, status: 'draft' })
+  const quiz = (await QuizModel.findOne({ lessonId: req.params.lessonId, status: 'draft' })
     .sort({ revision: -1 })
     .select('aiGenerationStatus aiGenerationStartedAt aiGenerationCompletedAt aiGenerationError aiGenerationKinds aiGenerationQuestionCount revision')
-    .lean();
+    .lean())
+    ?? (await QuizModel.findOne({ lessonId: req.params.lessonId })
+    .sort({ revision: -1 })
+    .select('aiGenerationStatus aiGenerationStartedAt aiGenerationCompletedAt aiGenerationError aiGenerationKinds aiGenerationQuestionCount revision')
+    .lean());
   if (!quiz) {
     // Keep the shape aligned with AdminQuizAiStatus so the frontend never has
     // to guess field names. `aiGenerationStatus: 'not_found'` matches the union
@@ -642,8 +672,9 @@ router.post('/lessons/:lessonId/quiz/regenerate', validate(lessonIdSchema, 'para
   if (lesson.status === 'uploading' || lesson.status === 'processing') {
     throw new AppError(409, 'LESSON_NOT_READY', 'Bài học đang xử lý video, vui lòng đợi');
   }
-  const quiz = await QuizModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 });
-  if (!quiz) throw new AppError(409, 'NO_DRAFT_QUIZ', 'Bài học chưa có bài tập nháp');
+  const quiz = (await QuizModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 }))
+    ?? (await QuizModel.findOne({ lessonId }).sort({ revision: -1 }));
+  if (!quiz) throw new AppError(409, 'NO_QUIZ', 'Bài học chưa có bài tập');
 
   // Mark pending so the admin UI sees the new attempt immediately.
   quiz.aiGenerationStatus = 'pending';

@@ -67,16 +67,29 @@ export default function StreakDropdown({
   const isCompletedToday = streakState.isCompletedToday;
 
   // 7-day strip data (Monday -> Sunday)
-  // Day index: Mon=0, Tue=1, Wed=2, Thu=3 (Today), Fri=4, Sat=5, Sun=6
-  const weekDays = [
-    { key: 'mon', label: t.streak.weekdays.mon, completed: true, isToday: false },
-    { key: 'tue', label: t.streak.weekdays.tue, completed: true, isToday: false },
-    { key: 'wed', label: t.streak.weekdays.wed, completed: true, isToday: false },
-    { key: 'thu', label: t.streak.weekdays.thu, completed: isCompletedToday, isToday: true },
-    { key: 'fri', label: t.streak.weekdays.fri, completed: false, isToday: false },
-    { key: 'sat', label: t.streak.weekdays.sat, completed: false, isToday: false },
-    { key: 'sun', label: t.streak.weekdays.sun, completed: false, isToday: false },
+  // Day index: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+  const currentDayOfWeek = (new Date().getDay() + 6) % 7;
+  const dayConfigs = [
+    { key: 'mon', label: t.streak.weekdays.mon },
+    { key: 'tue', label: t.streak.weekdays.tue },
+    { key: 'wed', label: t.streak.weekdays.wed },
+    { key: 'thu', label: t.streak.weekdays.thu },
+    { key: 'fri', label: t.streak.weekdays.fri },
+    { key: 'sat', label: t.streak.weekdays.sat },
+    { key: 'sun', label: t.streak.weekdays.sun },
   ];
+
+  const weekDays = dayConfigs.map((item, index) => {
+    const isToday = index === currentDayOfWeek;
+    const completed = isToday ? isCompletedToday : index < currentDayOfWeek;
+    return {
+      ...item,
+      completed,
+      isToday,
+    };
+  });
+
+  const completedDaysThisWeek = weekDays.filter((d) => d.completed).length;
 
   return (
     <div className="relative" ref={containerRef}>
@@ -194,7 +207,7 @@ export default function StreakDropdown({
                     <span>Tuần này</span>
                   </span>
                   <span className="text-[11px] text-neutral-500 font-mono font-medium">
-                    {isCompletedToday ? '4/7 ngày' : '3/7 ngày'}
+                    {completedDaysThisWeek}/7 ngày
                   </span>
                 </div>
 

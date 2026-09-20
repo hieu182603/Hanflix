@@ -32,8 +32,8 @@ param dockerImage string = ''
 @allowed(['production', 'development'])
 param nodeEnv string = 'production'
 
-@description('Minimum replica count for backend. Set 0 to scale-to-zero (no cost when idle; cold start ~5-10s on first request).')
-param minReplicas int = 0
+@description('Minimum replica count for backend. Set 1 so background queue worker keeps running.')
+param minReplicas int = 1
 
 @description('Maximum replica count for backend')
 param maxReplicas int = 3
