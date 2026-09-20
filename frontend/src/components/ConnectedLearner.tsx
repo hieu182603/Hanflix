@@ -27,10 +27,25 @@ import { perfMarks } from '../lib/perfMarks';
 import { awardXP } from '../lib/xp';
 import { recordLearningActivity } from '../lib/streak';
 
+import CustomSelect from './common/CustomSelect';
+
 type Section = 'feed' | 'lessons' | 'saved' | 'vocabulary' | 'roadmap' | 'history';
 
 const LESSONS_LIST_STALE = 60 * 1000; // 1 minute — catalog refetch tolerates a small staleness
 const DASHBOARD_STALE = 30 * 1000;
+
+const HSK_OPTIONS = [
+  { value: '', label: 'Mọi cấp HSK' },
+  { value: '1', label: 'HSK 1' },
+  { value: '2', label: 'HSK 2' },
+  { value: '3', label: 'HSK 3' },
+  { value: '4', label: 'HSK 4' },
+  { value: '5', label: 'HSK 5' },
+  { value: '6', label: 'HSK 6' },
+  { value: '7', label: 'HSK 7' },
+  { value: '8', label: 'HSK 8' },
+  { value: '9', label: 'HSK 9' },
+];
 
 export default function ConnectedLearner({ section, onSelectLesson, onOpenPreferences, onNavigateSection }: {
   section: Section;
@@ -188,22 +203,16 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
           placeholder="Tìm kiếm bài học…"
         />
       </label>
-      <select
-        className="rounded-xl border border-[#E7E7EA] bg-white px-3 h-10 text-xs sm:text-sm font-semibold outline-none cursor-pointer focus:border-[#B91B1C]"
+      <CustomSelect
+        className="w-full sm:w-36"
         value={hsk}
-        onChange={(event) => {
-          setHsk(event.target.value);
+        onChange={(val) => {
+          setHsk(val);
           setPage(1);
         }}
-        aria-label="Lọc HSK"
-      >
-        <option value="">Mọi cấp HSK</option>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
-          <option key={level} value={level}>
-            HSK {level}
-          </option>
-        ))}
-      </select>
+        options={HSK_OPTIONS}
+        ariaLabel="Lọc HSK"
+      />
     </div>
   );
 
