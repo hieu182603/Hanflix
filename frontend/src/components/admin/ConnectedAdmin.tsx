@@ -541,6 +541,7 @@ export default function ConnectedAdmin({
           if (activeProcessingLessonId && fallbackJob) {
             return {
               _id: activeProcessingLessonId,
+              slug: activeProcessingLessonId,
               titleVi: `Bài học #${activeProcessingLessonId.slice(-6)}`,
               titleZh: '',
               descriptionVi: '',
