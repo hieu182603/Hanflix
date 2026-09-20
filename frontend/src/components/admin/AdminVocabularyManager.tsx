@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../notifications';
 import { Spinner } from '../notifications';
+import { AdminSearchBar } from './AdminSearchBar';
 import {
   Search,
   Plus,
@@ -422,20 +423,11 @@ export default function AdminVocabularyManager() {
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-[#F2E4D8] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
         <form onSubmit={handleSearchSubmit} className="relative w-full md:max-w-md">
-          <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Tìm theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt..."
+          <AdminSearchBar
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-20 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl text-xs text-[#2B2826] outline-none focus:border-[#B91B1C] focus:bg-white transition-all placeholder:text-[#8C827A]/70"
+            onChange={setSearchQuery}
+            placeholder="Tìm theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt..."
           />
-          <button
-            type="submit"
-            className="absolute right-1.5 top-1 px-3 py-1.5 bg-[#B91B1C] hover:bg-[#A3181A] text-white text-[11px] font-bold rounded-lg transition-colors shadow-2xs"
-          >
-            Tìm kiếm
-          </button>
         </form>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
@@ -489,7 +481,7 @@ export default function AdminVocabularyManager() {
               <th className="p-4">Nghĩa tiếng Việt</th>
               <th className="p-4 w-[110px]">Cấp độ</th>
               <th className="p-4 w-[140px]">Trạng thái</th>
-              <th className="p-4 text-right w-[110px]">Thao tác</th>
+              <th className="p-4 text-center w-[110px]">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F2E4D8]">
@@ -588,8 +580,8 @@ export default function AdminVocabularyManager() {
                     </td>
 
                     {/* Actions */}
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => openEditModal(item)}
                           className="p-1.5 rounded-lg border border-[#F2E4D8] bg-white text-[#8C827A] hover:text-[#2B2826] hover:bg-[#FFF9F5] transition-colors"

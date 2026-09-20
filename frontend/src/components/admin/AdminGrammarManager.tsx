@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../notifications';
 import { Spinner } from '../notifications';
+import { AdminSearchBar } from './AdminSearchBar';
 import {
   FileText,
   Search,
@@ -10,17 +11,12 @@ import {
   Trash2,
   X,
   RefreshCw,
-  Eye,
-  EyeOff,
   BookOpen,
-  Sparkles,
   CheckCircle2,
   HelpCircle,
   Volume2,
   Copy,
   Check,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import {
   getAdminGrammarList,
@@ -61,8 +57,7 @@ export default function AdminGrammarManager() {
   const [hskFilter, setHskFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Expanded details row
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Audio playback + clipboard
   const [speakingText, setSpeakingText] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -338,20 +333,11 @@ export default function AdminGrammarManager() {
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-[#F2E4D8] flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
         <form onSubmit={handleSearchSubmit} className="relative w-full md:max-w-md">
-          <Search className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Tìm theo cấu trúc, công thức hoặc giải thích nghĩa..."
+          <AdminSearchBar
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-20 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl text-xs text-[#2B2826] outline-none focus:border-[#B91B1C] focus:bg-white transition-all placeholder:text-[#8C827A]/70"
+            onChange={setSearchQuery}
+            placeholder="Tìm theo cấu trúc, công thức hoặc giải thích nghĩa..."
           />
-          <button
-            type="submit"
-            className="absolute right-1.5 top-1 px-3 py-1.5 bg-[#B91B1C] hover:bg-[#A3181A] text-white text-[11px] font-bold rounded-lg transition-colors shadow-2xs"
-          >
-            Tìm kiếm
-          </button>
         </form>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
@@ -405,7 +391,7 @@ export default function AdminGrammarManager() {
               <th className="p-4">Ý nghĩa tiếng Việt</th>
               <th className="p-4 w-[110px]">Cấp độ</th>
               <th className="p-4 w-[140px]">Trạng thái</th>
-              <th className="p-4 text-right w-[110px]">Thao tác</th>
+              <th className="p-4 text-center w-[110px]">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F2E4D8]">
@@ -428,7 +414,6 @@ export default function AdminGrammarManager() {
               items.map((item) => {
                 const lvlKey = String(item.hskLevel);
                 const styling = HSK_COLORS[lvlKey] || HSK_COLORS['1'];
-                const isExpanded = expandedId === item._id;
                 const ex = item.examples && item.examples.length > 0 ? item.examples[0] : null;
 
                 return (
@@ -436,32 +421,14 @@ export default function AdminGrammarManager() {
                     <tr className="hover:bg-[#FFF9F5]/70 transition-colors group">
                       {/* Structure + Group */}
                       <td className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-serif text-base font-black text-[#2B2826] tracking-wide">
-                              {item.structure}
-                            </div>
-                            {item.group && (
-                              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFF9F5] text-[#8C827A] border border-[#F2E4D8]">
-                                {item.group}
-                              </span>
-                            )}
-                          </div>
-                          {ex && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedId(isExpanded ? null : item._id)}
-                              className={`p-1 rounded-lg border transition-all ${
-                                isExpanded
-                                  ? 'bg-[#2B2826] text-white border-[#2B2826]'
-                                  : 'bg-white text-[#8C827A] border-[#F2E4D8] hover:border-[#B91B1C] hover:text-[#B91B1C]'
-                              }`}
-                              title={isExpanded ? 'Thu gọn ví dụ' : 'Xem ví dụ minh họa'}
-                            >
-                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
+                        <div className="font-serif text-base font-black text-[#2B2826] tracking-wide">
+                          {item.structure}
                         </div>
+                        {item.group && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFF9F5] text-[#8C827A] border border-[#F2E4D8]">
+                            {item.group}
+                          </span>
+                        )}
                       </td>
 
                       {/* Pattern / Formula */}
@@ -488,7 +455,7 @@ export default function AdminGrammarManager() {
                         <div className="text-[#2B2826] font-semibold text-xs leading-relaxed max-w-[320px]">
                           {item.explanationVi}
                         </div>
-                        {ex && !isExpanded && (
+                        {ex && (
                           <div className="text-[11px] text-[#8C827A] mt-0.5 line-clamp-1 italic">
                             Ví dụ: {ex.chinese} {ex.vietnamese ? `(${ex.vietnamese})` : ''}
                           </div>
@@ -524,8 +491,21 @@ export default function AdminGrammarManager() {
                       </td>
 
                       {/* Actions */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => playAudio(item.structure)}
+                            className={`p-1.5 rounded-lg border transition-all ${
+                              speakingText === item.structure
+                                ? 'bg-[#B91B1C] text-white border-[#B91B1C] scale-105'
+                                : 'bg-white text-[#8C827A] border-[#F2E4D8] hover:border-[#B91B1C] hover:text-[#B91B1C]'
+                            }`}
+                            title="Nghe phát âm cấu trúc ngữ pháp"
+                            aria-label={`Phát âm cấu trúc ${item.structure}`}
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={() => openEditModal(item)}
                             className="p-1.5 rounded-lg border border-[#F2E4D8] bg-white text-[#8C827A] hover:text-[#2B2826] hover:bg-[#FFF9F5] transition-colors"
@@ -543,57 +523,6 @@ export default function AdminGrammarManager() {
                         </div>
                       </td>
                     </tr>
-
-                    {/* Expanded Example Drawer */}
-                    {isExpanded && ex && (
-                      <tr className="bg-[#FFFDFB] border-t border-b border-[#F2E4D8]">
-                        <td colSpan={6} className="p-4 pl-8">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[#B45309]">
-                                <Sparkles className="w-3.5 h-3.5 text-[#B45309]" />
-                                <span>Ví dụ câu thực tế chuẩn HSK</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-serif text-base font-bold text-[#2B2826]">
-                                  {ex.chinese}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => playAudio(ex.chinese)}
-                                  className={`p-1.5 rounded-lg border transition-all ${
-                                    speakingText === ex.chinese
-                                      ? 'bg-[#B91B1C] text-white border-[#B91B1C] scale-105'
-                                      : 'border-[#F2E4D8] bg-white text-[#8C827A] hover:text-[#B91B1C] hover:border-[#B91B1C]'
-                                  }`}
-                                  title="Nghe phát âm câu mẫu"
-                                >
-                                  <Volume2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                              {ex.pinyin && (
-                                <p className="font-mono text-xs font-bold text-[#B91B1C]">
-                                  {ex.pinyin}
-                                </p>
-                              )}
-                              {ex.vietnamese && (
-                                <p className="text-xs text-[#8C827A]">
-                                  {ex.vietnamese}
-                                </p>
-                              )}
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setExpandedId(null)}
-                              className="text-[11px] font-bold text-[#8C827A] hover:text-[#2B2826] px-2.5 py-1 rounded-lg hover:bg-[#FFF9F5] transition-colors"
-                            >
-                              Đóng
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 );
               })

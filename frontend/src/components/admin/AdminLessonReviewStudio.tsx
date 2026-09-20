@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNotification } from '../notifications';
+import { AdminSearchBar } from './AdminSearchBar';
 import {
   Video,
   Play,
@@ -9,7 +10,6 @@ import {
   Save,
   CheckCircle2,
   RotateCcw,
-  Search,
   Plus,
   Copy,
   Trash2,
@@ -483,16 +483,13 @@ export default function AdminLessonReviewStudio({
 
                 {/* Search cues */}
                 <div className="relative">
-                  <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    placeholder="Tìm câu thoại theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt..."
+                  <AdminSearchBar
                     value={cueSearch}
-                    onChange={(e) => {
-                      setCueSearch(e.target.value);
-                      setCuePage(1);
-                    }}
-                    className="w-full pl-9 pr-4 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl text-xs outline-none focus:border-[#B91B1C] text-[#18181B] placeholder:text-[#8B9097]"
+                    onChange={setCueSearch}
+                    onChangeExtra={() => setCuePage(1)}
+                    placeholder="Tìm câu thoại theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt..."
+                    inputClassName="!py-2 !text-xs"
+                    containerClassName="!rounded-xl !border-[#F2E4D8]"
                   />
                 </div>
 

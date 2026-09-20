@@ -26,6 +26,7 @@ import type { AdminLesson } from '../../api/admin';
 import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
 import { useNotification, StatusBadge } from '../notifications';
 import type { NotificationVariant } from '../notifications';
+import { AdminSearchBar } from './AdminSearchBar';
 
 interface AdminVideoListProps {
   lessons: AdminLesson[];
@@ -324,24 +325,12 @@ export default function AdminVideoList({
       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs">
         {/* Search Box */}
         <div className="relative flex-1 min-w-0 w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
-          <input
-            type="text"
-            placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
+          <AdminSearchBar
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            onChange={setSearchQuery}
+            onClear={() => setSearchQuery('')}
+            placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#2B2826] transition-colors"
-              title="Xóa tìm kiếm"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
 
         {/* Right Controls Group */}
@@ -479,7 +468,7 @@ export default function AdminVideoList({
                   <th className="py-3.5 px-4">Chủ đề</th>
                   <th className="py-3.5 px-4">Thời lượng</th>
                   <th className="py-3.5 px-4">Trạng thái</th>
-                  <th className="py-3.5 px-5 text-right">Thao tác Admin</th>
+                  <th className="py-3.5 px-5 text-center">Thao tác Admin</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F2E4D8]">

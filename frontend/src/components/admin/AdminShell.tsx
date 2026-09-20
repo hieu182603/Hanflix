@@ -23,7 +23,7 @@ export default function AdminShell({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: 'overview', label: 'Tổng quan hệ thống', icon: BarChart2, badge: 'Realtime' },
+    { id: 'overview', label: 'Tổng quan hệ thống', icon: BarChart2 },
     { id: 'videos', label: 'Danh sách Video', icon: Video },
     { id: 'quiz', label: 'Bài Luyện Tập', icon: ListChecks },
     { id: 'vocabulary', label: 'Kho Từ vựng HSK', icon: BookOpen },
@@ -60,7 +60,6 @@ export default function AdminShell({
         <span className="text-[10px] font-black uppercase tracking-wider text-[#8B9097]">
           Danh mục quản trị
         </span>
-        <span className="text-xs text-[#B91B1C] font-serif select-none opacity-40">漢</span>
       </div>
 
       {menuItems.map((item) => {
@@ -82,11 +81,6 @@ export default function AdminShell({
               <span className="tracking-tight text-left">{item.label}</span>
             </div>
 
-            {item.badge && !isActive && (
-              <span className="px-1.5 py-0.5 text-[9px] font-extrabold rounded-full bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA]">
-                {item.badge}
-              </span>
-            )}
             {isActive && (
               <span className="w-1.5 h-1.5 rounded-full bg-[#FDE6BA] shadow-xs" />
             )}
@@ -206,27 +200,15 @@ export default function AdminShell({
       {/* Main Layout */}
       <div className="flex-1 flex max-w-[1920px] w-full mx-auto">
         {/* Desktop Admin Left Sidebar */}
-        <aside className="hidden lg:flex w-[260px] shrink-0 bg-white/90 backdrop-blur-sm border-r border-[#F2E4D8] p-4 flex-col justify-between sticky top-[70px] h-[calc(100vh-70px)] z-20">
+        <aside className="hidden lg:flex w-[260px] shrink-0 bg-white/90 backdrop-blur-sm border-r border-[#F2E4D8] p-4 flex-col justify-between fixed top-[70px] left-0 h-[calc(100vh-70px)] z-20">
           {renderNavButtons()}
-
-          {/* Bottom Sidebar Card */}
-          <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-br from-[#FFF9F5] to-[#FDF1F1] border border-[#F2E4D8] relative overflow-hidden">
-            <div className="absolute right-1 -bottom-2 text-4xl font-serif text-[#B91B1C]/10 select-none pointer-events-none">
-              影
-            </div>
-            <div className="flex items-center gap-2 text-[#B91B1C] text-[11px] font-black mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Tiêu chuẩn HSK 3.0</span>
-            </div>
-            <p className="text-[10px] text-[#5F6368] leading-relaxed">
-              Dữ liệu video, phụ đề và từ vựng tự động căn chỉnh theo chuẩn khảo thí HSK mới nhất.
-            </p>
-          </div>
         </aside>
 
         {/* Content Area */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 min-w-0 space-y-6">
-          {children}
+        <main className="flex-1 lg:ml-[260px]">
+          <div className="h-[calc(100vh-70px)] overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

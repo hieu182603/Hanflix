@@ -60,6 +60,7 @@ export default function ConnectedAdmin({
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [jobs, setJobs] = useState<ProcessingJob[]>([]);
   const [processing, setProcessing] = useState<ProcessingStatus | null>(null);
+  const [lastUploadedLesson, setLastUploadedLesson] = useState<AdminLesson | null>(null);
   const [review, setReview] = useState<AdminReview | null>(null);
   const [media, setMedia] = useState<{ url: string; mimeType: string; sizeBytes: number } | null>(null);
   const [cues, setCues] = useState<AdminCue[]>([]);
@@ -112,14 +113,14 @@ export default function ConnectedAdmin({
 
   const reload = async () => {
     const [lessonItems, userItems, jobItems] = await Promise.all([listAdminLessons(), listAdminUsers(), listProcessingJobs()]);
-    setLessons(lessonItems); setUsers(userItems); setJobs(jobItems.items);
+    setLessons(lessonItems.items); setUsers(userItems); setJobs(jobItems.items);
   };
 
   useEffect(() => {
     let active = true;
     setLoading(true); setError('');
     void Promise.all([listAdminLessons(), listAdminUsers(), listProcessingJobs()]).then(([lessonItems, userItems, jobItems]) => {
-      if (active) { setLessons(lessonItems); setUsers(userItems); setJobs(jobItems.items); }
+      if (active) { setLessons(lessonItems.items); setUsers(userItems); setJobs(jobItems.items); }
     }).catch(reason => { if (active) setError(errorText(reason)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -257,20 +258,38 @@ export default function ConnectedAdmin({
     setEditingId(newId);
   };
 
+  const activeProcessingLessonId =
+    processingId ||
+    editingId ||
+    lastUploadedLesson?._id ||
+    (jobs.length > 0 ? jobs[0].lessonId : null);
+
   useEffect(() => {
-    const activeProcessingLessonId = processingId || editingId;
     if (tab !== 'processing' || !activeProcessingLessonId) return;
     let active = true;
     const poll = async () => {
       try {
-        const [status, lessonItems, jobItems] = await Promise.all([getProcessingStatus(activeProcessingLessonId), listAdminLessons(), listProcessingJobs()]);
-        if (active) { setProcessing(status); setLessons(lessonItems); setJobs(jobItems.items); }
-      } catch (reason) { if (active) setError(errorText(reason)); }
+        const [status, lessonItems, jobItems] = await Promise.all([
+          getProcessingStatus(activeProcessingLessonId),
+          listAdminLessons(),
+          listProcessingJobs(),
+        ]);
+        if (active) {
+          setProcessing(status);
+          setLessons(lessonItems.items);
+          setJobs(jobItems.items);
+        }
+      } catch (reason) {
+        if (active) setError(errorText(reason));
+      }
     };
     void poll();
     const timer = window.setInterval(() => void poll(), 5000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [tab, editingId, processingId]);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [tab, activeProcessingLessonId]);
 
   /**
    * F01: action() no longer calls reload() globally. It only refreshes the lessons
@@ -283,7 +302,7 @@ export default function ConnectedAdmin({
       await task();
       // Refresh lessons list (sidebar) but keep editor state intact.
       const [lessonItems, jobItems] = await Promise.all([listAdminLessons(), listProcessingJobs()]);
-      setLessons(lessonItems); setJobs(jobItems.items);
+      setLessons(lessonItems.items); setJobs(jobItems.items);
       if (options?.refreshEditor && editingId) {
         initialLoadDone.current = null;
         // Trigger editor effect to refetch on next render.
@@ -319,13 +338,35 @@ export default function ConnectedAdmin({
         autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number' ? autoGenerateQuizCount : undefined,
       });
       lessonId = draft._id;
+
+      // Immediately switch to the processing tab & select the new draft!
+      const initialDraft: AdminLesson = {
+        ...draft,
+        status: 'uploading',
+        processingStatus: 'UPLOADED',
+        processingStep: 'UPLOADING',
+        processingProgress: 0,
+      };
+      setLastUploadedLesson(initialDraft);
+      setLessons(prev => [initialDraft, ...prev.filter(l => l._id !== draft._id)]);
+      if (onSelectProcessingLesson) {
+        onSelectProcessingLesson(draft._id);
+      } else {
+        setEditingId(draft._id);
+        setTab('processing');
+      }
+
+      // Reset the upload input fields so the upload tab is clean
+      setFile(null);
+      initialLoadDone.current = null;
+
       const signed = await presignVideo(draft._id, file);
       uploadStarted = true;
       const totalBytes = signed.clientByteSize ?? file.size;
       setUploadProgress({ percent: 0, bytesSent: 0, totalBytes });
       setUploadStage('uploading');
-      // F08: stream the upload so we can report progress AND honor abort.
-      // We throttle onProgress to once every 200ms to avoid re-rendering 60×/sec.
+
+      // Stream upload to R2
       await uploadVideoToR2(signed.uploadUrl, file, signed.requiredHeaders['Content-Type'], {
         signal: uploadControllerRef.current?.signal,
         onProgress: (event: UploadProgressEvent) => {
@@ -335,20 +376,16 @@ export default function ConnectedAdmin({
           setUploadProgress({ percent: event.percent, bytesSent: event.bytesSent, totalBytes: event.totalBytes });
         },
       });
+
       if (uploadControllerRef.current?.signal.aborted) {
-        // User pressed cancel; the abort already raised an exception in the upload.
-        // Fall through to the catch below.
         throw new Error('Đã hủy tải lên.');
       }
+
       setUploadStage('confirming');
       await confirmVideo(draft._id, signed.objectKey);
       setUploadStage('idle');
-      await reload();
-      // F08: reset form state so a new upload doesn't re-use the previous file.
-      setFile(null);
-      initialLoadDone.current = null;
-      setEditingId(draft._id); setTab('processing');
-      setMessage('Video đã tải lên. Đang theo dõi quá trình xử lý.');
+      setMessage('Video đã tải lên Cloudflare R2 thành công. Đang tiến hành bóc tách âm thanh & AI.');
+      void reload();
     } catch (reason) {
       if (lessonId && uploadStarted) {
         try { await cancelVideoUpload(lessonId); } catch { /* Leave the draft visible for manual recovery. */ }
@@ -374,7 +411,7 @@ export default function ConnectedAdmin({
     }
   };
 
-  const selected = lessons.find(item => item._id === editingId);
+  const selected = lessons.find(item => item._id === editingId) || (lastUploadedLesson && lastUploadedLesson._id === editingId ? lastUploadedLesson : undefined);
   const statusLabel: Record<string, string> = { draft: 'Bản nháp', uploading: 'Đang tải lên', processing: 'Đang xử lý', ready_for_review: 'Chờ duyệt', published: 'Đã đăng', hidden: 'Đã ẩn', failed: 'Lỗi xử lý' };
 
   return <div className="space-y-5">
@@ -460,8 +497,15 @@ export default function ConnectedAdmin({
         onTabChange={(t) => {
           if (t === 'upload') setTab('upload');
           else if (t === 'processing') {
-            if (onSelectProcessingLesson) onSelectProcessingLesson(null);
+            const targetId = activeProcessingLessonId;
+            if (onSelectProcessingLesson) onSelectProcessingLesson(targetId);
             else setTab('processing');
+          } else if (t === 'editor') {
+            if (activeProcessingLessonId) {
+              void requestSwitchLesson(activeProcessingLessonId);
+            } else {
+              setTab('editor');
+            }
           } else {
             setTab(t as AdminTab);
           }
@@ -488,7 +532,34 @@ export default function ConnectedAdmin({
         uploadError={uploadError}
         onSubmitUpload={submitUpload}
         onCancelUpload={cancelInFlightUpload}
-        selectedLesson={lessons.find(item => item._id === (processingId || editingId)) || selected}
+        selectedLesson={(() => {
+          const found = lessons.find(item => item._id === activeProcessingLessonId);
+          if (found) return found;
+          if (lastUploadedLesson && lastUploadedLesson._id === activeProcessingLessonId) return lastUploadedLesson;
+          if (selected && selected._id === activeProcessingLessonId) return selected;
+          const fallbackJob = jobs.find(j => j.lessonId === activeProcessingLessonId);
+          if (activeProcessingLessonId && fallbackJob) {
+            return {
+              _id: activeProcessingLessonId,
+              slug: activeProcessingLessonId,
+              titleVi: `Bài học #${activeProcessingLessonId.slice(-6)}`,
+              titleZh: '',
+              descriptionVi: '',
+              hsk: 3,
+              topicIds: [],
+              goalTags: [],
+              durationSeconds: 0,
+              status: (fallbackJob.status === 'completed' ? 'ready_for_review' : fallbackJob.status === 'failed' ? 'failed' : 'processing') as AdminLesson['status'],
+              processingProgress: processing?.stageProgress ?? fallbackJob.stageProgress ?? 0,
+              processingStatus: processing?.status ?? fallbackJob.status ?? 'queued',
+              processingStep: processing?.stage ?? fallbackJob.stage ?? 'inspect_media',
+              processingError: processing?.errorMessage ?? fallbackJob.errorMessage,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            } as AdminLesson;
+          }
+          return undefined;
+        })()}
         processingStatus={processing}
         jobs={jobs}
         lessons={lessons}
@@ -499,6 +570,9 @@ export default function ConnectedAdmin({
             requestSwitchLesson(id);
             setTab('processing');
           }
+        }}
+        onEditLesson={(id) => {
+          void requestSwitchLesson(id);
         }}
         onRetryProcessing={async (id) => {
           await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');

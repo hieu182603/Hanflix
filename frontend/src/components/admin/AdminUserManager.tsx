@@ -433,7 +433,7 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
               <th className="p-4 w-[130px]">Vai trò</th>
               <th className="p-4 w-[130px]">Trình độ HSK</th>
               <th className="p-4 w-[140px]">Trạng thái</th>
-              <th className="p-4 text-right w-[120px]">Thao tác</th>
+              <th className="p-4 text-center w-[120px]">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F2E4D8]">
@@ -556,8 +556,8 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
                     </td>
 
                     {/* Actions */}
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => {

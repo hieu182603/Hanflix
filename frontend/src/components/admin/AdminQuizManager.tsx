@@ -1,21 +1,17 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ListChecks,
   Plus,
-  Search,
   Filter,
   Edit2,
   Trash2,
   X,
   RefreshCw,
-  Eye,
-  EyeOff,
   CheckCircle2,
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Save,
   Clock,
   Layers,
   Sparkles,
@@ -24,12 +20,12 @@ import {
   Copy,
   Subtitles,
   HelpCircle,
-  Play,
-  RotateCcw,
   BookOpen,
+  Check,
 } from 'lucide-react';
 import { useNotification } from '../notifications';
 import { Spinner } from '../notifications';
+import { AdminSearchBar } from './AdminSearchBar';
 import {
   listAdminLessons,
   getAdminReview,
@@ -45,6 +41,7 @@ import {
   type GeneratedAiQuestion,
   type QuizQuestionKind,
 } from '../../api/admin';
+import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
 
 interface QuizItem {
   lesson: Pick<AdminLesson, '_id' | 'titleVi' | 'titleZh' | 'status'> & { hsk?: number; durationSeconds?: number };
@@ -96,32 +93,32 @@ function makeEmptyQuestion(cueId?: string): AdminQuestion {
   };
 }
 
+const AUTO_SAVE_DEBOUNCE_MS = 800;
+
 export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?: string } = {}) {
   const params = useParams<{ lessonId?: string }>();
   const activeParamLessonId = propLessonId || params.lessonId || '';
   const navigate = useNavigate();
   const notify = useNotification();
   const [lessons, setLessons] = useState<AdminLesson[]>([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: DEFAULT_ADMIN_PAGE_SIZE, total: 0, totalPages: 1 });
+  const [pageSize, setPageSize] = useState(DEFAULT_ADMIN_PAGE_SIZE);
+  const [page, setPage] = useState(1);
   const [selectedLessonId, setSelectedLessonId] = useState(activeParamLessonId);
   const [quizData, setQuizData] = useState<QuizItem | null>(null);
   const [localQuestions, setLocalQuestions] = useState<AdminQuestion[]>([]);
 
-  // State
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fetchingLesson, setFetchingLesson] = useState(false);
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [hskFilter, setHskFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'ready_for_review' | 'published'>('all');
 
-  // Question editing / view modes
-  const [previewMode, setPreviewMode] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
-  // AI generation state
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState('');
@@ -132,21 +129,46 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
   const [aiStatus, setAiStatus] = useState<AdminQuizAiStatus | null>(null);
   const [regenerateBusy, setRegenerateBusy] = useState(false);
 
-  // Load lesson list on mount
-  useEffect(() => {
-    loadLessons();
-  }, []);
+  const loadLessons = useCallback(
+    async (targetPage: number = page) => {
+      setLoading(true);
+      try {
+        const res = await listAdminLessons({
+          page: targetPage,
+          limit: pageSize,
+          hsk: hskFilter ? Number(hskFilter) : undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          search: searchQuery.trim() || undefined,
+        });
+        setLessons(res.items);
+        setPagination(res.pagination);
+        setPage(res.pagination.page);
+      } catch (err) {
+        console.error(err);
+        notify.toast('error', 'Không thể tải danh sách bài học');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, pageSize, hskFilter, statusFilter, searchQuery, notify],
+  );
 
-  // Sync with route param if it changes
+  useEffect(() => {
+    loadLessons(1);
+  }, [hskFilter, statusFilter, pageSize]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadLessons(1);
+  };
+
   useEffect(() => {
     if (activeParamLessonId && activeParamLessonId !== selectedLessonId) {
       loadLessonQuiz(activeParamLessonId);
+      setEditorOpen(true);
     }
   }, [activeParamLessonId]);
 
-  // F-load AI generation status: refresh whenever the selected lesson changes,
-  // and poll every 4s while the background job is pending/running so the badge
-  // updates without manual reload.
   const aiStatusTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (aiStatusTimer.current) {
@@ -158,8 +180,6 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       getAdminQuizAiStatus(selectedLessonId)
         .then((status) => {
           setAiStatus(status);
-          // If the job finished, refresh the quiz questions too so the new
-          // AI-generated questions appear in the editor.
           if (status.aiGenerationStatus === 'completed') {
             void getAdminReview(selectedLessonId).then((data) => {
               setLocalQuestions(data.quiz?.questions ?? []);
@@ -189,30 +209,9 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
     };
   }, [selectedLessonId, aiStatus?.aiGenerationStatus, quizData]);
 
-  const loadLessons = async () => {
-    setLoading(true);
-    try {
-      const items = await listAdminLessons();
-      setLessons(items);
-      // Auto-select param lesson or first lesson if none selected
-      const targetId = activeParamLessonId || selectedLessonId || (items.length > 0 ? items[0]._id : '');
-      if (targetId) {
-        loadLessonQuiz(targetId);
-      }
-    } catch (err) {
-      console.error(err);
-      showMsg('error', 'Không thể tải danh sách bài học');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadLessonQuiz = useCallback(async (lessonId: string) => {
     setFetchingLesson(true);
     setSelectedLessonId(lessonId);
-    setEditingIndex(null);
-    setIsAddingNew(false);
-    setPreviewMode(false);
     try {
       const data = await getAdminReview(lessonId);
       const item: QuizItem = {
@@ -222,33 +221,37 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       };
       setQuizData(item);
       setLocalQuestions(data.quiz?.questions ?? []);
-      // F-load AI status in the background; failure is non-blocking.
       getAdminQuizAiStatus(lessonId).then(setAiStatus).catch(() => undefined);
     } catch (err) {
       console.error(err);
-      showMsg('error', 'Không thể tải bài luyện tập cho video này');
+      notify.toast('error', 'Không thể tải bài luyện tập cho video này');
       setQuizData(null);
     } finally {
       setFetchingLesson(false);
     }
-  }, []);
+  }, [notify]);
 
-  const showMsg = (type: 'success' | 'error', text: string) => {
-    notify.toast(type, text);
+  const openEditor = (lessonId: string) => {
+    if (!quizData || quizData.lesson._id !== lessonId) {
+      loadLessonQuiz(lessonId);
+    }
+    setSelectedLessonId(lessonId);
+    setActiveQuestionId(null);
+    setEditorOpen(true);
+    navigate(`/admin/quiz/${lessonId}`);
   };
 
-  // Question CRUD
+  const closeEditor = () => {
+    setEditorOpen(false);
+    setActiveQuestionId(null);
+    navigate('/admin/quiz');
+    loadLessons();
+  };
+
   const handleAddNewQuestion = () => {
     const newQ = makeEmptyQuestion();
     setLocalQuestions((prev) => [...prev, newQ]);
-    setEditingIndex(localQuestions.length);
-    setIsAddingNew(true);
-  };
-
-  const handleUpdateQuestion = (idx: number, updated: AdminQuestion) => {
-    setLocalQuestions((prev) => prev.map((q, i) => (i === idx ? updated : q)));
-    setEditingIndex(null);
-    setIsAddingNew(false);
+    setActiveQuestionId(newQ.questionId);
   };
 
   const handleDuplicateQuestion = (idx: number) => {
@@ -263,7 +266,8 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       next.splice(idx + 1, 0, duplicated);
       return next;
     });
-    showMsg('success', `Đã nhân bản câu hỏi #${idx + 1}`);
+    setActiveQuestionId(duplicated.questionId);
+    notify.toast('success', `Đã nhân bản câu hỏi #${idx + 1}`);
   };
 
   const handleRemoveQuestion = async (idx: number) => {
@@ -273,8 +277,11 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       confirmText: 'Xóa',
       tone: 'danger',
     })) return;
+    const removed = localQuestions[idx];
     setLocalQuestions((prev) => prev.filter((_, i) => i !== idx));
-    if (editingIndex === idx) setEditingIndex(null);
+    if (removed && removed.questionId === activeQuestionId) {
+      setActiveQuestionId(null);
+    }
   };
 
   const handleMoveQuestion = (idx: number, dir: -1 | 1) => {
@@ -285,24 +292,6 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       [arr[idx], arr[targetIdx]] = [arr[targetIdx], arr[idx]];
       return arr;
     });
-    if (editingIndex === idx) setEditingIndex(targetIdx);
-  };
-
-  // Save changes
-  const handleSave = async () => {
-    if (!selectedLessonId) return;
-    setSaving(true);
-    try {
-      await saveAdminQuiz(selectedLessonId, localQuestions);
-      showMsg('success', 'Đã lưu danh sách câu hỏi thành công!');
-      if (quizData) {
-        setQuizData({ ...quizData, questions: localQuestions });
-      }
-    } catch (err: any) {
-      showMsg('error', err?.message || 'Lỗi khi lưu bài luyện tập');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const openAiGenerator = () => {
@@ -325,7 +314,7 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       const generated = result.questions;
       setAiDraft(generated);
       setAiSelectedIds(new Set(generated.map((q) => q.questionId)));
-      showMsg('success', `AI đã sinh ${generated.length} câu hỏi. Bấm vào từng câu để chọn.`);
+      notify.toast('success', `AI đã sinh ${generated.length} câu hỏi. Bấm vào từng câu để chọn.`);
     } catch (err: any) {
       setAiError(err?.message || 'AI không thể sinh câu hỏi lúc này');
     } finally {
@@ -354,7 +343,7 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       }));
     setLocalQuestions((prev) => [...prev, ...selectedQuestions]);
     setAiModalOpen(false);
-    showMsg('success', `Đã thêm ${selectedQuestions.length} câu hỏi từ AI vào danh sách. Nhớ bấm "Lưu thay đổi".`);
+    notify.toast('success', `Đã thêm ${selectedQuestions.length} câu hỏi từ AI vào danh sách.`);
   };
 
   const handleRegenerate = async () => {
@@ -372,9 +361,9 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
         aiGenerationStatus: 'pending',
         revision: aiStatus?.revision ?? null,
       });
-      showMsg('success', 'Đã yêu cầu Panda AI tạo lại bài tập. Trạng thái sẽ tự cập nhật.');
+      notify.toast('success', 'Đã yêu cầu Panda AI tạo lại bài tập. Trạng thái sẽ tự cập nhật.');
     } catch (err: any) {
-      showMsg('error', err?.message || 'Không thể tạo lại câu hỏi lúc này');
+      notify.toast('error', err?.message || 'Không thể tạo lại câu hỏi lúc này');
     } finally {
       setRegenerateBusy(false);
     }
@@ -400,38 +389,22 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
   const handlePublish = async () => {
     if (!selectedLessonId) return;
     if (localQuestions.length === 0) {
-      showMsg('error', 'Cần ít nhất 1 câu hỏi trước khi xuất bản bài luyện tập');
+      notify.toast('error', 'Cần ít nhất 1 câu hỏi trước khi xuất bản bài luyện tập');
       return;
     }
     setSaving(true);
     try {
       await saveAdminQuiz(selectedLessonId, localQuestions);
       await publishAdminLesson(selectedLessonId);
-      showMsg('success', 'Đã xuất bản bài học và bộ bài tập trắc nghiệm!');
+      notify.toast('success', 'Đã xuất bản bài học và bộ bài tập trắc nghiệm!');
       await loadLessons();
       await loadLessonQuiz(selectedLessonId);
     } catch (err: any) {
-      showMsg('error', err?.message || 'Lỗi khi xuất bản bài luyện tập');
+      notify.toast('error', err?.message || 'Lỗi khi xuất bản bài luyện tập');
     } finally {
       setSaving(false);
     }
   };
-
-  // Filter lessons
-  const filteredLessons = lessons.filter((l) => {
-    if (statusFilter !== 'all' && l.status !== statusFilter) return false;
-    if (hskFilter && String(l.hsk) !== hskFilter) return false;
-    if (
-      searchQuery &&
-      !(l.titleVi + (l.titleZh || '') + (l.pinyin || '')).toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const selectedLesson = lessons.find((l) => l._id === selectedLessonId);
-  const hasUnsavedChanges = JSON.stringify(localQuestions) !== JSON.stringify(quizData?.questions ?? []);
 
   return (
     <div className="space-y-6">
@@ -461,7 +434,7 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
       />
       {/* Top Banner & Header */}
       <div className="relative overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white p-6 shadow-2xs">
-        <div className="pointer-events-none absolute -right-6 -bottom-8 select-none font-serif text-8xl font-black text-[#B91B1C]/5">
+        <div className="pointer-events-none absolute -right-6 -bottom-8 select-none font-fraunces text-8xl font-black text-[#B91B1C]/5">
           练
         </div>
         <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
@@ -484,75 +457,28 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
 
           <div className="flex shrink-0 items-center gap-2.5">
             <button
-              onClick={loadLessons}
+              onClick={() => loadLessons(1)}
               disabled={loading}
               className="flex h-10 items-center gap-2 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 text-xs font-bold text-[#2B2826] shadow-2xs transition-all hover:border-[#B91B1C]/30 hover:bg-white disabled:opacity-40 active:scale-[0.98]"
             >
               <RefreshCw className={`h-4 w-4 text-[#8C827A] ${loading ? 'animate-spin' : ''}`} />
               <span>Làm mới</span>
             </button>
-
-            {selectedLessonId && (
-              <>
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !hasUnsavedChanges}
-                  className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold shadow-2xs transition-all active:scale-[0.98] ${
-                    hasUnsavedChanges
-                      ? 'border-[#B91B1C] bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#FCE8E8]'
-                      : 'cursor-not-allowed border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A] opacity-50'
-                  }`}
-                >
-                  <Save className="h-4 w-4" />
-                  <span>{saving ? 'Đang lưu...' : hasUnsavedChanges ? 'Lưu thay đổi *' : 'Đã lưu'}</span>
-                </button>
-
-                {quizData?.lesson.status === 'published' ? (
-                  <span className="flex h-10 items-center gap-1.5 rounded-xl border border-[#C6E7DA] bg-[#EAF5F1] px-4 text-xs font-bold text-[#188A5A]">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Đã xuất bản</span>
-                  </span>
-                ) : (
-                  <button
-                    onClick={handlePublish}
-                    disabled={saving || localQuestions.length === 0}
-                    className="flex h-10 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Xuất bản</span>
-                  </button>
-                )}
-              </>
-            )}
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar - 1 row */}
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
-          <input
-            type="text"
-            placeholder="Tìm bài học theo tên Việt, Trung hoặc mô tả..."
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs md:flex-row md:items-center md:justify-between">
+        <form onSubmit={handleSearchSubmit} className="relative w-full md:max-w-md">
+          <AdminSearchBar
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            onChange={setSearchQuery}
+            placeholder="Tìm bài học theo tên Việt, Trung hoặc mô tả..."
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#2B2826] transition-colors"
-              title="Xóa tìm kiếm"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        </form>
 
-        <div className="flex shrink-0 items-center gap-2">
-          {/* HSK Level Filter */}
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
             <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
@@ -570,7 +496,6 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
             </select>
           </div>
 
-          {/* Status Filter */}
           <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
             <Filter className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
@@ -604,472 +529,793 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
         </div>
       </div>
 
-      {/* Main Two-Column Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column: Lesson Selector */}
-        <div className="space-y-4 lg:col-span-5 xl:col-span-4">
-          {/* Lesson List */}
-          <div className="max-h-[680px] overflow-y-auto overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xs divide-y divide-[#F2E4D8]">
-            {loading ? (
-              <div className="p-10 text-center text-[#8C827A]">
-                <Spinner size="md" tone="brand" className="mx-auto mb-2" />
-                <p className="text-xs">Đang tải danh sách bài học...</p>
-              </div>
-            ) : filteredLessons.length === 0 ? (
-              <div className="p-8 text-center text-[#8C827A]">
-                <BookOpen className="mx-auto mb-2 h-8 w-8 text-[#8C827A]/40" />
-                <p className="text-xs font-bold text-[#2B2826]">Không tìm thấy bài học nào</p>
-                <p className="mt-0.5 text-[11px] text-[#8C827A]">Thử đổi từ khóa hoặc bộ lọc HSK.</p>
-              </div>
-            ) : (
-              filteredLessons.map((lesson) => {
-                const isSelected = lesson._id === selectedLessonId;
-                const lvlKey = String(lesson.hsk);
-                const styling = HSK_COLORS[lvlKey] || HSK_COLORS['1'];
+      {/* Lesson Table - list view */}
+      <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs min-w-[720px]">
+            <thead className="bg-[#FFF9F5] border-b border-[#F2E4D8] text-[#8C827A] uppercase font-bold text-[10px] tracking-wider">
+              <tr>
+                <th className="p-4 w-[280px]">Bài học</th>
+                <th className="p-4 w-[120px]">Thời lượng</th>
+                <th className="p-4 w-[90px]">HSK</th>
+                <th className="p-4 w-[140px]">Trạng thái</th>
+                <th className="p-4 text-center w-[130px]">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F2E4D8]">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center text-[#8C827A]">
+                    <div className="inline-flex items-center gap-2">
+                      <Spinner size="sm" tone="brand" />
+                      <span>Đang tải danh sách bài học...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : lessons.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center text-[#8C827A]">
+                    <div className="flex flex-col items-center gap-2">
+                      <BookOpen className="h-8 w-8 text-[#8C827A]/40" />
+                      <p className="text-sm font-bold text-[#2B2826]">Không tìm thấy bài học nào</p>
+                      <p className="text-[11px] text-[#8C827A]">Thử đổi từ khóa hoặc bộ lọc HSK.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                lessons.map((lesson) => {
+                  const lvlKey = String(lesson.hsk);
+                  const styling = HSK_COLORS[lvlKey] || HSK_COLORS['1'];
+                  return (
+                    <tr
+                      key={lesson._id}
+                      className="hover:bg-[#FFF9F5]/70 transition-colors group"
+                    >
+                      {/* Title */}
+                      <td className="p-4">
+                        <div className="space-y-0.5">
+                          <p className="font-fraunces text-sm font-bold text-[#2B2826] line-clamp-1">
+                            {lesson.titleVi}
+                          </p>
+                          {lesson.titleZh && (
+                            <p className="font-fraunces text-[11px] text-[#8C827A] line-clamp-1">
+                              {lesson.titleZh}
+                            </p>
+                          )}
+                          <p className="font-mono text-[10px] text-[#A1A1AA]">
+                            {lesson._id.slice(-8)}
+                          </p>
+                        </div>
+                      </td>
 
-                return (
-                  <button
-                    key={lesson._id}
-                    onClick={() => {
-                      navigate(`/admin/quiz/${lesson._id}`);
-                      loadLessonQuiz(lesson._id);
-                    }}
-                    className={`flex w-full items-start justify-between gap-3 p-4 text-left transition-all ${
-                      isSelected
-                        ? 'border-l-4 border-l-[#B91B1C] bg-[#FDF1F1]'
-                        : 'hover:bg-[#FFF9F5]/70'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1.5 flex items-center gap-2">
-                        <span className={`rounded px-2 py-0.5 text-[10px] font-black border ${styling.bg} ${styling.text} ${styling.border}`}>
+                      {/* Duration */}
+                      <td className="p-4">
+                        <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#2B2826]">
+                          <Clock className="h-3 w-3 text-[#8C827A]" />
+                          {formatDuration(lesson.durationSeconds || 0)}
+                        </span>
+                      </td>
+
+                      {/* HSK badge */}
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-md font-black text-[10px] border ${styling.bg} ${styling.text} ${styling.border}`}>
                           HSK {lesson.hsk}
                         </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-4">
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-black border ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide uppercase border ${
                             lesson.status === 'published'
-                              ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                              ? 'bg-[#EAF5F1] text-[#188A5A] border-[#C6E7DA]'
                               : lesson.status === 'ready_for_review'
-                              ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
-                              : 'border-[#E5DCD3] bg-[#F4EFEA] text-[#6E655F]'
+                              ? 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]'
+                              : 'bg-[#F4EFEA] text-[#6E655F] border-[#E5DCD3]'
                           }`}
                         >
-                          {lesson.status === 'published'
-                            ? 'Đã xuất bản'
-                            : lesson.status === 'ready_for_review'
-                            ? 'Chờ duyệt'
-                            : 'Nháp'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            lesson.status === 'published' ? 'bg-[#188A5A]' : lesson.status === 'ready_for_review' ? 'bg-[#B45309]' : 'bg-[#8C827A]'
+                          }`} />
+                          <span>
+                            {lesson.status === 'published'
+                              ? 'Đã xuất bản'
+                              : lesson.status === 'ready_for_review'
+                              ? 'Chờ duyệt'
+                              : 'Nháp'}
+                          </span>
                         </span>
-                      </div>
+                      </td>
 
-                      <p
-                        className={`line-clamp-1 text-sm font-bold leading-snug ${
-                          isSelected ? 'text-[#B91B1C]' : 'text-[#2B2826]'
-                        }`}
-                      >
-                        {lesson.titleVi}
-                      </p>
-                      {lesson.titleZh && (
-                        <p className="mt-0.5 line-clamp-1 font-serif text-xs text-[#8C827A]">
-                          {lesson.titleZh}
-                        </p>
-                      )}
-                    </div>
+                      {/* Actions */}
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openEditor(lesson._id)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#B91B1C] px-3.5 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 hover:bg-[#A3181A] active:scale-[0.98]"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          <span>Sửa bài tập</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <AdminPaginationBar
+        total={pagination.total}
+        page={pagination.page}
+        pageSize={pageSize}
+        visibleCount={lessons.length}
+        unitLabel="bài học"
+        disabled={loading}
+        ariaLabel="Phân trang bài luyện tập"
+        onPageChange={(p) => loadLessons(p)}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
+
+      {/* Editor popup - landscape, 2 columns horizontal */}
+      {editorOpen && (
+        <EditorPopup
+          lesson={quizData?.lesson ?? null}
+          cues={quizData?.subtitleCues ?? []}
+          questions={localQuestions}
+          activeQuestionId={activeQuestionId}
+          loading={fetchingLesson}
+          saving={saving}
+          aiStatus={aiStatus}
+          onChangeActiveQuestion={setActiveQuestionId}
+          onAddQuestion={handleAddNewQuestion}
+          onUpdateQuestions={setLocalQuestions}
+          onDuplicate={handleDuplicateQuestion}
+          onRemove={handleRemoveQuestion}
+          onMove={handleMoveQuestion}
+          onOpenAi={openAiGenerator}
+          onRegenerate={handleRegenerate}
+          regenerateBusy={regenerateBusy}
+          onPublish={handlePublish}
+          onClose={closeEditor}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Editor Popup (landscape, 2 columns horizontal)
+// ---------------------------------------------------------------------------
+
+interface EditorPopupProps {
+  lesson: Pick<AdminLesson, '_id' | 'titleVi' | 'titleZh' | 'status'> & { hsk?: number; durationSeconds?: number } | null;
+  cues: AdminCue[];
+  questions: AdminQuestion[];
+  activeQuestionId: string | null;
+  loading: boolean;
+  saving: boolean;
+  aiStatus: AdminQuizAiStatus | null;
+  onChangeActiveQuestion: (id: string | null) => void;
+  onAddQuestion: () => void;
+  onUpdateQuestions: (updater: AdminQuestion[] | ((prev: AdminQuestion[]) => AdminQuestion[])) => void;
+  onDuplicate: (idx: number) => void;
+  onRemove: (idx: number) => void;
+  onMove: (idx: number, dir: -1 | 1) => void;
+  onOpenAi: () => void;
+  onRegenerate: () => void;
+  regenerateBusy: boolean;
+  onPublish: () => void;
+  onClose: () => void;
+}
+
+function EditorPopup({
+  lesson,
+  cues,
+  questions,
+  activeQuestionId,
+  loading,
+  saving,
+  aiStatus,
+  onChangeActiveQuestion,
+  onAddQuestion,
+  onUpdateQuestions,
+  onDuplicate,
+  onRemove,
+  onMove,
+  onOpenAi,
+  onRegenerate,
+  regenerateBusy,
+  onPublish,
+  onClose,
+}: EditorPopupProps) {
+  const [confirmingClose, setConfirmingClose] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [popupSaving, setPopupSaving] = useState(false);
+
+  // Auto-save (debounced) - persists whenever questions change
+  const initialQuestionsRef = useRef<string>(JSON.stringify(questions));
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDirtyRef = useRef(false);
+
+  useEffect(() => {
+    const serialized = JSON.stringify(questions);
+    if (serialized === initialQuestionsRef.current) return;
+    isDirtyRef.current = true;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      if (!lesson) return;
+      setAutoSaving(true);
+      try {
+        await saveAdminQuiz(lesson._id, questions);
+        setLastSavedAt(new Date());
+        isDirtyRef.current = false;
+        initialQuestionsRef.current = serialized;
+      } catch (err: any) {
+        // surface error toast
+        // eslint-disable-next-line no-console
+        console.error('Auto-save failed:', err);
+      } finally {
+        setAutoSaving(false);
+      }
+    }, AUTO_SAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [questions, lesson]);
+
+  // ESC to close
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (confirmingClose) {
+          setConfirmingClose(false);
+        } else {
+          attemptClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmingClose]);
+
+  const attemptClose = () => {
+    if (isDirtyRef.current) {
+      setConfirmingClose(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleDiscardAndClose = () => {
+    setConfirmingClose(false);
+    onClose();
+  };
+
+  const handleSaveAndClose = async () => {
+    if (!lesson) return;
+    setPopupSaving(true);
+    try {
+      await saveAdminQuiz(lesson._id, questions);
+      setLastSavedAt(new Date());
+      isDirtyRef.current = false;
+      onClose();
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+    } finally {
+      setPopupSaving(false);
+    }
+  };
+
+  const activeQuestion = questions.find((q) => q.questionId === activeQuestionId) ?? null;
+  const activeIndex = activeQuestion ? questions.findIndex((q) => q.questionId === activeQuestionId) : -1;
+
+  if (!lesson) {
+    return (
+      <ModalShell onBackdrop={onClose}>
+        <div className="flex min-h-[300px] items-center justify-center p-12">
+          <Spinner size="lg" tone="brand" />
+          <p className="ml-3 text-xs font-bold text-[#8C827A]">Đang tải dữ liệu bài học...</p>
+        </div>
+      </ModalShell>
+    );
+  }
+
+  return (
+    <ModalShell onBackdrop={attemptClose}>
+      <div className="flex h-[85vh] max-h-[900px] w-full max-w-[1280px] flex-col overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xl">
+        {/* Header */}
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#F2E4D8] bg-[#FFF9F5] px-6 py-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-[#FDF1F1] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#B91B1C] ring-1 ring-[#B91B1C]/20">
+                Editor
+              </span>
+              {lesson.hsk !== undefined && (
+                <span className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${
+                  (HSK_COLORS[String(lesson.hsk)] || HSK_COLORS['1']).bg
+                } ${(HSK_COLORS[String(lesson.hsk)] || HSK_COLORS['1']).text} ${(HSK_COLORS[String(lesson.hsk)] || HSK_COLORS['1']).border}`}>
+                  HSK {lesson.hsk}
+                </span>
+              )}
+              {lesson.status && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black border ${
+                    lesson.status === 'published'
+                      ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                      : lesson.status === 'ready_for_review'
+                      ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
+                      : 'border-[#E5DCD3] bg-[#F4EFEA] text-[#6E655F]'
+                  }`}
+                >
+                  {lesson.status === 'published' ? 'Đã xuất bản' : lesson.status === 'ready_for_review' ? 'Chờ duyệt' : 'Bản nháp'}
+                </span>
+              )}
+              <AiStatusBadge status={aiStatus} />
+            </div>
+            <h2 className="mt-1 truncate text-lg font-black tracking-tight text-[#2B2826]">
+              {lesson.titleVi}
+            </h2>
+            {lesson.titleZh && (
+              <p className="truncate font-fraunces text-xs text-[#8C827A]">{lesson.titleZh}</p>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            <SaveIndicator saving={saving} autoSaving={autoSaving} lastSavedAt={lastSavedAt} />
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-[#8C827A] hover:bg-white hover:text-[#2B2826]"
+              aria-label="Đóng"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body: 2 columns horizontal (45/55) */}
+        <div className="grid flex-1 min-h-0 grid-cols-1 lg:grid-cols-[45%_55%]">
+          {/* Left column: question list */}
+          <div className="flex min-h-0 flex-col border-r border-[#F2E4D8] bg-[#FFFDFB]">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#F2E4D8] px-5 py-3">
+              <div>
+                <h3 className="text-xs font-black text-[#2B2826]">
+                  Danh sách câu hỏi
+                  <span className="ml-2 rounded-md bg-[#FFF9F5] px-2 py-0.5 font-mono text-[10px] text-[#8C827A]">
+                    {questions.length}
+                  </span>
+                </h3>
+                <p className="mt-0.5 text-[11px] text-[#8C827A]">
+                  Click chọn câu để chỉnh sửa bên phải
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onOpenAi}
+                  disabled={cues.length === 0}
+                  className="flex h-8 items-center gap-1 rounded-lg border border-[#B91B1C]/30 bg-white px-3 text-[11px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] active:scale-[0.98] disabled:opacity-40"
+                  title="Tạo câu hỏi bằng AI"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  AI
+                </button>
+                <button
+                  type="button"
+                  onClick={onAddQuestion}
+                  className="flex h-8 items-center gap-1 rounded-lg bg-[#B91B1C] px-3 text-[11px] font-bold text-white shadow-2xs shadow-[#B91B1C]/25 hover:bg-[#A3181A] active:scale-[0.98]"
+                >
+                  <Plus className="h-3 w-3" />
+                  Thêm
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex h-full items-center justify-center p-8">
+                  <Spinner size="md" tone="brand" />
+                </div>
+              ) : questions.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FDF1F1] text-[#B91B1C] ring-1 ring-[#B91B1C]/20">
+                    <HelpCircle className="h-6 w-6" />
+                  </div>
+                  <p className="mb-1 text-sm font-bold text-[#2B2826]">Chưa có câu hỏi nào</p>
+                  <p className="mb-4 max-w-xs text-[11px] text-[#8C827A]">
+                    Bấm "Thêm" hoặc "AI" để tạo câu hỏi đầu tiên cho bài học này.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onAddQuestion}
+                    className="flex h-9 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white hover:bg-[#A3181A] active:scale-[0.98]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tạo câu hỏi đầu tiên
                   </button>
-                );
-              })
+                </div>
+              ) : (
+                <ul className="divide-y divide-[#F2E4D8]">
+                  {questions.map((q, idx) => (
+                    <QuestionListItem
+                      key={q.questionId}
+                      question={q}
+                      index={idx}
+                      cues={cues}
+                      isActive={q.questionId === activeQuestionId}
+                      onSelect={() => onChangeActiveQuestion(q.questionId)}
+                      onDuplicate={() => onDuplicate(idx)}
+                      onRemove={() => onRemove(idx)}
+                      onMove={(dir) => onMove(idx, dir)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Right column: editor for active question */}
+          <div className="flex min-h-0 flex-col bg-white">
+            {activeQuestion ? (
+              <QuestionEditorPanel
+                question={activeQuestion}
+                index={activeIndex}
+                cues={cues}
+                onUpdate={(updated) => {
+                  onUpdateQuestions((prev) =>
+                    prev.map((q) => (q.questionId === updated.questionId ? updated : q))
+                  );
+                }}
+                onClose={() => onChangeActiveQuestion(null)}
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center p-12 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-[#F2E4D8] bg-[#FFF9F5]">
+                  <Layers className="h-7 w-7 text-[#8C827A]" />
+                </div>
+                <h3 className="text-lg font-extrabold text-[#2B2826]">Chọn một câu hỏi để chỉnh sửa</h3>
+                <p className="mt-1.5 max-w-sm text-xs text-[#8C827A]">
+                  Click vào câu hỏi bất kỳ trong danh sách bên trái, hoặc thêm câu mới để bắt đầu.
+                </p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Quiz Builder & Learner Preview */}
-        <div className="lg:col-span-7 xl:col-span-8">
-          {!selectedLessonId ? (
-            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-3xl border border-[#F2E4D8] bg-white p-12 text-center shadow-2xs">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-[#F2E4D8] bg-[#FFF9F5]">
-                <Layers className="h-7 w-7 text-[#8C827A]" />
-              </div>
-              <h3 className="text-lg font-extrabold text-[#2B2826]">Chọn một bài học để soạn câu hỏi</h3>
-              <p className="mt-1.5 max-w-sm text-xs text-[#8C827A]">
-                Danh sách bài học ở cột bên trái phân loại theo chuẩn HSK 1 đến 9. Bấm chọn bài học để bắt đầu.
-              </p>
-            </div>
-          ) : fetchingLesson ? (
-            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-3xl border border-[#F2E4D8] bg-white p-12 shadow-2xs">
-              <Spinner size="lg" tone="brand" className="mb-3" />
-              <p className="text-xs font-bold text-[#8C827A]">Đang tải dữ liệu câu hỏi bài tập...</p>
-            </div>
-          ) : quizData ? (
-            <div className="space-y-4">
-              {/* Lesson Meta Card & Mode Switcher */}
-              {(() => {
-                const lvlKey = String(quizData.lesson.hsk || 1);
-                const hskStyle = HSK_COLORS[lvlKey] || HSK_COLORS['1'];
-                return (
-                  <div className="rounded-3xl border border-[#F2E4D8] bg-white p-5 sm:p-6 shadow-2xs">
-                    {/* Row 1: Metadata Badges */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-black tracking-wide border whitespace-nowrap shadow-2xs ${hskStyle.bg} ${hskStyle.text} ${hskStyle.border}`}>
-                        HSK {quizData.lesson.hsk}
-                      </span>
+        {/* Footer */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#F2E4D8] bg-[#FFF9F5] px-6 py-3">
+          <button
+            type="button"
+            onClick={onRegenerate}
+            disabled={regenerateBusy || aiStatus?.aiGenerationStatus === 'pending' || aiStatus?.aiGenerationStatus === 'running'}
+            className="flex h-9 items-center gap-2 rounded-xl border border-[#B91B1C]/25 bg-white px-3.5 text-xs font-bold text-[#B91B1C] hover:bg-[#FDF1F1] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
+            title="Yêu cầu Panda AI tạo lại toàn bộ câu hỏi"
+          >
+            {regenerateBusy ? (
+              <Spinner size="sm" tone="brand" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 text-[#B91B1C]" />
+            )}
+            <span>Tạo lại bằng AI</span>
+          </button>
 
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#FFF9F5] border border-[#F2E4D8] text-[11px] font-semibold text-[#5F6368] whitespace-nowrap shadow-2xs">
-                        <Clock className="h-3 w-3 text-[#8C827A]" />
-                        <span>Thời lượng: {formatDuration(quizData.lesson.durationSeconds || 0)}</span>
-                      </span>
-
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#FFF9F5] border border-[#F2E4D8] text-[11px] font-semibold text-[#5F6368] whitespace-nowrap shadow-2xs">
-                        <Subtitles className="h-3 w-3 text-[#8C827A]" />
-                        <span>{quizData.subtitleCues.length} câu thoại</span>
-                      </span>
-
-                      <AiStatusBadge status={aiStatus} />
-
-                      {quizData.lesson.status && (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap shadow-2xs ${
-                            quizData.lesson.status === 'published'
-                              ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                              : quizData.lesson.status === 'ready_for_review'
-                              ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
-                              : 'border-[#E5DCD3] bg-[#F4EFEA] text-[#6E655F]'
-                          }`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            quizData.lesson.status === 'published' ? 'bg-[#188A5A]' : quizData.lesson.status === 'ready_for_review' ? 'bg-[#B45309]' : 'bg-[#8C827A]'
-                          }`} />
-                          <span>
-                            {quizData.lesson.status === 'published' ? 'Đã xuất bản' : quizData.lesson.status === 'ready_for_review' ? 'Chờ duyệt' : 'Bản nháp'}
-                          </span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Row 2: Title & Actions Toolbar */}
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pt-1">
-                      {/* Left: Lesson Titles */}
-                      <div className="min-w-0 flex-1">
-                        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[#18181B] leading-snug">
-                          {quizData.lesson.titleVi}
-                        </h2>
-                        {quizData.lesson.titleZh && (
-                          <p className="mt-1 font-serif text-sm font-semibold text-[#8C827A] tracking-wide">
-                            {quizData.lesson.titleZh}
-                          </p>
-                        )}
-                        {aiStatus?.aiGenerationError && aiStatus.aiGenerationStatus !== 'completed' && (
-                          <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-[#F9D2D2] bg-[#FDF1F1] px-3 py-2 text-xs font-bold text-[#B91B1C]">
-                            <AlertCircle className="h-4 w-4 shrink-0" />
-                            <span>Panda AI: {aiStatus.aiGenerationError}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Actions Toolbar */}
-                      <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={handleRegenerate}
-                          disabled={regenerateBusy || aiStatus?.aiGenerationStatus === 'pending' || aiStatus?.aiGenerationStatus === 'running'}
-                          className="flex h-10 items-center gap-2 rounded-xl border border-[#B91B1C]/25 bg-white px-3.5 text-xs font-bold text-[#B91B1C] shadow-2xs transition-all hover:bg-[#FDF1F1] hover:border-[#B91B1C]/50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                          title="Yêu cầu Panda AI tạo lại toàn bộ câu hỏi"
-                        >
-                          {regenerateBusy ? (
-                            <Spinner size="sm" tone="brand" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 text-[#B91B1C]" />
-                          )}
-                          <span>Tạo lại bằng AI</span>
-                        </button>
-
-                        {/* Toggle Mode: Editor vs Learner Preview */}
-                        <div className="flex items-center rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-1 shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => setPreviewMode(false)}
-                            className={`flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all cursor-pointer ${
-                              !previewMode
-                                ? 'border border-[#F2E4D8]/80 bg-white text-[#18181B] shadow-2xs'
-                                : 'text-[#8C827A] hover:text-[#18181B]'
-                            }`}
-                          >
-                            <Edit2 className={`h-3.5 w-3.5 ${!previewMode ? 'text-[#B91B1C]' : ''}`} />
-                            <span>Biên tập ({localQuestions.length})</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPreviewMode(true)}
-                            className={`flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all cursor-pointer ${
-                              previewMode
-                                ? 'bg-[#B91B1C] text-white shadow-2xs shadow-[#B91B1C]/20'
-                                : 'text-[#8C827A] hover:text-[#B91B1C]'
-                            }`}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>Xem trước học viên</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Mode 1: Learner Preview Mode */}
-              {previewMode ? (
-                <LearnerQuizPreview
-                  questions={localQuestions}
-                  cues={quizData.subtitleCues}
-                  onExit={() => setPreviewMode(false)}
-                />
-              ) : (
-                /* Mode 2: Quiz Builder / Editor Mode */
-                <div className="overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xs">
-                  <div className="flex items-center justify-between border-b border-[#F2E4D8] bg-[#FFF9F5]/40 px-5 py-4">
-                    <div>
-                      <h3 className="text-sm font-black text-[#2B2826]">Danh sách câu hỏi bài tập</h3>
-                      <p className="text-[11px] text-[#8C827A]">
-                        Mỗi bài học nên có từ 3 đến 7 câu hỏi để củng cố từ vựng và ngữ pháp.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={openAiGenerator}
-                        disabled={fetchingLesson || quizData.subtitleCues.length === 0}
-                        className="flex h-9 items-center gap-1.5 rounded-xl border border-[#B91B1C]/30 bg-white px-4 text-xs font-bold text-[#B91B1C] shadow-2xs transition-all hover:bg-[#FDF1F1] active:scale-[0.98] disabled:opacity-40"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        <span>Tạo bằng AI</span>
-                      </button>
-                      <button
-                        onClick={handleAddNewQuestion}
-                        className="flex h-9 items-center gap-1.5 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] active:scale-[0.98]"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Thêm câu hỏi mới</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {localQuestions.length === 0 ? (
-                    <div className="flex flex-col items-center p-12 text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FDF1F1] text-[#B91B1C] ring-1 ring-[#B91B1C]/20 shadow-2xs">
-                        <HelpCircle className="h-6 w-6" />
-                      </div>
-                      <p className="mb-1 text-sm font-bold text-[#2B2826]">Chưa có câu hỏi nào cho bài học này</p>
-                      <p className="mb-4 max-w-sm text-xs text-[#8C827A]">
-                        Bấm nút bên dưới để thêm câu hỏi trắc nghiệm hoặc điền từ vào chỗ trống liên kết với phụ đề phim.
-                      </p>
-                      <button
-                        onClick={handleAddNewQuestion}
-                        className="flex h-9 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] active:scale-[0.98]"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Tạo câu hỏi đầu tiên</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-[#F2E4D8]">
-                      {localQuestions.map((question, idx) => {
-                        const isEditing = editingIndex === idx;
-                        const boundCue = quizData.subtitleCues.find((c) => c.cueId === question.cueId);
-
-                        if (isEditing) {
-                          return (
-                            <div key={`edit-${question.questionId || idx}`} className="bg-[#FFFDFB] p-5">
-                              <QuestionForm
-                                question={question}
-                                cues={quizData.subtitleCues}
-                                index={idx}
-                                onSave={(updated) => handleUpdateQuestion(idx, updated)}
-                                onCancel={() => {
-                                  if (isAddingNew && idx === localQuestions.length - 1 && !question.prompt) {
-                                    setLocalQuestions((prev) => prev.filter((_, i) => i !== idx));
-                                  }
-                                  setEditingIndex(null);
-                                  setIsAddingNew(false);
-                                }}
-                              />
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={`row-${question.questionId || idx}`}
-                            className="group p-5 transition-colors hover:bg-[#FFF9F5]/60"
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Move Controls & Index */}
-                              <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveQuestion(idx, -1)}
-                                  disabled={idx === 0}
-                                  className="rounded p-0.5 text-[#8C827A] hover:text-[#2B2826] disabled:opacity-20"
-                                  title="Di chuyển lên"
-                                >
-                                  <ChevronUp className="h-3.5 w-3.5" />
-                                </button>
-                                <span className="w-6 text-center font-mono text-xs font-black text-[#2B2826]">
-                                  Q{idx + 1}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveQuestion(idx, 1)}
-                                  disabled={idx === localQuestions.length - 1}
-                                  className="rounded p-0.5 text-[#8C827A] hover:text-[#2B2826] disabled:opacity-20"
-                                  title="Di chuyển xuống"
-                                >
-                                  <ChevronDown className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-
-                              {/* Question Details */}
-                              <div className="min-w-0 flex-1 space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span
-                                    className={`rounded-md px-2 py-0.5 text-[10px] font-black border ${
-                                      question.type === 'multiple_choice'
-                                        ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                                        : 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
-                                    }`}
-                                  >
-                                    {question.type === 'multiple_choice' ? 'Trắc nghiệm (4 đáp án)' : 'Điền từ'}
-                                  </span>
-
-                                  {/* Bound Cue Tag */}
-                                  {boundCue ? (
-                                    <span className="inline-flex items-center gap-1 rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-2 py-0.5 text-[10px] font-bold text-[#188A5A]">
-                                      <Subtitles className="h-3 w-3" />
-                                      <span>
-                                        [{formatCueTime(boundCue.startMs)}] {boundCue.zh}
-                                      </span>
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] italic text-[#8C827A]">Chưa gắn phụ đề</span>
-                                  )}
-                                </div>
-
-                                {/* Prompt */}
-                                <p className="text-sm font-bold leading-relaxed text-[#2B2826]">
-                                  {question.prompt || <span className="italic text-[#8C827A]">Chưa nhập câu hỏi</span>}
-                                </p>
-
-                                {/* Options Preview */}
-                                {question.type === 'multiple_choice' ? (
-                                  <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
-                                    {question.options.map((opt) => {
-                                      const isCorrect = opt.optionId === question.correctOptionId;
-                                      return (
-                                        <div
-                                          key={opt.optionId}
-                                          className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs transition-all ${
-                                            isCorrect
-                                              ? 'border-[#188A5A] bg-[#EAF5F1] font-bold text-[#188A5A] shadow-2xs'
-                                              : 'border-[#F2E4D8] bg-white text-[#6E655F]'
-                                          }`}
-                                        >
-                                          <span
-                                            className={`flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-black ${
-                                              isCorrect ? 'bg-[#188A5A] text-white' : 'bg-[#FFF9F5] text-[#8C827A]'
-                                            }`}
-                                          >
-                                            {opt.optionId.toUpperCase()}
-                                          </span>
-                                          <span className="flex-1 truncate">{opt.text || '...'}</span>
-                                          {isCorrect && <CheckCircle2 className="h-3.5 w-3.5 text-[#188A5A]" />}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                    <span className="text-[11px] font-bold text-[#8C827A]">Đáp án đúng:</span>
-                                    {(question.acceptedAnswers || []).map((ans, i) => (
-                                      <span
-                                        key={i}
-                                        className="rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-2.5 py-0.5 font-mono text-xs font-bold text-[#188A5A]"
-                                      >
-                                        {ans}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Explanation snippet */}
-                                {question.explanationVi && (
-                                  <div className="flex items-start gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-2 text-[11px] text-[#6E655F]">
-                                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#B45309]" />
-                                    <span>
-                                      <strong className="text-[#2B2826]">Giải thích:</strong> {question.explanationVi}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Row Actions */}
-                              <div className="flex shrink-0 items-center gap-1 pt-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingIndex(idx)}
-                                  className="rounded-lg border border-[#F2E4D8] bg-white p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
-                                  title="Chỉnh sửa câu hỏi"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDuplicateQuestion(idx)}
-                                  className="rounded-lg border border-[#F2E4D8] bg-white p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
-                                  title="Nhân bản câu hỏi"
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveQuestion(idx)}
-                                  className="rounded-lg border border-[#F2E4D8] bg-white p-1.5 text-[#8C827A] transition-colors hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
-                                  title="Xóa câu hỏi"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : null}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={attemptClose}
+              className="flex h-9 items-center gap-2 rounded-xl border border-[#F2E4D8] bg-white px-4 text-xs font-bold text-[#2B2826] hover:bg-[#FFF9F5] active:scale-[0.98]"
+            >
+              <span>Đóng</span>
+            </button>
+            {lesson.status === 'published' ? (
+              <span className="flex h-9 items-center gap-1.5 rounded-xl border border-[#C6E7DA] bg-[#EAF5F1] px-4 text-xs font-bold text-[#188A5A]">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Đã xuất bản</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={onPublish}
+                disabled={saving || questions.length === 0}
+                className="flex h-9 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Xuất bản</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Confirm close dialog */}
+        {confirmingClose && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="close-confirm-title"
+          >
+            <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xl">
+              <div className="p-6">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FDF1F1] text-[#B91B1C] ring-1 ring-[#B91B1C]/20">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <h3 id="close-confirm-title" className="text-base font-black text-[#2B2826]">
+                  Có thay đổi chưa được lưu
+                </h3>
+                <p className="mt-1 text-xs text-[#8C827A]">
+                  Một số câu hỏi đang chờ auto-save. Bạn muốn lưu trước khi đóng, hay hủy thay đổi?
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-[#F2E4D8] bg-[#FFF9F5] px-6 py-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClose(false)}
+                  className="rounded-xl border border-[#F2E4D8] bg-white px-4 py-2 text-xs font-bold text-[#8C827A] hover:bg-white"
+                >
+                  Ở lại
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscardAndClose}
+                  className="rounded-xl border border-[#F2E4D8] bg-white px-4 py-2 text-xs font-bold text-[#B91B1C] hover:bg-[#FDF1F1]"
+                >
+                  Hủy thay đổi
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveAndClose}
+                  disabled={popupSaving}
+                  className="rounded-xl bg-[#B91B1C] px-4 py-2 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 hover:bg-[#A3181A] disabled:opacity-40"
+                >
+                  {popupSaving ? 'Đang lưu...' : 'Lưu & đóng'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </ModalShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modal Shell (overlay + center + ESC handled by parent)
+// ---------------------------------------------------------------------------
+
+function ModalShell({
+  onBackdrop,
+  children,
+}: {
+  onBackdrop: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      onClick={onBackdrop}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Question Form (Inline Editor for a single question)
+// Save Indicator (live auto-save status)
 // ---------------------------------------------------------------------------
 
-function QuestionForm({
+function SaveIndicator({
+  saving,
+  autoSaving,
+  lastSavedAt,
+}: {
+  saving: boolean;
+  autoSaving: boolean;
+  lastSavedAt: Date | null;
+}) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  let label = 'Đã lưu';
+  let dotClass = 'bg-[#188A5A]';
+  if (saving || autoSaving) {
+    label = 'Đang lưu...';
+    dotClass = 'bg-[#B45309] animate-pulse';
+  } else if (!lastSavedAt) {
+    label = 'Chưa có thay đổi';
+    dotClass = 'bg-[#8C827A]';
+  } else {
+    const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+    if (seconds < 60) label = 'Đã lưu vừa xong';
+    else if (seconds < 3600) label = `Đã lưu ${Math.floor(seconds / 60)} phút trước`;
+    else label = `Đã lưu lúc ${lastSavedAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2E4D8] bg-white px-3 py-1 text-[11px] font-bold text-[#8C827A]">
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Question List Item (left column row)
+// ---------------------------------------------------------------------------
+
+function QuestionListItem({
   question,
-  cues,
   index,
-  onSave,
-  onCancel,
+  cues,
+  isActive,
+  onSelect,
+  onDuplicate,
+  onRemove,
+  onMove,
 }: {
   question: AdminQuestion;
-  cues: AdminCue[];
   index: number;
-  onSave: (q: AdminQuestion) => void;
-  onCancel: () => void;
+  cues: AdminCue[];
+  isActive: boolean;
+  onSelect: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onMove: (dir: -1 | 1) => void;
+}) {
+  const boundCue = cues.find((c) => c.cueId === question.cueId);
+  const isEmpty = !question.prompt.trim();
+
+  return (
+    <li
+      className={`group transition-colors ${
+        isActive
+          ? 'border-l-4 border-l-[#B91B1C] bg-[#FDF1F1]'
+          : 'border-l-4 border-l-transparent hover:bg-[#FFF9F5]/60'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex w-full items-start gap-2.5 p-4 text-left"
+      >
+        <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMove(-1);
+            }}
+            disabled={index === 0}
+            className="rounded p-0.5 text-[#8C827A] hover:text-[#2B2826] disabled:opacity-20"
+            title="Di chuyển lên"
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+          <span className="w-6 text-center font-mono text-[11px] font-black text-[#2B2826]">
+            Q{index + 1}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMove(1);
+            }}
+            disabled={false}
+            className="rounded p-0.5 text-[#8C827A] hover:text-[#2B2826] disabled:opacity-20"
+            title="Di chuyển xuống"
+          >
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-md px-1.5 py-0.5 text-[10px] font-black border ${
+                question.type === 'multiple_choice'
+                  ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                  : 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
+              }`}
+            >
+              {question.type === 'multiple_choice' ? 'TN' : 'Điền'}
+            </span>
+            {boundCue && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-1.5 py-0.5 text-[10px] font-bold text-[#188A5A]">
+                <Subtitles className="h-2.5 w-2.5" />
+                <span className="font-mono">{formatCueTime(boundCue.startMs)}</span>
+              </span>
+            )}
+            {isEmpty && (
+              <span className="rounded-md border border-[#FDE6BA] bg-[#FFF8EC] px-1.5 py-0.5 text-[10px] font-bold text-[#B45309]">
+                Chưa nhập
+              </span>
+            )}
+          </div>
+
+          <p className={`line-clamp-2 text-xs leading-snug ${
+            isEmpty ? 'italic text-[#8C827A]' : 'font-bold text-[#2B2826]'
+          }`}>
+            {question.prompt || 'Chưa nhập câu hỏi'}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+            className="rounded p-1 text-[#8C827A] hover:bg-white hover:text-[#2B2826]"
+            title="Nhân bản"
+          >
+            <Copy className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="rounded p-1 text-[#8C827A] hover:bg-white hover:text-[#B91B1C]"
+            title="Xóa"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Question Editor Panel (right column - inline editor)
+// ---------------------------------------------------------------------------
+
+function QuestionEditorPanel({
+  question,
+  index,
+  cues,
+  onUpdate,
+  onClose,
+}: {
+  question: AdminQuestion;
+  index: number;
+  cues: AdminCue[];
+  onUpdate: (q: AdminQuestion) => void;
+  onClose: () => void;
 }) {
   const [local, setLocal] = useState<AdminQuestion>({ ...question });
+
+  // Re-sync local state when active question changes
+  useEffect(() => {
+    setLocal({ ...question });
+  }, [question.questionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push changes up so parent can auto-save
+  useEffect(() => {
+    onUpdate(local);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local]);
 
   const setField = <K extends keyof AdminQuestion>(key: K, value: AdminQuestion[K]) => {
     setLocal((prev) => ({ ...prev, [key]: value }));
@@ -1107,7 +1353,6 @@ function QuestionForm({
     }));
   };
 
-  // Accepted answers for fill_blank
   const handleAcceptedAnswerChange = (idx: number, text: string) => {
     setLocal((prev) => ({
       ...prev,
@@ -1129,472 +1374,212 @@ function QuestionForm({
     }));
   };
 
-  const isValid =
-    local.prompt.trim() !== '' &&
-    local.explanationVi.trim() !== '' &&
-    (local.type === 'multiple_choice'
-      ? local.options.every((o) => o.text.trim() !== '') && !!local.correctOptionId
-      : (local.acceptedAnswers || []).some((a) => a.trim() !== ''));
+  const boundCue = cues.find((c) => c.cueId === local.cueId);
 
   return (
-    <div className="space-y-4 rounded-2xl border border-[#F2E4D8] bg-white p-5 text-xs shadow-xs">
-      <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-3">
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center justify-between border-b border-[#F2E4D8] px-5 py-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#B91B1C] font-mono text-[11px] font-bold text-white shadow-2xs">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#B91B1C] font-mono text-[11px] font-bold text-white">
             Q{index + 1}
           </span>
-          <h4 className="text-sm font-black text-[#2B2826]">Chỉnh Sửa Nội Dung Câu Hỏi</h4>
+          <h3 className="text-xs font-black text-[#2B2826]">Chi tiết câu hỏi</h3>
         </div>
-        <button onClick={onCancel} className="rounded-lg p-1 text-[#8C827A] hover:bg-[#FFF9F5]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded p-1 text-[#8C827A] hover:bg-[#FFF9F5]"
+          title="Đóng editor"
+        >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Row 1: Type & Cue Binding */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block font-bold text-[#2B2826]">Loại câu hỏi *</label>
-          <select
-            value={local.type}
-            onChange={(e) => setField('type', e.target.value as AdminQuestion['type'])}
-            className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
-          >
-            <option value="multiple_choice">Trắc nghiệm (4 đáp án)</option>
-            <option value="fill_blank">Điền từ vào chỗ trống</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1 block font-bold text-[#2B2826]">Liên kết phụ đề trong phim (Cue)</label>
-          <select
-            value={local.cueId || ''}
-            onChange={(e) => setField('cueId', e.target.value || undefined)}
-            className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
-          >
-            <option value="">-- Không gắn câu thoại cụ thể --</option>
-            {cues.map((c) => (
-              <option key={c.cueId} value={c.cueId}>
-                [{formatCueTime(c.startMs)}] {c.zh} ({c.vi})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Row 2: Prompt */}
-      <div>
-        <label className="mb-1 block font-bold text-[#2B2826]">
-          Nội dung câu hỏi <span className="text-[#B91B1C]">*</span>
-        </label>
-        <textarea
-          rows={2}
-          value={local.prompt}
-          onChange={(e) => setField('prompt', e.target.value)}
-          placeholder='Ví dụ: Trong đoạn hội thoại trên, từ "服务员" có nghĩa là gì?'
-          className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-2.5 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
-        />
-      </div>
-
-      {/* Multiple Choice Options */}
-      {local.type === 'multiple_choice' ? (
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <label className="block font-bold text-[#2B2826]">
-              Danh sách lựa chọn <span className="font-normal text-[#8C827A]">(Bấm radio để chọn đáp án đúng)</span>
-            </label>
-            {local.options.length < 6 && (
-              <button
-                type="button"
-                onClick={handleAddOption}
-                className="flex items-center gap-1 text-[11px] font-bold text-[#B91B1C] hover:underline"
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="space-y-4">
+          {/* Row 1: Type & Cue Binding */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block font-bold text-[#2B2826]">Loại câu hỏi *</label>
+              <select
+                value={local.type}
+                onChange={(e) => setField('type', e.target.value as AdminQuestion['type'])}
+                className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
               >
-                <Plus className="h-3 w-3" />
-                Thêm lựa chọn
-              </button>
-            )}
+                <option value="multiple_choice">Trắc nghiệm (4 đáp án)</option>
+                <option value="fill_blank">Điền từ vào chỗ trống</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block font-bold text-[#2B2826]">Liên kết phụ đề (Cue)</label>
+              <select
+                value={local.cueId || ''}
+                onChange={(e) => setField('cueId', e.target.value || undefined)}
+                className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
+              >
+                <option value="">-- Không gắn câu thoại --</option>
+                {cues.map((c) => (
+                  <option key={c.cueId} value={c.cueId}>
+                    [{formatCueTime(c.startMs)}] {c.zh}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {local.options.map((opt) => {
-              const isCorrect = opt.optionId === local.correctOptionId;
-              return (
-                <div key={opt.optionId} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSetCorrectOption(opt.optionId)}
-                    className={`flex h-7 w-7 items-center justify-center rounded-xl border transition-all ${
-                      isCorrect
-                        ? 'border-[#188A5A] bg-[#188A5A] text-white shadow-2xs'
-                        : 'border-[#F2E4D8] bg-white text-[#8C827A] hover:border-[#188A5A]'
-                    }`}
-                    title={isCorrect ? 'Đáp án đúng' : 'Bấm để chọn làm đáp án đúng'}
-                  >
-                    {isCorrect ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                  </button>
+          {/* Bound cue preview */}
+          {boundCue && (
+            <div className="space-y-1 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] p-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-[#188A5A]">
+                <Subtitles className="h-3 w-3" />
+                <span>Phụ đề [{formatCueTime(boundCue.startMs)}]</span>
+              </div>
+              <p className="font-fraunces text-sm font-bold text-[#2B2826]">{boundCue.zh}</p>
+              <p className="text-[11px] text-[#8C827A]">{boundCue.vi}</p>
+            </div>
+          )}
 
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-black ${
-                      isCorrect ? 'bg-[#188A5A] text-white' : 'bg-[#FFF9F5] text-[#8C827A]'
-                    }`}
-                  >
-                    {opt.optionId.toUpperCase()}
-                  </span>
-
-                  <input
-                    type="text"
-                    required
-                    value={opt.text}
-                    onChange={(e) => handleOptionChange(opt.optionId, e.target.value)}
-                    placeholder={`Nội dung lựa chọn ${opt.optionId.toUpperCase()}`}
-                    className="flex-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
-                  />
-
-                  {local.options.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveOption(opt.optionId)}
-                      className="rounded-lg p-1.5 text-[#8C827A] hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
-                      title="Xóa lựa chọn này"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* Fill in the blank answers */
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <label className="block font-bold text-[#2B2826]">
-              Danh sách từ được chấp nhận <span className="text-[#B91B1C]">*</span>
+          {/* Row 2: Prompt */}
+          <div>
+            <label className="mb-1 block font-bold text-[#2B2826]">
+              Nội dung câu hỏi <span className="text-[#B91B1C]">*</span>
             </label>
-            <button
-              type="button"
-              onClick={handleAddAcceptedAnswer}
-              className="flex items-center gap-1 text-[11px] font-bold text-[#B91B1C] hover:underline"
-            >
-              <Plus className="h-3 w-3" />
-              Thêm từ đồng nghĩa
-            </button>
+            <textarea
+              rows={2}
+              value={local.prompt}
+              onChange={(e) => setField('prompt', e.target.value)}
+              placeholder='Ví dụ: Trong đoạn hội thoại trên, từ "服务员" có nghĩa là gì?'
+              className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-2.5 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            />
           </div>
 
-          <div className="space-y-2">
-            {(local.acceptedAnswers || ['']).map((ans, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#FFF9F5] font-mono text-[10px] font-bold text-[#8C827A]">
-                  #{i + 1}
-                </span>
-                <input
-                  type="text"
-                  value={ans}
-                  onChange={(e) => handleAcceptedAnswerChange(i, e.target.value)}
-                  placeholder="Từ đúng (ví dụ: 服务员)"
-                  className="flex-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 font-serif text-xs font-bold text-[#2B2826] outline-none transition-all focus:border-[#B91B1C] focus:bg-white"
-                />
-                {(local.acceptedAnswers || []).length > 1 && (
+          {/* Options or Fill */}
+          {local.type === 'multiple_choice' ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block font-bold text-[#2B2826]">
+                  Lựa chọn <span className="font-normal text-[#8C827A]">(Bấm radio để chọn đáp án đúng)</span>
+                </label>
+                {local.options.length < 6 && (
                   <button
                     type="button"
-                    onClick={() => handleRemoveAcceptedAnswer(i)}
-                    className="rounded-lg p-1.5 text-[#8C827A] hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
+                    onClick={handleAddOption}
+                    className="flex items-center gap-1 text-[11px] font-bold text-[#B91B1C] hover:underline"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <Plus className="h-3 w-3" />
+                    Thêm lựa chọn
                   </button>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Row 3: Vietnamese Explanation */}
-      <div>
-        <label className="mb-1 block font-bold text-[#2B2826]">
-          Giải thích đáp án (Tiếng Việt) <span className="text-[#B91B1C]">*</span>
-        </label>
-        <textarea
-          rows={2}
-          value={local.explanationVi}
-          onChange={(e) => setField('explanationVi', e.target.value)}
-          placeholder="Giải thích lý do chọn đáp án này, dịch nghĩa từ vựng hoặc ngữ pháp liên quan..."
-          className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-2.5 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
-        />
-      </div>
+              <div className="space-y-2">
+                {local.options.map((opt) => {
+                  const isCorrect = opt.optionId === local.correctOptionId;
+                  return (
+                    <div key={opt.optionId} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSetCorrectOption(opt.optionId)}
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                          isCorrect
+                            ? 'border-[#188A5A] bg-[#188A5A] text-white shadow-2xs'
+                            : 'border-[#F2E4D8] bg-white text-[#8C827A] hover:border-[#188A5A]'
+                        }`}
+                        title={isCorrect ? 'Đáp án đúng' : 'Bấm để chọn làm đáp án đúng'}
+                      >
+                        {isCorrect ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                      </button>
 
-      {/* Form Buttons */}
-      <div className="flex items-center justify-end gap-2 border-t border-[#F2E4D8] pt-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 py-2 font-bold text-[#8C827A] hover:bg-white active:scale-[0.98]"
-        >
-          Hủy bỏ
-        </button>
-        <button
-          type="button"
-          onClick={() => onSave(local)}
-          disabled={!isValid}
-          className="rounded-xl bg-[#B91B1C] px-5 py-2 font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
-        >
-          Lưu câu hỏi
-        </button>
-      </div>
-    </div>
-  );
-}
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
+                          isCorrect ? 'bg-[#188A5A] text-white' : 'bg-[#FFF9F5] text-[#8C827A]'
+                        }`}
+                      >
+                        {opt.optionId.toUpperCase()}
+                      </span>
 
-// ---------------------------------------------------------------------------
-// Learner Quiz Preview (Simulates student interaction)
-// ---------------------------------------------------------------------------
+                      <input
+                        type="text"
+                        value={opt.text}
+                        onChange={(e) => handleOptionChange(opt.optionId, e.target.value)}
+                        placeholder={`Nội dung lựa chọn ${opt.optionId.toUpperCase()}`}
+                        className="flex-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+                      />
 
-function LearnerQuizPreview({
-  questions,
-  cues,
-  onExit,
-}: {
-  questions: AdminQuestion[];
-  cues: AdminCue[];
-  onExit: () => void;
-}) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [fillAnswer, setFillAnswer] = useState('');
-  const [isAnswered, setIsAnswered] = useState(false);
-
-  const q = questions[currentIdx];
-  const boundCue = q ? cues.find((c) => c.cueId === q.cueId) : undefined;
-
-  const handleCheckAnswer = () => {
-    setIsAnswered(true);
-  };
-
-  const handleNextQuestion = () => {
-    if (currentIdx < questions.length - 1) {
-      setCurrentIdx((prev) => prev + 1);
-      setSelectedOption(null);
-      setFillAnswer('');
-      setIsAnswered(false);
-    }
-  };
-
-  const handlePrevQuestion = () => {
-    if (currentIdx > 0) {
-      setCurrentIdx((prev) => prev - 1);
-      setSelectedOption(null);
-      setFillAnswer('');
-      setIsAnswered(false);
-    }
-  };
-
-  const handleReset = () => {
-    setCurrentIdx(0);
-    setSelectedOption(null);
-    setFillAnswer('');
-    setIsAnswered(false);
-  };
-
-  if (!q) {
-    return (
-      <div className="rounded-3xl border border-[#F2E4D8] bg-white p-8 text-center shadow-2xs">
-        <p className="text-xs text-[#8C827A]">Không có câu hỏi nào để xem trước.</p>
-        <button
-          onClick={onExit}
-          className="mt-3 rounded-xl bg-[#2B2826] px-4 py-2 text-xs font-bold text-white hover:bg-[#1C1A19]"
-        >
-          Quay lại biên tập
-        </button>
-      </div>
-    );
-  }
-
-  const isMultiple = q.type === 'multiple_choice';
-  const isCorrect = isAnswered
-    ? isMultiple
-      ? selectedOption === q.correctOptionId
-      : (q.acceptedAnswers || []).some(
-          (ans) => ans.trim().toLowerCase() === fillAnswer.trim().toLowerCase()
-        )
-    : false;
-
-  return (
-    <div className="space-y-5 rounded-3xl border border-[#F2E4D8] bg-white p-6 shadow-2xs animate-in fade-in duration-200">
-      {/* Top Banner for Preview Mode */}
-      <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-3">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#B91B1C] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-2xs shadow-[#B91B1C]/25">
-            Learner Preview
-          </span>
-          <span className="text-xs font-bold text-[#8C827A]">
-            Mô phỏng trải nghiệm học viên trên HanFlix
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleReset}
-            className="rounded-lg border border-[#F2E4D8] p-1.5 text-[#8C827A] hover:bg-[#FFF9F5]"
-            title="Làm lại từ đầu"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onExit}
-            className="text-xs font-bold text-[#B91B1C] hover:underline"
-          >
-            Đóng xem trước
-          </button>
-        </div>
-      </div>
-
-      {/* Progress Dots */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-black text-[#2B2826]">
-          Câu hỏi {currentIdx + 1} / {questions.length}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {questions.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                setCurrentIdx(i);
-                setSelectedOption(null);
-                setFillAnswer('');
-                setIsAnswered(false);
-              }}
-              className={`h-2 rounded-full transition-all ${
-                i === currentIdx
-                  ? 'w-6 bg-[#B91B1C]'
-                  : 'w-2 bg-[#F2E4D8] hover:bg-[#8C827A]'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Cue Video Context Quote (if bound) */}
-      {boundCue && (
-        <div className="space-y-1 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] p-3.5">
-          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-[#188A5A]">
-            <Subtitles className="h-3 w-3" />
-            <span>Dòng thoại trong phim [{formatCueTime(boundCue.startMs)}]</span>
-          </div>
-          <p className="font-serif text-base font-bold text-[#2B2826]">{boundCue.zh}</p>
-          <p className="text-xs text-[#8C827A]">{boundCue.vi}</p>
-        </div>
-      )}
-
-      {/* Prompt */}
-      <div className="py-2">
-        <h3 className="text-base font-black leading-snug text-[#2B2826]">{q.prompt}</h3>
-      </div>
-
-      {/* Interactive Options or Fill Input */}
-      {isMultiple ? (
-        <div className="space-y-2.5">
-          {q.options.map((opt) => {
-            const isSelected = selectedOption === opt.optionId;
-            const isThisCorrect = opt.optionId === q.correctOptionId;
-
-            let btnStyle = 'bg-white border-[#F2E4D8] hover:border-[#B91B1C]/40 text-[#2B2826]';
-            if (isAnswered) {
-              if (isThisCorrect) {
-                btnStyle = 'bg-[#EAF5F1] border-[#188A5A] text-[#188A5A] font-bold ring-2 ring-[#188A5A]';
-              } else if (isSelected && !isThisCorrect) {
-                btnStyle = 'bg-[#FDF1F1] border-[#B91B1C] text-[#B91B1C] line-through';
-              } else {
-                btnStyle = 'bg-[#FFF9F5] border-[#F2E4D8] text-[#8C827A] opacity-60';
-              }
-            } else if (isSelected) {
-              btnStyle = 'bg-[#2B2826] text-white border-[#2B2826] font-bold shadow-2xs';
-            }
-
-            return (
-              <button
-                key={opt.optionId}
-                disabled={isAnswered}
-                onClick={() => setSelectedOption(opt.optionId)}
-                className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left text-xs transition-all ${btnStyle}`}
-              >
-                <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
-                    isSelected && !isAnswered
-                      ? 'bg-white text-[#2B2826]'
-                      : isAnswered && isThisCorrect
-                      ? 'bg-[#188A5A] text-white'
-                      : 'bg-[#FFF9F5] text-[#8C827A]'
-                  }`}
+                      {local.options.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOption(opt.optionId)}
+                          className="rounded-lg p-1.5 text-[#8C827A] hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
+                          title="Xóa lựa chọn này"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block font-bold text-[#2B2826]">
+                  Từ được chấp nhận <span className="text-[#B91B1C]">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddAcceptedAnswer}
+                  className="flex items-center gap-1 text-[11px] font-bold text-[#B91B1C] hover:underline"
                 >
-                  {opt.optionId.toUpperCase()}
-                </span>
-                <span className="flex-1 font-medium">{opt.text}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-[#2B2826]">Nhập câu trả lời của bạn:</label>
-          <input
-            type="text"
-            disabled={isAnswered}
-            value={fillAnswer}
-            onChange={(e) => setFillAnswer(e.target.value)}
-            placeholder="Gõ từ tiếng Trung..."
-            className="w-full rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 py-3 font-serif text-sm font-bold text-[#2B2826] outline-none transition-all focus:border-[#B91B1C] focus:bg-white"
-          />
-        </div>
-      )}
+                  <Plus className="h-3 w-3" />
+                  Thêm từ đồng nghĩa
+                </button>
+              </div>
 
-      {/* Feedback Banner after Check */}
-      {isAnswered && (
-        <div
-          className={`space-y-1 rounded-2xl border p-4 text-xs animate-in fade-in duration-150 ${
-            isCorrect
-              ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-              : 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
-          }`}
-        >
-          <div className="flex items-center gap-1.5 text-sm font-black">
-            {isCorrect ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <span>{isCorrect ? 'Chính xác! Làm rất tốt.' : 'Chưa đúng rồi!'}</span>
-          </div>
-          {q.explanationVi && (
-            <p className="mt-1 rounded-xl bg-white/70 p-2.5 text-xs text-[#2B2826]">
-              <strong>Giải thích:</strong> {q.explanationVi}
-            </p>
+              <div className="space-y-2">
+                {(local.acceptedAnswers || ['']).map((ans, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#FFF9F5] font-mono text-[10px] font-bold text-[#8C827A]">
+                      #{i + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={ans}
+                      onChange={(e) => handleAcceptedAnswerChange(i, e.target.value)}
+                      placeholder="Từ đúng (ví dụ: 服务员)"
+                      className="flex-1 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-3 py-2 font-fraunces text-xs font-bold text-[#2B2826] outline-none transition-all focus:border-[#B91B1C] focus:bg-white"
+                    />
+                    {(local.acceptedAnswers || []).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAcceptedAnswer(i)}
+                        className="rounded-lg p-1.5 text-[#8C827A] hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
+          {/* Row 3: Vietnamese Explanation */}
+          <div>
+            <label className="mb-1 block font-bold text-[#2B2826]">
+              Giải thích đáp án (Tiếng Việt) <span className="text-[#B91B1C]">*</span>
+            </label>
+            <textarea
+              rows={2}
+              value={local.explanationVi}
+              onChange={(e) => setField('explanationVi', e.target.value)}
+              placeholder="Giải thích lý do chọn đáp án này..."
+              className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-2.5 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            />
+          </div>
         </div>
-      )}
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between border-t border-[#F2E4D8] pt-3">
-        <button
-          onClick={handlePrevQuestion}
-          disabled={currentIdx === 0}
-          className="rounded-xl border border-[#F2E4D8] bg-white px-4 py-2 text-xs font-bold text-[#8C827A] disabled:opacity-30 hover:bg-[#FFF9F5] active:scale-[0.98]"
-        >
-          Câu trước
-        </button>
-
-        {!isAnswered ? (
-          <button
-            onClick={handleCheckAnswer}
-            disabled={isMultiple ? !selectedOption : !fillAnswer.trim()}
-            className="rounded-xl bg-[#2B2826] px-5 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-[#1C1A19] active:scale-[0.98]"
-          >
-            Kiểm tra đáp án
-          </button>
-        ) : (
-          <button
-            onClick={handleNextQuestion}
-            disabled={currentIdx === questions.length - 1}
-            className="rounded-xl bg-[#B91B1C] px-5 py-2 text-xs font-bold text-white shadow-2xs shadow-[#B91B1C]/25 transition-all hover:bg-[#A3181A] disabled:opacity-40 active:scale-[0.98]"
-          >
-            {currentIdx < questions.length - 1 ? 'Câu kế tiếp' : 'Hoàn thành xem trước'}
-          </button>
-        )}
       </div>
     </div>
   );
@@ -1660,9 +1645,6 @@ const AI_STATUS_STYLES: Record<
 };
 
 function AiStatusBadge({ status }: { status: AdminQuizAiStatus | null }) {
-  // Defensive: backend may return partial data, a `not_found` shorthand, or
-  // unset the field on legacy rows. Guard every step so a malformed payload
-  // can never crash the admin screen with a whitescreen.
   if (!status) return null;
   const key = status.aiGenerationStatus;
   if (!key) return null;
@@ -1723,7 +1705,7 @@ function AiQuizGenerationModal({
   const totalSelected = Array.from(selectedIds).length;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -1744,7 +1726,7 @@ function AiQuizGenerationModal({
                 Sinh câu hỏi bằng Panda AI
               </h2>
               <p className="text-[11px] text-[#8C827A]">
-                Dựa trên phụ đề video để tạo bộ câu hỏi tự động. Bạn có thể chọn/bỏ trước khi thêm vào.
+                Dựa trên phụ đề video để tạo bộ câu hỏi tự động.
               </p>
             </div>
           </div>
@@ -1760,7 +1742,6 @@ function AiQuizGenerationModal({
 
         {/* Body */}
         <div className="max-h-[64vh] overflow-y-auto px-5 py-5">
-          {/* Config Panel (only before generation) */}
           {draft.length === 0 && (
             <div className="space-y-4">
               <div>
@@ -1828,7 +1809,6 @@ function AiQuizGenerationModal({
             </div>
           )}
 
-          {/* Preview Panel */}
           {draft.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-xl bg-[#FFF9F5] p-2.5 text-[11px]">

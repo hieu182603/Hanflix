@@ -128,15 +128,48 @@ async function safeDownloadUrl(key?: string | null): Promise<string | null> {
   }
 }
 
-router.get('/lessons', asyncHandler(async (_req, res) => {
-  const items = await LessonModel.find().select('-media.objectKey').sort({ createdAt: -1 }).limit(100).lean();
+const lessonListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(8),
+  hsk: z.coerce.number().int().min(1).max(9).optional(),
+  status: z.enum(['draft', 'uploading', 'processing', 'ready_for_review', 'published', 'hidden', 'failed']).optional(),
+  search: z.string().trim().min(1).max(120).optional(),
+});
+
+router.get('/lessons', validateQuery(lessonListQuerySchema), asyncHandler(async (req, res) => {
+  const { page, limit, hsk, status, search } = req.query as unknown as z.infer<typeof lessonListQuerySchema>;
+  const filter: Record<string, unknown> = {};
+  if (hsk !== undefined) filter.hsk = hsk;
+  if (status) filter.status = status;
+  if (search) {
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escaped, 'i');
+    filter.$or = [{ titleVi: re }, { titleZh: re }, { pinyin: re }];
+  }
+
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    LessonModel.find(filter)
+      .select('-media.objectKey')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    LessonModel.countDocuments(filter),
+  ]);
   const itemsWithThumbnails = await Promise.all(
     items.map(async item => {
       const thumbnailUrl = await safeDownloadUrl(item.thumbnailKey);
       return withProcessingCompatibility({ ...item, thumbnailUrl });
     })
   );
-  res.json({ data: { items: itemsWithThumbnails } });
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  res.json({
+    data: {
+      items: itemsWithThumbnails,
+      pagination: { page, limit, total, totalPages },
+    },
+  });
 }));
 
 router.get('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandler(async (req, res) => {
