@@ -137,7 +137,7 @@ const lessonListQuerySchema = z.object({
 });
 
 router.get('/lessons', validateQuery(lessonListQuerySchema), asyncHandler(async (req, res) => {
-  const { page, limit, hsk, status, search } = req.query as z.infer<typeof lessonListQuerySchema>;
+  const { page, limit, hsk, status, search } = req.query as unknown as z.infer<typeof lessonListQuerySchema>;
   const filter: Record<string, unknown> = {};
   if (hsk !== undefined) filter.hsk = hsk;
   if (status) filter.status = status;
