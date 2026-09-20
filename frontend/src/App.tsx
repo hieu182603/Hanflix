@@ -886,6 +886,10 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
             else if (t === 'videos') navigate('/admin/videos');
             else if (t === 'upload') navigate('/admin/videos/upload');
             else if (t === 'processing') navigate('/admin/processing');
+            else if (t === 'editor') {
+              if (editingId) navigate(`/admin/videos/${editingId}/edit`);
+              else navigate('/admin/videos');
+            }
             else if (t === 'quiz') navigate('/admin/quiz');
             else if (t === 'users') navigate('/admin/users');
             else if (t === 'vocabulary') navigate('/admin/vocabulary');

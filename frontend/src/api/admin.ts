@@ -92,9 +92,33 @@ export interface AdminUser {
   createdAt?: string;
 }
 
-export async function listAdminLessons(): Promise<AdminLesson[]> {
-  const data = await apiFetch<{ items: AdminLesson[] }>('/admin/lessons');
-  return data.items;
+export interface AdminLessonListParams {
+  page?: number;
+  limit?: number;
+  hsk?: number;
+  status?: AdminLessonStatus;
+  search?: string;
+}
+
+export interface AdminLessonListResponse {
+  items: AdminLesson[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export async function listAdminLessons(
+  params: AdminLessonListParams = {},
+): Promise<AdminLessonListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set('page', String(params.page));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.hsk !== undefined) searchParams.set('hsk', String(params.hsk));
+  if (params.status) searchParams.set('status', params.status);
+  if (params.search) searchParams.set('search', params.search);
+  const qs = searchParams.toString();
+  const data = await apiFetch<{ items: AdminLesson[]; pagination: AdminLessonListResponse['pagination'] }>(
+    `/admin/lessons${qs ? `?${qs}` : ''}`,
+  );
+  return { items: data.items, pagination: data.pagination };
 }
 
 export function createAdminLesson(input: Omit<AdminLesson, '_id' | 'status' | 'processingStatus' | 'processingStep' | 'processingProgress' | 'processingError' | 'media' | 'createdAt'>): Promise<AdminLesson> {

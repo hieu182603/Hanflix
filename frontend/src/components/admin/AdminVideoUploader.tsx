@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   Video,
@@ -16,6 +16,7 @@ import {
   ExternalLink,
   RefreshCw,
   Cpu,
+  ChevronDown,
 } from 'lucide-react';
 import type { AdminLesson, ProcessingJob, ProcessingStatus, UploadProgressEvent } from '../../api/admin';
 
@@ -73,6 +74,7 @@ export interface AdminVideoUploaderProps {
   jobs: ProcessingJob[];
   lessons: AdminLesson[];
   onSelectLesson: (id: string) => void;
+  onEditLesson?: (id: string) => void;
   onRetryProcessing: (id: string) => Promise<void>;
   onCancelVideoUpload: (id: string) => Promise<void>;
 }
@@ -107,6 +109,7 @@ export default function AdminVideoUploader({
   jobs,
   lessons,
   onSelectLesson,
+  onEditLesson,
   onRetryProcessing,
   onCancelVideoUpload,
 }: AdminVideoUploaderProps) {
@@ -168,6 +171,13 @@ export default function AdminVideoUploader({
     { key: 'review', label: '5. Sẵn Sàng Duyệt', desc: 'Ready for Review' },
   ];
 
+  // Cleanup any lingering legacy portal element from document body
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const oldPortal = document.getElementById('hanflix-fab-root');
+    if (oldPortal) oldPortal.remove();
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Tab Navigation */}
@@ -202,11 +212,10 @@ export default function AdminVideoUploader({
             <button
               type="button"
               onClick={() => onTabChange('upload')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                activeTab === 'upload'
-                  ? 'border border-[#F2E4D8] bg-white text-[#2B2826] shadow-2xs'
-                  : 'text-[#8C827A] hover:text-[#2B2826]'
-              }`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${activeTab === 'upload'
+                ? 'border border-[#F2E4D8] bg-white text-[#2B2826] shadow-2xs'
+                : 'text-[#8C827A] hover:text-[#2B2826]'
+                }`}
             >
               <Upload className="h-3.5 w-3.5" />
               <span>Tải video mới</span>
@@ -214,11 +223,10 @@ export default function AdminVideoUploader({
             <button
               type="button"
               onClick={() => onTabChange('processing')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                activeTab === 'processing'
-                  ? 'bg-[#B91B1C] text-white shadow-2xs'
-                  : 'text-[#8C827A] hover:text-[#2B2826]'
-              }`}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${activeTab === 'processing'
+                ? 'bg-[#B91B1C] text-white shadow-2xs'
+                : 'text-[#8C827A] hover:text-[#2B2826]'
+                }`}
             >
               <Cpu className="h-3.5 w-3.5" />
               <span>Theo dõi tiến trình AI ({jobs.length})</span>
@@ -227,11 +235,54 @@ export default function AdminVideoUploader({
         </div>
       </div>
 
+      {/* Upload In-Flight Progress Bar (Top - spans both tabs) */}
+      {uploadStage !== 'idle' && (
+        <div className="overflow-hidden rounded-2xl border border-[#F2E4D8] bg-white shadow-2xs animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F2E4D8] bg-[#FFF9F5] px-5 py-3 text-xs">
+            <span className="flex items-center gap-2 font-black text-[#2B2826]">
+              <RefreshCw className="h-4 w-4 animate-spin text-[#B91B1C]" />
+              {uploadStage === 'presigning' && 'Đang xin mã cấp quyền tải lên Cloudflare R2...'}
+              {uploadStage === 'uploading' && `Đang truyền luồng video lên R2 (${uploadProgress.percent}%)`}
+              {uploadStage === 'confirming' && 'Đang xác nhận tệp và khởi động AI Pipeline...'}
+            </span>
+            {uploadStage === 'uploading' && (
+              <button
+                type="button"
+                onClick={onCancelUpload}
+                className="rounded-lg border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-1 text-[11px] font-bold text-[#B91B1C] transition-colors hover:bg-[#FCE8E8]"
+              >
+                Hủy tải lên
+              </button>
+            )}
+          </div>
+
+          <div className="px-5 py-3">
+            <div className="h-2.5 w-full overflow-hidden rounded-full border border-[#F2E4D8] bg-[#FFF9F5]">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${uploadStage === 'uploading'
+                  ? 'bg-linear-to-r from-[#B91B1C] via-[#B45309] to-[#188A5A]'
+                  : uploadStage === 'confirming'
+                    ? 'bg-[#188A5A]'
+                    : 'bg-[#B45309] animate-pulse'
+                  }`}
+                style={{ width: `${uploadStage === 'uploading' ? uploadProgress.percent : uploadStage === 'confirming' ? 100 : 5}%` }}
+              />
+            </div>
+            {uploadStage === 'uploading' && (
+              <div className="mt-2 flex items-center justify-between text-[11px] text-[#8C827A]">
+                <span>Đã tải: {formatFileSize(uploadProgress.bytesSent)}</span>
+                <span>Tổng dung lượng: {formatFileSize(uploadProgress.totalBytes)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB 1: UPLOAD FORM & DRAG-AND-DROP                                        */}
       {/* ========================================================================= */}
       {activeTab === 'upload' && (
-        <form onSubmit={onSubmitUpload} className="space-y-6">
+        <form id="admin-video-uploader-form" onSubmit={onSubmitUpload} className="space-y-6">
           {/* Main 2-Column Bento Form */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             {/* Left Column: Drag & Drop Zone & Video Specs */}
@@ -245,13 +296,12 @@ export default function AdminVideoUploader({
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={handleFileDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed p-6 text-center transition-all shadow-2xs ${
-                  isDragOver
-                    ? 'scale-[1.01] border-[#B91B1C] bg-[#FDF1F1]/60'
-                    : file
+                className={`flex min-h-[340px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all shadow-2xs ${isDragOver
+                  ? 'scale-[1.01] border-[#B91B1C] bg-[#FDF1F1]/60'
+                  : file
                     ? 'border-[#188A5A] bg-[#EAF5F1]/40'
                     : 'border-[#F2E4D8] bg-[#FFFDFB] hover:border-[#B91B1C]/50 hover:bg-[#FFF9F5]'
-                }`}
+                  }`}
               >
                 <input
                   ref={fileInputRef}
@@ -263,19 +313,18 @@ export default function AdminVideoUploader({
                 />
 
                 <div
-                  className={`mb-3 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
-                    file
-                      ? 'bg-[#EAF5F1] text-[#188A5A]'
-                      : isDragOver
+                  className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${file
+                    ? 'bg-[#EAF5F1] text-[#188A5A]'
+                    : isDragOver
                       ? 'bg-[#B91B1C] text-white'
                       : 'border border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]'
-                  }`}
+                    }`}
                 >
                   {file ? <CheckCircle2 className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
                 </div>
 
                 {file ? (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <p className="max-w-[280px] truncate text-sm font-black text-[#2B2826]">{file.name}</p>
                     <p className="text-xs font-bold text-[#188A5A]">
                       {formatFileSize(file.size)} · {file.type.replace('video/', '').toUpperCase()}
@@ -283,10 +332,10 @@ export default function AdminVideoUploader({
                     <p className="mt-1 text-[11px] text-[#8C827A]">Bấm hoặc kéo thả tệp khác để thay thế</p>
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <p className="text-sm font-black text-[#2B2826]">Kéo thả video vào đây hoặc chọn tệp</p>
                     <p className="text-xs text-[#8C827A]">Hỗ trợ định dạng MP4 và WebM (tối đa 500 MB)</p>
-                    <span className="mt-2 inline-block rounded-lg bg-[#2B2826] px-3.5 py-1.5 text-[11px] font-bold text-white shadow-2xs transition-colors hover:bg-[#1A1817]">
+                    <span className="mt-3 inline-block rounded-xl bg-[#2B2826] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-[#1A1817]">
                       Chọn tệp video từ máy
                     </span>
                   </div>
@@ -294,27 +343,27 @@ export default function AdminVideoUploader({
               </div>
 
               {/* Technical Specifications Guide */}
-              <div className="space-y-3 rounded-3xl border border-[#F2E4D8] bg-white p-5 text-xs shadow-2xs">
-                <div className="flex items-center gap-2 font-black text-[#2B2826]">
-                  <Info className="h-4 w-4 text-[#B91B1C]" />
+              <div className="rounded-3xl border border-[#F2E4D8] bg-white p-4 text-[11px] shadow-2xs">
+                <div className="mb-2.5 flex items-center gap-1.5 font-black text-[#2B2826]">
+                  <Info className="h-3.5 w-3.5 text-[#B91B1C]" />
                   <span>Tiêu chuẩn kỹ thuật video HanFlix</span>
                 </div>
-                <div className="space-y-2 text-[#5F5852]">
-                  <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-1.5">
-                    <span>Độ phân giải khuyến nghị:</span>
-                    <strong className="text-[#2B2826]">1080p (Full HD) hoặc 720p</strong>
+                <div className="grid grid-cols-1 gap-1.5 text-[#5F5852]">
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
+                    <span className="shrink-0">Độ phân giải</span>
+                    <strong className="text-right text-[#2B2826]">1080p / 720p</strong>
                   </div>
-                  <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-1.5">
-                    <span>Tỉ lệ khung hình:</span>
-                    <strong className="text-[#2B2826]">16:9 ngang chuẩn điện ảnh</strong>
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
+                    <span className="shrink-0">Tỉ lệ khung hình</span>
+                    <strong className="text-right text-[#2B2826]">16:9</strong>
                   </div>
-                  <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-1.5">
-                    <span>Thời lượng video bài học:</span>
-                    <strong className="text-[#2B2826]">1 – 5 phút (60s – 300s)</strong>
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
+                    <span className="shrink-0">Thời lượng</span>
+                    <strong className="text-right text-[#2B2826]">60s – 300s</strong>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>Chất lượng âm thanh:</span>
-                    <strong className="text-[#188A5A]">Rõ thoại tiếng Trung bản xứ</strong>
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#EAF5F1]/40 px-2.5 py-1.5">
+                    <span className="shrink-0">Âm thanh</span>
+                    <strong className="text-right text-[#188A5A]">Tiếng Trong rõ</strong>
                   </div>
                 </div>
               </div>
@@ -369,61 +418,107 @@ export default function AdminVideoUploader({
                   </div>
                   <textarea
                     id="video-description"
-                    rows={3}
+                    rows={2}
                     required
                     minLength={10}
                     maxLength={1000}
                     value={descriptionVi}
                     onChange={(e) => setDescriptionVi(e.target.value)}
                     placeholder="Tóm tắt ngắn gọn tình huống trong video, từ khóa chính và mẫu câu đàm thoại người học sẽ học được..."
-                    className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] p-3 text-xs leading-relaxed text-[#2B2826] transition-colors outline-none focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                    className="w-full resize-none rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] p-2.5 text-xs leading-relaxed text-[#2B2826] transition-colors outline-none focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
                   />
                 </div>
 
-                {/* Cấp độ HSK (1-9 Pills) */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-[#2B2826]">
-                    Cấp độ HSK 3.0 mục tiêu <span className="text-[#B91B1C]">*</span>
-                  </label>
-                  <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-9">
-                    {HSK_LEVELS.map((level) => {
-                      const isSelected = hsk === level;
-                      const styling = HSK_COLORS[level];
-                      return (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setHsk(level)}
-                          className={`rounded-xl border py-2 text-xs font-black transition-all ${
-                            isSelected
-                              ? 'border-transparent bg-[#B91B1C] text-white shadow-xs ring-2 ring-[#B91B1C]'
-                              : `${styling.bg} ${styling.text} ${styling.border} hover:opacity-85`
-                          }`}
-                        >
-                          H{level}
-                        </button>
-                      );
-                    })}
+                {/* Hàng kết hợp: Cấp độ HSK (Dropdown), Chủ đề (Dropdown) & Thời lượng (giây) */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                  {/* Cấp độ HSK 3.0 Dropdown */}
+                  <div className="sm:col-span-4">
+                    <label htmlFor="video-hsk-select" className="mb-1.5 block text-xs font-bold text-[#2B2826]">
+                      Cấp độ HSK 3.0 <span className="text-[#B91B1C]">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="video-hsk-select"
+                        value={hsk}
+                        onChange={(e) => setHsk(Number(e.target.value))}
+                        className="w-full cursor-pointer appearance-none rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2 pr-8 text-xs font-black text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                      >
+                        {HSK_LEVELS.map((level) => (
+                          <option key={level} value={level}>
+                            HSK {level} {level <= 3 ? '(Sơ cấp)' : level <= 6 ? '(Trung cấp)' : '(Cao cấp)'}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8C827A]">
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chủ đề bài học Dropdown */}
+                  <div className="sm:col-span-5">
+                    <label htmlFor="video-topic-select" className="mb-1.5 block text-xs font-bold text-[#2B2826]">
+                      Chủ đề bài học
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="video-topic-select"
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                        className="w-full cursor-pointer appearance-none rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2 pr-8 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                      >
+                        {TOPIC_OPTIONS.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#8C827A]">
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Thời lượng video */}
+                  <div className="sm:col-span-3">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label htmlFor="video-duration" className="text-xs font-bold text-[#2B2826]">
+                        Thời lượng (giây)
+                      </label>
+                      <span className="text-[10px] font-black text-[#188A5A]">≈ {formatTime(duration)}</span>
+                    </div>
+                    <input
+                      id="video-duration"
+                      type="number"
+                      required
+                      min={30}
+                      max={600}
+                      value={duration}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                    />
                   </div>
                 </div>
 
-                {/* Số câu hỏi tự động tạo cho AI Quiz (tùy chọn) */}
-                <div className="rounded-xl border border-dashed border-[#F2E4D8] bg-[#FFFAF3] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <label className="mb-0.5 flex items-center gap-1.5 text-xs font-bold text-[#2B2826]">
-                        <Sparkles size={12} className="text-[#B45309]" />
-                        Số câu hỏi AI Quiz
-                      </label>
-                      <p className="text-[11px] leading-relaxed text-[#7A6F66]">
-                        Để trống = theo HSK (1-2: 3 câu, 3-4: 5, 5-6: 6, 7-9: 7). Nhập 1-15 để override.
-                      </p>
+                {/* Số câu hỏi tự động tạo cho AI Quiz (tùy chọn) - Thanh ngang gọn gàng */}
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-[#F2E4D8] bg-[#FFFAF3] px-3.5 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]">
+                      <Sparkles className="h-3 w-3" />
                     </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-[#2B2826]">Số câu hỏi AI Quiz:</span>
+                      <span className="ml-1.5 text-[11px] text-[#7A6F66] hidden sm:inline">
+                        để trống = tự động theo HSK (3 – 7 câu). Hoặc nhập 1 – 15
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <input
                       type="number"
                       min={1}
                       max={15}
-                      placeholder="Số"
+                      placeholder="Tự động"
                       value={autoGenerateQuizCount}
                       onChange={(e) => {
                         const raw = e.target.value;
@@ -432,105 +527,62 @@ export default function AdminVideoUploader({
                         if (!Number.isFinite(n)) return;
                         setAutoGenerateQuizCount(Math.min(15, Math.max(1, n)));
                       }}
-                      className="w-28 rounded-lg border border-[#F2E4D8] bg-white px-2.5 py-2 text-center text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                      className="w-24 rounded-lg border border-[#F2E4D8] bg-white px-2 py-1 text-center text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
                     />
+                    <span className="text-[11px] font-bold text-[#8C827A]">câu</span>
                   </div>
                 </div>
 
-                {/* Chủ đề & Thời lượng */}
-                <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold text-[#2B2826]">Chủ đề bài học</label>
-                    <select
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      className="w-full cursor-pointer rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
-                    >
-                      {TOPIC_OPTIONS.map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                {/* Error Message */}
+                {uploadError && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-4 text-xs font-bold text-[#B91B1C]">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{uploadError}</span>
                   </div>
+                )}
 
-                  <div>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#2B2826]">Thời lượng video (giây)</label>
-                      <span className="text-[11px] font-bold text-[#188A5A]">≈ {formatTime(duration)}</span>
-                    </div>
-                    <input
-                      type="number"
-                      required
-                      min={30}
-                      max={600}
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
-                      className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Upload In-Flight Progress Widget */}
-              {uploadStage !== 'idle' && (
-                <div className="space-y-3 rounded-3xl border border-[#F2E4D8] bg-white p-5 shadow-2xs animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-2 font-black text-[#2B2826]">
-                      <RefreshCw className="h-4 w-4 animate-spin text-[#B91B1C]" />
-                      {uploadStage === 'presigning' && 'Đang xin mã cấp quyền tải lên Cloudflare R2...'}
-                      {uploadStage === 'uploading' && `Đang truyền luồng video lên R2 (${uploadProgress.percent}%)`}
-                      {uploadStage === 'confirming' && 'Đang xác nhận tệp và khởi động AI Pipeline...'}
-                    </span>
-                    {uploadStage === 'uploading' && (
-                      <button
-                        type="button"
-                        onClick={onCancelUpload}
-                        className="rounded-lg border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-1 text-[11px] font-bold text-[#B91B1C] transition-colors hover:bg-[#FCE8E8]"
-                      >
-                        Hủy tải lên
-                      </button>
+                {/* Form Action & Launch Footer */}
+                <div className="border-t border-[#F2E4D8] pt-4 mt-2">
+                  {/* Primary Action Button */}
+                  <button
+                    type="submit"
+                    disabled={busy || !file}
+                    className={`group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-6 text-xs font-black uppercase tracking-[0.08em] transition-all duration-200 select-none cursor-pointer ${busy || !file
+                      ? 'bg-[#EFE9E2] text-[#9E948B] border border-[#E2DAD0] cursor-not-allowed shadow-none'
+                      : 'bg-gradient-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415] text-white shadow-[0_8px_20px_-4px_rgba(185,27,28,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] hover:from-[#A3181A] hover:to-[#831112] hover:shadow-[0_12px_28px_-4px_rgba(185,27,28,0.52)] active:scale-[0.985] active:translate-y-px'
+                      }`}
+                  >
+                    {/* Shimmer sweep */}
+                    {!busy && file && (
+                      <span
+                        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                        aria-hidden
+                      />
                     )}
-                  </div>
 
-                  {uploadStage === 'uploading' && (
-                    <div className="space-y-1.5">
-                      <div className="h-2.5 w-full overflow-hidden rounded-full border border-[#F2E4D8] bg-[#FFF9F5]">
-                        <div
-                          className="h-full rounded-full bg-linear-to-r from-[#B91B1C] via-[#B45309] to-[#188A5A] transition-all duration-300"
-                          style={{ width: `${uploadProgress.percent}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-[#8C827A]">
-                        <span>Đã tải: {formatFileSize(uploadProgress.bytesSent)}</span>
-                        <span>Tổng dung lượng: {formatFileSize(uploadProgress.totalBytes)}</span>
-                      </div>
-                    </div>
-                  )}
+                    {busy ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                        <span>Đang xử lý tải video…</span>
+                      </>
+                    ) : !file ? (
+                      <>
+                        <Upload className="h-4 w-4 text-[#9E948B]" />
+                        <span>Tạo Bài Học & Khởi Động AI</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 text-[#FDE6BA] transition-transform duration-300 group-hover:rotate-12" />
+                        <span>Tạo Bài Học & Khởi Động AI</span>
+                        <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
-
-              {/* Error Message */}
-              {uploadError && (
-                <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-4 text-xs font-bold text-[#B91B1C]">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{uploadError}</span>
-                </div>
-              )}
-
-              {/* Action Submit Button */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={busy || !file}
-                  className="flex h-12 items-center gap-2 rounded-2xl bg-linear-to-r from-[#B91B1C] to-[#991415] px-6 text-xs font-black text-white shadow-md transition-all hover:from-[#A3181A] hover:to-[#881112] active:scale-[0.98] disabled:opacity-40"
-                >
-                  <Upload className="h-4 w-4" />
-                  <span>{busy ? 'Đang xử lý tải video...' : 'Tạo Bài Học & Khởi Động AI Pipeline'}</span>
-                </button>
               </div>
             </div>
           </div>
+
         </form>
       )}
 
@@ -558,11 +610,19 @@ export default function AdminVideoUploader({
 
                 {/* Status Action Buttons */}
                 <div className="flex shrink-0 items-center gap-2">
-                  {selectedLesson.status === 'ready_for_review' && (
+                  {(selectedLesson.status === 'ready_for_review' ||
+                    selectedLesson.status === 'published' ||
+                    processingStatus?.status === 'completed') && (
                     <button
                       type="button"
-                      onClick={() => onTabChange('editor')}
-                      className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98]"
+                      onClick={() => {
+                        if (onEditLesson) {
+                          onEditLesson(selectedLesson._id);
+                        } else {
+                          onTabChange('editor');
+                        }
+                      }}
+                      className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98] cursor-pointer"
                     >
                       <span>Kiểm Tra & Biên Tập Phụ Đề</span>
                       <ArrowRight className="h-4 w-4" />
@@ -599,30 +659,32 @@ export default function AdminVideoUploader({
                 <div className="flex items-center justify-between text-xs font-bold text-[#2B2826]">
                   <span>Quy trình xử lý AI tự động:</span>
                   <span className="text-[#B91B1C]">
-                    Tiến độ: {processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0}%
+                    Tiến độ: {uploadStage === 'uploading' && selectedLesson.status === 'uploading'
+                      ? `Đang lưu trữ R2 (${uploadProgress.percent}%)`
+                      : `${processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0}%`}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
                   {PIPELINE_STAGES.map((st, i) => {
-                    const currentProgress = processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0;
-                    const completed = processingStatus?.status === 'completed' || selectedLesson.status === 'ready_for_review' || selectedLesson.status === 'published';
+                    const isUploadingR2 = uploadStage !== 'idle' && selectedLesson.status === 'uploading';
+                    const currentProgress = isUploadingR2 ? 0 : (processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0);
+                    const completed = !isUploadingR2 && (processingStatus?.status === 'completed' || selectedLesson.status === 'ready_for_review' || selectedLesson.status === 'published');
                     const failed = processingStatus?.status === 'failed' || selectedLesson.status === 'failed';
                     const queued = processingStatus?.status === 'queued';
-                    const stageIndex = currentProgress < 10 ? 0 : currentProgress < 35 ? 1 : currentProgress < 60 ? 2 : 3;
-                    const isPassed = completed || i < stageIndex;
-                    const isCurrent = !completed && i === stageIndex;
+                    const stageIndex = isUploadingR2 ? 0 : (currentProgress < 10 ? 0 : currentProgress < 35 ? 1 : currentProgress < 60 ? 2 : 3);
+                    const isPassed = !isUploadingR2 && (completed || i < stageIndex || (i === 0 && selectedLesson.status !== 'uploading'));
+                    const isCurrent = isUploadingR2 ? (i === 0) : (!completed && i === stageIndex);
 
                     return (
                       <div
                         key={st.key}
-                        className={`rounded-2xl border p-3.5 transition-all ${
-                          isPassed
-                            ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                            : isCurrent
+                        className={`rounded-2xl border p-3.5 transition-all ${isPassed
+                          ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                          : isCurrent
                             ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309] ring-2 ring-[#F59E0B]'
                             : 'border-[#F2E4D8] bg-[#FFFDFB] text-[#8C827A]'
-                        }`}
+                          }`}
                       >
                         <div className="mb-1 flex items-center justify-between">
                           <span className="font-mono text-[10px] font-black">BƯỚC 0{i + 1}</span>
@@ -637,7 +699,11 @@ export default function AdminVideoUploader({
                           )}
                         </div>
                         <div className="text-xs font-bold">{st.label}</div>
-                        <div className="mt-0.5 text-[10px] opacity-80">{st.desc}</div>
+                        <div className="mt-0.5 text-[10px] opacity-80">
+                          {i === 0 && isUploadingR2
+                            ? `Đang tải: ${uploadProgress.percent}%`
+                            : st.desc}
+                        </div>
                       </div>
                     );
                   })}
@@ -680,14 +746,25 @@ export default function AdminVideoUploader({
               <div className="divide-y divide-[#F2E4D8]">
                 {jobs.map((job) => {
                   const lesson = lessons.find((l) => l._id === job.lessonId);
+                  const isSelected = selectedLesson?._id === job.lessonId;
                   return (
                     <div
                       key={job._id}
                       onClick={() => onSelectLesson(job.lessonId)}
-                      className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-[#FFF9F5]"
+                      className={`flex cursor-pointer items-center justify-between gap-4 p-4 transition-all ${
+                        isSelected
+                          ? 'border-l-4 border-l-[#B91B1C] bg-[#FFF8EC]'
+                          : 'hover:bg-[#FFF9F5]'
+                      }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] text-[#5F5852]">
+                        <div
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                            isSelected
+                              ? 'border-[#FDE6BA] bg-white text-[#B91B1C]'
+                              : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#5F5852]'
+                          }`}
+                        >
                           <Video className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
@@ -702,16 +779,20 @@ export default function AdminVideoUploader({
                       </div>
 
                       <div className="flex shrink-0 items-center gap-2">
+                        {isSelected && (
+                          <span className="rounded-full bg-[#B91B1C]/10 px-2 py-0.5 text-[10px] font-black text-[#B91B1C]">
+                            Đang xem
+                          </span>
+                        )}
                         <span
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${
-                            job.status === 'completed'
-                              ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                              : job.status === 'running'
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${job.status === 'completed'
+                            ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                            : job.status === 'running'
                               ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
                               : job.status === 'failed'
-                              ? 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
-                              : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]'
-                          }`}
+                                ? 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
+                                : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]'
+                            }`}
                         >
                           {job.status}
                         </span>
