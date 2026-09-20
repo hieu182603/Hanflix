@@ -18,34 +18,34 @@ const STYLE_PRESETS: Record<
 > = {
   modern: {
     containerClass:
-      'bg-black/75 text-white border border-white/10 backdrop-blur-sm shadow-2xl rounded-xl px-4 py-2 sm:px-5 sm:py-2.5',
-    textClass: 'text-white font-bold text-lg sm:text-xl md:text-2xl tracking-wide',
-    pinyinClass: 'text-white/90 italic text-sm sm:text-base md:text-lg font-medium tracking-wide',
-    translationClass: 'text-white/95 text-sm sm:text-base md:text-lg font-medium',
+      'bg-black/75 text-white border border-white/10 backdrop-blur-sm shadow-2xl rounded-xl px-3 py-1.5 sm:px-5 sm:py-2.5',
+    textClass: 'text-white font-bold text-base sm:text-xl md:text-2xl tracking-wide',
+    pinyinClass: 'text-white/90 italic text-xs sm:text-base md:text-lg font-medium tracking-wide',
+    translationClass: 'text-white/95 text-xs sm:text-base md:text-lg font-medium',
     description: 'Hiện đại · nền đen mờ',
   },
   classic_yellow: {
     containerClass:
-      'bg-black/85 text-white border border-yellow-300/40 shadow-[0_0_0_2px_rgba(0,0,0,0.85)] rounded-lg px-4 py-2 sm:px-5 sm:py-2.5',
-    textClass: 'text-yellow-300 font-black text-lg sm:text-xl md:text-2xl tracking-wide',
-    pinyinClass: 'text-white italic text-sm sm:text-base md:text-lg font-medium tracking-wide',
-    translationClass: 'text-white text-sm sm:text-base md:text-lg font-medium',
+      'bg-black/85 text-white border border-yellow-300/40 shadow-[0_0_0_2px_rgba(0,0,0,0.85)] rounded-lg px-3 py-1.5 sm:px-5 sm:py-2.5',
+    textClass: 'text-yellow-300 font-black text-base sm:text-xl md:text-2xl tracking-wide',
+    pinyinClass: 'text-white italic text-xs sm:text-base md:text-lg font-medium tracking-wide',
+    translationClass: 'text-white text-xs sm:text-base md:text-lg font-medium',
     description: 'Phim cổ điển · chữ vàng nổi bật',
   },
   netflix: {
     containerClass:
-      'bg-zinc-900/95 text-white rounded-lg px-4 py-2 sm:px-5 sm:py-2.5 shadow-2xl',
-    textClass: 'text-white font-bold text-lg sm:text-xl md:text-2xl tracking-wide',
-    pinyinClass: 'text-zinc-300 italic text-sm sm:text-base md:text-lg font-medium tracking-wide',
-    translationClass: 'text-zinc-100 text-sm sm:text-base md:text-lg font-medium',
+      'bg-zinc-900/95 text-white rounded-lg px-3 py-1.5 sm:px-5 sm:py-2.5 shadow-2xl',
+    textClass: 'text-white font-bold text-base sm:text-xl md:text-2xl tracking-wide',
+    pinyinClass: 'text-zinc-300 italic text-xs sm:text-base md:text-lg font-medium tracking-wide',
+    translationClass: 'text-zinc-100 text-xs sm:text-base md:text-lg font-medium',
     description: 'Netflix · box mờ chuyên nghiệp',
   },
   anime: {
     containerClass:
-      'bg-black/90 text-white border-2 border-white rounded-xl px-5 py-2.5 sm:px-6 sm:py-3 shadow-[0_0_0_3px_rgba(0,0,0,0.95)]',
-    textClass: 'text-white font-black text-2xl sm:text-3xl md:text-4xl tracking-wide',
-    pinyinClass: 'text-yellow-200 italic text-base sm:text-lg md:text-xl font-bold tracking-wide',
-    translationClass: 'text-white text-base sm:text-lg md:text-xl font-semibold',
+      'bg-black/90 text-white border-2 border-white rounded-xl px-4 py-2 sm:px-6 sm:py-3 shadow-[0_0_0_3px_rgba(0,0,0,0.95)]',
+    textClass: 'text-white font-black text-xl sm:text-3xl md:text-4xl tracking-wide',
+    pinyinClass: 'text-yellow-200 italic text-xs sm:text-lg md:text-xl font-bold tracking-wide',
+    translationClass: 'text-white text-xs sm:text-lg md:text-xl font-semibold',
     description: 'Anime · chữ to, viền rõ',
   },
 };
@@ -64,6 +64,7 @@ export type SubtitleOverlayProps = {
   style: SubtitleOverlayStyle;
   scale?: number;
   className?: string;
+  containerStyle?: React.CSSProperties;
   onTokenClick?: (cueId: string, wordId: string, wordText: string, event: React.MouseEvent) => void;
   onSaveWord?: (cueId: string, wordId: string) => void;
 };
@@ -151,6 +152,7 @@ export function SubtitleOverlay({
   style,
   scale = 100,
   className,
+  containerStyle,
   onTokenClick,
 }: SubtitleOverlayProps) {
   const activeCue = useMemo(
@@ -174,6 +176,7 @@ export function SubtitleOverlay({
         className ||
         'pointer-events-none absolute inset-x-0 bottom-4 z-20 flex flex-col items-center gap-1 px-4 sm:bottom-6'
       }
+      style={containerStyle}
       aria-live="polite"
     >
       {rows.map((row, index) => {

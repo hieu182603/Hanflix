@@ -601,7 +601,7 @@ export default function PublishedLessonView({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E7E7EA] hover:border-[#B91B1C]/30 hover:bg-[#FFF5F5] text-xs sm:text-sm font-semibold text-[#18181B] shadow-2xs transition-all cursor-pointer group"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] rounded-xl bg-white border border-[#E7E7EA] hover:border-[#B91B1C]/30 hover:bg-[#FFF5F5] text-xs sm:text-sm font-semibold text-[#18181B] shadow-2xs transition-all cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-[#5F6368] group-hover:-translate-x-0.5 group-hover:text-[#B91B1C] transition-transform" />
           <span>Quay lại gợi ý</span>

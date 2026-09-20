@@ -201,7 +201,10 @@ export default function AIAssistantDrawer({
     }, 1200)
 
     try {
-      const aiResponseText = await askPanda(query)
+      const contextStr = learningContext?.title
+        ? `Bài học: "${learningContext.title}" (HSK ${learningContext.hskLevel || 1})`
+        : undefined
+      const aiResponseText = await askPanda(query, contextStr)
       window.clearTimeout(workTimer)
       setMessages((previous) => [
         ...previous,
@@ -443,7 +446,7 @@ export default function AIAssistantDrawer({
           )}
         </div>
 
-        <footer className="shrink-0 border-t border-[#E9DEDA] bg-[#FFFCFA] px-3.5 pb-3 pt-3 sm:px-5">
+        <footer className="shrink-0 border-t border-[#E9DEDA] bg-[#FFFCFA] px-3.5 pb-3 pt-3 sm:px-5 safe-area-bottom">
           <form
             onSubmit={(event) => {
               event.preventDefault()

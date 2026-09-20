@@ -70,7 +70,7 @@ export default function OtpInput({ value, onChange, length = 6, disabled = false
   }, [length, onChange, focusInput]);
 
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3">
+    <div className="flex items-center justify-center gap-1.5 sm:gap-3">
       {Array.from({ length }, (_, i) => (
         <input
           key={i}
@@ -87,8 +87,8 @@ export default function OtpInput({ value, onChange, length = 6, disabled = false
           onFocus={e => e.target.select()}
           aria-label={`Digit ${i + 1}`}
           className={`
-            w-11 h-13 sm:w-13 sm:h-15
-            text-center text-xl sm:text-2xl font-black font-display
+            w-9 h-11 sm:w-13 sm:h-15
+            text-center text-lg sm:text-2xl font-black font-display
             rounded-xl border-2 bg-white
             transition-all duration-200
             outline-none

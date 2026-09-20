@@ -290,31 +290,31 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-200">
       {/* Outer Container with Liquid Glass Refraction Border */}
-      <div className="bg-white w-full max-w-4xl rounded-3xl overflow-hidden shadow-[0_25px_70px_-15px_rgba(0,0,0,0.3)] border border-zinc-200/90 flex flex-col max-h-[92vh] min-h-[580px]">
+      <div className="bg-white w-full max-w-4xl rounded-none sm:rounded-3xl overflow-hidden shadow-[0_25px_70px_-15px_rgba(0,0,0,0.3)] border-0 sm:border border-zinc-200/90 flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:min-h-[540px] safe-area-bottom">
         
         {/* Header Bar */}
-        <div className="px-6 py-4 border-b border-zinc-200/80 flex items-center justify-between bg-white shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200/80 flex items-center justify-between bg-white shrink-0 safe-area-top">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C] flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C] flex items-center justify-center shadow-xs shrink-0">
               <UserIcon className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-zinc-900 tracking-tight">Cài Đặt Tài Khoản</h2>
+                <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">Cài Đặt Tài Khoản</h2>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-zinc-100 text-zinc-600 border border-zinc-200">
                   {currentUser?.role === 'admin' ? 'Quản Trị Viên' : 'Học Viên HanFlix'}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 font-medium">Quản lý nhận diện cá nhân, lộ trình học và bảo mật tài khoản</p>
+              <p className="text-xs text-zinc-500 font-medium line-clamp-1">Quản lý nhận diện cá nhân, lộ trình học và bảo mật tài khoản</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             aria-label="Đóng cài đặt"
-            className="p-2 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer active:scale-95"
+            className="p-2 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -324,7 +324,7 @@ export default function SettingsModal({
         <div className="flex md:hidden border-b border-zinc-200/80 px-4 bg-zinc-50/80 overflow-x-auto no-scrollbar shrink-0 py-2 gap-1.5">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'profile'
                 ? 'bg-[#B91B1C] text-white shadow-xs'
                 : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
@@ -335,7 +335,7 @@ export default function SettingsModal({
           </button>
           <button
             onClick={() => setActiveTab('security')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'security'
                 ? 'bg-[#B91B1C] text-white shadow-xs'
                 : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'

@@ -86,12 +86,46 @@ function sanitizeForPrompt(text: string, maxLength = 500): string {
 }
 
 function extractJson(text: string): unknown {
-  const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    throw new AppError(502, 'AI_INVALID_RESPONSE', 'Gemini trả về dữ liệu không đúng định dạng');
+  if (!text || typeof text !== 'string') {
+    throw new AppError(502, 'AI_INVALID_RESPONSE', 'Gemini không trả về nội dung');
   }
+
+  const trimmed = text.trim();
+
+  // 1. Direct JSON parse
+  try {
+    return JSON.parse(trimmed);
+  } catch {}
+
+  // 2. Strip any markdown code fences
+  const fenceStripped = trimmed
+    .replace(/^```(?:json)?\s*/im, '')
+    .replace(/\s*```$/im, '')
+    .trim();
+  try {
+    return JSON.parse(fenceStripped);
+  } catch {}
+
+  // 3. Find outermost matching [ ... ] or { ... }
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    const candidate = trimmed.slice(firstBracket, lastBracket + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {}
+  }
+
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {}
+  }
+
+  throw new AppError(502, 'AI_INVALID_RESPONSE', 'Gemini trả về dữ liệu không đúng định dạng');
 }
 
 export type QuestionKind = 'comprehension' | 'vocabulary' | 'grammar' | 'cloze';

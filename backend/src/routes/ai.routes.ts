@@ -21,11 +21,18 @@ const explainSchema = z.object({
   question: z.string().trim().min(1).max(500).optional(),
 });
 
-const askSchema = z.object({ question: z.string().trim().min(1).max(500) });
+const askSchema = z.object({
+  question: z.string().trim().min(1).max(500),
+  context: z.string().trim().max(1000).optional(),
+});
 
 router.post('/ask', requireAuth, aiLimiter, validate(askSchema), asyncHandler(async (req, res) => {
   const learner = await UserModel.findById(req.auth!.userId).select('learningProfile').lean();
-  const answer = await answerLearningQuestion({ question: req.body.question, profile: learner?.learningProfile ?? {} });
+  const answer = await answerLearningQuestion({
+    question: req.body.question,
+    profile: learner?.learningProfile ?? {},
+    context: req.body.context,
+  });
   res.json({ data: answer });
 }));
 

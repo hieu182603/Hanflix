@@ -245,7 +245,7 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-              className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors p-0.5"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" /> : <Eye className="w-4.5 h-4.5 sm:w-5 sm:h-5 stroke-[1.8]" />}
             </button>

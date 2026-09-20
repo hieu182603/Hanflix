@@ -245,10 +245,10 @@ export default function LearningSurveyModal({
   const handleSkip = () => onClose();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-[#E7E7EA] flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-5 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-none sm:rounded-3xl overflow-hidden shadow-2xl border-0 sm:border border-[#E7E7EA] flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh]">
         {/* Top Header Bar */}
-        <div className="px-6 py-4 border-b border-[#E7E7EA] flex items-center justify-between bg-white shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#E7E7EA] flex items-center justify-between bg-white shrink-0 safe-area-top">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center shrink-0">
               <Compass className="w-5 h-5 stroke-[2.2]" />
@@ -262,7 +262,7 @@ export default function LearningSurveyModal({
                   Bước {step} / {totalSteps}
                 </span>
               </div>
-              <p className="text-xs text-[#5F6368]">
+              <p className="text-xs text-[#5F6368] line-clamp-1">
                 Tùy chỉnh nội dung video và lộ trình tiếng Trung phù hợp với bạn
               </p>
             </div>
@@ -271,7 +271,7 @@ export default function LearningSurveyModal({
           <button
             onClick={handleSkip}
             aria-label="Đóng"
-            className="p-2 rounded-xl text-[#8B9097] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-[#8B9097] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -566,13 +566,13 @@ export default function LearningSurveyModal({
 
         {saveError && <div className="px-6 mb-3"><InlineBanner variant="error" message={saveError} /></div>}
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0 safe-area-bottom">
           <div>
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="px-4 py-2.5 rounded-xl border border-[#E7E7EA] bg-white text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 min-h-[44px] rounded-xl border border-[#E7E7EA] bg-white text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Quay lại</span>
@@ -581,7 +581,7 @@ export default function LearningSurveyModal({
               <button
                 type="button"
                 onClick={handleSkip}
-                className="text-xs font-semibold text-[#8B9097] hover:text-[#5F6368] px-2 py-1 transition-colors cursor-pointer"
+                className="text-xs font-semibold text-[#8B9097] hover:text-[#5F6368] px-2 py-1 min-h-[44px] inline-flex items-center transition-colors cursor-pointer"
               >
                 Bỏ qua lần này
               </button>
@@ -593,7 +593,7 @@ export default function LearningSurveyModal({
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="px-6 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                className="px-6 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
               >
                 <span>Tiếp tục</span>
                 <ChevronRight className="w-4 h-4" />
@@ -603,7 +603,7 @@ export default function LearningSurveyModal({
                 type="button"
                 onClick={handleComplete}
                 disabled={saving}
-                className="px-6 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                className="px-6 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
                 <span>{saving ? 'Đang lưu…' : 'Lưu & Bắt đầu học'}</span>

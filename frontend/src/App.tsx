@@ -577,7 +577,7 @@ function LearnerRouteShell({
 
       <nav
         aria-label="Điều hướng dưới"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#E7E7EA] flex items-center safe-area-inset-bottom"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E7E7EA] flex items-center safe-area-inset-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
       >
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
@@ -588,12 +588,12 @@ function LearnerRouteShell({
               onClick={() => navigate(activeNavToPath(item.id))}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-[10px] font-bold transition-colors cursor-pointer ${
-                isActive ? 'text-[#B91B1C]' : 'text-[#8B9097]'
+              className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 text-[10px] font-bold transition-colors cursor-pointer select-none active:scale-95 ${
+                isActive ? 'text-[#B91B1C]' : 'text-[#8B9097] hover:text-[#18181B]'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-[#B91B1C]' : 'text-[#8B9097]'}`} />
-              <span>{item.label}</span>
+              <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-[#B91B1C]' : 'text-[#8B9097]'}`} />
+              <span className="truncate max-w-full px-0.5">{item.label}</span>
             </button>
           );
         })}

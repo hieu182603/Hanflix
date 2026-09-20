@@ -320,17 +320,17 @@ export default function AdminVideoList({
         })}
       </div>
 
-      {/* 3. Advanced Control Bar: Search + Status + HSK + View Mode - All in 1 row */}
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
+      {/* 3. Advanced Control Bar: Search + Status + HSK + View Mode */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs">
         {/* Search Box */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-0 w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
           <input
             type="text"
             placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            className="h-10 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
           />
           {searchQuery && (
             <button
@@ -345,9 +345,9 @@ export default function AdminVideoList({
         </div>
 
         {/* Right Controls Group */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Status Filter Dropdown */}
-          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+          <div className="flex h-10 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
             <Filter className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={statusFilter}
@@ -365,7 +365,7 @@ export default function AdminVideoList({
           </div>
 
           {/* HSK Level Filter */}
-          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+          <div className="flex h-10 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
             <GraduationCap className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={hskFilter}
