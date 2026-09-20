@@ -22,6 +22,8 @@ export interface AdminLesson {
   processingProgress?: number;
   processingError?: string;
   media?: { mimeType: string; sizeBytes: number } | null;
+  thumbnailUrl?: string | null;
+  thumbnailKey?: string;
   createdAt?: string;
 }
 

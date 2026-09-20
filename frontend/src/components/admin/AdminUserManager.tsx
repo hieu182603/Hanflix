@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useNotification } from '../notifications';
 import { Spinner } from '../notifications';
 import {
@@ -16,7 +17,6 @@ import {
   Copy,
   Check,
   GraduationCap,
-  Target,
   Calendar,
   UserCheck,
   UserX,
@@ -76,7 +76,10 @@ function formatDate(dateStr?: string): string {
   }
 }
 
-export default function AdminUserManager() {
+export default function AdminUserManager({ userId: propUserId }: { userId?: string } = {}) {
+  const params = useParams<{ userId?: string }>();
+  const activeUserId = propUserId || params.userId || '';
+  const navigate = useNavigate();
   const notify = useNotification();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,6 +115,23 @@ export default function AdminUserManager() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Sync route param with selectedUser
+  useEffect(() => {
+    if (!activeUserId) {
+      setSelectedUser(null);
+      return;
+    }
+    const found = users.find((u) => u._id === activeUserId);
+    if (found) {
+      setSelectedUser(found);
+    }
+  }, [activeUserId, users]);
+
+  const handleCloseModal = () => {
+    setSelectedUser(null);
+    navigate('/admin/users');
+  };
 
   const showMsg = (type: 'success' | 'error', text: string) => {
     notify.toast(type, text);
@@ -170,8 +190,7 @@ export default function AdminUserManager() {
         const q = searchQuery.toLowerCase();
         const matchesName = u.name?.toLowerCase().includes(q);
         const matchesEmail = u.email?.toLowerCase().includes(q);
-        const matchesGoal = u.learningProfile?.goal?.toLowerCase().includes(q);
-        if (!matchesName && !matchesEmail && !matchesGoal) return false;
+        if (!matchesName && !matchesEmail) return false;
       }
       return true;
     });
@@ -293,28 +312,41 @@ export default function AdminUserManager() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs md:flex-row">
+      {/* Filter and Search Bar - All in 1 row */}
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
         {/* Search */}
-        <div className="relative w-full md:max-w-md">
-          <Search className="absolute top-3 left-3.5 h-4 w-4 text-[#8C827A]" />
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
           <input
             type="text"
-            placeholder="Tìm theo tên học viên, email hoặc mục tiêu học..."
+            placeholder="Tìm theo tên học viên, email..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] py-2 pr-4 pl-9 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setPage(1);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#2B2826] transition-colors"
+              title="Xóa tìm kiếm"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Filters Group */}
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end">
+        {/* Filters Group - strictly on 1 row */}
+        <div className="flex shrink-0 items-center gap-2">
           {/* Role Filter */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Shield className="h-3.5 w-3.5 text-[#8C827A]" />
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <Shield className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={roleFilter}
               onChange={(e) => {
@@ -322,7 +354,7 @@ export default function AdminUserManager() {
                 setPage(1);
               }}
               aria-label="Lọc theo vai trò"
-              className="h-8 min-w-[140px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
             >
               <option value="all">Tất cả vai trò</option>
               <option value="user">Học viên</option>
@@ -331,8 +363,8 @@ export default function AdminUserManager() {
           </div>
 
           {/* Status Filter */}
-          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
-            <Filter className="h-3.5 w-3.5 text-[#8C827A]" />
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <Filter className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -340,7 +372,7 @@ export default function AdminUserManager() {
                 setPage(1);
               }}
               aria-label="Lọc theo trạng thái"
-              className="h-8 min-w-[160px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Đang hoạt động</option>
@@ -349,8 +381,8 @@ export default function AdminUserManager() {
           </div>
 
           {/* HSK Level Filter */}
-          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
-            <GraduationCap className="h-3.5 w-3.5 text-[#8C827A]" />
+          <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
+            <GraduationCap className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
             <select
               value={hskFilter}
               onChange={(e) => {
@@ -358,7 +390,7 @@ export default function AdminUserManager() {
                 setPage(1);
               }}
               aria-label="Lọc theo cấp độ HSK"
-              className="h-8 min-w-[120px] cursor-pointer rounded-lg border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-bold text-[#2B2826] outline-none transition-colors hover:border-[#B91B1C]/40 focus:border-[#B91B1C]"
+              className="cursor-pointer bg-transparent text-xs font-bold text-[#2B2826] outline-none"
             >
               <option value="">Tất cả HSK</option>
               {HSK_LEVELS.map((lvl) => (
@@ -368,6 +400,25 @@ export default function AdminUserManager() {
               ))}
             </select>
           </div>
+
+          {/* Reset button if active */}
+          {(searchQuery || roleFilter !== 'all' || statusFilter !== 'all' || hskFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setRoleFilter('all');
+                setStatusFilter('all');
+                setHskFilter('');
+                setPage(1);
+              }}
+              className="flex h-9 items-center gap-1 rounded-xl border border-[#F2E4D8] bg-[#FDF1F1] px-2.5 text-xs font-bold text-[#B91B1C] transition-colors hover:bg-[#FAD2CF]"
+              title="Đặt lại bộ lọc"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Đặt lại</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -377,10 +428,9 @@ export default function AdminUserManager() {
           <thead className="border-b border-[#F2E4D8] bg-[#FFF9F5] text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
             <tr>
               <th className="p-4 w-[260px]">Người dùng</th>
-              <th className="p-4 w-[240px]">Email</th>
+              <th className="p-4">Email</th>
               <th className="p-4 w-[130px]">Vai trò</th>
-              <th className="p-4 w-[120px]">Trình độ HSK</th>
-              <th className="p-4">Mục tiêu học tập</th>
+              <th className="p-4 w-[130px]">Trình độ HSK</th>
               <th className="p-4 w-[140px]">Trạng thái</th>
               <th className="p-4 text-right w-[120px]">Thao tác</th>
             </tr>
@@ -388,7 +438,7 @@ export default function AdminUserManager() {
           <tbody className="divide-y divide-[#F2E4D8]">
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-[#8C827A]">
+                <td colSpan={6} className="p-12 text-center text-[#8C827A]">
                   <div className="inline-flex items-center gap-2">
                     <Spinner size="sm" tone="brand" />
                     <span>Đang tải danh sách người dùng...</span>
@@ -397,7 +447,7 @@ export default function AdminUserManager() {
               </tr>
             ) : currentUsers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-[#8C827A]">
+                <td colSpan={6} className="p-12 text-center text-[#8C827A]">
                   Không tìm thấy người dùng nào phù hợp với bộ lọc.
                 </td>
               </tr>
@@ -476,18 +526,6 @@ export default function AdminUserManager() {
                       )}
                     </td>
 
-                    {/* Learning Goal */}
-                    <td className="p-4">
-                      {user.learningProfile?.goal ? (
-                        <span className="inline-flex items-center gap-1 rounded-xl border border-[#FDE6BA] bg-[#FFF8EC] px-2.5 py-1 text-[11px] font-bold text-[#B45309]">
-                          <Target className="h-3 w-3" />
-                          <span className="max-w-[200px] truncate">{user.learningProfile.goal}</span>
-                        </span>
-                      ) : (
-                        <span className="italic text-[11px] text-[#8C827A]">—</span>
-                      )}
-                    </td>
-
                     {/* Status Pill Toggle */}
                     <td className="p-4">
                       <button
@@ -521,7 +559,10 @@ export default function AdminUserManager() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setSelectedUser(user)}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            navigate(`/admin/users/${user._id}`);
+                          }}
                           className="rounded-lg border border-[#F2E4D8] bg-white p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
                           title="Xem hồ sơ chi tiết"
                         >
@@ -592,7 +633,7 @@ export default function AdminUserManager() {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseModal}
                 className="rounded-lg p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
               >
                 <X className="h-4 w-4" />
@@ -644,13 +685,6 @@ export default function AdminUserManager() {
                 )}
               </div>
 
-              <div className="space-y-1 rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="block font-bold text-[#8C827A]">Mục tiêu học tập:</span>
-                <p className="text-xs font-semibold text-[#2B2826]">
-                  {selectedUser.learningProfile?.goal || 'Chưa đặt mục tiêu học'}
-                </p>
-              </div>
-
               <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
                 <span className="font-bold text-[#8C827A]">Ngày đăng ký tham gia:</span>
                 <span className="font-bold text-[#2B2826]">{formatDate(selectedUser.createdAt)}</span>
@@ -661,7 +695,7 @@ export default function AdminUserManager() {
             <div className="flex items-center justify-end gap-2.5 border-t border-[#F2E4D8] pt-3">
               <button
                 type="button"
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseModal}
                 className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 py-2 text-xs font-bold text-[#5F5852] transition-colors hover:bg-white hover:text-[#2B2826]"
               >
                 Đóng

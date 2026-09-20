@@ -286,11 +286,11 @@ export async function runEditorCommit(input: EditorCommitInput): Promise<EditorC
 
     if (subtitle) {
       updatedSubtitle = await SubtitleTrackModel.findOneAndUpdate(
-        { lessonId, revision: subtitle.revision, status: 'draft' },
+        { lessonId, revision: subtitle.revision },
         { $set: { cues: subtitle.cues } },
         { returnDocument: 'after', session: sess as any },
       );
-      if (!updatedSubtitle) throw new AppError(409, 'SUBTITLE_NOT_FOUND', 'Không tìm thấy phụ đề nháp ở revision này');
+      if (!updatedSubtitle) throw new AppError(409, 'SUBTITLE_NOT_FOUND', 'Không tìm thấy phụ đề ở revision này');
       if (subtitle.dirty && subtitle.dirty.zhChangedCount > 0) {
         shouldMarkDirty = true;
         dirtyReason = subtitle.dirty.reason;
@@ -298,11 +298,11 @@ export async function runEditorCommit(input: EditorCommitInput): Promise<EditorC
     }
     if (quiz) {
       updatedQuiz = await QuizModel.findOneAndUpdate(
-        { lessonId, revision: quiz.revision, status: 'draft' },
+        { lessonId, revision: quiz.revision },
         { $set: { questions: quiz.questions } },
         { returnDocument: 'after', session: sess as any },
       );
-      if (!updatedQuiz) throw new AppError(409, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập nháp ở revision này');
+      if (!updatedQuiz) throw new AppError(409, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài tập ở revision này');
       const hasUnlinked = quiz.questions.some(q => !q.relatedWordIds || q.relatedWordIds.length === 0);
       if (hasUnlinked) {
         shouldMarkDirty = true;

@@ -317,10 +317,32 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
     { returnDocument: 'after' },
   );
   if (!session) {
-    // SECURITY (BUG-01 + C-3): Token reuse OR fingerprint mismatch detected.
-    // Revoke ALL active sessions for this user (OWASP session family revocation).
+    // Check if this was a concurrent in-flight request within the rotation grace period (e.g. 10s)
     const compromisedSession = await RefreshSessionModel.findOne({ jti: claims.jti });
     if (compromisedSession) {
+      const ROTATION_GRACE_PERIOD_MS = 10_000;
+      const isRecentRotation = Boolean(
+        compromisedSession.replacedByJti &&
+        compromisedSession.revokedAt &&
+        (Date.now() - compromisedSession.revokedAt.getTime()) < ROTATION_GRACE_PERIOD_MS
+      );
+
+      if (isRecentRotation) {
+        const replacementSession = await RefreshSessionModel.findOne({
+          jti: compromisedSession.replacedByJti,
+          revokedAt: { $exists: false },
+          expiresAt: { $gt: new Date() },
+        });
+        if (replacementSession) {
+          const user = await UserModel.findById(claims.sub).select('+emailVerificationRequired');
+          if (user && user.status === 'active') {
+            return res.json({ data: { accessToken: signAccessToken(user._id.toString(), user.role) } });
+          }
+        }
+      }
+
+      // SECURITY (BUG-01 + C-3): Token reuse outside grace period detected.
+      // Revoke ALL active sessions for this user (OWASP session family revocation).
       await RefreshSessionModel.updateMany(
         { userId: compromisedSession.userId, revokedAt: { $exists: false } },
         { $set: { revokedAt: new Date() } },

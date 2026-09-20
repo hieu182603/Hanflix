@@ -127,16 +127,23 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-4">
         {/* Profile Card (Expanded) */}
         {!collapsed && (
-          <div className="bg-[#F7F7F9] rounded-2xl p-4 border border-[#E7E7EA] flex flex-col items-center text-center transition-opacity duration-200">
+          <div
+            onClick={() => {
+              onNavChange('profile');
+              onCloseDrawer?.();
+            }}
+            className="bg-[#F7F7F9] hover:bg-[#F2E4D8]/30 cursor-pointer rounded-2xl p-4 border border-[#E7E7EA] flex flex-col items-center text-center transition-all duration-200 group"
+            title="Xem & Chỉnh sửa hồ sơ cá nhân"
+          >
             <div className="relative mb-2.5">
               <UserAvatar
                 user={{ id: userProfile.id, name: userProfile.name, avatarConfig: userProfile.avatarConfig, avatar: userProfile.avatar }}
                 size={56}
-                className="border-2 border-white shadow-md"
+                className="border-2 border-white shadow-md group-hover:scale-105 transition-transform"
               />
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#188A5A] rounded-full border-2 border-white" />
             </div>
-            <h3 className="font-bold text-sm text-[#18181B] tracking-tight truncate max-w-full">{userProfile.name}</h3>
+            <h3 className="font-bold text-sm text-[#18181B] group-hover:text-[#B91B1C] transition-colors tracking-tight truncate max-w-full">{userProfile.name}</h3>
             
             {/* Badges row: HSK Level + XP points */}
             <div className="mt-1.5 flex items-center justify-center gap-1.5 flex-wrap">

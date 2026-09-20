@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   User as UserIcon,
-  Sliders,
   Shield,
   Camera,
   Upload,
@@ -16,22 +15,18 @@ import {
   Compass,
   Flame,
   GraduationCap,
-  Sparkles,
   Lock,
-  Volume2,
-  Gauge,
-  Subtitles,
   Mail,
   BadgeCheck,
   Check,
 } from 'lucide-react';
 import * as authApi from '../../api/auth';
 import { uploadAvatarToCloudinary, restoreDefaultAvatar } from '../../api/upload';
-import { saveLearningProfile } from '../../api/learning';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { User, UserProfile } from '../../data/hanflixData';
 import UserAvatar from '../common/UserAvatar';
 import { InlineBanner } from '../notifications';
+import { getStreakState } from '../../lib/streak';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -43,7 +38,7 @@ interface SettingsModalProps {
   onUpdateUser?: (updated: User) => void;
 }
 
-type TabType = 'profile' | 'learning' | 'security';
+type TabType = 'profile' | 'security';
 
 export default function SettingsModal({
   isOpen,
@@ -55,6 +50,25 @@ export default function SettingsModal({
   onUpdateUser,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [currentStreak, setCurrentStreak] = useState(() => {
+    const fromStorage = getStreakState().streakCount;
+    return typeof fromStorage === 'number' ? fromStorage : (userProfile?.streakDays ?? 14);
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCurrentStreak(getStreakState().streakCount);
+    };
+    if (isOpen) {
+      handleUpdate();
+    }
+    window.addEventListener('hanflix:streak-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('hanflix:streak-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [isOpen, userProfile?.streakDays]);
 
   // Basic Profile editing state
   const [editName, setEditName] = useState(currentUser?.name || userProfile?.name || '');
@@ -182,22 +196,6 @@ export default function SettingsModal({
   const [isUnlinkingGoogle, setIsUnlinkingGoogle] = useState(false);
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
 
-  // Learning preferences state
-  const [subtitleMode, setSubtitleMode] = useState<'all' | 'zh-pinyin' | 'zh'>(
-    userProfile?.subtitleMode || 'all'
-  );
-  const [autoPronounce, setAutoPronounce] = useState<boolean>(() => {
-    const saved = localStorage.getItem('hanflix_auto_pronounce');
-    return saved !== null ? saved === 'true' : true;
-  });
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(() => {
-    const saved = localStorage.getItem('hanflix_playback_speed');
-    return saved ? Number(saved) : 1;
-  });
-  const [prefSuccess, setPrefSuccess] = useState('');
-  const [prefError, setPrefError] = useState('');
-  const [savingPrefs, setSavingPrefs] = useState(false);
-
   useEffect(() => {
     if (currentUser) {
       setEditName(currentUser.name);
@@ -276,40 +274,11 @@ export default function SettingsModal({
     }
   };
 
-  const handleSaveLearningPrefs = async () => {
-    setSavingPrefs(true);
-    setPrefError('');
-    setPrefSuccess('');
-    try {
-      const profile = currentUser?.learningProfile;
-      await saveLearningProfile({
-        currentHsk: profile?.hskLevel ?? 3,
-        currentHskSource: profile?.currentHskSource ?? 'unknown',
-        targetHsk: profile?.targetHsk,
-        goal: profile?.goal ?? 'daily',
-        focusSkills: profile?.focusSkills,
-        topicIds: profile?.topics ?? [],
-        dailyMinutes: profile?.dailyMinutes ?? 15,
-        studyDaysPerWeek: profile?.studyDaysPerWeek,
-        subtitlePreference: { all: 'all', 'zh-pinyin': 'zh_pinyin', zh: 'zh_only' }[subtitleMode],
-        surveyVersion: profile?.surveyVersion ?? 1,
-      });
-      localStorage.setItem('hanflix_auto_pronounce', String(autoPronounce));
-      localStorage.setItem('hanflix_playback_speed', String(playbackSpeed));
-      onSavePreferences?.({ subtitleMode });
-      setPrefSuccess('Đã lưu tùy chọn trải nghiệm học tập!');
-    } catch (error) {
-      setPrefError(error instanceof Error ? error.message : 'Không thể lưu tùy chọn.');
-    } finally {
-      setSavingPrefs(false);
-    }
-  };
-
   if (!isOpen) return null;
 
   const hskCurrent = currentUser?.learningProfile?.hskLevel || 3;
   const hskTarget = currentUser?.learningProfile?.targetHsk || Math.min(9, hskCurrent + 1);
-  const streak = userProfile?.streakDays || 0;
+  const streak = currentStreak;
   const goalLabel = currentUser?.learningProfile?.goal || 'daily';
   const goalMap: Record<string, string> = {
     daily: 'Giao tiếp hàng ngày',
@@ -365,17 +334,6 @@ export default function SettingsModal({
             <span>Hồ sơ cá nhân</span>
           </button>
           <button
-            onClick={() => setActiveTab('learning')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activeTab === 'learning'
-                ? 'bg-[#B91B1C] text-white shadow-xs'
-                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            <span>Tùy chọn học tập</span>
-          </button>
-          <button
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'security'
@@ -392,7 +350,7 @@ export default function SettingsModal({
         <div className="flex-1 flex overflow-hidden">
           
           {/* Left Rail (Desktop Only Master View) */}
-          <div className="hidden md:flex w-64 bg-zinc-50/70 border-r border-zinc-200/80 p-4 flex-col justify-between shrink-0 select-none">
+          <div className="hidden md:flex w-64 bg-zinc-50/70 border-r border-zinc-200/80 p-4 flex-col shrink-0 select-none">
             <div className="space-y-4">
               {/* Mini Learner Profile Card */}
               <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex items-center gap-3">
@@ -425,12 +383,6 @@ export default function SettingsModal({
                     icon: UserIcon,
                     title: 'Hồ sơ cá nhân',
                     sub: 'Ảnh đại diện & danh tính',
-                  },
-                  {
-                    id: 'learning' as TabType,
-                    icon: Sliders,
-                    title: 'Tùy chọn học tập',
-                    sub: 'Phụ đề, phát âm & nhịp độ',
                   },
                   {
                     id: 'security' as TabType,
@@ -471,15 +423,6 @@ export default function SettingsModal({
                   );
                 })}
               </nav>
-            </div>
-
-            {/* Bottom Rail Tag */}
-            <div className="p-3 rounded-2xl bg-zinc-100/70 border border-zinc-200/60 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-zinc-700">
-                <Sparkles className="w-3.5 h-3.5 text-[#B91B1C]" />
-                <span>HanFlix Chinese AI</span>
-              </div>
-              <p className="text-[10px] text-zinc-400 mt-0.5">Phiên bản học thông minh 2.4</p>
             </div>
           </div>
 
@@ -748,195 +691,7 @@ export default function SettingsModal({
                 </motion.div>
               )}
 
-              {/* TAB 2: LEARNING PREFERENCES */}
-              {activeTab === 'learning' && (
-                <motion.div
-                  key="tab-learning"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-6"
-                >
-                  {/* Status Alerts */}
-                  {prefSuccess && (
-                    <InlineBanner variant="success" message={prefSuccess} />
-                  )}
-                  {prefError && (
-                    <InlineBanner variant="error" message={prefError} />
-                  )}
-
-                  <div className="space-y-5">
-                    {/* Subtitle Preferences with Visual Preview Cards */}
-                    <div className="p-6 rounded-3xl bg-zinc-50/70 border border-zinc-200/90 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Subtitles className="w-4 h-4 text-[#B91B1C]" />
-                        <h3 className="text-sm font-black text-zinc-900 tracking-tight">Chế độ phụ đề mặc định</h3>
-                      </div>
-                      <p className="text-xs text-zinc-500 font-medium">Chọn định dạng phụ đề ưa thích khi xem video và đoạn phim</p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {[
-                          {
-                            id: 'all' as const,
-                            title: 'Song ngữ + Pinyin',
-                            badge: 'Toàn diện',
-                            zh: '你好，很高兴认识你！',
-                            py: 'Nǐ hǎo, hěn gāoxìng rènshí nǐ!',
-                            vi: 'Xin chào, rất vui được làm quen!',
-                          },
-                          {
-                            id: 'zh-pinyin' as const,
-                            title: 'Hán tự + Pinyin',
-                            badge: 'Thử thách dịch',
-                            zh: '你好，很高兴认识你！',
-                            py: 'Nǐ hǎo, hěn gāoxìng rènshí nǐ!',
-                            vi: null,
-                          },
-                          {
-                            id: 'zh' as const,
-                            title: 'Chỉ Hán tự',
-                            badge: 'Cao cấp',
-                            zh: '你好，很高兴认识你！',
-                            py: null,
-                            vi: null,
-                          },
-                        ].map((mode) => {
-                          const isSelected = subtitleMode === mode.id;
-                          return (
-                            <button
-                              key={mode.id}
-                              type="button"
-                              onClick={() => setSubtitleMode(mode.id)}
-                              className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative group ${
-                                isSelected
-                                  ? 'border-[#B91B1C] bg-white ring-2 ring-[#B91B1C]/15 shadow-sm'
-                                  : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/50'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className={`text-xs font-bold ${isSelected ? 'text-[#B91B1C]' : 'text-zinc-800'}`}>
-                                  {mode.title}
-                                </span>
-                                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">
-                                  {mode.badge}
-                                </span>
-                              </div>
-
-                              {/* Mock Subtitle Preview Strip */}
-                              <div className="p-2.5 rounded-xl bg-zinc-900 text-white space-y-1 text-center my-2 select-none">
-                                <div className="text-xs font-bold text-amber-300 tracking-wide">{mode.zh}</div>
-                                {mode.py && <div className="text-[10px] text-zinc-300 font-mono">{mode.py}</div>}
-                                {mode.vi && <div className="text-[10px] text-zinc-400 border-t border-zinc-700/60 pt-1 mt-1">{mode.vi}</div>}
-                              </div>
-
-                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-medium mt-1">
-                                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                                  isSelected ? 'border-[#B91B1C] bg-[#B91B1C] text-white' : 'border-zinc-300'
-                                }`}>
-                                  {isSelected && <Check className="w-2.5 h-2.5" />}
-                                </div>
-                                <span>{isSelected ? 'Đang chọn' : 'Bấm để chọn'}</span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Audio & Playback Toggles Bento */}
-                    <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-xs space-y-4">
-                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">Trợ năng & Trình phát</h3>
-
-                      <div className="divide-y divide-zinc-100 space-y-4">
-                        {/* Pronounce Toggle */}
-                        <div className="flex items-center justify-between pt-1">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-xl bg-zinc-100 text-zinc-700 mt-0.5">
-                              <Volume2 className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-zinc-900">Tự động phát âm từ vựng</div>
-                              <div className="text-xs text-zinc-500 font-medium">Tự động đọc giọng chuẩn khi nhấp tra từ trên phụ đề</div>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setAutoPronounce(!autoPronounce)}
-                            className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer p-0.5 ${
-                              autoPronounce ? 'bg-[#B91B1C]' : 'bg-zinc-300'
-                            }`}
-                          >
-                            <motion.div
-                              layout
-                              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                              className={`w-6 h-6 rounded-full bg-white shadow-sm ${autoPronounce ? 'ml-auto' : 'mr-auto'}`}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Playback Speed */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-xl bg-zinc-100 text-zinc-700 mt-0.5">
-                              <Gauge className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-zinc-900">Tốc độ phát mặc định</div>
-                              <div className="text-xs text-zinc-500 font-medium">Tốc độ ban đầu mỗi khi mở bài học video mới</div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl">
-                            {[
-                              { val: 0.75, label: '0.75x' },
-                              { val: 1, label: '1.0x (Chuẩn)' },
-                              { val: 1.25, label: '1.25x' },
-                            ].map((s) => (
-                              <button
-                                key={s.val}
-                                type="button"
-                                onClick={() => setPlaybackSpeed(s.val)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                  playbackSpeed === s.val
-                                    ? 'bg-white text-zinc-900 shadow-2xs'
-                                    : 'text-zinc-600 hover:text-zinc-900'
-                                }`}
-                              >
-                                {s.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleSaveLearningPrefs}
-                        disabled={savingPrefs}
-                        className="px-6 py-2.5 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-98 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {savingPrefs ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Đang lưu...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4" />
-                            <span>Lưu tùy chọn học tập</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* TAB 3: SECURITY & AUTH */}
+              {/* TAB 2: SECURITY & AUTH */}
               {activeTab === 'security' && (
                 <motion.div
                   key="tab-security"

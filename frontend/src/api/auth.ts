@@ -257,26 +257,36 @@ export async function logout(): Promise<void> {
   await purgeClientCaches();
 }
 
+let restoreSessionPromise: Promise<User | null> | null = null;
+
 /**
  * Try to restore a session from the existing refresh cookie.
  * Returns the current user if the cookie is still valid, or null.
  */
 export async function restoreSession(): Promise<User | null> {
-  try {
-    const data = await apiFetch<{ accessToken: string }>('/auth/refresh', {
-      method: 'POST',
-    });
-    setAccessToken(data.accessToken);
-
-    const me = await apiFetch<MeResponse>('/auth/me');
-    const user = toFrontendUser(me.user);
-    saveUserCache(user);
-    return user;
-  } catch {
-    setAccessToken(null);
-    saveUserCache(null);
-    return null;
+  if (restoreSessionPromise) {
+    return restoreSessionPromise;
   }
+  restoreSessionPromise = (async () => {
+    try {
+      const data = await apiFetch<{ accessToken: string }>('/auth/refresh', {
+        method: 'POST',
+      });
+      setAccessToken(data.accessToken);
+
+      const me = await apiFetch<MeResponse>('/auth/me');
+      const user = toFrontendUser(me.user);
+      saveUserCache(user);
+      return user;
+    } catch {
+      setAccessToken(null);
+      saveUserCache(null);
+      return null;
+    } finally {
+      restoreSessionPromise = null;
+    }
+  })();
+  return restoreSessionPromise;
 }
 
 /**

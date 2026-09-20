@@ -164,6 +164,13 @@ export default function PublishedLessonView({
     }
   }, [lesson?.media?.url, lessonId]);
 
+  // Record learning activity for daily streak
+  useEffect(() => {
+    if (lessonId) {
+      recordLearningActivity('video');
+    }
+  }, [lessonId]);
+
   const [currentMs, setCurrentMs] = useState(0);
   const [loading] = useState(false); // retained for type compatibility; no longer used to gate the player
   const [error] = useState('');

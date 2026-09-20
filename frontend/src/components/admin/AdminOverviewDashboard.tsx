@@ -3,23 +3,21 @@ import { motion } from 'framer-motion';
 import {
   UploadSimple,
   CheckCircle,
-  Clock,
   WarningCircle,
-  ArrowsClockwise,  Play,
+  ArrowsClockwise,
+  Play,
   PencilSimple,
   Sparkle,
-  BookBookmark,
-  Article,
-  Exam,
   UsersThree,
-  TrendUp,
   Cpu,
-  ShieldCheck,
   CaretRight,
-  Broadcast,
   WifiSlash,
+  VideoCamera,
+  Check,
+  GraduationCap,
 } from '@phosphor-icons/react';
 import type { AdminLesson, AdminUser, ProcessingJob } from '../../api/admin';
+import { useNotification } from '../notifications';
 
 interface AdminOverviewDashboardProps {
   lessons: AdminLesson[];
@@ -33,7 +31,49 @@ interface AdminOverviewDashboardProps {
   onPublishLesson: (lessonId: string) => Promise<void>;
   onRetryProcessing: (lessonId: string) => Promise<void>;
 }
-import { useNotification } from '../notifications';
+
+// Deterministic avatar color palette
+const AVATAR_BG_COLORS = [
+  'bg-[#B91B1C] text-white',
+  'bg-[#188A5A] text-white',
+  'bg-[#B45309] text-white',
+  'bg-[#8F1719] text-white',
+  'bg-[#2F6E62] text-white',
+  'bg-[#78350F] text-white',
+  'bg-[#18181B] text-white',
+];
+
+function getAvatarColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return AVATAR_BG_COLORS[Math.abs(hash) % AVATAR_BG_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  if (!name) return 'HV';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch {
+    return '—';
+  }
+}
+
+function formatDuration(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
 
 export default function AdminOverviewDashboard({
   lessons,
@@ -54,42 +94,47 @@ export default function AdminOverviewDashboard({
 
   const notify = useNotification();
 
-  // Core metrics calculation
+  // ==========================================
+  // METRICS COMPUTATION
+  // ==========================================
   const totalLessons = lessons.length;
-  const publishedLessons = useMemo(() => lessons.filter(l => l.status === 'published'), [lessons]);
-  const readyForReviewLessons = useMemo(() => lessons.filter(l => l.status === 'ready_for_review'), [lessons]);
-  const draftLessons = useMemo(() => lessons.filter(l => l.status === 'draft'), [lessons]);
-  const processingLessons = useMemo(() => lessons.filter(l => ['processing', 'uploading'].includes(l.status)), [lessons]);
-  const failedLessons = useMemo(() => lessons.filter(l => l.status === 'failed'), [lessons]);
+  const publishedLessons = useMemo(() => lessons.filter((l) => l.status === 'published'), [lessons]);
+  const readyForReviewLessons = useMemo(() => lessons.filter((l) => l.status === 'ready_for_review'), [lessons]);
+  const draftLessons = useMemo(() => lessons.filter((l) => l.status === 'draft'), [lessons]);
+  const processingLessons = useMemo(
+    () => lessons.filter((l) => ['processing', 'uploading'].includes(l.status)),
+    [lessons],
+  );
+  const failedLessons = useMemo(() => lessons.filter((l) => l.status === 'failed'), [lessons]);
 
-  // Combined urgent review queue
-  const pendingReviewQueue = useMemo(() => {
-    return lessons
-      .filter(l => {
-        if (reviewFilter === 'ready_for_review') return l.status === 'ready_for_review';
-        if (reviewFilter === 'draft') return l.status === 'draft';
-        return l.status === 'ready_for_review' || l.status === 'draft' || l.status === 'failed';
+  const newVideosLast7Days = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return lessons.filter(
+      (l) => l.status === 'published' && l.createdAt && new Date(l.createdAt) >= sevenDaysAgo,
+    ).length;
+  }, [lessons]);
+
+  // Video review queue or recent lessons list
+  const displayLessons = useMemo(() => {
+    const queue = lessons.filter((l) => {
+      if (reviewFilter === 'ready_for_review') return l.status === 'ready_for_review';
+      if (reviewFilter === 'draft') return l.status === 'draft';
+      return true;
+    });
+    // Priority: ready_for_review -> failed -> draft -> published
+    return queue
+      .sort((a, b) => {
+        const order: Record<string, number> = { ready_for_review: 0, failed: 1, draft: 2, published: 3, hidden: 4 };
+        return (order[a.status] ?? 5) - (order[b.status] ?? 5);
       })
-      .slice(0, 8); // top 8 items for dashboard focus
+      .slice(0, 6);
   }, [lessons, reviewFilter]);
 
-  // Active AI Processing jobs & pipeline
-  const activeJobs = useMemo(() => {
-    if (jobs.length > 0) return jobs;
-    return processingLessons.map(l => ({
-      _id: l._id,
-      lessonId: l._id,
-      status: 'running' as const,
-      stage: l.processingStep || 'Phân tích âm thanh Whisper ASR',
-      stageProgress: l.processingProgress || 45,
-      attempts: 1,
-    }));
-  }, [jobs, processingLessons]);
-
-  // HSK distribution counts (Supports HSK 1 to 9)
+  // HSK distribution counts (1 to 9)
   const hskDistribution = useMemo(() => {
     const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
-    lessons.forEach(l => {
+    lessons.forEach((l) => {
       const lvl = Math.min(Math.max(l.hsk || 1, 1), 9);
       counts[lvl] = (counts[lvl] || 0) + 1;
     });
@@ -98,13 +143,40 @@ export default function AdminOverviewDashboard({
 
   const maxHskCount = Math.max(...Object.values(hskDistribution), 1);
 
-  // Total content runtime in minutes
-  const totalMinutes = useMemo(() => {
-    const seconds = lessons.reduce((acc, l) => acc + (l.durationSeconds || 0), 0);
-    return Math.round(seconds / 60);
-  }, [lessons]);
+  // User metrics
+  const totalUsers = users.length;
+  const activeUsers = useMemo(() => users.filter((u) => u.status === 'active').length, [users]);
+  const adminUsers = useMemo(() => users.filter((u) => u.role === 'admin').length, [users]);
 
-  // Handle manual refresh
+  const newUsersLast7Days = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return users.filter((u) => u.createdAt && new Date(u.createdAt) >= sevenDaysAgo).length;
+  }, [users]);
+
+  const recentUsers = useMemo(() => {
+    return [...users]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5);
+  }, [users]);
+
+  // Learner HSK demographics
+  const learnerHskLevels = useMemo(() => {
+    let beginner = 0; // HSK 1 - 3
+    let intermediate = 0; // HSK 4 - 6
+    let advanced = 0; // HSK 7 - 9
+
+    users.forEach((u) => {
+      const lvl = u.learningProfile?.currentHsk;
+      if (!lvl || lvl <= 3) beginner++;
+      else if (lvl <= 6) intermediate++;
+      else advanced++;
+    });
+
+    return { beginner, intermediate, advanced };
+  }, [users]);
+
+  // Handlers
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
@@ -114,14 +186,16 @@ export default function AdminOverviewDashboard({
     }
   };
 
-  // Handle direct publish from dashboard
   const handleQuickPublish = async (lessonId: string, titleVi: string) => {
-    if (!await notify.confirm({
-      title: 'Phê duyệt và xuất bản',
-      message: `Xác nhận phê duyệt và xuất bản bài học: "${titleVi}"?`,
-      confirmText: 'Xuất bản',
-      tone: 'default',
-    })) return;
+    if (
+      !(await notify.confirm({
+        title: 'Phê duyệt và xuất bản',
+        message: `Xác nhận phê duyệt và phát hành bài học: "${titleVi}"?`,
+        confirmText: 'Duyệt bài ngay',
+        tone: 'default',
+      }))
+    )
+      return;
     try {
       setPublishingId(lessonId);
       await onPublishLesson(lessonId);
@@ -130,7 +204,6 @@ export default function AdminOverviewDashboard({
     }
   };
 
-  // Handle retry processing
   const handleRetry = async (lessonId: string) => {
     try {
       setRetryingId(lessonId);
@@ -140,22 +213,11 @@ export default function AdminOverviewDashboard({
     }
   };
 
-  // Format seconds to mm:ss
-  const formatDuration = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
   return (
-    <div className="space-y-7 pb-12">
-      {/* Offline / Connection Notice (Graceful instead of raw error) */}
+    <div className="space-y-6 pb-12 font-sans">
+      {/* Offline / Connection Notice */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#FFF8F8] border border-[#FCDADA] text-[#90191B]"
-        >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#FFF8F8] border border-[#FCDADA] text-[#90191B]">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-[#FEECEC] text-[#B91B1C]">
               <WifiSlash size={20} weight="bold" />
@@ -163,7 +225,7 @@ export default function AdminOverviewDashboard({
             <div>
               <p className="text-xs font-bold">Chế độ đồng bộ dữ liệu ngoại tuyến</p>
               <p className="text-[11px] text-[#A53436] mt-0.5">
-                Chưa kết nối được máy chủ API ({error}). Hệ thống đang hiển thị dữ liệu bộ nhớ đệm an toàn.
+                Chưa kết nối được máy chủ ({error}). Đang hiển thị dữ liệu đã lưu trữ.
               </p>
             </div>
           </div>
@@ -171,589 +233,490 @@ export default function AdminOverviewDashboard({
             type="button"
             onClick={() => void handleRefresh()}
             disabled={isRefreshing}
-            className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#FDF1F1] border border-[#FCDADA] text-xs font-bold text-[#B91B1C] flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98]"
+            className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#FDF1F1] border border-[#FCDADA] text-xs font-bold text-[#B91B1C] flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <ArrowsClockwise size={14} className={isRefreshing ? 'animate-spin' : ''} />
-            <span>{isRefreshing ? 'Đang kết nối…' : 'Thử kết nối lại'}</span>
+            <span>Thử lại</span>
           </button>
-        </motion.div>
+        </div>
       )}
 
-      {/* 1. Header & Strategic Quick Action Hub */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white p-6 md:p-7 rounded-3xl border border-[#F2E4D8] shadow-2xs relative overflow-hidden">
-        {/* Subtle decorative HanFlix oriental watermark background */}
-        <div className="absolute right-0 top-0 bottom-0 w-80 bg-gradient-to-l from-[#FFF7F5] to-transparent pointer-events-none opacity-80" />
-        <div className="absolute -right-6 -top-10 text-9xl font-serif font-black text-[#B91B1C]/[0.04] select-none pointer-events-none">
-          汉
-        </div>
-        <div className="absolute right-32 -bottom-8 text-7xl font-serif font-black text-[#E7A92F]/[0.05] select-none pointer-events-none">
-          审
-        </div>
-
-        <div className="relative z-10 space-y-1.5 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-extrabold tracking-wide uppercase flex items-center gap-1.5 border border-[#F9D2D2] shadow-2xs">
-              <ShieldCheck size={14} weight="fill" className="text-[#B91B1C]" />
-              <span>Cổng Kiểm Duyệt & Biên Tập Độc Quyền</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#5F6368]">
-              <span className={`w-2 h-2 rounded-full ${error ? 'bg-amber-500' : 'bg-[#188A5A] animate-pulse'}`} />
-              {error ? 'Ngoại tuyến' : 'AI Whisper Sẵn sàng'}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
-            Tổng quan Kiểm duyệt & Xuất bản
-          </h1>
-          <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed">
-            Kiểm tra chất lượng phụ đề AI song ngữ, tinh chỉnh bài tập trắc nghiệm và phát hành nội dung phim học tiếng Trung chuẩn HSK 3.0.
+      {/* 1. Header Bar: Minimalist title + 2 Action Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-[#18181B] tracking-tight">Tổng quan hệ thống</h1>
+          <p className="text-xs text-[#5F6368] mt-0.5">
+            Trung tâm điều hành nội dung phim học tiếng Trung & cộng đồng học viên HanFlix
           </p>
         </div>
 
-        {/* Quick Actions Cluster */}
-        <div className="relative z-10 flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => onNavigateToTab('upload')}
-            className="h-11 px-5 rounded-2xl bg-gradient-to-r from-[#B91B1C] to-[#991415] hover:from-[#A3181A] hover:to-[#8F1719] text-white text-xs font-extrabold flex items-center gap-2 shadow-sm shadow-[#B91B1C]/25 transition-all active:scale-[0.98] cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
           >
-            <UploadSimple size={16} weight="bold" />
-            <span>Thêm video bài học</span>
+            <UploadSimple size={15} weight="bold" />
+            <span>Tải video mới</span>
           </button>
 
           <button
             type="button"
-            onClick={() => onNavigateToTab('vocabulary')}
-            className="h-11 px-4 rounded-2xl bg-[#FFF9F5] hover:bg-[#FFF0EB] text-[#18181B] hover:text-[#B91B1C] text-xs font-bold flex items-center gap-2 border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
+            onClick={() => onNavigateToTab('users')}
+            className="h-10 px-4 rounded-xl bg-white hover:bg-[#FFF9F5] border border-[#F2E4D8] text-[#18181B] hover:text-[#B91B1C] text-xs font-bold flex items-center gap-2 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
           >
-            <BookBookmark size={15} weight="duotone" className="text-[#B91B1C]" />
-            <span>Kho Từ vựng HSK</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateToTab('quiz')}
-            className="h-11 px-4 rounded-2xl bg-[#FFF9F5] hover:bg-[#EAF5F1] text-[#18181B] hover:text-[#2F6E62] text-xs font-bold flex items-center gap-2 border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
-          >
-            <Exam size={15} weight="duotone" className="text-[#2F6E62]" />
-            <span>Bài Luyện Tập</span>
+            <UsersThree size={15} weight="bold" />
+            <span>Quản lý học viên</span>
           </button>
 
           <button
             type="button"
             onClick={() => void handleRefresh()}
-            disabled={isRefreshing || loading}
-            title="Làm mới số liệu"
-            className="h-11 w-11 rounded-2xl bg-[#FFF9F5] hover:bg-white text-[#5F6368] hover:text-[#B91B1C] flex items-center justify-center border border-[#F2E4D8] transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
+            disabled={isRefreshing}
+            title="Làm mới dữ liệu"
+            className="h-10 w-10 rounded-xl bg-white hover:bg-[#FFF9F5] border border-[#F2E4D8] text-[#5F6368] hover:text-[#18181B] flex items-center justify-center shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
           >
-            <ArrowsClockwise size={16} className={isRefreshing || loading ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={16} className={isRefreshing ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* 2. Key Operational Bento Metrics */}
+      {/* 2. Top 4 Stat Cards in 1 Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Chờ Admin kiểm duyệt (TOP PRIORITY - Amber Accent) */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => {
-            setReviewFilter('ready_for_review');
-            const el = document.getElementById('review-queue-section');
-            el?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className={`p-5 rounded-3xl bg-white border cursor-pointer transition-all shadow-2xs ${
+        {/* Card 1: Video bài học */}
+        <div
+          onClick={() => onNavigateToTab('videos')}
+          className="p-5 rounded-2xl bg-white border border-[#F2E4D8] hover:border-[#188A5A]/50 transition-all shadow-2xs cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#5F6368] group-hover:text-[#18181B] transition-colors">
+              <VideoCamera size={16} weight="bold" />
+              <span className="text-xs font-bold">Video bài học</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-[#EAF5F1] text-[#188A5A] text-[10px] font-black font-mono">
+              +{newVideosLast7Days}
+            </span>
+          </div>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl font-black font-mono text-[#18181B]">+{newVideosLast7Days}</span>
+            <span className="text-xs text-[#5F6368] font-medium">bài tuần này</span>
+          </div>
+          <p className="text-[11px] text-[#8B9097] mt-1">
+            Tổng cộng: <strong className="text-[#18181B] font-mono">{totalLessons}</strong> video ({publishedLessons.length} đã đăng)
+          </p>
+        </div>
+
+        {/* Card 2: Chờ kiểm duyệt */}
+        <div
+          onClick={() => setReviewFilter('ready_for_review')}
+          className={`p-5 rounded-2xl bg-white border transition-all shadow-2xs cursor-pointer group ${
             readyForReviewLessons.length > 0
-              ? 'border-[#FDE6BA] ring-2 ring-[#FDE6BA]/30 bg-gradient-to-b from-[#FFFDF8] to-white shadow-sm'
-              : 'border-[#F2E4D8]'
+              ? 'border-[#FDE6BA] ring-1 ring-[#FDE6BA]'
+              : 'border-[#F2E4D8] hover:border-[#B45309]/50'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Cần kiểm duyệt</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#FFF8EC] text-[#B45309] text-[11px] font-extrabold flex items-center gap-1 border border-[#FDE6BA]">
-              <WarningCircle size={13} weight="fill" />
-              <span>Ưu tiên số 1</span>
+            <div className="flex items-center gap-2 text-[#5F6368] group-hover:text-[#18181B] transition-colors">
+              <WarningCircle size={16} weight="bold" />
+              <span className="text-xs font-bold">Chờ kiểm duyệt</span>
+            </div>
+            <span
+              className={`p-1 rounded-lg ${
+                readyForReviewLessons.length > 0
+                  ? 'bg-[#FFF8EC] text-[#B45309]'
+                  : 'bg-[#EAF5F1] text-[#188A5A]'
+              }`}
+            >
+              <Check size={12} weight="bold" />
             </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black font-mono text-[#B45309]">{readyForReviewLessons.length}</span>
-            <span className="text-xs font-bold text-[#5F6368]">video sẵn sàng</span>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl font-black font-mono text-[#18181B]">{readyForReviewLessons.length}</span>
+            <span className="text-xs text-[#5F6368] font-medium">bài cần duyệt</span>
           </div>
-          <p className="text-[11px] text-[#8B9097] mt-2 flex items-center gap-1">
-            <span>+ {draftLessons.length} bản nháp đang soạn thảo</span>
+          <p className="text-[11px] text-[#8B9097] mt-1">
+            {draftLessons.length > 0 ? `+ ${draftLessons.length} bản nháp đang soạn` : 'Toàn bộ nội dung đã duyệt'}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Card 2: Đã xuất bản công khai (Jade Accent) */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
+        {/* Card 3: Học viên nền tảng */}
+        <div
+          onClick={() => onNavigateToTab('users')}
+          className="p-5 rounded-2xl bg-white border border-[#F2E4D8] hover:border-[#188A5A]/50 transition-all shadow-2xs cursor-pointer group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#5F6368] group-hover:text-[#18181B] transition-colors">
+              <UsersThree size={16} weight="bold" />
+              <span className="text-xs font-bold">Học viên nền tảng</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-[#EAF5F1] text-[#188A5A] text-[10px] font-black font-mono">
+              +{newUsersLast7Days}
+            </span>
+          </div>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-2xl font-black font-mono text-[#18181B]">+{newUsersLast7Days}</span>
+            <span className="text-xs text-[#5F6368] font-medium">học viên mới</span>
+          </div>
+          <p className="text-[11px] text-[#8B9097] mt-1">
+            Tổng: <strong className="text-[#18181B] font-mono">{totalUsers}</strong> ({activeUsers} đang hoạt động)
+          </p>
+        </div>
+
+        {/* Card 4: Tiến trình Whisper AI */}
+        <div
           onClick={() => onNavigateToTab('videos')}
-          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#188A5A] cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FAFDFB] to-white"
+          className="p-5 rounded-2xl bg-white border border-[#F2E4D8] hover:border-[#B91B1C]/50 transition-all shadow-2xs cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Đã đăng công khai</span>
-            <span className="p-1.5 rounded-xl bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA]">
-              <CheckCircle size={15} weight="bold" />
+            <div className="flex items-center gap-2 text-[#5F6368] group-hover:text-[#18181B] transition-colors">
+              <Cpu size={16} weight="bold" />
+              <span className="text-xs font-bold">Tiến trình Whisper AI</span>
+            </div>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                processingLessons.length > 0 ? 'bg-[#B91B1C] animate-ping' : 'bg-[#188A5A]'
+              }`}
+            />
+          </div>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-base font-black text-[#188A5A]">
+              {processingLessons.length > 0 ? `${processingLessons.length} tác vụ đang chạy` : 'Đang hoạt động'}
             </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black font-mono text-[#188A5A]">{publishedLessons.length}</span>
-            <span className="text-xs font-bold text-[#5F6368]">/ {totalLessons} bài</span>
-          </div>
-          <p className="text-[11px] text-[#5F6368] mt-2 flex items-center gap-1">
-            <TrendUp size={13} className="text-[#188A5A]" />
-            <span className="font-semibold text-[#188A5A]">{totalLessons > 0 ? Math.round((publishedLessons.length / totalLessons) * 100) : 0}%</span>
-            <span>nội dung đã phát hành</span>
-          </p>
-        </motion.div>
-
-        {/* Card 3: Đang xử lý AI & Hàng đợi (Crimson Accent) */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => {
-            const el = document.getElementById('ai-pipeline-section');
-            el?.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#B91B1C] cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FFFDFD] to-white"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Tiến trình AI Whisper</span>
-            <span className={`p-1.5 rounded-xl border ${processingLessons.length > 0 ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2] animate-pulse' : 'bg-[#FFF9F5] text-[#8B9097] border-[#F2E4D8]'}`}>
-              <Cpu size={15} weight="bold" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className={`text-3xl font-black font-mono ${processingLessons.length > 0 ? 'text-[#B91B1C]' : 'text-[#18181B]'}`}>
-              {processingLessons.length}
-            </span>
-            <span className="text-xs font-bold text-[#5F6368]">đang chạy</span>
-          </div>
-          <p className="text-[11px] text-[#8B9097] mt-2">
+          <p className="text-[11px] text-[#8B9097] mt-1">
             {failedLessons.length > 0 ? (
-              <span className="text-[#B91B1C] font-bold">{failedLessons.length} video gặp lỗi cần thử lại</span>
+              <span className="text-[#B91B1C] font-bold">{failedLessons.length} bài cần thử lại</span>
             ) : (
-              <span>Tách phụ đề & nhận diện giọng nói</span>
+              'Đường ống nhận dạng giọng nói ổn định'
             )}
           </p>
-        </motion.div>
-
-        {/* Card 4: Tổng kho thời lượng & Học viên (Sandalwood / Warm Paper) */}
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => onNavigateToTab('users')}
-          className="p-5 rounded-3xl bg-white border border-[#F2E4D8] hover:border-[#B91B1C]/40 cursor-pointer transition-all shadow-2xs hover:shadow-xs bg-gradient-to-b from-[#FFF9F5] to-white"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-[#8B9097] uppercase tracking-wider">Kho bài & Học viên</span>
-            <span className="p-1.5 rounded-xl bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA]">
-              <UsersThree size={15} weight="bold" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black font-mono text-[#18181B]">{users.length}</span>
-            <span className="text-xs font-bold text-[#5F6368]">tài khoản</span>
-          </div>
-          <p className="text-[11px] text-[#5F6368] mt-2 flex items-center gap-1 font-mono">
-            <Clock size={12} className="text-[#B91B1C]" />
-            <span>Tổng thời lượng: <strong className="text-[#18181B]">{totalMinutes} phút</strong> học</span>
-          </p>
-        </motion.div>
+        </div>
       </div>
 
-      {/* 3. Main Operational Split: Pending Review Queue vs AI Pipeline Tracker */}
+      {/* 3. Main Dashboard Layout (62% Left vs 38% Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT / PRIMARY (7 Cols): Hàng chờ kiểm duyệt & Xuất bản */}
-        <div id="review-queue-section" className="lg:col-span-7 space-y-4">
-          <div className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F2E4D8]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black text-[#18181B]">
-                    Hàng chờ Kiểm duyệt Nội dung
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full bg-[#FFF8EC] text-[#B45309] text-xs font-extrabold border border-[#FDE6BA]">
-                    {readyForReviewLessons.length + draftLessons.length}
-                  </span>
-                </div>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Bài học đã phân tích xong phụ đề/quiz, chờ Admin phê duyệt để xuất bản
-                </p>
-              </div>
-
-              {/* Status Filter Pill buttons */}
-              <div className="flex items-center gap-1 bg-[#FFF9F5] p-1 rounded-2xl border border-[#F2E4D8] self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setReviewFilter('all')}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    reviewFilter === 'all'
-                      ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                      : 'text-[#5F6368] hover:text-[#B91B1C]'
-                  }`}
-                >
-                  Tất cả
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReviewFilter('ready_for_review')}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    reviewFilter === 'ready_for_review'
-                      ? 'bg-[#B91B1C] text-white shadow-xs'
-                      : 'text-[#5F6368] hover:text-[#B91B1C]'
-                  }`}
-                >
-                  Chờ duyệt ({readyForReviewLessons.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReviewFilter('draft')}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    reviewFilter === 'draft'
-                      ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                      : 'text-[#5F6368] hover:text-[#B91B1C]'
-                  }`}
-                >
-                  Nháp ({draftLessons.length})
-                </button>
-              </div>
+        {/* ========================================================= */}
+        {/* LEFT COLUMN: Hàng chờ & Danh sách Video (7 Cols)         */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-[#F2E4D8] p-5 shadow-2xs space-y-5">
+          {/* Card Header & Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F2E4D8]">
+            <div>
+              <h2 className="text-base font-black text-[#18181B]">Hàng chờ & Danh sách Video</h2>
+              <p className="text-xs text-[#5F6368] mt-0.5">
+                Các bài học gần đây cần kiểm tra phụ đề, duyệt hoặc chỉnh sửa
+              </p>
             </div>
 
-            {/* List of lessons needing review */}
-            {pendingReviewQueue.length === 0 ? (
-              <div className="py-12 px-6 text-center space-y-3 bg-[#FFFDFB] rounded-2xl border border-dashed border-[#F2E4D8]">
-                <div className="w-12 h-12 rounded-2xl bg-[#EAF5F1] text-[#188A5A] border border-[#C6E7DA] flex items-center justify-center mx-auto shadow-2xs">
-                  <CheckCircle size={26} weight="fill" />
-                </div>
-                <div className="max-w-md mx-auto">
-                  <h3 className="text-sm font-bold text-[#18181B]">Không có bài học chờ duyệt</h3>
-                  <p className="text-xs text-[#5F6368] mt-1">
-                    Tuyệt vời! Toàn bộ video trong kho đã được kiểm tra và xuất bản hoặc hệ thống đang chờ bạn tải video mới lên.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab('upload')}
-                  className="px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <UploadSimple size={14} weight="bold" />
-                  <span>Tải video mới lên</span>
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#F2E4D8]">
-                {pendingReviewQueue.map((item) => {
-                  const isReady = item.status === 'ready_for_review';
-                  const isFailed = item.status === 'failed';
-                  const isPublishing = publishingId === item._id;
-                  const isRetrying = retryingId === item._id;
-
-                  return (
-                    <div
-                      key={item._id}
-                      className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FFFDFB] -mx-2 px-3 rounded-2xl transition-colors"
-                    >
-                      <div className="flex items-start gap-3 min-w-0">
-                        {/* Video Thumbnail / Placeholder */}
-                        <div className="w-16 h-11 rounded-xl bg-[#18181B] shrink-0 overflow-hidden relative border border-[#F2E4D8] flex items-center justify-center shadow-2xs">
-                          <Play size={16} weight="fill" className="text-white/70" />
-                          <span className="absolute bottom-0.5 right-1 text-[9px] font-mono font-bold text-white/90 bg-black/70 px-1 rounded">
-                            {formatDuration(item.durationSeconds || 120)}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-extrabold text-sm text-[#18181B] truncate" title={item.titleVi}>
-                              {item.titleVi}
-                            </h3>
-                            <span className="px-1.5 py-0.5 rounded-md bg-[#FFF5F0] text-[#B91B1C] border border-[#F9D2D2] text-[10px] font-black font-mono">
-                              HSK {item.hsk}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-xs text-[#5F6368] flex-wrap">
-                            {item.titleZh && (
-                              <span className="text-[#B91B1C] font-semibold text-[11px]">
-                                {item.titleZh}
-                              </span>
-                            )}
-                            <span className="text-[11px] text-[#8B9097]">·</span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                isReady
-                                  ? 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]'
-                                  : isFailed
-                                  ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]'
-                                  : 'bg-[#FFF9F5] text-[#5F6368] border-[#F2E4D8]'
-                              }`}
-                            >
-                              {isReady ? 'Sẵn sàng duyệt' : isFailed ? 'Lỗi xử lý AI' : 'Bản nháp'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        {/* Edit and review cues / quiz */}
-                        <button
-                          type="button"
-                          onClick={() => onSelectLessonToEdit(item._id)}
-                          className="h-9 px-3.5 rounded-xl border border-[#F2E4D8] hover:border-[#B91B1C] hover:bg-[#FDF1F1] hover:text-[#B91B1C] text-xs font-bold text-[#18181B] flex items-center gap-1.5 transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
-                        >
-                          <PencilSimple size={14} weight="bold" />
-                          <span>Biên tập & Phụ đề</span>
-                        </button>
-
-                        {/* Quick publish if ready */}
-                        {isReady && (
-                          <button
-                            type="button"
-                            disabled={isPublishing}
-                            onClick={() => void handleQuickPublish(item._id, item.titleVi)}
-                            className="h-9 px-3.5 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 active:scale-[0.98] cursor-pointer"
-                          >
-                            <CheckCircle size={14} weight="bold" />
-                            <span>{isPublishing ? 'Đang xuất bản…' : 'Duyệt & Đăng'}</span>
-                          </button>
-                        )}
-
-                        {/* Retry if failed */}
-                        {isFailed && (
-                          <button
-                            type="button"
-                            disabled={isRetrying}
-                            onClick={() => void handleRetry(item._id)}
-                            className="h-9 px-3.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-extrabold flex items-center gap-1.5 transition-all shadow-xs disabled:opacity-50 active:scale-[0.98] cursor-pointer"
-                          >
-                            <ArrowsClockwise size={14} className={isRetrying ? 'animate-spin' : ''} />
-                            <span>Thử lại AI</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Link to full video manager */}
-            <div className="pt-2 flex justify-between items-center text-xs">
-              <span className="text-[#8B9097]">
-                Hiển thị {pendingReviewQueue.length} bài học cần xử lý
-              </span>
+            <div className="flex items-center gap-1 bg-[#FFF9F5] p-1 rounded-xl border border-[#F2E4D8]">
               <button
                 type="button"
-                onClick={() => onNavigateToTab('videos')}
-                className="font-bold text-[#B91B1C] hover:underline flex items-center gap-1 cursor-pointer"
+                onClick={() => setReviewFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewFilter === 'all'
+                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                    : 'text-[#5F6368] hover:text-[#B91B1C]'
+                }`}
               >
-                <span>Xem toàn bộ danh sách video ({lessons.length})</span>
-                <CaretRight size={13} weight="bold" />
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewFilter('ready_for_review')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewFilter === 'ready_for_review'
+                    ? 'bg-[#B91B1C] text-white shadow-xs'
+                    : 'text-[#5F6368] hover:text-[#B91B1C]'
+                }`}
+              >
+                Chờ duyệt ({readyForReviewLessons.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewFilter('draft')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewFilter === 'draft'
+                    ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
+                    : 'text-[#5F6368] hover:text-[#B91B1C]'
+                }`}
+              >
+                Bản nháp ({draftLessons.length})
               </button>
             </div>
           </div>
-        </div>
 
-        {/* RIGHT (5 Cols): AI Pipeline Monitor & HSK Distribution */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* AI Video Processing Pipeline Monitor */}
-          <div id="ai-pipeline-section" className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#F2E4D8]">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-xl bg-[#FDF1F1] text-[#B91B1C] border border-[#F9D2D2]">
-                  <Cpu size={16} weight="bold" />
-                </div>
-                <div>
-                  <h2 className="text-base font-black text-[#18181B]">Luồng xử lý AI Video</h2>
-                  <p className="text-[11px] text-[#5F6368]">Whisper ASR, Pinyin & Tự động tạo Quiz</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full bg-[#FFF9F5] text-[#5F6368] text-[11px] font-bold border border-[#F2E4D8]">
-                {activeJobs.length} tác vụ
-              </span>
+          {/* Video Table List */}
+          {displayLessons.length === 0 ? (
+            <div className="py-12 text-center space-y-2 bg-[#FFFDFB] rounded-xl border border-dashed border-[#F2E4D8]">
+              <CheckCircle size={32} className="text-[#188A5A] mx-auto" weight="fill" />
+              <p className="text-xs font-bold text-[#18181B]">Không có video nào trong hàng chờ</p>
+              <p className="text-[11px] text-[#5F6368]">Toàn bộ video đã được xuất bản hoặc chưa tải video mới</p>
             </div>
+          ) : (
+            <div className="divide-y divide-[#F2E4D8]">
+              {displayLessons.map((item) => {
+                const isReady = item.status === 'ready_for_review';
+                const isFailed = item.status === 'failed';
+                const isPublishing = publishingId === item._id;
+                const isRetrying = retryingId === item._id;
 
-            {activeJobs.length === 0 ? (
-              <div className="py-6 px-4 text-center rounded-2xl bg-[#FFFDFB] border border-dashed border-[#F2E4D8] space-y-2">
-                <div className="w-8 h-8 rounded-full bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA] flex items-center justify-center mx-auto">
-                  <Broadcast size={18} weight="bold" />
-                </div>
-                <p className="text-xs font-bold text-[#18181B]">Không có tác vụ AI đang chạy</p>
-                <p className="text-[11px] text-[#5F6368] max-w-xs mx-auto">
-                  Khi bạn tải video mới lên, hệ thống sẽ tự động tách âm thanh, nhận diện tiếng Trung và đồng bộ phụ đề tại đây.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {activeJobs.map((job) => {
-                  const lesson = lessons.find(l => l._id === job.lessonId);
-                  // Hide job when lesson metadata is missing — avoids showing raw ObjectIds to admins.
-                  if (!lesson?.titleVi) return null;
-                  const progress = job.stageProgress || 50;
-
-                  return (
-                    <div key={job._id} className="p-3.5 rounded-2xl bg-[#FFF9F5] border border-[#F2E4D8] space-y-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-xs font-bold text-[#18181B] truncate max-w-[200px]">
-                            {lesson.titleVi}
-                          </p>
-                          <p className="text-[11px] text-[#B91B1C] font-semibold mt-0.5 flex items-center gap-1">
-                            <Sparkle size={12} weight="fill" />
-                            <span>{job.stage || 'Đang xử lý Whisper ASR'}</span>
-                          </p>
-                        </div>
-                        <span className="text-xs font-black font-mono text-[#18181B]">
-                          {progress}%
+                return (
+                  <div
+                    key={item._id}
+                    className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FFFDFB] -mx-2 px-2.5 rounded-xl transition-colors"
+                  >
+                    {/* Left: Thumbnail & Title Info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Video Thumbnail with 16:9 preview & duration */}
+                      <div className="w-20 h-12 rounded-lg bg-[#18181B] shrink-0 overflow-hidden relative border border-[#F2E4D8] flex items-center justify-center">
+                        {item.thumbnailUrl ? (
+                          <img
+                            src={item.thumbnailUrl}
+                            alt={item.titleVi}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <Play size={16} weight="fill" className="text-white/60" />
+                        )}
+                        <span className="absolute bottom-0.5 right-1 text-[8px] font-mono font-bold text-white bg-black/80 px-1 rounded">
+                          {formatDuration(item.durationSeconds || 0)}
                         </span>
                       </div>
 
-                      {/* Animated Progress Bar */}
-                      <div className="h-2 w-full bg-[#F2E4D8] rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-[#B91B1C] to-[#E03A3C] rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.5, ease: 'easeOut' }}
-                        />
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-xs text-[#18181B] truncate max-w-[200px]" title={item.titleVi}>
+                            {item.titleVi}
+                          </p>
+                          <span className="px-1.5 py-0.2 rounded bg-[#FFF5F0] text-[#B91B1C] border border-[#F9D2D2] text-[9px] font-black font-mono">
+                            HSK {item.hsk}
+                          </span>
+                        </div>
+                        {item.titleZh && (
+                          <p className="text-[11px] text-[#8B9097] truncate">{item.titleZh}</p>
+                        )}
                       </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-[#8B9097] pt-0.5">
-                        <span>1. Âm thanh ➔ 2. Phụ đề ➔ 3. Quiz</span>
-                        <span className="font-bold text-[#188A5A]">Đang xử lý tự động</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* HSK Level Distribution & Curriculum Health */}
-          <div className="bg-white rounded-3xl border border-[#F2E4D8] p-6 shadow-2xs space-y-5">
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#F2E4D8]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-black text-[#18181B]">Độ phủ Giáo trình HSK</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#EAF5F1] text-[#2F6E62] border border-[#C6E7DA] text-[10px] font-extrabold">
-                    {Object.values(hskDistribution).filter(c => c > 0).length}/9 Cấp độ đã có bài
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#5F6368] mt-0.5">
-                  Phân bổ số lượng video theo 9 cấp độ học chuẩn (HSK 1 - 9)
-                </p>
-              </div>
-            </div>
-
-            {/* Vertical Column Bento Chart (HSK 1 - 9) */}
-            <div className="grid grid-cols-9 gap-1 sm:gap-1.5 pt-2 items-end">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => {
-                const count = hskDistribution[lvl] || 0;
-                const isMax = count === maxHskCount && count > 0;
-                const isZero = count === 0;
-                const heightPercent = count > 0 ? Math.max(Math.round((count / maxHskCount) * 100), 16) : 0;
-
-                const subLabels: Record<number, string> = {
-                  1: 'Sơ cấp',
-                  2: 'Sơ cấp',
-                  3: 'Sơ cấp',
-                  4: 'Trung cấp',
-                  5: 'Trung cấp',
-                  6: 'Trung cấp',
-                  7: 'Cao cấp',
-                  8: 'Cao cấp',
-                  9: 'Cao cấp',
-                };
-
-                return (
-                  <div key={lvl} className="flex flex-col items-center gap-1.5 group">
-                    {/* Top Count Label — fixed-height wraps single- and multi-digit values */}
-                    <div className="h-4 flex items-end justify-center">
-                      <span
-                        className={`text-[11px] font-mono font-black transition-colors leading-none ${
-                          isMax ? 'text-[#B91B1C]' : count > 0 ? 'text-[#18181B]' : 'text-[#8B9097]'
-                        }`}
-                      >
-                        {count}
-                      </span>
                     </div>
 
-                    {/* Bar Track & Fill */}
-                    <div className="w-full max-w-[34px] h-28 bg-[#FFF9F5] rounded-xl p-0.5 sm:p-1 flex flex-col justify-end border border-[#F2E4D8] relative overflow-hidden">
-                      {count > 0 ? (
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${heightPercent}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className={`w-full rounded-lg shadow-2xs ${
-                            isMax
-                              ? 'bg-gradient-to-t from-[#B91B1C] to-[#E03A3C]'
-                              : lvl <= 3
-                              ? 'bg-gradient-to-t from-[#2F6E62] to-[#188A5A]'
-                              : lvl <= 6
-                              ? 'bg-gradient-to-t from-[#D97706] to-[#F59E0B]'
-                              : 'bg-gradient-to-t from-[#B91B1C] to-[#E03A3C]'
-                          }`}
-                        />
-                      ) : (
-                        <div className="w-full h-1 bg-[#F2E4D8] rounded-full my-0.5" />
-                      )}
-                    </div>
-
-                    {/* HSK Level Name — fixed-height container so the sm-only sub-label toggling never reflows siblings */}
-                    <div className="text-center min-h-[26px]">
-                      <p className="text-[10px] sm:text-[11px] font-extrabold font-mono text-[#18181B] leading-none">
-                        H{lvl}
-                      </p>
-                      <p className="text-[8px] text-[#8B9097] mt-0.5 whitespace-nowrap hidden sm:block">
-                        {subLabels[lvl]}
-                      </p>
-                    </div>
-
-                    {/* Status Badge — fixed-height row prevents layout reflow when data toggles 0 ↔ >0 */}
-                    <div className="h-5 flex items-center justify-center">
-                      {isZero ? (
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      {isReady && (
                         <button
                           type="button"
-                          onClick={() => onNavigateToTab('upload')}
-                          title={`Thêm video HSK ${lvl}`}
-                          aria-label={`Thêm video HSK ${lvl}`}
-                          className="text-[9px] font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-1 py-0.5 rounded border border-dashed border-[#F9D2D2] transition-colors cursor-pointer leading-none"
+                          disabled={isPublishing}
+                          onClick={() => void handleQuickPublish(item._id, item.titleVi)}
+                          className="h-8 px-3 rounded-lg bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
                         >
-                          +
+                          {isPublishing ? 'Đang duyệt…' : 'Duyệt bài'}
                         </button>
-                      ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#188A5A]" aria-hidden="true" />
                       )}
+
+                      {isFailed && (
+                        <button
+                          type="button"
+                          disabled={isRetrying}
+                          onClick={() => void handleRetry(item._id)}
+                          className="h-8 px-3 rounded-lg bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
+                        >
+                          {isRetrying ? 'Đang thử lại…' : 'Thử lại'}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => onSelectLessonToEdit(item._id)}
+                        className="h-8 px-3 rounded-lg bg-white hover:bg-[#FFF9F5] border border-[#F2E4D8] text-[#18181B] text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
+                      >
+                        Biên tập
+                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
+          )}
 
-            {/* Insight Note */}
-            <div className="p-3 rounded-2xl bg-[#FFF9F5] border border-[#F2E4D8] flex items-start gap-2.5 text-xs">
-              <div className="p-1.5 rounded-xl bg-white text-[#B91B1C] border border-[#F2E4D8] shrink-0 mt-0.5 shadow-2xs">
-                <Sparkle size={13} weight="fill" />
+          {/* Bottom Chart: HSK 1-9 Distribution */}
+          <div className="pt-3 border-t border-[#F2E4D8] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#18181B]">Phân bổ video theo cấp độ HSK 1 - 9</span>
+              <span className="text-[11px] text-[#8B9097]">
+                {Object.values(hskDistribution).filter((c) => c > 0).length}/9 cấp độ đã có bài
+              </span>
+            </div>
+
+            <div className="grid grid-cols-9 gap-1 sm:gap-2 items-end pt-1">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => {
+                const count = hskDistribution[lvl] || 0;
+                const isMax = count === maxHskCount && count > 0;
+                const heightPercent = count > 0 ? Math.max(Math.round((count / maxHskCount) * 100), 18) : 0;
+
+                return (
+                  <div key={lvl} className="flex flex-col items-center gap-1">
+                    <span
+                      className={`text-[10px] font-mono font-bold leading-none ${
+                        isMax ? 'text-[#188A5A]' : count > 0 ? 'text-[#18181B]' : 'text-[#8B9097]'
+                      }`}
+                    >
+                      {count}
+                    </span>
+
+                    <div className="w-full max-w-[28px] h-20 bg-[#FFF9F5] rounded-md p-0.5 flex flex-col justify-end border border-[#F2E4D8]">
+                      {count > 0 ? (
+                        <div
+                          className="w-full rounded bg-[#188A5A] transition-all"
+                          style={{ height: `${heightPercent}%` }}
+                        />
+                      ) : (
+                        <div className="w-full h-0.5 bg-[#F2E4D8] rounded my-0.5" />
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-mono font-bold text-[#5F6368]">H{lvl}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* RIGHT COLUMN: Học viên & Con người (5 Cols)              */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Card: Học viên mới đăng ký */}
+          <div className="bg-white rounded-2xl border border-[#F2E4D8] p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F2E4D8]">
+              <div>
+                <h2 className="text-base font-black text-[#18181B]">Học viên mới đăng ký</h2>
+                <p className="text-xs text-[#5F6368] mt-0.5">Danh sách người dùng đăng ký gần đây nhất</p>
               </div>
-              <div className="text-[11px] text-[#5F6368] leading-relaxed">
-                <span className="font-bold text-[#18181B]">Khuyến nghị giáo trình: </span>
-                {Object.entries(hskDistribution).filter(([, c]) => c === 0).length > 0 ? (
-                  <span>
-                    Các cấp độ{' '}
-                    <strong className="text-[#B91B1C]">
-                      {Object.entries(hskDistribution)
-                        .filter(([, c]) => c === 0)
-                        .map(([lvl]) => `HSK ${lvl}`)
-                        .join(', ')}
-                    </strong>{' '}
-                    chưa có bài học nào. Bạn nên ưu tiên tải thêm video để học viên có lộ trình liền mạch.
+              <span className="px-2 py-0.5 rounded-full bg-[#EAF5F1] text-[#188A5A] text-[10px] font-bold font-mono">
+                {totalUsers} học viên
+              </span>
+            </div>
+
+            {recentUsers.length === 0 ? (
+              <div className="py-6 text-center text-xs text-[#8B9097]">Chưa có dữ liệu học viên</div>
+            ) : (
+              <div className="divide-y divide-[#F2E4D8]">
+                {recentUsers.map((u) => {
+                  const isAdmin = u.role === 'admin';
+
+                  return (
+                    <div key={u._id} className="py-2.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 ${getAvatarColor(
+                            u._id,
+                          )}`}
+                        >
+                          {getInitials(u.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold text-xs text-[#18181B] truncate">{u.name}</p>
+                            {isAdmin && (
+                              <span className="px-1 py-0.2 rounded text-[8px] font-black bg-[#FDF1F1] text-[#B91B1C]">
+                                ADMIN
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#8B9097] truncate">{u.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="px-1.5 py-0.5 rounded bg-[#FFF8EC] text-[#B45309] border border-[#FDE6BA] text-[9px] font-bold font-mono">
+                          HSK {u.learningProfile?.currentHsk || 1}
+                        </span>
+                        <span className="text-[10px] text-[#8B9097] font-mono">{formatDate(u.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-[#F2E4D8] flex justify-end">
+              <button
+                type="button"
+                onClick={() => onNavigateToTab('users')}
+                className="text-xs font-bold text-[#B91B1C] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Xem tất cả học viên</span>
+                <CaretRight size={12} weight="bold" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card: Phân bổ học viên (Learner Demographics) */}
+          <div className="bg-white rounded-2xl border border-[#F2E4D8] p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F2E4D8]">
+              <div className="flex items-center gap-2">
+                <GraduationCap size={16} weight="bold" className="text-[#188A5A]" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#18181B]">
+                  Phân bố mục tiêu học viên
+                </h3>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Sơ cấp */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-[#18181B]">Sơ cấp (HSK 1 - 3)</span>
+                  <span className="font-mono text-[#188A5A]">
+                    {learnerHskLevels.beginner} ({totalUsers > 0 ? Math.round((learnerHskLevels.beginner / totalUsers) * 100) : 0}%)
                   </span>
-                ) : (
-                  <span>Toàn bộ các cấp độ HSK 1 - 9 đều đã có bài học đầy đủ!</span>
-                )}
+                </div>
+                <div className="h-2 w-full bg-[#FFF9F5] rounded-full overflow-hidden border border-[#F2E4D8]">
+                  <div
+                    className="h-full bg-[#188A5A] rounded-full transition-all"
+                    style={{
+                      width: `${totalUsers > 0 ? Math.round((learnerHskLevels.beginner / totalUsers) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Trung cấp */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-[#18181B]">Trung cấp (HSK 4 - 6)</span>
+                  <span className="font-mono text-[#B45309]">
+                    {learnerHskLevels.intermediate} ({totalUsers > 0 ? Math.round((learnerHskLevels.intermediate / totalUsers) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-[#FFF9F5] rounded-full overflow-hidden border border-[#F2E4D8]">
+                  <div
+                    className="h-full bg-[#B45309] rounded-full transition-all"
+                    style={{
+                      width: `${totalUsers > 0 ? Math.round((learnerHskLevels.intermediate / totalUsers) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Cao cấp */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-[#18181B]">Cao cấp (HSK 7 - 9)</span>
+                  <span className="font-mono text-[#B91B1C]">
+                    {learnerHskLevels.advanced} ({totalUsers > 0 ? Math.round((learnerHskLevels.advanced / totalUsers) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-[#FFF9F5] rounded-full overflow-hidden border border-[#F2E4D8]">
+                  <div
+                    className="h-full bg-[#B91B1C] rounded-full transition-all"
+                    style={{
+                      width: `${totalUsers > 0 ? Math.round((learnerHskLevels.advanced / totalUsers) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

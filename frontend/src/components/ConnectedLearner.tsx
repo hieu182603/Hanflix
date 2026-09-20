@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -37,13 +38,43 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   onOpenPreferences: () => void;
   onNavigateSection?: (section: string) => void;
 }) {
-  // We keep local UI state for search/HSK filter so they survive a remount,
-  // but the data itself comes from React Query. React Query dedupes requests
-  // for the same key, so changing search briefly while a previous response
-  // is still in flight will not produce a stale flash.
-  const [search, setSearch] = useState('');
-  const [hsk, setHsk] = useState('');
-  const [page, setPage] = useState(1);
+  // Synchronize lessons search, HSK level, and pagination with URL search params
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = section === 'lessons' ? searchParams.get('q') || '' : '';
+  const hsk = section === 'lessons' ? searchParams.get('hsk') || '' : '';
+  const page = section === 'lessons' ? Math.max(1, Number(searchParams.get('page')) || 1) : 1;
+
+  const setSearch = (val: string) => {
+    if (section !== 'lessons') return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('q', val);
+      else next.delete('q');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+
+  const setHsk = (val: string) => {
+    if (section !== 'lessons') return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('hsk', val);
+      else next.delete('hsk');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+
+  const setPage = (p: number) => {
+    if (section !== 'lessons') return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (p > 1) next.set('page', String(p));
+      else next.delete('page');
+      return next;
+    });
+  };
 
   const lessonsQuery = useQuery({
     queryKey: lessonQueryKeys.list({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12 }),

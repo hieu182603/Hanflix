@@ -156,7 +156,14 @@ export default function Header({
           </button>
         </div>
         <div
-          onClick={() => onNavigateToLessons?.()}
+          onClick={() => {
+            if (currentUser) {
+              if (currentUser.role === 'admin') navigate('/admin');
+              else navigate('/feed');
+            } else {
+              navigate('/');
+            }
+          }}
           className="flex items-center gap-2.5 cursor-pointer select-none py-1"
         >
           <img

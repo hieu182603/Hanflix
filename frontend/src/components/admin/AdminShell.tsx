@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText, ListChecks, ExternalLink, Sparkles } from 'lucide-react';
+import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText, ListChecks, Sparkles } from 'lucide-react';
 import { User } from '../../data/hanflixData';
 import UserAvatar from '../common/UserAvatar';
 
@@ -48,23 +48,7 @@ export default function AdminShell({
         </div>
 
         <div className="flex items-center gap-3 md:gap-5">
-          {/* Quick status pill */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFF5F0] border border-[#F2E4D8] text-[11px] font-medium text-[#8B9097]">
-            <span className="w-2 h-2 rounded-full bg-[#188A5A] animate-pulse" />
-            <span className="text-[#5F6368] font-semibold">Hệ thống hoạt động ổn định</span>
-          </div>
-
-          {/* Link back to Learner View */}
-          <a
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#5F6368] hover:text-[#B91B1C] hover:bg-[#FFF5F0] border border-[#F2E4D8] transition-all cursor-pointer"
-            title="Xem giao diện học viên"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-[#B91B1C]" />
-            <span className="hidden sm:inline">Trang học viên</span>
-          </a>
-
-          <div className="flex items-center gap-2.5 border-l border-[#F2E4D8] pl-4">
+          <div className="flex items-center gap-2.5">
             <div className="relative">
               <UserAvatar
                 user={currentUser}
