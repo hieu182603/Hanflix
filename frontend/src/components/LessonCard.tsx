@@ -106,7 +106,7 @@ export default function LessonCard({
           onClick();
         }
       }}
-      className={`group relative flex flex-col bg-white rounded-2xl border border-[#E7E7EA] p-2.5 sm:p-3 shadow-2xs hover:shadow-lg hover:border-[#B91B1C]/40 transition-all duration-200 text-left cursor-pointer hover:-translate-y-0.5 w-full max-w-[300px] ${className}`}
+      className={`group relative flex flex-col bg-white rounded-2xl border border-[#E7E7EA] p-2.5 sm:p-3 shadow-2xs hover:shadow-lg hover:border-[#B91B1C]/40 transition-all duration-200 text-left cursor-pointer hover:-translate-y-0.5 w-full ${className}`}
     >
       {/* 16:9 Thumbnail Box */}
       <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-neutral-900 border border-black/5 shrink-0 select-none">

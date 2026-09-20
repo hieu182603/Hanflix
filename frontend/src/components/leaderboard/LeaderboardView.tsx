@@ -204,50 +204,50 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
             </div>
           </div>
 
-          <div className="flex items-end justify-center gap-3 sm:gap-8 md:gap-10 pt-4 max-w-3xl mx-auto">
+          <div className="flex items-end justify-center gap-1.5 sm:gap-6 md:gap-10 pt-4 max-w-3xl mx-auto">
             {/* PODIUM #2 (SILVER - LEFT) */}
             {top2 && (
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="flex flex-col items-center flex-1 max-w-[180px] sm:max-w-[220px]"
+                className="flex flex-col items-center flex-1 max-w-[100px] sm:max-w-[180px] md:max-w-[220px]"
               >
                 {/* Avatar + Badge */}
-                <div className="relative mb-3 flex flex-col items-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500 shadow-md">
+                <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500 shadow-md">
                     <img
                       src={getAvatarSrc(top2.avatar, top2.name)}
                       alt={top2.name}
                       className="w-full h-full object-cover rounded-full bg-white"
                     />
                   </div>
-                  <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
+                  <div className="absolute -bottom-1.5 sm:-bottom-2 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 text-white font-black text-[10px] sm:text-xs flex items-center justify-center border-2 border-white shadow-sm">
                     2
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="text-center space-y-0.5 w-full px-1">
-                  <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
+                <div className="text-center space-y-0.5 w-full px-0.5 sm:px-1">
+                  <div className="font-extrabold text-[11px] sm:text-sm text-neutral-900 truncate">
                     {top2.name}
                   </div>
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
+                  <div className="flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-neutral-500 pt-0.5">
                     <span className="font-semibold text-neutral-700">{top2.hskLevel}</span>
                     <span>•</span>
                     <span className="inline-flex items-center text-amber-700 font-bold">
-                      <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
+                      <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 fill-amber-500 mr-0.5" />
                       {top2.streakDays}n
                     </span>
                   </div>
                 </div>
 
                 {/* Silver Pillar */}
-                <div className="w-full h-28 sm:h-36 mt-3 rounded-t-3xl bg-gradient-to-b from-slate-100 via-slate-200/90 to-slate-300/80 border-t-2 border-x-2 border-slate-300 flex flex-col items-center justify-between py-3 shadow-inner">
-                  <span className="font-black text-xs sm:text-sm text-slate-800">
+                <div className="w-full h-20 sm:h-28 md:h-36 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-slate-100 via-slate-200/90 to-slate-300/80 border-t-2 border-x-2 border-slate-300 flex flex-col items-center justify-between py-2 sm:py-3 shadow-inner">
+                  <span className="font-black text-[10px] sm:text-sm text-slate-800">
                     {top2.xp.toLocaleString()} XP
                   </span>
-                  <span className="text-3xl sm:text-4xl font-black text-slate-400/40 select-none">
+                  <span className="text-2xl sm:text-4xl font-black text-slate-400/40 select-none">
                     2
                   </span>
                 </div>
@@ -260,57 +260,57 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="flex flex-col items-center flex-1 max-w-[210px] sm:max-w-[260px] z-10"
+                className="flex flex-col items-center flex-1 max-w-[120px] sm:max-w-[210px] md:max-w-[260px] z-10"
               >
                 {/* Floating Crown Animation */}
                 <motion.div
                   animate={{ y: [0, -5, 0] }}
                   transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                  className="mb-1"
+                  className="mb-0.5 sm:mb-1"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
-                    <Crown className="w-5 h-5 fill-white" />
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                    <Crown className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white" />
                   </div>
                 </motion.div>
 
                 {/* Avatar + Golden Ring */}
-                <div className="relative mb-3 flex flex-col items-center">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1.5 bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-xl shadow-amber-400/20">
+                <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full p-1 sm:p-1.5 bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-500 shadow-xl shadow-amber-400/20">
                     <img
                       src={getAvatarSrc(top1.avatar, top1.name)}
                       alt={top1.name}
                       className="w-full h-full object-cover rounded-full bg-white"
                     />
                   </div>
-                  <div className="absolute -bottom-2.5 w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-black text-sm flex items-center justify-center border-2 border-white shadow-md">
+                  <div className="absolute -bottom-2 sm:-bottom-2.5 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md">
                     1
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="text-center space-y-0.5 w-full px-1">
-                  <div className="font-black text-sm sm:text-base text-neutral-900 truncate">
+                <div className="text-center space-y-0.5 w-full px-0.5 sm:px-1">
+                  <div className="font-black text-xs sm:text-base text-neutral-900 truncate">
                     {top1.name}
                   </div>
-                  <span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold border border-amber-300/80">
+                  <span className="inline-block px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full bg-amber-100 text-amber-900 text-[9px] sm:text-[10px] font-bold border border-amber-300/80">
                     {top1.badge || 'Quán Quân'}
                   </span>
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-500 pt-0.5">
+                  <div className="flex items-center justify-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-neutral-500 pt-0.5">
                     <span className="font-semibold text-neutral-700">{top1.hskLevel}</span>
                     <span>•</span>
                     <span className="inline-flex items-center text-amber-700 font-bold">
-                      <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 mr-0.5" />
+                      <Flame className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-500 fill-amber-500 mr-0.5" />
                       {top1.streakDays} ngày
                     </span>
                   </div>
                 </div>
 
                 {/* Gold Pillar */}
-                <div className="w-full h-36 sm:h-48 mt-3 rounded-t-3xl bg-gradient-to-b from-amber-200 via-amber-300/90 to-amber-400/90 border-t-2 border-x-2 border-amber-300 flex flex-col items-center justify-between py-3 shadow-lg shadow-amber-400/20">
-                  <span className="font-black text-sm sm:text-base text-amber-950">
+                <div className="w-full h-28 sm:h-36 md:h-48 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-amber-200 via-amber-300/90 to-amber-400/90 border-t-2 border-x-2 border-amber-300 flex flex-col items-center justify-between py-2 sm:py-3 shadow-lg shadow-amber-400/20">
+                  <span className="font-black text-xs sm:text-base text-amber-950">
                     {top1.xp.toLocaleString()} XP
                   </span>
-                  <span className="text-4xl sm:text-5xl font-black text-amber-600/30 select-none">
+                  <span className="text-3xl sm:text-5xl font-black text-amber-600/30 select-none">
                     1
                   </span>
                 </div>
@@ -323,43 +323,43 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="flex flex-col items-center flex-1 max-w-[180px] sm:max-w-[220px]"
+                className="flex flex-col items-center flex-1 max-w-[100px] sm:max-w-[180px] md:max-w-[220px]"
               >
                 {/* Avatar + Badge */}
-                <div className="relative mb-3 flex flex-col items-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-br from-amber-700 to-amber-900 shadow-md">
+                <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full p-1 bg-gradient-to-br from-amber-700 to-amber-900 shadow-md">
                     <img
                       src={getAvatarSrc(top3.avatar, top3.name)}
                       alt={top3.name}
                       className="w-full h-full object-cover rounded-full bg-white"
                     />
                   </div>
-                  <div className="absolute -bottom-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 text-white font-black text-xs flex items-center justify-center border-2 border-white shadow-sm">
+                  <div className="absolute -bottom-1.5 sm:-bottom-2 w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 text-white font-black text-[10px] sm:text-xs flex items-center justify-center border-2 border-white shadow-sm">
                     3
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="text-center space-y-0.5 w-full px-1">
-                  <div className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
+                <div className="text-center space-y-0.5 w-full px-0.5 sm:px-1">
+                  <div className="font-extrabold text-[11px] sm:text-sm text-neutral-900 truncate">
                     {top3.name}
                   </div>
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-0.5">
+                  <div className="flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-neutral-500 pt-0.5">
                     <span className="font-semibold text-neutral-700">{top3.hskLevel}</span>
                     <span>•</span>
                     <span className="inline-flex items-center text-amber-700 font-bold">
-                      <Flame className="w-3 h-3 text-amber-500 fill-amber-500 mr-0.5" />
+                      <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 fill-amber-500 mr-0.5" />
                       {top3.streakDays}n
                     </span>
                   </div>
                 </div>
 
                 {/* Bronze Pillar */}
-                <div className="w-full h-24 sm:h-32 mt-3 rounded-t-3xl bg-gradient-to-b from-orange-100 via-orange-200/90 to-amber-300/60 border-t-2 border-x-2 border-amber-300/80 flex flex-col items-center justify-between py-3 shadow-inner">
-                  <span className="font-black text-xs sm:text-sm text-amber-950">
+                <div className="w-full h-16 sm:h-24 md:h-32 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-orange-100 via-orange-200/90 to-amber-300/60 border-t-2 border-x-2 border-amber-300/80 flex flex-col items-center justify-between py-2 sm:py-3 shadow-inner">
+                  <span className="font-black text-[10px] sm:text-sm text-amber-950">
                     {top3.xp.toLocaleString()} XP
                   </span>
-                  <span className="text-3xl sm:text-4xl font-black text-amber-700/30 select-none">
+                  <span className="text-2xl sm:text-4xl font-black text-amber-700/30 select-none">
                     3
                   </span>
                 </div>
@@ -417,12 +417,12 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           </div>
 
           {/* Quick CTA Actions */}
-          <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0 self-stretch sm:self-center w-full sm:w-auto justify-end">
             {onStartPractice && (
               <button
                 type="button"
                 onClick={onStartPractice}
-                className="px-4 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xs transition-all active:scale-98 cursor-pointer"
+                className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-98 cursor-pointer"
               >
                 <BookOpenCheck className="w-4 h-4" />
                 <span>Luyện tập tích XP</span>
@@ -433,7 +433,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
               <button
                 type="button"
                 onClick={onSelectLesson}
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-200 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Xem video</span>
@@ -539,7 +539,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   </div>
 
                   {/* XP Score & Progress bar */}
-                  <div className="text-right shrink-0 w-28 sm:w-48 md:w-60">
+                  <div className="text-right shrink-0 w-20 sm:w-48 md:w-60">
                     <div className="text-xs sm:text-sm font-black text-neutral-900">
                       {user.xp.toLocaleString()} <span className="text-[10px] text-amber-700 font-bold">XP</span>
                     </div>

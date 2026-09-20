@@ -422,7 +422,7 @@ export function CommunityPage() {
           <div className="font-bold text-[#18181B] text-sm">Đăng ký nhận thông báo sớm</div>
           <div className="text-xs text-[#5F6368] mt-0.5">Bạn sẽ là người đầu tiên trải nghiệm khi cộng đồng ra mắt.</div>
         </div>
-        <button className="px-5 py-2.5 rounded-xl bg-[#B91B1C] text-white font-bold text-sm hover:bg-[#A3181A] transition-colors shrink-0">
+        <button className="px-5 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] text-white font-bold text-sm hover:bg-[#A3181A] transition-colors shrink-0 cursor-pointer">
           Nhận thông báo
         </button>
       </div>

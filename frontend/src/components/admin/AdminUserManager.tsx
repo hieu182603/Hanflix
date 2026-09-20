@@ -312,10 +312,10 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
         </div>
       </div>
 
-      {/* Filter and Search Bar - All in 1 row */}
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs overflow-x-auto">
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-0 w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8C827A]" />
           <input
             type="text"
@@ -325,7 +325,7 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
               setSearchQuery(e.target.value);
               setPage(1);
             }}
-            className="h-9 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
+            className="h-10 w-full rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] pl-9 pr-8 text-xs text-[#2B2826] outline-none transition-all placeholder:text-[#8C827A]/70 focus:border-[#B91B1C] focus:bg-white"
           />
           {searchQuery && (
             <button
@@ -342,8 +342,8 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
           )}
         </div>
 
-        {/* Filters Group - strictly on 1 row */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Filters Group */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Role Filter */}
           <div className="flex h-9 items-center gap-1.5 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 transition-colors hover:border-[#B91B1C]/40 focus-within:border-[#B91B1C] focus-within:bg-white">
             <Shield className="h-3.5 w-3.5 shrink-0 text-[#8C827A]" />
@@ -424,7 +424,8 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
 
       {/* Users Data Table */}
       <div className="overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xs">
-        <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
           <thead className="border-b border-[#F2E4D8] bg-[#FFF9F5] text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
             <tr>
               <th className="p-4 w-[260px]">Người dùng</th>
@@ -595,6 +596,7 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <AdminPaginationBar

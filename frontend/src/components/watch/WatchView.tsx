@@ -113,7 +113,7 @@ export default function WatchView({
       <div className="flex flex-wrap items-center justify-between gap-3 py-1">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#E7E7EA] hover:border-[#D1D5DB] hover:bg-[#F7F7F9] text-xs sm:text-sm font-bold text-[#18181B] shadow-2xs transition-all cursor-pointer group"
+          className="inline-flex items-center gap-2 px-3.5 py-2 min-h-[44px] rounded-xl bg-white border border-[#E7E7EA] hover:border-[#D1D5DB] hover:bg-[#F7F7F9] text-xs sm:text-sm font-bold text-[#18181B] shadow-2xs transition-all cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-[#5F6368] group-hover:-translate-x-0.5 transition-transform" />
           <span>{t.watch.backToFeed}</span>
@@ -148,7 +148,7 @@ export default function WatchView({
         {/* ================= LEFT COLUMN: Video Theater Stage & Details (7 cols on lg, 8 on xl) ================= */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           {/* Cinema Video Container */}
-          <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-slate-950 border border-[#E7E7EA] shadow-xl group select-none">
+          <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-950 border border-[#E7E7EA] shadow-xl group select-none">
             {/* Poster / Video Frame */}
             <img
               src={lesson.thumbnail}
@@ -159,22 +159,22 @@ export default function WatchView({
 
             {/* Subtitles Overlay in Center-Bottom */}
             {subtitleMode !== 'off' && lesson.transcript && lesson.transcript.length > 0 && (
-              <div className="absolute bottom-16 sm:bottom-20 inset-x-4 sm:inset-x-12 mx-auto max-w-2xl text-center z-10 px-4 py-3 bg-black/75 backdrop-blur-md rounded-2xl text-white border border-white/10 shadow-2xl transition-all">
+              <div className="absolute bottom-14 sm:bottom-16 md:bottom-20 inset-x-2 sm:inset-x-8 md:inset-x-12 mx-auto max-w-2xl text-center z-10 px-3 sm:px-4 py-2 sm:py-3 bg-black/75 backdrop-blur-md rounded-xl sm:rounded-2xl text-white border border-white/10 shadow-2xl transition-all">
                 {/* Chinese */}
                 {(subtitleMode === 'all' || subtitleMode === 'zh-pinyin' || subtitleMode === 'zh') && (
-                  <div className="text-xl sm:text-2xl md:text-3xl font-black font-mono tracking-wide text-yellow-300 drop-shadow">
+                  <div className="text-base sm:text-2xl md:text-3xl font-black font-mono tracking-wide text-yellow-300 drop-shadow">
                     {lesson.transcript[activeSubtitleIndex]?.chinese || lesson.transcript[0].chinese}
                   </div>
                 )}
                 {/* Pinyin */}
                 {(subtitleMode === 'all' || subtitleMode === 'zh-pinyin') && (
-                  <div className="text-xs sm:text-sm text-gray-200 font-mono mt-0.5 drop-shadow">
+                  <div className="text-[11px] sm:text-sm text-gray-200 font-mono mt-0.5 drop-shadow">
                     {lesson.transcript[activeSubtitleIndex]?.pinyin || lesson.transcript[0].pinyin}
                   </div>
                 )}
                 {/* Vietnamese */}
                 {subtitleMode === 'all' && (
-                  <div className="text-xs sm:text-sm text-white/90 font-medium mt-1 drop-shadow">
+                  <div className="text-[11px] sm:text-sm text-white/90 font-medium mt-1 drop-shadow">
                     ({lesson.transcript[activeSubtitleIndex]?.vietnamese || lesson.transcript[0].vietnamese})
                   </div>
                 )}
@@ -671,7 +671,7 @@ export default function WatchView({
                   className="p-2 rounded-2xl bg-white hover:bg-[#F7F7F9] border border-[#E7E7EA] hover:border-[#B91B1C]/30 transition-all cursor-pointer flex gap-3 group"
                 >
                   {/* Video Thumbnail (YouTube style compact 16:9) */}
-                  <div className="relative w-36 sm:w-40 aspect-video rounded-xl overflow-hidden bg-slate-900 shrink-0">
+                  <div className="relative w-28 sm:w-36 md:w-40 aspect-video rounded-xl overflow-hidden bg-slate-900 shrink-0">
                     <img
                       src={item.thumbnail}
                       alt={item.title}

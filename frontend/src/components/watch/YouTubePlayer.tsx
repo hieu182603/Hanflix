@@ -274,27 +274,152 @@ export default function YouTubePlayer({
     }
   };
 
-  // Fullscreen toggle
+  // Dynamic video layout tracking: computes exact bounding box of the rendered video
+  // within the player container to ensure subtitles always sit directly on the video
+  // frame, especially when in mobile portrait fullscreen where 16:9 videos have large
+  // vertical letterbox black bars.
+  const [videoLayout, setVideoLayout] = useState<{
+    bottomOffset: number;
+    leftOffset: number;
+    videoWidth: number;
+    videoHeight: number;
+    isLetterboxed: boolean;
+  }>({
+    bottomOffset: 0,
+    leftOffset: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    isLetterboxed: false,
+  });
+
+  const updateVideoLayout = useCallback(() => {
+    const container = containerRef.current;
+    const video = videoRef.current;
+    if (!container) return;
+
+    const containerW = container.clientWidth;
+    const containerH = container.clientHeight;
+    if (!containerW || !containerH) return;
+
+    // Use natural video dimensions if available, fallback to 16/9
+    const videoW = video?.videoWidth || 16;
+    const videoH = video?.videoHeight || 9;
+    const videoAspect = videoW / videoH;
+    const containerAspect = containerW / containerH;
+
+    let bottomOffset = 0;
+    let leftOffset = 0;
+    let renderedW = containerW;
+    let renderedH = containerH;
+    let isLetterboxed = false;
+
+    // Container is taller than video aspect ratio (letterbox top & bottom, e.g. portrait mobile fullscreen)
+    if (containerAspect < videoAspect - 0.01) {
+      renderedW = containerW;
+      renderedH = containerW / videoAspect;
+      bottomOffset = Math.max(0, (containerH - renderedH) / 2);
+      isLetterboxed = bottomOffset > 10;
+    } else if (containerAspect > videoAspect + 0.01) {
+      // Container is wider than video aspect ratio (pillarbox left & right, e.g. ultrawide screen)
+      renderedH = containerH;
+      renderedW = containerH * videoAspect;
+      leftOffset = Math.max(0, (containerW - renderedW) / 2);
+      bottomOffset = 0;
+      isLetterboxed = false;
+    }
+
+    setVideoLayout({
+      bottomOffset,
+      leftOffset,
+      videoWidth: renderedW,
+      videoHeight: renderedH,
+      isLetterboxed,
+    });
+  }, []);
+
+  // Fullscreen toggle with vendor prefixes and layout refresh
   const toggleFullscreen = () => {
     const container = containerRef.current;
     if (!container) return;
 
-    if (!document.fullscreenElement) {
-      void container.requestFullscreen();
+    const doc = document as any;
+    const isFs = Boolean(
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
+    );
+
+    if (!isFs) {
+      if (container.requestFullscreen) {
+        void container.requestFullscreen();
+      } else if ((container as any).webkitRequestFullscreen) {
+        (container as any).webkitRequestFullscreen();
+      } else if ((container as any).mozRequestFullScreen) {
+        (container as any).mozRequestFullScreen();
+      } else if ((container as any).msRequestFullscreen) {
+        (container as any).msRequestFullscreen();
+      }
       setIsFullscreen(true);
     } else {
-      void document.exitFullscreen();
+      if (doc.exitFullscreen) {
+        void doc.exitFullscreen();
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      } else if (doc.mozCancelFullScreen) {
+        doc.mozCancelFullScreen();
+      } else if (doc.msExitFullscreen) {
+        doc.msExitFullscreen();
+      }
       setIsFullscreen(false);
     }
+
+    setTimeout(updateVideoLayout, 100);
   };
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    updateVideoLayout();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateVideoLayout();
+    });
+    resizeObserver.observe(container);
+
     const onFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const doc = document as any;
+      const isFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isFs);
+      // Staggered timeouts ensure video dimensions have stabilized after browser CSS transition
+      setTimeout(updateVideoLayout, 50);
+      setTimeout(updateVideoLayout, 150);
+      setTimeout(updateVideoLayout, 300);
     };
+
+    window.addEventListener('resize', updateVideoLayout);
+    window.addEventListener('orientationchange', updateVideoLayout);
     document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
-  }, []);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateVideoLayout);
+      window.removeEventListener('orientationchange', updateVideoLayout);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', onFullscreenChange);
+    };
+  }, [updateVideoLayout]);
 
   // Quick toggle Subtitles (CC)
   const toggleSubtitles = () => {
@@ -438,6 +563,16 @@ export default function YouTubePlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferPercent = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
 
+  // Dynamic positioning for subtitles:
+  // In mobile portrait fullscreen (or any letterboxed state where video has vertical black bars),
+  // position the subtitle directly on the lower part of the video frame (videoLayout.bottomOffset + 14px)
+  // so subtitles are NEVER detached in the black letterbox area or stuck down at the bottom of the phone screen.
+  // In normal landscape mode, position right above the control bar (or near bottom if controls are hidden).
+  const baseSubtitleBottom = controlsVisible || !isPlaying || isScrubbing || settingsOpen ? 54 : 14;
+  const subtitleBottom = videoLayout.isLetterboxed
+    ? Math.max(Math.round(videoLayout.bottomOffset + 14), controlsVisible ? 56 : 14)
+    : baseSubtitleBottom;
+
   return (
     <div
       ref={containerRef}
@@ -447,7 +582,11 @@ export default function YouTubePlayer({
           setControlsVisible(false);
         }
       }}
-      className="relative w-full aspect-video rounded-2xl md:rounded-3xl overflow-hidden bg-black border border-[#E7E7EA] shadow-xl group select-none flex items-center justify-center cursor-pointer"
+      className={`relative w-full overflow-hidden bg-black group select-none flex items-center justify-center cursor-pointer ${
+        isFullscreen
+          ? 'h-full rounded-none border-0 shadow-none'
+          : 'aspect-video rounded-2xl md:rounded-3xl border border-[#E7E7EA] shadow-xl'
+      }`}
     >
       {/* 1. Underlying Video Element */}
       <video
@@ -471,6 +610,7 @@ export default function YouTubePlayer({
         onPlay={() => {
           setIsPlaying(true);
           markFirstFrameIfNeeded();
+          updateVideoLayout();
         }}
         onPause={() => {
           setIsPlaying(false);
@@ -490,9 +630,15 @@ export default function YouTubePlayer({
             setPlaybackRate(savedSpeed);
           }
           perfMarks.since('metadata:ready', 'lesson_media:ready', { lessonId: title });
+          updateVideoLayout();
           onLoadedMetadata?.(e);
         }}
-        onTimeUpdate={(e) => handleTimeUpdateInternal(e.currentTarget)}
+        onTimeUpdate={(e) => {
+          handleTimeUpdateInternal(e.currentTarget);
+          if (videoLayout.videoWidth === 0) {
+            updateVideoLayout();
+          }
+        }}
         onSeeking={onSeeking}
         onWaiting={() => perfMarks.mark('buffering:start', { lessonId: title })}
         onCanPlay={() => perfMarks.since('buffering:end', 'buffering:start', { lessonId: title })}
@@ -549,11 +695,12 @@ export default function YouTubePlayer({
         bottomTrack={bottomTrack}
         style={subtitleStyle}
         scale={scale}
-        className={`pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1 px-4 transition-all duration-300 ${
-          controlsVisible || !isPlaying || isScrubbing || settingsOpen
-            ? 'bottom-13 sm:bottom-14'
-            : 'bottom-3 sm:bottom-4'
-        }`}
+        className="pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center gap-1 px-4 transition-[bottom] duration-200"
+        containerStyle={{
+          bottom: `${subtitleBottom}px`,
+          left: videoLayout.leftOffset > 0 ? `${videoLayout.leftOffset}px` : undefined,
+          right: videoLayout.leftOffset > 0 ? `${videoLayout.leftOffset}px` : undefined,
+        }}
         onTokenClick={onTokenClick}
         onSaveWord={onSaveWord}
       />
@@ -769,7 +916,7 @@ export default function YouTubePlayer({
               {settingsOpen && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-12 right-0 z-50 w-72 rounded-2xl border border-white/15 bg-neutral-900/95 text-white p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute bottom-12 right-0 z-50 w-[min(288px,calc(100vw-32px))] rounded-2xl border border-white/15 bg-neutral-900/95 text-white p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
                 >
                   {/* Main Settings Menu */}
                   {settingsSubmenu === 'main' && (

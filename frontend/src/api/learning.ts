@@ -187,8 +187,11 @@ function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
 }
 
 
-export async function askPanda(question: string): Promise<string> {
-  const data = await apiFetch<{ answerVi: string }>('/ai/ask', { method: 'POST', body: JSON.stringify({ question }) });
+export async function askPanda(question: string, context?: string): Promise<string> {
+  const data = await apiFetch<{ answerVi: string }>('/ai/ask', {
+    method: 'POST',
+    body: JSON.stringify({ question, context }),
+  });
   return data.answerVi;
 }
 

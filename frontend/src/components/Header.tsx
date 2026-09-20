@@ -136,10 +136,10 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full h-[68px] bg-white border-b border-[#E7E7EA] pr-4 md:pr-7 flex items-center justify-between shadow-xs">
-      {/* Left: Hamburger (aligned with 72px sidebar rail center) + Brand Logo */}
-      <div className="flex items-center">
-        <div className="w-[72px] flex items-center justify-center shrink-0">
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E7E7EA] px-2 sm:px-4 md:pr-7 flex items-center justify-between shadow-xs safe-area-top min-h-[64px] sm:min-h-[68px]">
+      {/* Left: Hamburger (aligned with 72px sidebar rail center on desktop) + Brand Logo */}
+      <div className="flex items-center shrink-0">
+        <div className="w-10 sm:w-12 lg:w-[72px] flex items-center justify-center shrink-0">
           <button
             onClick={() => {
               if (window.innerWidth < 1024) {
@@ -164,29 +164,29 @@ export default function Header({
               navigate('/');
             }
           }}
-          className="flex items-center gap-2.5 cursor-pointer select-none py-1"
+          className="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none py-1"
         >
           <img
             src="/assets/logo.png"
             alt="HanFlix Logo"
-            className="h-8 sm:h-9 md:h-10 w-auto max-w-[160px] sm:max-w-[190px] object-contain hover:scale-105 transition-transform drop-shadow-xs"
+            className="h-7 sm:h-8 md:h-10 w-auto max-w-[110px] sm:max-w-[160px] md:max-w-[190px] object-contain hover:scale-105 transition-transform drop-shadow-xs"
           />
-          <span className="hidden sm:inline-block px-2.5 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
+          <span className="hidden md:inline-block px-2.5 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
             HSK {currentUser?.learningProfile?.hskLevel || 3}
           </span>
         </div>
       </div>
 
       {/* Middle: Search bar */}
-      <div className="relative flex-1 max-w-[500px] mx-4" ref={searchContainerRef}>
+      <div className="relative flex-1 min-w-0 max-w-[500px] mx-1.5 sm:mx-4" ref={searchContainerRef}>
         <div
-          className={`relative flex items-center h-10 px-4 rounded-full bg-[#F7F7F9] border transition-all ${
+          className={`relative flex items-center h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F7F7F9] border transition-all ${
             isSearchFocused
               ? 'border-[#B91B1C] bg-white ring-2 ring-[#B91B1C]/10 shadow-xs'
               : 'border-[#E7E7EA] hover:border-[#D1D5DB]'
           }`}
         >
-          <Search className="w-4 h-4 text-[#8B9097] mr-2.5 shrink-0" />
+          <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8B9097] mr-1.5 sm:mr-2.5 shrink-0" />
           <input
             type="text"
             placeholder={t.header.searchPlaceholder}
@@ -196,12 +196,12 @@ export default function Header({
               setIsSearchFocused(true);
               if (searchQuery.trim()) panda?.triggerReaction('searching', 3500);
             }}
-            className="w-full text-sm text-[#18181B] bg-transparent outline-none placeholder:text-[#8B9097]"
+            className="w-full text-xs sm:text-sm text-[#18181B] bg-transparent outline-none placeholder:text-[#8B9097] truncate"
           />
           {searchQuery && (
             <button
               onClick={handleClearSearch}
-              className="p-1 text-[#8B9097] hover:text-[#18181B] rounded-full hover:bg-gray-200"
+              className="p-1 text-[#8B9097] hover:text-[#18181B] rounded-full hover:bg-gray-200 shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -244,7 +244,7 @@ export default function Header({
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
         {/* Interactive Streak Dropdown Center */}
         <StreakDropdown
           initialStreakDays={streakDays}
@@ -260,7 +260,7 @@ export default function Header({
         <div className="relative" ref={langRef}>
           <button
             onClick={() => setShowLanguageMenu(!showLangMenu)}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer"
             title={t.header.language}
             aria-label={t.header.language}
           >
@@ -268,7 +268,7 @@ export default function Header({
           </button>
 
           {showLangMenu && (
-            <div className="absolute right-0 top-12 w-52 bg-white rounded-2xl border border-[#E7E7EA] shadow-xl py-2 z-50 animate-in fade-in duration-150">
+            <div className="absolute right-0 top-12 w-52 max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-[#E7E7EA] shadow-xl py-2 z-50 animate-in fade-in duration-150">
               <div className="px-3.5 py-1.5 text-xs font-bold text-[#8B9097] border-b border-[#E7E7EA] mb-1">
                 {t.header.language}
               </div>
@@ -299,17 +299,17 @@ export default function Header({
         <div className="relative" ref={userRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-1 rounded-full hover:bg-[#F7F7F9] transition-colors cursor-pointer"
+            className="flex items-center gap-2 p-0.5 sm:p-1 rounded-full hover:bg-[#F7F7F9] transition-colors cursor-pointer"
           >
             <UserAvatar
               user={currentUser}
-              size={40}
+              size={36}
               className="border-2 border-white shadow-xs"
             />
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl border border-[#E7E7EA] shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute right-0 top-12 w-64 max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-[#E7E7EA] shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-4 py-3 border-b border-[#E7E7EA]">
                 <div className="font-bold text-sm text-[#18181B] truncate">
                   {currentUser?.name || t.header.learner}

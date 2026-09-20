@@ -83,6 +83,17 @@ export default function Sidebar({
 }: SidebarProps) {
   const { t } = useLanguage();
 
+  // Lock background scroll when mobile drawer is active
+  React.useEffect(() => {
+    if (isDrawerOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isDrawerOpen]);
+
   const dashboardQuery = useQuery({
     queryKey: dashboardQueryKeys.detail(),
     queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
@@ -116,7 +127,7 @@ export default function Sidebar({
           <button
             onClick={onCloseDrawer}
             aria-label="Đóng menu"
-            className="p-1.5 rounded-full hover:bg-[#F7F7F9] text-[#5F6368] cursor-pointer"
+            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] active:scale-95 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -274,7 +285,7 @@ export default function Sidebar({
             onClick={onCloseDrawer}
             aria-hidden="true"
           />
-          <aside className="relative z-10 w-[280px] bg-white h-full shadow-2xl flex flex-col">
+          <aside className="relative z-10 w-[min(300px,85vw)] bg-white h-full shadow-2xl flex flex-col safe-area-bottom">
             {renderContent(false)}
           </aside>
         </div>

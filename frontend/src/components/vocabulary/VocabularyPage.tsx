@@ -1337,13 +1337,13 @@ export default function VocabularyPage({
 
           {/* Pagination Bar */}
           {totalPages > 1 && (
-            <div className="bg-white rounded-2xl p-4 border border-[#E7E7EA] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-              <div className="text-xs text-[#5F6368] font-bold">
+            <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-[#E7E7EA] flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 shadow-2xs">
+              <div className="text-xs text-[#5F6368] font-bold w-full text-center sm:text-left sm:w-auto">
                 Trang <span className="text-[#18181B]">{currentPage}</span> / {totalPages}{' '}
                 <span className="text-[#8B9097] font-normal">({totalItems} từ vựng)</span>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full sm:w-auto">
                 {/* Previous Button */}
                 <button
                   disabled={currentPage === 1}
@@ -1351,17 +1351,18 @@ export default function VocabularyPage({
                     setCurrentPage((prev) => Math.max(1, prev - 1));
                     window.scrollTo({ top: 120, behavior: 'smooth' });
                   }}
-                  className="h-9 px-3 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-xs font-bold text-[#18181B] flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                  className="h-9 px-2.5 sm:px-3 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-xs font-bold text-[#18181B] flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer active:scale-95"
+                  aria-label="Trang trước"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span>Trang trước</span>
+                  <span className="hidden sm:inline">Trang trước</span>
                 </button>
 
                 {/* Page Numbers */}
-                <div className="flex items-center gap-1 mx-1">
+                <div className="flex items-center gap-1 mx-0.5 sm:mx-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter((page) => {
-                      if (totalPages <= 7) return true;
+                      if (totalPages <= 5) return true;
                       return (
                         page === 1 ||
                         page === totalPages ||
@@ -1382,7 +1383,7 @@ export default function VocabularyPage({
                               setCurrentPage(page);
                               window.scrollTo({ top: 120, behavior: 'smooth' });
                             }}
-                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                               currentPage === page
                                 ? 'bg-[#B91B1C] text-white shadow-xs'
                                 : 'bg-white hover:bg-[#F7F7F9] text-[#18181B] border border-[#E7E7EA]'
@@ -1402,9 +1403,10 @@ export default function VocabularyPage({
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1));
                     window.scrollTo({ top: 120, behavior: 'smooth' });
                   }}
-                  className="h-9 px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-xs font-bold text-white flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-xs"
+                  className="h-9 px-2.5 sm:px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-xs font-bold text-white flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-xs active:scale-95"
+                  aria-label="Trang sau"
                 >
-                  <span>Trang sau</span>
+                  <span className="hidden sm:inline">Trang sau</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

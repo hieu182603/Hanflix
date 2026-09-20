@@ -702,85 +702,118 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
           ) : quizData ? (
             <div className="space-y-4">
               {/* Lesson Meta Card & Mode Switcher */}
-              <div className="rounded-3xl border border-[#F2E4D8] bg-white p-5 shadow-2xs">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                  <div>
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="rounded bg-[#2B2826] px-2 py-0.5 text-[10px] font-black text-white">
+              {(() => {
+                const lvlKey = String(quizData.lesson.hsk || 1);
+                const hskStyle = HSK_COLORS[lvlKey] || HSK_COLORS['1'];
+                return (
+                  <div className="rounded-3xl border border-[#F2E4D8] bg-white p-5 sm:p-6 shadow-2xs">
+                    {/* Row 1: Metadata Badges */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-black tracking-wide border whitespace-nowrap shadow-2xs ${hskStyle.bg} ${hskStyle.text} ${hskStyle.border}`}>
                         HSK {quizData.lesson.hsk}
                       </span>
-                      <span className="text-xs text-[#8C827A]">
-                        Thời lượng: {formatDuration(quizData.lesson.durationSeconds || 0)}
+
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#FFF9F5] border border-[#F2E4D8] text-[11px] font-semibold text-[#5F6368] whitespace-nowrap shadow-2xs">
+                        <Clock className="h-3 w-3 text-[#8C827A]" />
+                        <span>Thời lượng: {formatDuration(quizData.lesson.durationSeconds || 0)}</span>
                       </span>
-                      <span className="text-xs text-[#8C827A]">·</span>
-                      <span className="flex items-center gap-1 text-xs text-[#8C827A]">
-                        <Subtitles className="h-3.5 w-3.5" />
-                        {quizData.subtitleCues.length} câu thoại
+
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#FFF9F5] border border-[#F2E4D8] text-[11px] font-semibold text-[#5F6368] whitespace-nowrap shadow-2xs">
+                        <Subtitles className="h-3 w-3 text-[#8C827A]" />
+                        <span>{quizData.subtitleCues.length} câu thoại</span>
                       </span>
+
                       <AiStatusBadge status={aiStatus} />
+
+                      {quizData.lesson.status && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap shadow-2xs ${
+                            quizData.lesson.status === 'published'
+                              ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                              : quizData.lesson.status === 'ready_for_review'
+                              ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
+                              : 'border-[#E5DCD3] bg-[#F4EFEA] text-[#6E655F]'
+                          }`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            quizData.lesson.status === 'published' ? 'bg-[#188A5A]' : quizData.lesson.status === 'ready_for_review' ? 'bg-[#B45309]' : 'bg-[#8C827A]'
+                          }`} />
+                          <span>
+                            {quizData.lesson.status === 'published' ? 'Đã xuất bản' : quizData.lesson.status === 'ready_for_review' ? 'Chờ duyệt' : 'Bản nháp'}
+                          </span>
+                        </span>
+                      )}
                     </div>
 
-                    <h2 className="text-xl font-black tracking-tight text-[#2B2826]">
-                      {quizData.lesson.titleVi}
-                    </h2>
-                    {quizData.lesson.titleZh && (
-                      <p className="mt-0.5 font-serif text-xs text-[#8C827A]">
-                        {quizData.lesson.titleZh}
-                      </p>
-                    )}
-                    {aiStatus?.aiGenerationError && aiStatus.aiGenerationStatus !== 'completed' && (
-                      <p className="mt-1 max-w-md rounded-xl border border-[#F9D2D2] bg-[#FDF1F1] p-2 text-[11px] font-bold text-[#B91B1C]">
-                        Panda AI: {aiStatus.aiGenerationError}
-                      </p>
-                    )}
-                  </div>
+                    {/* Row 2: Title & Actions Toolbar */}
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pt-1">
+                      {/* Left: Lesson Titles */}
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[#18181B] leading-snug">
+                          {quizData.lesson.titleVi}
+                        </h2>
+                        {quizData.lesson.titleZh && (
+                          <p className="mt-1 font-serif text-sm font-semibold text-[#8C827A] tracking-wide">
+                            {quizData.lesson.titleZh}
+                          </p>
+                        )}
+                        {aiStatus?.aiGenerationError && aiStatus.aiGenerationStatus !== 'completed' && (
+                          <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-[#F9D2D2] bg-[#FDF1F1] px-3 py-2 text-xs font-bold text-[#B91B1C]">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <span>Panda AI: {aiStatus.aiGenerationError}</span>
+                          </div>
+                        )}
+                      </div>
 
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleRegenerate}
-                      disabled={regenerateBusy || aiStatus?.aiGenerationStatus === 'pending' || aiStatus?.aiGenerationStatus === 'running'}
-                      className="flex h-8 items-center gap-1.5 rounded-xl border border-[#B91B1C]/30 bg-white px-3 text-[11px] font-bold text-[#B91B1C] shadow-2xs transition-all hover:bg-[#FDF1F1] active:scale-[0.98] disabled:opacity-40"
-                      title="Yêu cầu Panda AI tạo lại toàn bộ câu hỏi"
-                    >
-                      {regenerateBusy ? (
-                        <Spinner size="sm" tone="brand" />
-                      ) : (
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      )}
-                      <span>Tạo lại bằng AI</span>
-                    </button>
+                      {/* Right: Actions Toolbar */}
+                      <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleRegenerate}
+                          disabled={regenerateBusy || aiStatus?.aiGenerationStatus === 'pending' || aiStatus?.aiGenerationStatus === 'running'}
+                          className="flex h-10 items-center gap-2 rounded-xl border border-[#B91B1C]/25 bg-white px-3.5 text-xs font-bold text-[#B91B1C] shadow-2xs transition-all hover:bg-[#FDF1F1] hover:border-[#B91B1C]/50 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                          title="Yêu cầu Panda AI tạo lại toàn bộ câu hỏi"
+                        >
+                          {regenerateBusy ? (
+                            <Spinner size="sm" tone="brand" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 text-[#B91B1C]" />
+                          )}
+                          <span>Tạo lại bằng AI</span>
+                        </button>
 
-                  {/* Toggle Mode: Editor vs Learner Preview */}
-                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] p-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewMode(false)}
-                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-                        !previewMode
-                          ? 'border border-[#F2E4D8]/60 bg-white text-[#2B2826] shadow-2xs'
-                          : 'text-[#8C827A] hover:text-[#2B2826]'
-                      }`}
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                      <span>Biên tập ({localQuestions.length})</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewMode(true)}
-                      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-                        previewMode
-                          ? 'bg-[#B91B1C] text-white shadow-2xs shadow-[#B91B1C]/25'
-                          : 'text-[#8C827A] hover:text-[#B91B1C]'
-                      }`}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>Xem trước học viên</span>
-                    </button>
+                        {/* Toggle Mode: Editor vs Learner Preview */}
+                        <div className="flex items-center rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-1 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMode(false)}
+                            className={`flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all cursor-pointer ${
+                              !previewMode
+                                ? 'border border-[#F2E4D8]/80 bg-white text-[#18181B] shadow-2xs'
+                                : 'text-[#8C827A] hover:text-[#18181B]'
+                            }`}
+                          >
+                            <Edit2 className={`h-3.5 w-3.5 ${!previewMode ? 'text-[#B91B1C]' : ''}`} />
+                            <span>Biên tập ({localQuestions.length})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMode(true)}
+                            className={`flex h-8 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold transition-all cursor-pointer ${
+                              previewMode
+                                ? 'bg-[#B91B1C] text-white shadow-2xs shadow-[#B91B1C]/20'
+                                : 'text-[#8C827A] hover:text-[#B91B1C]'
+                            }`}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>Xem trước học viên</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Mode 1: Learner Preview Mode */}
               {previewMode ? (
@@ -1637,14 +1670,14 @@ function AiStatusBadge({ status }: { status: AdminQuizAiStatus | null }) {
   if (!style) return null;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${style.bg} ${style.text} ${style.border}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-[11px] font-bold whitespace-nowrap shadow-2xs ${style.bg} ${style.text} ${style.border}`}
       title={
         status.aiGenerationStatus === 'completed' && status.aiGenerationQuestionCount !== undefined
           ? `Panda AI đã sinh ${status.aiGenerationQuestionCount} câu hỏi`
           : style.label
       }
     >
-      <Sparkles className={`h-3 w-3 ${style.spin ? 'animate-pulse' : ''}`} />
+      <Sparkles className={`h-3 w-3 shrink-0 ${style.spin ? 'animate-pulse' : ''}`} />
       <span>
         {status.aiGenerationStatus === 'completed' && status.aiGenerationQuestionCount !== undefined
           ? `AI: ${status.aiGenerationQuestionCount} câu hỏi`

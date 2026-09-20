@@ -174,44 +174,100 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
     || (section === 'roadmap' && (activityQuery.isPending || dashboardQuery.isPending))
     || (section === 'history' && dashboardQuery.isPending);
 
-  const controls = <div className="flex flex-wrap gap-2">
-    <label className="flex items-center gap-2 rounded-xl border bg-white px-3"><Search className="w-4 h-4" /><input className="p-2 text-sm outline-none" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Tìm kiếm" /></label>
-    <select className="rounded-xl border bg-white p-2 text-sm" value={hsk} onChange={event => { setHsk(event.target.value); setPage(1); }} aria-label="Lọc HSK"><option value="">Mọi cấp HSK</option>{[1,2,3,4,5,6,7,8,9].map(level => <option key={level} value={level}>HSK {level}</option>)}</select>
-  </div>;
+  const controls = (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+      <label className="flex items-center gap-2 rounded-xl border border-[#E7E7EA] bg-white px-3 h-10 shadow-2xs focus-within:border-[#B91B1C]">
+        <Search className="w-4 h-4 text-[#8B9097] shrink-0" />
+        <input
+          className="w-full sm:w-48 text-xs sm:text-sm outline-none bg-transparent"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+          placeholder="Tìm kiếm bài học…"
+        />
+      </label>
+      <select
+        className="rounded-xl border border-[#E7E7EA] bg-white px-3 h-10 text-xs sm:text-sm font-semibold outline-none cursor-pointer focus:border-[#B91B1C]"
+        value={hsk}
+        onChange={(event) => {
+          setHsk(event.target.value);
+          setPage(1);
+        }}
+        aria-label="Lọc HSK"
+      >
+        <option value="">Mọi cấp HSK</option>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => (
+          <option key={level} value={level}>
+            HSK {level}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 
-  const pagination = (pages: number) => pages > 1 && <div className="flex items-center gap-3 justify-center pt-3">
-    <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-lg border bg-white p-2 disabled:opacity-40" aria-label="Trang trước"><ChevronLeft className="w-4 h-4" /></button>
-    <span className="text-sm">Trang {page}/{pages}</span>
-    <button type="button" disabled={page >= pages} onClick={() => setPage(page + 1)} className="rounded-lg border bg-white p-2 disabled:opacity-40" aria-label="Trang sau"><ChevronRight className="w-4 h-4" /></button>
-  </div>;
+  const pagination = (pages: number) =>
+    pages > 1 && (
+      <div className="flex items-center gap-3 justify-center pt-4">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => setPage(page - 1)}
+          className="rounded-xl border border-[#E7E7EA] bg-white p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center disabled:opacity-40 hover:bg-[#F7F7F9] cursor-pointer"
+          aria-label="Trang trước"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-xs sm:text-sm font-bold text-[#5F6368]">
+          Trang {page}/{pages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= pages}
+          onClick={() => setPage(page + 1)}
+          className="rounded-xl border border-[#E7E7EA] bg-white p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center disabled:opacity-40 hover:bg-[#F7F7F9] cursor-pointer"
+          aria-label="Trang sau"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
 
   const renderError = errorMessage
     ? <InlineBanner variant="error" message={errorMessage} />
     : null;
 
-  return <div className="space-y-6">
-    {renderError}
-    {section === 'feed' && (
-      <>
-        <div className="rounded-3xl bg-[#18181B] p-6 text-white md:p-8">
-          <p className="text-sm text-red-300">Tiếp tục hành trình tiếng Trung</p>
-          <h1 className="mt-1 text-2xl font-black">Bài học của bạn</h1>
-          {dashboardQuery.data?.continueLearning?.lessonId?._id ? (
-            <button type="button" onClick={() => onSelectLesson(dashboardQuery.data!.continueLearning!.lessonId!._id)} className="mt-4 rounded-xl bg-[#B91B1C] px-4 py-2 text-sm font-bold">Tiếp tục: {dashboardQuery.data.continueLearning!.lessonId!.titleVi}</button>
-          ) : (
-            <p className="mt-3 text-sm text-neutral-300">Chọn một bài học đã xuất bản để bắt đầu.</p>
-          )}
-          {dashboardQuery.data && (
-            <div className="mt-5 flex flex-wrap gap-5 text-sm">
-              <span>{dashboardQuery.data.metrics.completedLessons} bài hoàn thành</span>
-              <span>{dashboardQuery.data.metrics.savedWords} từ đã lưu</span>
-              <span>{dashboardQuery.data.metrics.dueWords} từ cần ôn</span>
-            </div>
-          )}
-        </div>
-        <AIRecommendationSection onSelectLessonId={onSelectLesson} onOpenPreferences={onOpenPreferences} />
-      </>
-    )}
+  return (
+    <div className="space-y-6">
+      {renderError}
+      {section === 'feed' && (
+        <>
+          <div className="rounded-3xl bg-[#18181B] p-5 sm:p-6 md:p-8 text-white shadow-sm">
+            <p className="text-xs sm:text-sm text-red-300 font-semibold">Tiếp tục hành trình tiếng Trung</p>
+            <h1 className="mt-1 text-xl sm:text-2xl font-black">Bài học của bạn</h1>
+            {dashboardQuery.data?.continueLearning?.lessonId?._id ? (
+              <button
+                type="button"
+                onClick={() => onSelectLesson(dashboardQuery.data!.continueLearning!.lessonId!._id)}
+                className="mt-4 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] px-4 py-2.5 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+              >
+                Tiếp tục: {dashboardQuery.data.continueLearning!.lessonId!.titleVi}
+              </button>
+            ) : (
+              <p className="mt-3 text-xs sm:text-sm text-neutral-300">Chọn một bài học đã xuất bản để bắt đầu.</p>
+            )}
+            {dashboardQuery.data && (
+              <div className="mt-5 flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm text-neutral-300">
+                <span className="bg-white/10 px-3 py-1 rounded-full">{dashboardQuery.data.metrics.completedLessons} bài hoàn thành</span>
+                <span className="bg-white/10 px-3 py-1 rounded-full">{dashboardQuery.data.metrics.savedWords} từ đã lưu</span>
+                <span className="bg-white/10 px-3 py-1 rounded-full">{dashboardQuery.data.metrics.dueWords} từ cần ôn</span>
+              </div>
+            )}
+          </div>
+          <AIRecommendationSection onSelectLessonId={onSelectLesson} onOpenPreferences={onOpenPreferences} />
+        </>
+      )}
     {section === 'lessons' && (
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -275,7 +331,8 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
           onSelectLesson={onSelectLesson}
           onNavigateToLessons={() => onNavigateSection?.('lessons')}
       />
-      </Suspense>
-    )}
-  </div>;
+        </Suspense>
+      )}
+    </div>
+  );
 }

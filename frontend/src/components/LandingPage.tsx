@@ -140,7 +140,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
     <div className="relative min-h-[100dvh] bg-[#FFF9F5] text-[#18181B] selection:bg-[#B91B1C] selection:text-white font-sans overflow-x-hidden">
 
       {/* ── 1. PUBLIC HEADER ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 h-20 md:h-[88px] flex items-center justify-between px-6 md:px-12 bg-[#FFF9F5]/92 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all">
+      <header className="sticky top-0 z-50 h-16 sm:h-20 md:h-[88px] flex items-center justify-between px-4 sm:px-6 md:px-12 bg-[#FFF9F5]/92 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all safe-area-top">
         {/* Logo */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -150,7 +150,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           <img
             src="/assets/logo.png"
             alt="HanFlix Logo"
-            className="h-14 sm:h-16 md:h-[72px] lg:h-[76px] w-auto max-w-[280px] sm:max-w-[320px] md:max-w-[360px] object-contain hover:scale-105 transition-transform drop-shadow-sm"
+            className="h-9 sm:h-12 md:h-16 lg:h-[72px] w-auto max-w-[140px] sm:max-w-[220px] md:max-w-[320px] object-contain hover:scale-105 transition-transform drop-shadow-sm"
           />
         </button>
 
@@ -173,25 +173,26 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         </nav>
 
         {/* Header CTAs */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={onSignIn}
-            className="text-sm font-bold text-[#18181B]/80 hover:text-[#B91B1C] px-3 py-2 rounded-xl transition-colors cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-[#18181B]/80 hover:text-[#B91B1C] px-2.5 sm:px-3 py-2 rounded-xl transition-colors cursor-pointer"
           >
             Đăng nhập
           </button>
           <button
             onClick={onStartSurvey}
-            className="h-11 px-5 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs md:text-sm font-bold flex items-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer"
+            className="h-9 sm:h-11 px-3.5 sm:px-5 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs md:text-sm font-bold flex items-center gap-1.5 sm:gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer shrink-0"
           >
-            <span>Tìm lộ trình của tôi</span>
-            <ArrowRight className="w-4 h-4" />
+            <span className="hidden xs:inline sm:inline">Tìm lộ trình của tôi</span>
+            <span className="inline xs:hidden sm:hidden">Lộ trình</span>
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </header>
 
       {/* ── 2. HERO SECTION WITH THREE.JS LIVE AMBIENCE ─────────────── */}
-      <section className="relative min-h-[calc(100vh-80px)] flex items-center py-12 md:py-20 px-6 md:px-12 overflow-hidden">
+      <section className="relative min-h-[calc(100vh-80px)] flex items-center py-8 sm:py-12 md:py-20 px-4 sm:px-6 md:px-12 overflow-hidden">
         
         {/* Three.js Interactive 3D Canvas (Lanterns swinging, cherry blossoms falling, embers floating with mouse parallax) */}
         <OrientalThreeCanvas intensity="hero" />
@@ -200,39 +201,39 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         <div className="absolute top-10 left-1/4 w-[500px] h-[500px] bg-[#FDECE5]/70 rounded-full blur-[120px] pointer-events-none -z-10" />
         <div className="absolute bottom-10 right-10 w-[450px] h-[450px] bg-[#FFF2DE]/70 rounded-full blur-[100px] pointer-events-none -z-10" />
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           
           {/* Left Hero Column: Typography & CTAs (50% width) */}
           <div className="flex flex-col items-start">
             
             {/* Top Tag */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] text-xs font-bold tracking-wide uppercase mb-6 shadow-xs backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] text-xs font-bold tracking-wide uppercase mb-4 sm:mb-6 shadow-xs backdrop-blur-sm">
               <span className="text-sm">🏮</span>
               <span>Học Tiếng Trung Qua Phim & Tình Huống</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#B91B1C] leading-[1.12] mb-6 font-fraunces tracking-tight">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#B91B1C] leading-[1.14] mb-4 sm:mb-6 font-fraunces tracking-tight text-clamp-hero">
               Tiếng Trung Gần Hơn <br />
               <span className="text-[#18181B]">Qua Mỗi Câu Chuyện</span>
             </h1>
 
             {/* Highlight Badge */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-[#FFF3DE] border border-[#E7A92F]/40 text-[#B7791F] text-sm font-semibold mb-6 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-[#E7A92F] animate-ping" />
+            <div className="inline-flex items-center gap-2.5 px-3.5 sm:px-4 py-2 rounded-2xl bg-[#FFF3DE] border border-[#E7A92F]/40 text-[#B7791F] text-xs sm:text-sm font-semibold mb-4 sm:mb-6 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#E7A92F] animate-ping shrink-0" />
               <span>Chỉ 15 phút mỗi ngày · Phụ đề 3 lớp Hán - Pinyin - Việt</span>
             </div>
 
             {/* Value Proposition */}
-            <p className="text-base sm:text-lg text-[#5F6368] mb-10 max-w-xl leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-[#5F6368] mb-8 sm:mb-10 max-w-xl leading-relaxed">
               Phương pháp học ngôn ngữ tự nhiên: xem trích đoạn phim 1–5 phút đời thực, chạm tra từ tức thì, luyện nói cùng AI và ghi nhớ lâu dài với thuật toán lặp lại ngắt quãng (SRS).
             </p>
 
             {/* Action Buttons (Strictly NO pricing tags) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto mb-10">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto mb-8 sm:mb-10">
               <button
                 onClick={onStartSurvey}
-                className="h-14 px-8 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-base font-bold flex items-center justify-center gap-3 glow-crimson transition-all active:scale-[0.98] cursor-pointer"
+                className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-sm sm:text-base font-bold flex items-center justify-center gap-3 glow-crimson transition-all active:scale-[0.98] cursor-pointer"
               >
                 <span>Tìm Lộ Trình Của Tôi</span>
                 <ArrowRight className="w-5 h-5" />
@@ -240,7 +241,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
               <button
                 onClick={() => onViewSample(SAMPLE_LESSONS[0].id)}
-                className="h-14 px-8 rounded-full border-2 border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] hover:text-[#975A16] text-base font-bold flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer"
+                className="h-12 sm:h-14 px-6 sm:px-8 rounded-full border-2 border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] hover:text-[#975A16] text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-full bg-[#D7AF70]/20 flex items-center justify-center">
                   <Play className="w-3.5 h-3.5 fill-[#B7791F]" />
@@ -268,21 +269,21 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           </div>
 
           {/* Right Hero Column: Liberated BaoBao Panda Floating on Clouds (50% width) */}
-          <div className="relative flex items-center justify-center min-h-[480px] lg:min-h-[540px] group">
+          <div className="relative flex items-center justify-center min-h-[360px] sm:min-h-[460px] lg:min-h-[540px] group">
             
             {/* Luminous Golden Sun / Halo behind the Panda */}
-            <div className="absolute inset-0 m-auto w-[380px] sm:w-[460px] h-[380px] sm:h-[460px] rounded-full bg-gradient-to-tr from-[#FFF0DE] via-[#FDECE5]/70 to-transparent blur-3xl -z-10 pointer-events-none" />
+            <div className="absolute inset-0 m-auto w-[280px] sm:w-[420px] md:w-[460px] h-[280px] sm:h-[420px] md:h-[460px] rounded-full bg-gradient-to-tr from-[#FFF0DE] via-[#FDECE5]/70 to-transparent blur-3xl -z-10 pointer-events-none" />
 
             {/* Floating Chinese Calligraphy Seal in Background */}
-            <div className="absolute -top-6 left-6 text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
+            <div className="absolute -top-6 left-6 text-7xl sm:text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
               学
             </div>
-            <div className="absolute -bottom-8 right-6 text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
+            <div className="absolute -bottom-8 right-6 text-7xl sm:text-9xl font-calligraphy text-[#B91B1C]/5 select-none pointer-events-none">
               汉
             </div>
 
             {/* Dynamic Animated Cloud Layer 1: Back Clouds (Slow Drift) */}
-            <div className="absolute top-8 -left-8 w-44 opacity-75 animate-cloud-slow pointer-events-none">
+            <div className="absolute top-8 -left-8 w-32 sm:w-44 opacity-75 animate-cloud-slow pointer-events-none">
               <svg viewBox="0 0 100 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-sm">
                 <path d="M20 35C12 35 5 28 5 20C5 12 12 5 22 5C26 2 32 0 38 0C48 0 56 6 58 15C63 12 70 12 75 16C82 16 88 22 88 30C88 35 83 35 80 35Z" fill="#FFF2E2" />
                 <path d="M22 35C15 35 10 30 10 24C10 18 16 12 24 12C28 10 32 8 38 8C46 8 52 13 54 20C58 18 64 18 68 21C74 21 80 25 80 32C80 35 76 35 74 35Z" fill="#FFFFFF" fillOpacity="0.8" />
@@ -290,7 +291,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </div>
 
             {/* Dynamic Animated Cloud Layer 2: Right Flank Cloud */}
-            <div className="absolute top-24 -right-10 w-52 opacity-80 animate-cloud-reverse pointer-events-none">
+            <div className="absolute top-24 -right-10 w-36 sm:w-52 opacity-80 animate-cloud-reverse pointer-events-none">
               <svg viewBox="0 0 120 45" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full drop-shadow-sm">
                 <path d="M25 40C15 40 8 32 8 22C8 13 16 6 27 6C32 2 40 0 48 0C60 0 70 7 73 17C79 14 87 14 93 18C102 18 110 25 110 34C110 40 104 40 100 40Z" fill="#FFF3DE" />
                 <path d="M28 40C20 40 14 34 14 27C14 20 21 14 30 14C35 12 40 10 48 10C57 10 65 15 67 23C73 21 80 21 85 24C92 24 98 29 98 37C98 40 94 40 90 40Z" fill="#FFFFFF" fillOpacity="0.9" />
@@ -299,15 +300,15 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
             {/* Hanging Lantern with Sway Animation */}
             <div className="absolute top-2 right-4 animate-lantern z-20 pointer-events-none">
-              <div className="w-0.5 h-10 bg-[#8B5A2B] mx-auto" />
-              <div className="w-9 h-11 rounded-full bg-gradient-to-b from-[#E53935] to-[#B91B1C] shadow-lg border border-[#E7A92F] flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-0.5 h-8 sm:h-10 bg-[#8B5A2B] mx-auto" />
+              <div className="w-8 sm:w-9 h-10 sm:h-11 rounded-full bg-gradient-to-b from-[#E53935] to-[#B91B1C] shadow-lg border border-[#E7A92F] flex items-center justify-center text-xs font-bold text-white">
                 春
               </div>
-              <div className="w-0.5 h-5 bg-[#E7A92F] mx-auto" />
+              <div className="w-0.5 h-4 sm:h-5 bg-[#E7A92F] mx-auto" />
             </div>
 
             {/* MAIN PANDA MASCOT (UNBOXED, FREELY SITTING ON CLOUDS) */}
-            <div className="relative z-10 w-full max-w-[460px] animate-mascot-float flex flex-col items-center">
+            <div className="relative z-10 w-full max-w-[280px] sm:max-w-[380px] md:max-w-[460px] animate-mascot-float flex flex-col items-center">
               <img
                 src="/assets/panda-mascot-transparent.png"
                 alt="Gấu Trúc Bảo Bảo - Linh vật HanFlix"
@@ -315,7 +316,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               />
 
               {/* Dynamic Animated Cloud Layer 3: Billowing Cloud Pedestal Under Panda's Seat */}
-              <div className="w-full -mt-16 sm:-mt-20 opacity-90 animate-cloud pointer-events-none flex justify-center">
+              <div className="w-full -mt-12 sm:-mt-16 md:-mt-20 opacity-90 animate-cloud pointer-events-none flex justify-center">
                 <svg viewBox="0 0 260 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[85%] drop-shadow-md">
                   <path d="M40 55C20 55 5 42 5 28C5 14 20 5 38 5C45 2 56 0 68 0C85 0 100 8 105 20C115 15 130 15 140 22C155 12 175 12 188 20C198 16 210 16 220 22C235 22 250 32 250 45C250 55 240 55 230 55Z" fill="#FFF0DB" />
                   <path d="M45 55C30 55 18 45 18 33C18 21 30 12 45 12C52 10 60 8 70 8C84 8 96 14 100 24C110 20 122 20 130 26C144 18 160 18 172 25C182 22 192 22 200 27C214 27 228 35 228 47C228 55 220 55 210 55Z" fill="#FFFFFF" fillOpacity="0.9" />
@@ -324,16 +325,16 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </div>
 
             {/* Floating Speech Bubble from BaoBao */}
-            <div className="absolute bottom-4 left-2 sm:left-4 z-20 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-[#E7A92F]/40 shadow-xl flex items-center gap-2.5 animate-float">
-              <span className="text-2xl">🐼</span>
+            <div className="absolute bottom-2 sm:bottom-4 left-1 sm:left-4 z-20 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-[#E7A92F]/40 shadow-xl flex items-center gap-2 sm:gap-2.5 animate-float">
+              <span className="text-xl sm:text-2xl">🐼</span>
               <div>
                 <div className="text-xs font-bold text-[#B91B1C]">Gấu Trúc Bảo Bảo</div>
-                <div className="text-[11px] text-[#5F6368] font-medium">你好！Cùng học tiếng Trung nào!</div>
+                <div className="text-[10px] sm:text-[11px] text-[#5F6368] font-medium">你好！Cùng học tiếng Trung nào!</div>
               </div>
             </div>
 
             {/* Floating Celestial Badge */}
-            <div className="absolute top-4 left-2 sm:left-6 z-20 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-[#8FB9A7]/50 shadow-md flex items-center gap-1.5 text-xs font-bold text-[#2F6E62]">
+            <div className="absolute top-2 sm:top-4 left-1 sm:left-6 z-20 px-3 py-1 sm:py-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-[#8FB9A7]/50 shadow-md flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-[#2F6E62]">
               <span>🏮</span>
               <span>Khởi đầu cùng HSK 1</span>
             </div>
@@ -344,43 +345,43 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
       </section>
 
       {/* ── 3. INTERACTIVE 4-STEP METHOD & VIDEO SUBTITLE DEMO ───────── */}
-      <section id="method" className="py-24 px-6 md:px-12 bg-white relative">
+      <section id="method" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
         <div className="max-w-7xl mx-auto">
           
           {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8FB9A7]/15 text-[#2F6E62] text-xs font-bold uppercase tracking-wider mb-3">
               Phương Pháp Đột Phá
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-3 sm:mb-4">
               4 Bước Làm Chủ Giao Tiếp Tự Nhiên
             </h2>
-            <p className="text-[#5F6368] text-base md:text-lg">
+            <p className="text-[#5F6368] text-sm sm:text-base md:text-lg">
               Không học vẹt danh sách từ vựng khô khan. Bạn học trọn vẹn cảm xúc và phản xạ từ những thước phim sinh động.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
             
             {/* Interactive Subtitle Simulation Player (Left 50% - Expanded to match Right Height) */}
-            <div className="bg-[#FFF9F5] rounded-3xl p-6 sm:p-8 border border-[#F2E4D8] shadow-lg relative flex flex-col justify-between h-full">
+            <div className="bg-[#FFF9F5] rounded-3xl p-4 sm:p-6 md:p-8 border border-[#F2E4D8] shadow-lg relative flex flex-col justify-between h-full">
               
               {/* Window Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#E53935]" />
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#E7A92F]" />
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#8FB9A7]" />
-                  <span className="text-xs font-bold text-[#5F6368] ml-2">Trình xem phụ đề thông minh HanFlix</span>
-                </div>
+              <div className="flex items-center justify-between mb-4 sm:mb-5">
                 <div className="flex items-center gap-2">
-                  <span className="bg-[#8FB9A7]/15 text-[#2F6E62] px-2.5 py-1 rounded-full text-[11px] font-bold">HSK 3</span>
-                  <span className="bg-white px-2.5 py-1 rounded-full border border-[#E7E7EA] text-[11px] font-bold text-[#B91B1C]">HD 1080p</span>
+                  <div className="w-3 h-3 rounded-full bg-[#E53935]" />
+                  <div className="w-3 h-3 rounded-full bg-[#E7A92F]" />
+                  <div className="w-3 h-3 rounded-full bg-[#8FB9A7]" />
+                  <span className="text-[11px] sm:text-xs font-bold text-[#5F6368] ml-1.5 truncate max-w-[160px] sm:max-w-none">Trình xem phụ đề HanFlix</span>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="bg-[#8FB9A7]/15 text-[#2F6E62] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-bold">HSK 3</span>
+                  <span className="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-[#E7E7EA] text-[10px] sm:text-[11px] font-bold text-[#B91B1C]">HD 1080p</span>
                 </div>
               </div>
 
               {/* Video Mockup Screen - Expanded for Rich Immersion */}
-              <div className="relative flex-1 min-h-[340px] sm:min-h-[400px] rounded-2xl overflow-hidden bg-[#18181B] shadow-inner mb-5 flex flex-col justify-between p-5 group">
+              <div className="relative flex-1 min-h-[260px] sm:min-h-[340px] md:min-h-[400px] rounded-2xl overflow-hidden bg-[#18181B] shadow-inner mb-4 sm:mb-5 flex flex-col justify-between p-3 sm:p-5 group">
                 <img
                   src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1000&h=650&fit=crop&auto=format"
                   alt="Tình huống giao tiếp phim Trung Quốc"
@@ -394,37 +395,37 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                 />
 
                 {/* Top overlay controls */}
-                <div className="relative z-10 flex items-center justify-between text-white/90">
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#8FB9A7] animate-ping" />
-                    Tình huống: Gọi món ở nhà hàng Bắc Kinh
+                <div className="relative z-10 flex items-center justify-between text-white/90 gap-2">
+                  <span className="text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1.5 sm:gap-2 truncate">
+                    <span className="w-2 h-2 rounded-full bg-[#8FB9A7] animate-ping shrink-0" />
+                    <span className="truncate">Tình huống: Gọi món ở nhà hàng</span>
                   </span>
                   <button
                     onClick={() => setActiveCueIndex((prev) => (prev === 0 ? 1 : 0))}
-                    className="px-3 py-1.5 rounded-lg bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[#B91B1C] hover:bg-[#A3181A] text-white text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
                   >
-                    Đổi câu thoại mẫu ↻
+                    Đổi câu ↻
                   </button>
                 </div>
 
                 {/* Center Subtitle & Interactive Vocabulary Area */}
-                <div className="relative z-10 text-center bg-black/80 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/15 shadow-2xl">
+                <div className="relative z-10 text-center bg-black/80 backdrop-blur-md rounded-2xl p-3 sm:p-5 border border-white/15 shadow-2xl">
                   
                   {/* Pinyin Layer */}
                   {showPinyin && (
-                    <div className="text-sm sm:text-base font-mono text-[#E7A92F] font-semibold mb-2 tracking-wide">
+                    <div className="text-xs sm:text-sm md:text-base font-mono text-[#E7A92F] font-semibold mb-1.5 sm:mb-2 tracking-wide">
                       {activeCue.pinyin}
                     </div>
                   )}
 
                   {/* Hanzi Interactive Tokens Layer */}
                   {showZh && (
-                    <div className="text-2xl sm:text-3xl font-black text-white tracking-wider flex flex-wrap items-center justify-center gap-1.5 font-hanzi my-1">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-wider flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 font-hanzi my-1">
                       {activeCue.tokens.map((token, idx) => (
                         <button
                           key={idx}
                           onClick={() => setSelectedToken(token.vi ? token : null)}
-                          className={`px-1.5 py-0.5 rounded-lg transition-all cursor-pointer ${
+                          className={`px-1 sm:px-1.5 py-0.5 rounded-lg transition-all cursor-pointer ${
                             token.vi
                               ? 'hover:bg-[#B91B1C] hover:text-white underline decoration-[#E7A92F] decoration-2 underline-offset-4'
                               : 'cursor-default'
@@ -439,14 +440,14 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
                   {/* Vietnamese Meaning Layer */}
                   {showVi && (
-                    <div className="text-xs sm:text-sm text-white/85 font-medium mt-2">
+                    <div className="text-xs sm:text-sm text-white/85 font-medium mt-1.5 sm:mt-2">
                       {activeCue.vi}
                     </div>
                   )}
 
                   {/* Hint */}
                   <div className="text-[10px] text-white/50 mt-2 italic">
-                    💡 Chạm vào bất kỳ chữ Hán nào để xem nghĩa và nghe phát âm tức thì
+                    💡 Chạm vào bất kỳ chữ Hán nào để tra từ và nghe phát âm
                   </div>
                 </div>
 
@@ -465,18 +466,18 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
               {/* 1-Tap Dictionary Interactive Popup Demo */}
               {selectedToken && (
-                <div className="mb-4 p-4 rounded-2xl bg-white border-2 border-[#E7A92F] shadow-lg flex items-center justify-between animate-float">
+                <div className="mb-4 p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-[#E7A92F] shadow-lg flex items-center justify-between animate-float">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-black text-[#B91B1C] font-hanzi">{selectedToken.text}</span>
+                      <span className="text-xl sm:text-2xl font-black text-[#B91B1C] font-hanzi">{selectedToken.text}</span>
                       <span className="text-xs font-mono text-[#E7A92F] font-bold">[{selectedToken.pinyin}]</span>
                     </div>
                     <div className="text-xs text-[#18181B] font-semibold mt-0.5">Nghĩa: {selectedToken.vi}</div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => alert(`Phát âm từ: ${selectedToken.text}`)}
-                      className="p-2.5 rounded-full bg-[#FFF3DE] text-[#B7791F] hover:bg-[#E7A92F] hover:text-white transition-colors cursor-pointer"
+                      className="p-2 sm:p-2.5 rounded-full bg-[#FFF3DE] text-[#B7791F] hover:bg-[#E7A92F] hover:text-white transition-colors cursor-pointer"
                       title="Nghe phát âm"
                     >
                       <Volume2 className="w-4 h-4" />
@@ -485,19 +486,19 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                       onClick={() => setSelectedToken(null)}
                       className="text-xs text-[#8B9097] hover:text-[#B91B1C] font-bold px-2 py-1 cursor-pointer"
                     >
-                      Đóng ✕
+                      ✕
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Subtitle Layers Toggles Bottom Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#F2E4D8]">
-                <div className="text-xs font-bold text-[#5F6368]">Hiển thị các tầng phụ đề:</div>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-4 border-t border-[#F2E4D8]">
+                <div className="text-xs font-bold text-[#5F6368]">Hiển thị tầng phụ đề:</div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     onClick={() => setShowZh(!showZh)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       showZh ? 'bg-[#B91B1C] text-white shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
                     }`}
                   >
@@ -505,7 +506,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                   </button>
                   <button
                     onClick={() => setShowPinyin(!showPinyin)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       showPinyin ? 'bg-[#E7A92F] text-[#18181B] shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
                     }`}
                   >
@@ -513,7 +514,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                   </button>
                   <button
                     onClick={() => setShowVi(!showVi)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       showVi ? 'bg-[#8FB9A7] text-white shadow-xs' : 'bg-white border border-[#E7E7EA] text-[#5F6368]'
                     }`}
                   >
@@ -525,22 +526,22 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </div>
 
             {/* Method Steps List (Right 50% - Equal Height & Balanced Spacing) */}
-            <div className="flex flex-col justify-between h-full space-y-4">
+            <div className="flex flex-col justify-between h-full space-y-3 sm:space-y-4">
               {METHOD_STEPS.map((step) => {
                 const IconComponent = step.icon;
                 return (
                   <div
                     key={step.n}
-                    className="p-5 sm:p-6 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] hover:border-[#B91B1C]/40 hover:shadow-md transition-all group flex items-start gap-4 flex-1"
+                    className="p-4 sm:p-5 md:p-6 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] hover:border-[#B91B1C]/40 hover:shadow-md transition-all group flex items-start gap-3 sm:gap-4 flex-1"
                   >
-                    <div className="w-13 h-13 rounded-2xl bg-white border border-[#F2E4D8] group-hover:bg-[#B91B1C] group-hover:text-white group-hover:border-[#B91B1C] flex flex-col items-center justify-center shrink-0 transition-all shadow-xs">
-                      <span className="text-sm font-black text-[#8FB9A7] group-hover:text-[#FFF9F5] font-fraunces leading-none">
+                    <div className="w-11 sm:w-13 h-11 sm:h-13 rounded-2xl bg-white border border-[#F2E4D8] group-hover:bg-[#B91B1C] group-hover:text-white group-hover:border-[#B91B1C] flex flex-col items-center justify-center shrink-0 transition-all shadow-xs">
+                      <span className="text-xs sm:text-sm font-black text-[#8FB9A7] group-hover:text-[#FFF9F5] font-fraunces leading-none">
                         {step.n}
                       </span>
-                      <IconComponent className="w-4 h-4 text-[#B91B1C] group-hover:text-white mt-1 transition-colors" />
+                      <IconComponent className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#B91B1C] group-hover:text-white mt-1 transition-colors" />
                     </div>
                     <div>
-                      <h3 className="text-base sm:text-lg font-bold text-[#18181B] group-hover:text-[#B91B1C] transition-colors mb-1.5">
+                      <h3 className="text-sm sm:text-base md:text-lg font-bold text-[#18181B] group-hover:text-[#B91B1C] transition-colors mb-1">
                         {step.title}
                       </h3>
                       <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed">
@@ -558,27 +559,27 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
       </section>
 
       {/* ── 4. FEATURED LESSON CATALOG (HSK 1 - 6) ───────────────────── */}
-      <section id="lessons" className="py-24 px-6 md:px-12 bg-[#FFF9F5] relative">
+      <section id="lessons" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-[#FFF9F5] relative">
         <div className="max-w-7xl mx-auto">
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 gap-6">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E7A92F]/15 text-[#B7791F] text-xs font-bold uppercase tracking-wider mb-3">
                 Kho Thư Viện Video
               </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-3">
+              <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-2 sm:mb-3">
                 Bài Học Mẫu Thực Tế
               </h2>
-              <p className="text-[#5F6368] text-base">
+              <p className="text-[#5F6368] text-sm sm:text-base">
                 Trải nghiệm những thước phim ngắn giúp bạn ghi nhớ sâu câu từ thông dụng.
               </p>
             </div>
 
             {/* Category Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-full border border-[#F2E4D8] shadow-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-white p-1.5 rounded-full border border-[#F2E4D8] shadow-xs overflow-x-auto no-scrollbar max-w-full flex-nowrap shrink-0">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'all'
                     ? 'bg-[#B91B1C] text-white shadow-xs'
                     : 'text-[#5F6368] hover:text-[#B91B1C]'
@@ -588,7 +589,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               </button>
               <button
                 onClick={() => setActiveTab('basic')}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'basic'
                     ? 'bg-[#B91B1C] text-white shadow-xs'
                     : 'text-[#5F6368] hover:text-[#B91B1C]'
@@ -598,7 +599,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               </button>
               <button
                 onClick={() => setActiveTab('drama')}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'drama'
                     ? 'bg-[#B91B1C] text-white shadow-xs'
                     : 'text-[#5F6368] hover:text-[#B91B1C]'
@@ -608,7 +609,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               </button>
               <button
                 onClick={() => setActiveTab('advanced')}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === 'advanced'
                     ? 'bg-[#B91B1C] text-white shadow-xs'
                     : 'text-[#5F6368] hover:text-[#B91B1C]'
@@ -620,7 +621,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           </div>
 
           {/* Video Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {filteredLessons.slice(0, 6).map((lesson) => (
               <div
                 key={lesson.id}
@@ -695,26 +696,26 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
       </section>
 
       {/* ── 5. LEARNER TESTIMONIALS ──────────────────────────────────── */}
-      <section id="testimonials" className="py-24 px-6 md:px-12 bg-white relative">
+      <section id="testimonials" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
         <div className="max-w-7xl mx-auto">
           
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#B91B1C]/10 text-[#B91B1C] text-xs font-bold uppercase tracking-wider mb-3">
               Cảm Nhận Thực Tế
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-3 sm:mb-4">
               Học Viên Nói Gì Về HanFlix?
             </h2>
-            <p className="text-[#5F6368] text-base">
+            <p className="text-[#5F6368] text-sm sm:text-base">
               Hàng ngàn bạn trẻ và người đi làm đã chinh phục tiếng Trung tự tin qua phim ảnh.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {TESTIMONIALS.map((t, idx) => (
               <div
                 key={idx}
-                className="p-8 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                className="p-6 sm:p-8 rounded-3xl bg-[#FFF9F5] border border-[#F2E4D8] shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center gap-1 text-[#E7A92F] mb-4">
@@ -752,31 +753,31 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
       </section>
 
       {/* ── 6. FAQ & BAOBAO ASSISTANT SECTION ──────────────────────── */}
-      <section id="faq" className="py-24 px-6 md:px-12 bg-[#FFF9F5] relative overflow-hidden">
+      <section id="faq" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-[#FFF9F5] relative overflow-hidden">
         {/* Subtle decorative background watermark */}
-        <div className="absolute -top-10 -left-10 text-[180px] font-calligraphy text-[#B91B1C]/3 select-none pointer-events-none">
+        <div className="absolute -top-10 -left-10 text-[120px] sm:text-[180px] font-calligraphy text-[#B91B1C]/3 select-none pointer-events-none">
           答
         </div>
 
         <div className="max-w-7xl mx-auto">
           
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] text-xs font-bold uppercase tracking-wider mb-3">
               <span>🏮</span>
               <span>Giải Đáp Tận Tâm</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-4">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#18181B] font-fraunces mb-3 sm:mb-4">
               Câu Hỏi Thường Gặp
             </h2>
-            <p className="text-[#5F6368] text-base">
+            <p className="text-[#5F6368] text-sm sm:text-base">
               Tất cả những điều bạn cần biết trước khi bắt đầu hành trình cùng HanFlix.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 items-stretch">
             
             {/* FAQ Accordion List (50% width) */}
-            <div className="space-y-4 flex flex-col justify-between">
+            <div className="space-y-3.5 sm:space-y-4 flex flex-col justify-between">
               {FAQS.map((faq, i) => {
                 const isOpen = openFaq === i;
                 const num = `0${i + 1}`;
@@ -792,18 +793,18 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                     <button
                       onClick={() => setOpenFaq(isOpen ? null : i)}
                       aria-expanded={isOpen}
-                      className="w-full px-5 py-4.5 flex items-center justify-between text-left gap-3 cursor-pointer group"
+                      className="w-full px-4 sm:px-5 py-4 sm:py-4.5 flex items-center justify-between text-left gap-3 cursor-pointer group"
                     >
-                      <div className="flex items-center gap-3.5">
-                        <span className="w-8 h-8 rounded-xl bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] flex items-center justify-center font-fraunces text-xs font-black shrink-0">
+                      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                        <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#8FB9A7]/15 border border-[#8FB9A7]/30 text-[#2F6E62] flex items-center justify-center font-fraunces text-xs font-black shrink-0">
                           {num}
                         </span>
-                        <span className="font-bold text-[#18181B] text-base group-hover:text-[#B91B1C] transition-colors leading-snug">
+                        <span className="font-bold text-[#18181B] text-sm sm:text-base group-hover:text-[#B91B1C] transition-colors leading-snug">
                           {faq.q}
                         </span>
                       </div>
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0 font-mono text-base font-bold ${
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all shrink-0 font-mono text-base font-bold ${
                           isOpen
                             ? 'bg-[#B91B1C] text-white rotate-180'
                             : 'bg-[#FFF9F5] border border-[#F2E4D8] text-[#E7A92F] group-hover:border-[#E7A92F]'
@@ -813,7 +814,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                       </div>
                     </button>
                     {isOpen && (
-                      <div className="px-5 pb-5 pt-2 text-sm text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/60 ml-11">
+                      <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2 text-xs sm:text-sm text-[#5F6368] leading-relaxed border-t border-[#F2E4D8]/60 ml-9 sm:ml-11">
                         <p>{faq.a}</p>
                       </div>
                     )}
@@ -823,7 +824,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </div>
 
             {/* BaoBao Panda Assistant Help Card (50% width, balanced height) */}
-            <div className="rounded-3xl bg-gradient-to-b from-white via-[#FFFDF9] to-[#FFF3DE] border-2 border-[#E7A92F]/40 p-8 shadow-lg relative overflow-hidden flex flex-col justify-between text-center h-full">
+            <div className="rounded-3xl bg-gradient-to-b from-white via-[#FFFDF9] to-[#FFF3DE] border-2 border-[#E7A92F]/40 p-6 sm:p-8 shadow-lg relative overflow-hidden flex flex-col justify-between text-center h-full">
               
               {/* Decorative corner lantern */}
               <div className="absolute top-0 right-6 animate-lantern pointer-events-none">
@@ -835,7 +836,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
               <div>
                 {/* Avatar */}
-                <div className="relative w-28 h-28 rounded-full p-1 bg-white border-2 border-[#E7A92F] shadow-md mx-auto mb-5 group">
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 bg-white border-2 border-[#E7A92F] shadow-md mx-auto mb-4 sm:mb-5 group">
                   <img
                     src="/assets/panda-mascot-transparent.png"
                     alt="Trợ lý Bảo Bảo"
@@ -848,11 +849,11 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                   <span>🏮 Trợ Lý Đồng Hành 24/7</span>
                 </div>
 
-                <h3 className="text-2xl font-bold text-[#18181B] font-fraunces mb-2.5">
+                <h3 className="text-xl sm:text-2xl font-bold text-[#18181B] font-fraunces mb-2">
                   Bạn Cần Tư Vấn Riêng?
                 </h3>
 
-                <p className="text-sm text-[#5F6368] leading-relaxed max-w-md mx-auto mb-6">
+                <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed max-w-md mx-auto mb-5 sm:mb-6">
                   Chưa biết trình độ của mình ở đâu? Hãy để Gấu Trúc Bảo Bảo gợi ý lộ trình phù hợp qua 6 câu hỏi ngắn nhé!
                 </p>
               </div>
@@ -860,7 +861,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               <div>
                 <button
                   onClick={onStartSurvey}
-                  className="w-full py-4 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-sm flex items-center justify-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer mb-3.5"
+                  className="w-full py-3.5 sm:py-4 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 glow-crimson transition-all active:scale-[0.98] cursor-pointer mb-3"
                 >
                   <span>Tìm Lộ Trình Của Tôi</span>
                   <ArrowRight className="w-4 h-4" />
@@ -868,12 +869,12 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
                 <button
                   onClick={() => onViewSample(SAMPLE_LESSONS[0].id)}
-                  className="w-full py-3.5 px-6 rounded-full border-2 border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] font-bold text-xs md:text-sm transition-colors cursor-pointer mb-5"
+                  className="w-full py-3 sm:py-3.5 px-6 rounded-full border-2 border-[#D7AF70] hover:bg-[#FFF3DE] text-[#B7791F] font-bold text-xs sm:text-sm transition-colors cursor-pointer mb-4 sm:mb-5"
                 >
                   Trải nghiệm bài học mẫu ngay
                 </button>
 
-                <div className="pt-4 border-t border-[#F2E4D8] w-full flex items-center justify-center gap-6 text-xs font-semibold text-[#8B9097]">
+                <div className="pt-4 border-t border-[#F2E4D8] w-full flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[11px] sm:text-xs font-semibold text-[#8B9097]">
                   <span className="flex items-center gap-1 text-[#2F6E62]">✓ Miễn phí 100%</span>
                   <span className="flex items-center gap-1 text-[#2F6E62]">✓ Kết quả sau 2 phút</span>
                   <span className="flex items-center gap-1 text-[#2F6E62]">✓ Lộ trình chuẩn HSK</span>
@@ -887,9 +888,8 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         </div>
       </section>
 
-
       {/* ── 8. LUXURY ORIENTAL FOOTER ───────────────────────────────── */}
-      <footer className="relative bg-[#FFF9F5] border-t-2 border-[#F2E4D8] pt-16 pb-12 px-6 md:px-12 overflow-hidden">
+      <footer className="relative bg-[#FFF9F5] border-t-2 border-[#F2E4D8] pt-12 sm:pt-16 pb-12 px-4 sm:px-6 md:px-12 overflow-hidden">
         
         {/* Architectural Pagoda Eaves Silhouette Top Transition */}
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-72 h-5 flex items-center justify-center pointer-events-none">
@@ -902,23 +902,23 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         <div className="max-w-7xl mx-auto">
           
           {/* Main Footer Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12 border-b border-[#F2E4D8]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-10 sm:pb-12 border-b border-[#F2E4D8]">
             
             {/* Col 1: Brand & Philosophy (4 cols) */}
-            <div className="lg:col-span-4">
-              <div className="mb-6">
+            <div className="sm:col-span-2 lg:col-span-4">
+              <div className="mb-4 sm:mb-6">
                 <img
                   src="/assets/logo.png"
                   alt="HanFlix Logo"
-                  className="h-20 sm:h-24 md:h-28 w-auto max-w-[320px] md:max-w-[380px] object-contain"
+                  className="h-16 sm:h-20 md:h-24 w-auto max-w-[220px] sm:max-w-[280px] object-contain"
                 />
               </div>
               
-              <p className="text-sm text-[#5F6368] leading-relaxed mb-6 max-w-sm">
+              <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed mb-5 sm:mb-6 max-w-sm">
                 Nền tảng học tiếng Trung qua phim ảnh và ngữ cảnh thực tế hàng đầu, kết hợp phụ đề 3 lớp thông minh và thuật toán ghi nhớ Spaced Repetition.
               </p>
 
-              <div className="flex items-center gap-3 text-xs font-bold text-[#8FB9A7]">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-[#8FB9A7]">
                 <span className="px-2.5 py-1 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30">HSK 1 - 6</span>
                 <span className="px-2.5 py-1 rounded-full bg-[#E7A92F]/15 border border-[#E7A92F]/30 text-[#B7791F]">AI Pronounce</span>
                 <span className="px-2.5 py-1 rounded-full bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C]">SRS Method</span>
@@ -927,11 +927,11 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
             {/* Col 2: Khóa học (2 cols) */}
             <div className="lg:col-span-2">
-              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-3 sm:mb-4 flex items-center gap-1.5">
                 <span className="text-[#8FB9A7]">🎋</span>
                 <span>Khóa Học</span>
               </h4>
-              <ul className="space-y-2.5 text-sm text-[#5F6368]">
+              <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
                 <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 1 - 2 Cơ bản</a></li>
                 <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 3 - 4 Phim ảnh</a></li>
                 <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 5 - 6 Chuyên sâu</a></li>
@@ -942,11 +942,11 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
 
             {/* Col 3: Phương pháp (2 cols) */}
             <div className="lg:col-span-2">
-              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-3 sm:mb-4 flex items-center gap-1.5">
                 <span className="text-[#8FB9A7]">🎋</span>
                 <span>Phương Pháp</span>
               </h4>
-              <ul className="space-y-2.5 text-sm text-[#5F6368]">
+              <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
                 <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phụ đề 3 tầng</a></li>
                 <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Tra từ 1-chạm</a></li>
                 <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phản xạ cùng AI</a></li>
@@ -956,16 +956,16 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             </div>
 
             {/* Col 4: Bản tin & Nhận tài liệu (4 cols) */}
-            <div className="lg:col-span-4">
+            <div className="sm:col-span-2 lg:col-span-4">
               <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <span className="text-[#B91B1C]">📬</span>
                 <span>Bản Tin Văn Hóa & Từ Vựng</span>
               </h4>
-              <p className="text-xs text-[#5F6368] mb-4">
+              <p className="text-xs text-[#5F6368] mb-3 sm:mb-4">
                 Nhận trích đoạn phim hay và 5 từ vựng đắt giá mỗi sáng thứ Hai.
               </p>
 
-              <form onSubmit={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký nhận bản tin HanFlix!'); }} className="flex gap-2">
+              <form onSubmit={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký nhận bản tin HanFlix!'); }} className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="email"
                   required
@@ -974,16 +974,16 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-[#E7A92F] hover:bg-[#D7AF70] text-[#18181B] text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  className="px-4 py-2.5 rounded-xl bg-[#E7A92F] hover:bg-[#D7AF70] text-[#18181B] text-xs font-bold transition-colors cursor-pointer shadow-xs shrink-0"
                 >
                   Nhận tin
                 </button>
               </form>
 
               {/* Social Media Links */}
-              <div className="mt-6 flex items-center gap-3">
+              <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-3">
                 <span className="text-xs font-bold text-[#8B9097]">Kết nối:</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {['Facebook', 'YouTube', 'TikTok', 'Instagram'].map((network) => (
                     <span
                       key={network}
@@ -999,13 +999,13 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           </div>
 
           {/* Bottom Copyright */}
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8B9097]">
-            <div className="flex items-center gap-2">
+          <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8B9097]">
+            <div className="flex items-center gap-2 text-center sm:text-left">
               <span>© {new Date().getFullYear()} HanFlix. Tất cả bản quyền được bảo lưu.</span>
               <span className="hidden sm:inline">·</span>
               <span className="hidden sm:inline">Lan tỏa niềm yêu thích tiếng Trung</span>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <button onClick={onSignIn} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng nhập</button>
               <button onClick={onSignUp} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng ký</button>
               <a href="#method" className="hover:text-[#B91B1C] transition-colors">Điều khoản</a>

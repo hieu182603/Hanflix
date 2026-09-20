@@ -480,7 +480,8 @@ export default function AdminVocabularyManager() {
 
       {/* Streamlined Vocabulary Table (Core fields only) */}
       <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
-        <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs min-w-[720px]">
           <thead className="bg-[#FFF9F5] border-b border-[#F2E4D8] text-[#8C827A] uppercase font-bold text-[10px] tracking-wider">
             <tr>
               <th className="p-4 w-[220px]">Chữ Hán Giản thể</th>
@@ -611,6 +612,7 @@ export default function AdminVocabularyManager() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <AdminPaginationBar
