@@ -210,7 +210,7 @@ jobs:
           # `secrets.GITHUB_TOKEN` is provided automatically; no extra setup.
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.resolve-tag.outputs.version }}
           name: "HanFlix v${{ needs.resolve-tag.outputs.version }}"
