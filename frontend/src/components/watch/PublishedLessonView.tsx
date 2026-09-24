@@ -119,7 +119,7 @@ export default function PublishedLessonView({
     queryKey: lessonQueryKeys.quiz(lessonId),
     queryFn: ({ signal }) => getLessonQuiz(lessonId, { signal }),
     enabled: Boolean(lessonId),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
   });
