@@ -36,7 +36,7 @@ param nodeEnv string = 'production'
 param minReplicas int = 1
 
 @description('Maximum replica count for backend')
-param maxReplicas int = 3
+param maxReplicas int = 1
 
 @description('CPU cores per replica')
 @allowed(['0.25', '0.5', '1.0', '2.0'])
@@ -131,6 +131,7 @@ module backendApp 'modules/container-app.bicep' = {
     dockerImage: dockerImage
     managedIdentityId: managedIdentity.id
     nodeEnv: nodeEnv
+    managedIdentityClientId: managedIdentity.properties.clientId
     minReplicas: minReplicas
     maxReplicas: maxReplicas
     cpuCoreCount: cpuCoreCount

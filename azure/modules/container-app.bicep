@@ -10,9 +10,7 @@
 //   • No secrets in environment variables (Key Vault references)
 //
 // Scaling:
-//   • HTTP scaling: 1-3 replicas based on request count
-//   • CPU scaling: scale out when CPU > 70%
-//   • Memory scaling: scale out when memory > 80%
+//   • One replica for the embedded queue worker and bounded compute concurrency.
 // ============================================================
 
 @description('Azure region')
@@ -36,6 +34,9 @@ param acrLoginServer string = ''
 @description('User-Assigned Managed Identity resource ID')
 param managedIdentityId string
 
+@description('Client ID used to select the user-assigned identity for ARM Job requests')
+param managedIdentityClientId string
+
 @description('NODE_ENV')
 @allowed(['production', 'development'])
 param nodeEnv string = 'production'
@@ -44,7 +45,7 @@ param nodeEnv string = 'production'
 param minReplicas int = 1
 
 @description('Max replicas')
-param maxReplicas int = 3
+param maxReplicas int = 1
 
 @description('CPU cores (as string: "0.25", "0.5", "1.0", "2.0")')
 param cpuCoreCount string = '0.5'
@@ -428,6 +429,10 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'embedded'
             }
             {
+              name: 'AZURE_CLIENT_ID'
+              value: managedIdentityClientId
+            }
+            {
               name: 'VIDEO_PROCESSING_MAX_RETRIES'
               value: '3'
             }
@@ -449,7 +454,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
             }
             {
               name: 'DISABLE_TRANSACTIONS'
-              value: 'true'
+              value: 'false'
             }
           ]
           probes: [
