@@ -44,6 +44,8 @@ Thumbs.db
 # Cache & temporary files
 .cache/
 .tmp/
+.runtime/
+__pycache__/
 tmp/
 *.tsbuildinfo
 .vite/

@@ -2,7 +2,7 @@ import { Schema, model, type InferSchemaType } from 'mongoose';
 
 const mediaSchema = new Schema({
   objectKey: { type: String, required: true },
-  mimeType: { type: String, enum: ['video/mp4', 'video/webm'], required: true },
+  mimeType: { type: String, enum: ['video/mp4', 'video/webm', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'], required: true },
   sizeBytes: { type: Number, min: 1, required: true },
   etag: { type: String },
 }, { _id: false });
@@ -27,7 +27,7 @@ const lessonSchema = new Schema({
   autoGenerateQuizCount: { type: Number, min: 1, max: 15 },
   topicIds: [{ type: String, required: true, trim: true, index: true }],
   goalTags: [{ type: String, enum: ['daily', 'travel', 'work', 'hsk', 'culture', 'other'] }],
-  durationSeconds: { type: Number, required: true, min: 60, max: 300 },
+  durationSeconds: { type: Number, required: true, min: 0.01, max: 21600 },
   status: {
     type: String,
     enum: ['draft', 'uploading', 'processing', 'ready_for_review', 'published', 'hidden', 'failed'],
@@ -80,6 +80,53 @@ const lessonSchema = new Schema({
   // need re-review. Reset to false on publish.
   contentDirty: { type: Boolean, default: false, index: true },
   contentDirtyReason: { type: String, maxlength: 500 },
+  // CONTENT MODE (2026-09-22): mở rộng ngoài bài học truyền thống.
+  // - 'lesson'   — video bài học chuẩn (HSK, phụ đề song ngữ, quiz). Code path mặc định, backward compatible.
+  // - 'song'     — bài hát/karaoke. Pipeline nhận LRC manual + align word-level cho karaoke highlight.
+  // - 'podcast'  — podcast dài (>10 phút). Pipeline chapter detection qua Gemini.
+  // - 'drama'    — clip kịch/drama. Pipeline speaker diarization, multi-speaker cue.
+  // Default 'lesson' để 100% lesson cũ chạy y nguyên. Index phục vụ admin filter.
+  contentMode: {
+    type: String,
+    enum: ['lesson', 'song', 'podcast', 'drama'],
+    default: 'lesson',
+    index: true,
+  },
+  // Pipeline v2 media classification. AUTO preserves the existing admin API
+  // and lets the evaluator decide whether vocal separation is needed.
+  mediaType: {
+    type: String,
+    enum: ['AUTO', 'MOVIE', 'PODCAST', 'MUSIC'],
+    default: 'AUTO',
+    index: true,
+  },
+  // === SONG-specific ===
+  // LRC do admin cung cấp; để trống sẽ dùng ASR. Không tạo lời giả khi ASR thất bại.
+  lyricsRaw: { type: String, maxlength: 20000 },
+  lyricsSource: { type: String, enum: ['lrc', 'manual', 'auto'] },
+  chorusSections: [{
+    startMs: { type: Number, min: 0 },
+    endMs: { type: Number, min: 0 },
+    _id: false,
+  }],
+  // === PODCAST-specific ===
+  chapters: [{
+    chapterId: { type: String, maxlength: 100 },
+    title: { type: String, maxlength: 200 },
+    startMs: { type: Number, min: 0 },
+    endMs: { type: Number, min: 0 },
+    summary: { type: String, maxlength: 1000 },
+    _id: false,
+  }],
+  // === DRAMA-specific ===
+  characters: [{
+    speakerId: { type: String, maxlength: 50 },
+    displayName: { type: String, maxlength: 100 },
+    descriptionVi: { type: String, maxlength: 500 },
+    color: { type: String, maxlength: 20 },     // mã màu UI cho subtitle/drama player
+    avatarUrl: { type: String, maxlength: 500 },
+    _id: false,
+  }],
 }, { timestamps: true, versionKey: false });
 
 lessonSchema.index({ titleVi: 'text', titleZh: 'text', pinyin: 'text', descriptionVi: 'text' });

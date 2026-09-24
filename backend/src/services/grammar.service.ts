@@ -56,7 +56,12 @@ export class GrammarService {
     }
 
     if (params.hskLevel) {
-      filter.hskLevel = params.hskLevel === '7-9' ? '7-9' : Number(params.hskLevel);
+      const asNumber = Number(params.hskLevel);
+      if (!isNaN(asNumber)) {
+        filter.$or = [{ hskLevel: asNumber }, { hskLevel: params.hskLevel }];
+      } else {
+        filter.hskLevel = params.hskLevel;
+      }
     }
 
     if (params.search && params.search.trim()) {
@@ -96,7 +101,9 @@ export class GrammarService {
       hsk4,
       hsk5,
       hsk6,
-      hsk7to9,
+      hsk7,
+      hsk8,
+      hsk9,
       published,
       pendingReview,
       draft,
@@ -108,7 +115,9 @@ export class GrammarService {
       GrammarModel.countDocuments({ hskLevel: 4 }),
       GrammarModel.countDocuments({ hskLevel: 5 }),
       GrammarModel.countDocuments({ hskLevel: 6 }),
-      GrammarModel.countDocuments({ hskLevel: '7-9' }),
+      GrammarModel.countDocuments({ hskLevel: 7 }),
+      GrammarModel.countDocuments({ hskLevel: 8 }),
+      GrammarModel.countDocuments({ hskLevel: 9 }),
       GrammarModel.countDocuments({ status: 'published' }),
       GrammarModel.countDocuments({ status: 'pending_review' }),
       GrammarModel.countDocuments({ status: 'draft' }),
@@ -123,7 +132,9 @@ export class GrammarService {
         4: hsk4,
         5: hsk5,
         6: hsk6,
-        '7-9': hsk7to9,
+        7: hsk7,
+        8: hsk8,
+        9: hsk9,
       },
       byStatus: {
         published,

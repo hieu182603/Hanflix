@@ -2,9 +2,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { sanitizeProviderMessage } from '../services/speech/azure-speech-batch.service.js';
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { env } from '../config/env.js';
 import { LessonModel } from '../models/lesson.model.js';
+import { ProcessingJobModel } from '../models/processing-job.model.js';
 import {
   abortProcessingJob,
   claimNextVideoProcessingJob,
@@ -18,10 +20,12 @@ import { downloadR2Object } from '../services/r2.js';
 import { logger } from '../services/logger.js';
 import { processLessonVideoPipeline } from '../services/subtitle-pipeline.js';
 import { NotificationService } from '../services/notification.service.js';
+import { completeProcessingStep, startProcessingStep } from '../services/pipeline/processing-steps.js';
 
 const workerId = `${process.pid}-${randomUUID()}`;
 let timer: NodeJS.Timeout | undefined;
 let running = false;
+let activeController: AbortController | undefined;
 
 async function processNextJob(): Promise<boolean> {
   if (running) return false;
@@ -33,6 +37,7 @@ async function processNextJob(): Promise<boolean> {
   //   2) The lease's heartbeat fails (another worker claimed it back).
   //   3) The worker's parent process receives SIGTERM/SIGINT (graceful shutdown).
   const abortController = new AbortController();
+  activeController = abortController;
   const { signal } = abortController;
   let deadlineTimer: NodeJS.Timeout | undefined;
   try {
@@ -82,9 +87,16 @@ async function processNextJob(): Promise<boolean> {
 
     logger.info({ videoId: lease.lessonId, jobId: lease.jobId, step: 'DOWNLOAD', status: 'START', leaseExpiresAt: lease.leaseExpiresAt }, '[VideoProcessing]');
     try {
-      const heartbeatPromise = void heartbeatLoop();
+      void heartbeatLoop().catch(() => abortController.abort(new Error('LEASE_REVOKED')));
       try {
-        await downloadR2Object(objectKey, localPath);
+        const state = await ProcessingJobModel.findById(lease.jobId).select('steps.DOWNLOAD_SOURCE').lean();
+        const sourceCompleted = state?.steps?.DOWNLOAD_SOURCE?.status === 'COMPLETED';
+        if (!await heartbeatProcessingJob(lease)) throw new Error('LEASE_REVOKED');
+        if (!sourceCompleted && !await startProcessingStep({ jobId: lease.jobId, leaseToken: lease.leaseToken, step: 'DOWNLOAD_SOURCE' })) throw new Error('LEASE_REVOKED');
+        // A completed source checkpoint identifies the durable R2 object. Restore the
+        // ephemeral local copy after a restart without resetting completed step state.
+        await downloadR2Object(objectKey, localPath, signal);
+        if (!sourceCompleted && !await completeProcessingStep({ jobId: lease.jobId, leaseToken: lease.leaseToken, step: 'DOWNLOAD_SOURCE', metadata: { objectKey } })) throw new Error('LEASE_REVOKED');
         if (signal.aborted) throw signal.reason ?? new Error('aborted');
       } catch (error) {
         if (signal.aborted) {
@@ -155,9 +167,9 @@ async function processNextJob(): Promise<boolean> {
         return true;
       }
       const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'PROCESSING_FAILED';
-      const message = error instanceof Error ? error.message : 'Lỗi xử lý video không xác định';
+      const message = sanitizeProviderMessage(error);
       const updated = await failOrRequeueVideoProcessingJob(lease.jobId, code, message, lease.leaseToken);
-      await LessonModel.findByIdAndUpdate(lease.lessonId, updated?.status === 'failed'
+      if (updated) await LessonModel.findByIdAndUpdate(lease.lessonId, updated?.status === 'failed'
         ? { $set: { status: 'failed', processingStatus: 'FAILED', processingStep: 'FAILED', processingError: message } }
         : { $set: { status: 'processing', processingStatus: 'QUEUED', processingStep: 'QUEUED', processingError: message } });
       logger.error({ videoId: lease.lessonId, jobId: lease.jobId, step: 'pipeline', status: 'FAILED', error: message }, '[VideoProcessing]');
@@ -192,6 +204,7 @@ async function processNextJob(): Promise<boolean> {
     }
     return true;
   } finally {
+    activeController = undefined;
     running = false;
   }
 }
@@ -212,7 +225,7 @@ export function wakeVideoProcessingWorker() {
 }
 
 export function startVideoProcessingWorker() {
-  if (env.VIDEO_WORKER_MODE !== 'embedded' || timer) return;
+  if (env.VIDEO_WORKER_MODE === 'disabled' || timer) return;
   wakeVideoProcessingWorker();
   timer = setInterval(() => {
     processNextJob().catch(error => {
@@ -229,6 +242,7 @@ export function startVideoProcessingWorker() {
 export async function stopVideoProcessingWorker() {
   if (timer) clearInterval(timer);
   timer = undefined;
+  activeController?.abort(new Error('WORKER_SHUTDOWN'));
   while (running) await new Promise(resolve => setTimeout(resolve, 100));
 }
 
@@ -251,6 +265,11 @@ const isDirectExecution = process.argv[1]?.endsWith('video-processing.worker.js'
 if (isDirectExecution) {
   (async () => {
     await connectDatabase();
+    if (process.argv.includes('--drain')) {
+      while (await processNextJob()) { /* Drain currently eligible durable jobs, then scale to zero. */ }
+      await disconnectDatabase();
+      return;
+    }
     startVideoProcessingWorker();
     const shutdown = async () => {
       await stopVideoProcessingWorker();

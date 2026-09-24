@@ -44,6 +44,46 @@ const TOPIC_OPTIONS = [
   { id: 'entertainment', label: 'Giải trí & Phim ảnh (Entertainment & Cinema)' },
 ];
 
+export function formatDurationMmSs(sec?: number): string {
+  if (sec === undefined || sec === null || isNaN(sec) || sec <= 0) return '';
+  const total = Math.round(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function parseDurationText(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':').map((p) => Number(p));
+    if (parts.every((p) => Number.isFinite(p) && p >= 0)) {
+      if (parts.length === 2) {
+        return Math.round(parts[0] * 60 + parts[1]);
+      }
+      if (parts.length === 3) {
+        return Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]);
+      }
+    }
+  }
+  const mMatch = /(\d+)\s*m/i.exec(trimmed);
+  const sMatch = /(\d+)\s*s/i.exec(trimmed);
+  if (mMatch || sMatch) {
+    const m = mMatch ? Number(mMatch[1]) : 0;
+    const s = sMatch ? Number(sMatch[1]) : 0;
+    return Math.round(m * 60 + s);
+  }
+  const num = Number(trimmed);
+  if (Number.isFinite(num) && num > 0) {
+    return Math.round(num);
+  }
+  return 0;
+}
+
 export interface AdminVideoUploaderProps {
   activeTab: 'upload' | 'processing';
   onTabChange: (tab: 'upload' | 'processing' | 'editor' | 'videos') => void;
@@ -75,8 +115,12 @@ export interface AdminVideoUploaderProps {
   lessons: AdminLesson[];
   onSelectLesson: (id: string) => void;
   onEditLesson?: (id: string) => void;
-  onRetryProcessing: (id: string) => Promise<void>;
+  onRetryProcessing: (id: string, lyricsRaw?: string, mode?: AdminLesson['contentMode']) => Promise<void>;
   onCancelVideoUpload: (id: string) => Promise<void>;
+  lyricsRaw: string;
+  setLyricsRaw: (value: string) => void;
+  contentMode: 'lesson' | 'song' | 'podcast' | 'drama';
+  setContentMode: (v: 'lesson' | 'song' | 'podcast' | 'drama') => void;
 }
 
 export default function AdminVideoUploader({
@@ -112,15 +156,36 @@ export default function AdminVideoUploader({
   onEditLesson,
   onRetryProcessing,
   onCancelVideoUpload,
+  lyricsRaw,
+  setLyricsRaw,
+  contentMode,
+  setContentMode,
 }: AdminVideoUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [durationError, setDurationError] = useState<string | null>(null);
+  const [durationText, setDurationText] = useState<string>(() => formatDurationMmSs(duration));
+
+  useEffect(() => {
+    if (duration > 0) {
+      const parsedCurrent = parseDurationText(durationText);
+      if (parsedCurrent !== duration) {
+        setDurationText(formatDurationMmSs(duration));
+      }
+    } else if (!durationText) {
+      setDurationText('');
+    }
+  }, [duration]);
+
+  const [repairModes, setRepairModes] = useState<Record<string, NonNullable<AdminLesson['contentMode']>>>({});
+  const [repairLyrics, setRepairLyrics] = useState<Record<string, string>>({});
+  const acceptedTypes = ['video/mp4', 'video/webm', ...(['song', 'podcast'].includes(contentMode) ? ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'] : [])];
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile && ['video/mp4', 'video/webm'].includes(droppedFile.type)) {
+    if (droppedFile && acceptedTypes.includes(droppedFile.type)) {
       setFile(droppedFile);
       extractVideoDuration(droppedFile);
     }
@@ -142,10 +207,19 @@ export default function AdminVideoUploader({
       v.onloadedmetadata = () => {
         URL.revokeObjectURL(url);
         const sec = Math.round(v.duration);
-        if (sec >= 30 && sec <= 600) {
+        if (Number.isFinite(sec) && sec > 0 && sec <= 21600) {
           setDuration(sec);
+          setDurationText(formatDurationMmSs(sec));
+          if (sec < 60) {
+            setDurationError(`Thời lượng video quá ngắn (${formatDurationMmSs(sec)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`);
+          } else if (contentMode !== 'podcast' && sec > 600) {
+            setDurationError(`Thời lượng video quá dài (${formatDurationMmSs(sec)}). Video phải có độ dài tối đa 10 phút (10:00).`);
+          } else {
+            setDurationError(null);
+          }
         }
       };
+      v.onerror = () => URL.revokeObjectURL(url);
       v.src = url;
     } catch {
       // Ignore if browser fails metadata parse
@@ -157,9 +231,11 @@ export default function AdminVideoUploader({
   };
 
   const formatTime = (seconds: number): string => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+    if (isNaN(seconds) || seconds <= 0) return '0m 00s';
+    const total = Math.round(seconds);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}m ${String(s).padStart(2, '0')}s`;
   };
 
   // Pipeline stages definition
@@ -307,7 +383,7 @@ export default function AdminVideoUploader({
                   ref={fileInputRef}
                   type="file"
                   aria-label="Video MP4/WebM"
-                  accept="video/mp4,video/webm"
+                  accept={acceptedTypes.join(',')}
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -334,13 +410,21 @@ export default function AdminVideoUploader({
                 ) : (
                   <div className="space-y-1.5">
                     <p className="text-sm font-black text-[#2B2826]">Kéo thả video vào đây hoặc chọn tệp</p>
-                    <p className="text-xs text-[#8C827A]">Hỗ trợ định dạng MP4 và WebM (tối đa 500 MB)</p>
+                    <p className="text-xs text-[#8C827A]">{['song', 'podcast'].includes(contentMode) ? 'MP4/WebM hoặc MP3/M4A/WAV. Dung lượng theo cấu hình máy chủ.' : 'MP4/WebM. Dung lượng theo cấu hình máy chủ.'}</p>
                     <span className="mt-3 inline-block rounded-xl bg-[#2B2826] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-[#1A1817]">
                       Chọn tệp video từ máy
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* Duration Error Alert below dropzone */}
+              {durationError && (
+                <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-3 text-xs font-bold text-[#B91B1C]">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{durationError}</span>
+                </div>
+              )}
 
               {/* Technical Specifications Guide */}
               <div className="rounded-3xl border border-[#F2E4D8] bg-white p-4 text-[11px] shadow-2xs">
@@ -359,7 +443,9 @@ export default function AdminVideoUploader({
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
                     <span className="shrink-0">Thời lượng</span>
-                    <strong className="text-right text-[#2B2826]">60s – 300s</strong>
+                    <strong className="text-right text-[#2B2826] font-bold">
+                      {contentMode === 'podcast' ? 'Theo giới hạn podcast của máy chủ' : '1 phút – 10 phút'}
+                    </strong>
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#EAF5F1]/40 px-2.5 py-1.5">
                     <span className="shrink-0">Âm thanh</span>
@@ -404,7 +490,7 @@ export default function AdminVideoUploader({
                     value={titleZh}
                     onChange={(e) => setTitleZh(e.target.value)}
                     placeholder="ví dụ: 电影剪辑：第一次在餐厅点餐"
-                    className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3.5 py-2.5 font-serif text-sm font-bold text-[#2B2826] transition-colors outline-none focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                    className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3.5 py-2.5 text-sm font-bold text-[#2B2826] transition-colors outline-none focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
                   />
                 </div>
 
@@ -483,22 +569,60 @@ export default function AdminVideoUploader({
                   <div className="sm:col-span-3">
                     <div className="mb-1.5 flex items-center justify-between">
                       <label htmlFor="video-duration" className="text-xs font-bold text-[#2B2826]">
-                        Thời lượng (giây)
+                        Thời lượng <span className="text-[#B91B1C]">*</span>
                       </label>
-                      <span className="text-[10px] font-black text-[#188A5A]">≈ {formatTime(duration)}</span>
                     </div>
                     <input
                       id="video-duration"
-                      type="number"
+                      type="text"
                       required
-                      min={30}
-                      max={600}
-                      value={duration}
-                      onChange={(e) => setDuration(Number(e.target.value))}
-                      className="w-full rounded-xl border border-[#F2E4D8] bg-[#FFFDFB] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
+                      placeholder="ví dụ: 3:22"
+                      value={durationText}
+                      onChange={(e) => {
+                        const valText = e.target.value;
+                        setDurationText(valText);
+                        const val = parseDurationText(valText);
+                        setDuration(val);
+                        if (val > 0 && val < 60) {
+                          setDurationError(`Thời lượng video quá ngắn (${formatDurationMmSs(val)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`);
+                        } else if (contentMode !== 'podcast' && val > 600) {
+                          setDurationError(`Thời lượng video quá dài (${formatDurationMmSs(val)}). Video phải có độ dài tối đa 10 phút (10:00).`);
+                        } else {
+                          setDurationError(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (duration > 0) {
+                          setDurationText(formatDurationMmSs(duration));
+                        }
+                      }}
+                      className={`w-full rounded-xl border bg-[#FFFDFB] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors ${duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600))
+                          ? 'border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/20'
+                          : 'border-[#F2E4D8] focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10'
+                        }`}
                     />
+                    {duration > 0 && duration < 60 && (
+                      <p className="mt-1 text-[10px] font-bold text-[#B91B1C]">
+                        Tối thiểu 1 phút (1:00)
+                      </p>
+                    )}
+                    {contentMode !== 'podcast' && duration > 600 && (
+                      <p className="mt-1 text-[10px] font-bold text-[#B91B1C]">
+                        Tối đa 10 phút (10:00)
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {contentMode === 'song' && (
+                  <div className="space-y-2">
+                    <label htmlFor="song-lyrics" className="text-xs font-bold">Lời bài hát LRC (khuyên dùng)</label>
+                    <textarea id="song-lyrics" value={lyricsRaw} onChange={e => setLyricsRaw(e.target.value)} maxLength={20000} rows={5}
+                      placeholder={'[00:12.00]你好\n[00:15.00]世界'}
+                      className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm" />
+                    <p className="text-xs text-[#8C827A]">Để trống để nhận diện tự động. Nếu nhận diện thất bại, cần bổ sung LRC rồi thử lại.</p>
+                  </div>
+                )}
 
                 {/* Số câu hỏi tự động tạo cho AI Quiz (tùy chọn) - Thanh ngang gọn gàng */}
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-[#F2E4D8] bg-[#FFFAF3] px-3.5 py-2">
@@ -546,8 +670,8 @@ export default function AdminVideoUploader({
                   {/* Primary Action Button */}
                   <button
                     type="submit"
-                    disabled={busy || !file}
-                    className={`group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-6 text-xs font-black uppercase tracking-[0.08em] transition-all duration-200 select-none cursor-pointer ${busy || !file
+                    disabled={busy || !file || Boolean(file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)))}
+                    className={`group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-6 text-xs font-black uppercase tracking-[0.08em] transition-all duration-200 select-none cursor-pointer ${busy || !file || Boolean(file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)))
                       ? 'bg-[#EFE9E2] text-[#9E948B] border border-[#E2DAD0] cursor-not-allowed shadow-none'
                       : 'bg-gradient-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415] text-white shadow-[0_8px_20px_-4px_rgba(185,27,28,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] hover:from-[#A3181A] hover:to-[#831112] hover:shadow-[0_12px_28px_-4px_rgba(185,27,28,0.52)] active:scale-[0.985] active:translate-y-px'
                       }`}
@@ -578,6 +702,14 @@ export default function AdminVideoUploader({
                       </>
                     )}
                   </button>
+
+                  {file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)) && (
+                    <p className="mt-2 text-center text-xs font-bold text-[#B91B1C]">
+                      {duration < 60
+                        ? `Thời lượng video quá ngắn (${formatDurationMmSs(duration)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`
+                        : `Thời lượng video quá dài (${formatDurationMmSs(duration)}). Video phải có độ dài tối đa 10 phút (10:00).`}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -604,7 +736,7 @@ export default function AdminVideoUploader({
                   </div>
                   <h2 className="text-xl font-black text-[#2B2826]">{selectedLesson.titleVi}</h2>
                   {selectedLesson.titleZh && (
-                    <p className="mt-0.5 font-serif text-xs text-[#8C827A]">{selectedLesson.titleZh}</p>
+                    <p className="mt-0.5 text-xs text-[#8C827A]">{selectedLesson.titleZh}</p>
                   )}
                 </div>
 
@@ -613,27 +745,27 @@ export default function AdminVideoUploader({
                   {(selectedLesson.status === 'ready_for_review' ||
                     selectedLesson.status === 'published' ||
                     processingStatus?.status === 'completed') && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onEditLesson) {
-                          onEditLesson(selectedLesson._id);
-                        } else {
-                          onTabChange('editor');
-                        }
-                      }}
-                      className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98] cursor-pointer"
-                    >
-                      <span>Kiểm Tra & Biên Tập Phụ Đề</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onEditLesson) {
+                            onEditLesson(selectedLesson._id);
+                          } else {
+                            onTabChange('editor');
+                          }
+                        }}
+                        className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98] cursor-pointer"
+                      >
+                        <span>Kiểm Tra & Biên Tập Phụ Đề</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
 
                   {selectedLesson.status === 'failed' && (
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => onRetryProcessing(selectedLesson._id)}
+                      onClick={() => onRetryProcessing(selectedLesson._id, repairLyrics[selectedLesson._id], repairModes[selectedLesson._id])}
                       className="flex h-10 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs transition-all hover:bg-[#A3181A] active:scale-[0.98]"
                     >
                       <RotateCcw className="h-4 w-4" />
@@ -671,7 +803,9 @@ export default function AdminVideoUploader({
                     const currentProgress = isUploadingR2 ? 0 : (processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0);
                     const completed = !isUploadingR2 && (processingStatus?.status === 'completed' || selectedLesson.status === 'ready_for_review' || selectedLesson.status === 'published');
                     const failed = processingStatus?.status === 'failed' || selectedLesson.status === 'failed';
-                    const queued = processingStatus?.status === 'queued';
+                    const waiting = processingStatus?.status === 'idle'
+                      || processingStatus?.status === 'uploading'
+                      || processingStatus?.status === 'queued';
                     const stageIndex = isUploadingR2 ? 0 : (currentProgress < 10 ? 0 : currentProgress < 35 ? 1 : currentProgress < 60 ? 2 : 3);
                     const isPassed = !isUploadingR2 && (completed || i < stageIndex || (i === 0 && selectedLesson.status !== 'uploading'));
                     const isCurrent = isUploadingR2 ? (i === 0) : (!completed && i === stageIndex);
@@ -692,7 +826,7 @@ export default function AdminVideoUploader({
                             <CheckCircle2 className="h-4 w-4 text-[#188A5A]" />
                           ) : isCurrent && failed ? (
                             <AlertCircle className="h-4 w-4 text-[#B91B1C]" />
-                          ) : isCurrent && !queued ? (
+                          ) : isCurrent && !waiting ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#B45309]" />
                           ) : (
                             <Clock className="h-3.5 w-3.5 text-[#8C827A]" />
@@ -711,7 +845,26 @@ export default function AdminVideoUploader({
               </div>
 
               {/* Error Box if Failed */}
-              {selectedLesson.processingError && (
+              {selectedLesson.status === 'failed' && (
+                <div className="px-4 pt-4 space-y-2">
+                  <label htmlFor="repair-content-mode" className="text-xs font-bold">Loại nội dung khi xử lý lại</label>
+                  <select id="repair-content-mode" className="block w-full rounded-xl border border-[#F2E4D8] p-3 text-sm"
+                    value={repairModes[selectedLesson._id] ?? selectedLesson.contentMode ?? 'lesson'}
+                    onChange={e => setRepairModes(previous => ({ ...previous, [selectedLesson._id]: e.target.value as NonNullable<AdminLesson['contentMode']> }))}>
+                    <option value="lesson">Bài học</option><option value="song">Bài hát</option><option value="podcast">Podcast</option><option value="drama">Drama</option>
+                  </select>
+                </div>
+              )}
+              {selectedLesson.status === 'failed' && (repairModes[selectedLesson._id] ?? selectedLesson.contentMode) === 'song' && (
+                <div className="p-4 space-y-2">
+                  <label htmlFor="repair-song-lyrics" className="text-xs font-bold">Bổ sung LRC trước khi thử lại</label>
+                  <textarea id="repair-song-lyrics" rows={5} maxLength={20000}
+                    value={repairLyrics[selectedLesson._id] ?? selectedLesson.lyricsRaw ?? ''}
+                    onChange={e => setRepairLyrics(previous => ({ ...previous, [selectedLesson._id]: e.target.value }))}
+                    className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm" />
+                </div>
+              )}
+              {selectedLesson.status === 'failed' && selectedLesson.processingError && (
                 <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-4 text-xs font-bold text-[#B91B1C]">
                   <AlertCircle className="h-5 w-5 shrink-0" />
                   <div>
@@ -751,19 +904,17 @@ export default function AdminVideoUploader({
                     <div
                       key={job._id}
                       onClick={() => onSelectLesson(job.lessonId)}
-                      className={`flex cursor-pointer items-center justify-between gap-4 p-4 transition-all ${
-                        isSelected
+                      className={`flex cursor-pointer items-center justify-between gap-4 p-4 transition-all ${isSelected
                           ? 'border-l-4 border-l-[#B91B1C] bg-[#FFF8EC]'
                           : 'hover:bg-[#FFF9F5]'
-                      }`}
+                        }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors ${
-                            isSelected
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors ${isSelected
                               ? 'border-[#FDE6BA] bg-white text-[#B91B1C]'
                               : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#5F5852]'
-                          }`}
+                            }`}
                         >
                           <Video className="h-4 w-4" />
                         </div>

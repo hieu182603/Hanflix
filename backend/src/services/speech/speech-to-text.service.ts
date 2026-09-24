@@ -11,5 +11,5 @@ export type SpeechSegment = {
 };
 
 export interface SpeechToTextService {
-  transcribeFile(filePath: string): Promise<SpeechSegment[]>;
+  transcribeFile(filePath: string, signal?: AbortSignal): Promise<SpeechSegment[]>;
 }

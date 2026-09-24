@@ -4,6 +4,7 @@ import {
   X,
   Volume2,
   CheckCircle2,
+  XCircle,
   AlertCircle,
   RotateCcw,
   Sparkles,
@@ -53,6 +54,8 @@ export default function LessonQuizModal({
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'correct' | 'wrong'>('all');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // Reveal correct answer immediately after user selects an option
+  const [revealedQuestionId, setRevealedQuestionId] = useState<string | null>(null);
 
   // Sync index if questions change
   useEffect(() => {
@@ -96,11 +99,14 @@ export default function LessonQuizModal({
   // Handle select option
   const handleSelectOption = (optionId: string) => {
     if (quizResult || !currentQuestion) return;
+    if (answers[currentQuestion.questionId]) return;
     setValidationMsg(null);
     setAnswers((prev) => ({
       ...prev,
       [currentQuestion.questionId]: optionId,
     }));
+    // Reveal correct answer immediately after selection
+    setRevealedQuestionId(currentQuestion.questionId);
   };
 
   // Move to next question
@@ -113,6 +119,7 @@ export default function LessonQuizModal({
     if (currentIndex < totalQuestions - 1) {
       setDirection(1);
       setCurrentIndex((prev) => prev + 1);
+      setRevealedQuestionId(null); // Reset reveal state for new question
     }
   };
 
@@ -122,6 +129,7 @@ export default function LessonQuizModal({
     if (currentIndex > 0) {
       setDirection(-1);
       setCurrentIndex((prev) => prev - 1);
+      setRevealedQuestionId(null); // Reset reveal state for new question
     }
   };
 
@@ -536,25 +544,41 @@ export default function LessonQuizModal({
                       <div className="grid gap-2.5">
                         {currentQuestion.options.map((option, optIdx) => {
                           const isSelected = currentAnswer === option.optionId;
+                          const isCorrect = option.isCorrect;
+                          const isRevealed = Boolean(revealedQuestionId === currentQuestion.questionId || answers[currentQuestion.questionId]);
                           const letter = String.fromCharCode(65 + optIdx); // A, B, C, D
+
+                          const isWrongSelection = isRevealed && isSelected && !isCorrect;
+                          const isCorrectOption = isRevealed && isCorrect;
 
                           return (
                             <button
                               key={option.optionId}
                               type="button"
+                              disabled={isRevealed}
                               onClick={() => handleSelectOption(option.optionId)}
-                              className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer group ${
-                                isSelected
-                                  ? 'bg-[#FFF5F5] border-[#B91B1C] ring-2 ring-[#B91B1C]/25 shadow-xs'
-                                  : 'bg-white border-[#E7E7EA] hover:border-neutral-300 hover:bg-neutral-50/70'
+                              className={`w-full flex items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl border text-left transition-all ${
+                                isRevealed ? 'cursor-default' : 'cursor-pointer group'
+                              } ${
+                                isCorrectOption
+                                  ? 'bg-[#EBF5EE] border-emerald-500 ring-2 ring-emerald-500/30 shadow-xs'
+                                  : isWrongSelection
+                                    ? 'bg-[#FDF1F1] border-[#B91B1C] ring-2 ring-[#B91B1C]/25 shadow-xs'
+                                    : isSelected
+                                      ? 'bg-neutral-100 border-[#18181B] ring-2 ring-[#18181B]/20 shadow-xs'
+                                      : 'bg-white border-[#E7E7EA] hover:border-neutral-300 hover:bg-neutral-50/70'
                               }`}
                             >
                               {/* Option Letter Badge */}
                               <span
                                 className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                                  isSelected
-                                    ? 'bg-[#B91B1C] text-white shadow-xs'
-                                    : 'bg-neutral-100 text-[#5F6368] group-hover:bg-[#FEE2E2] group-hover:text-[#B91B1C]'
+                                  isCorrectOption
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : isWrongSelection
+                                      ? 'bg-[#B91B1C] text-white shadow-xs'
+                                      : isSelected
+                                        ? 'bg-[#18181B] text-white shadow-xs'
+                                        : 'bg-neutral-100 text-[#5F6368] group-hover:bg-[#FEE2E2] group-hover:text-[#B91B1C]'
                                 }`}
                               >
                                 {letter}
@@ -563,28 +587,39 @@ export default function LessonQuizModal({
                               {/* Option Text */}
                               <span
                                 className={`flex-1 text-sm sm:text-base font-medium transition-colors ${
-                                  isSelected
-                                    ? 'font-bold text-[#18181B]'
-                                    : 'text-[#374151] group-hover:text-[#18181B]'
+                                  isCorrectOption
+                                    ? 'font-bold text-emerald-800'
+                                    : isWrongSelection
+                                      ? 'font-bold text-[#B91B1C]'
+                                      : isSelected
+                                        ? 'font-bold text-[#18181B]'
+                                        : 'text-[#374151] group-hover:text-[#18181B]'
                                 }`}
                               >
                                 {option.text}
                               </span>
 
-                              {/* Selection Indicator */}
+                              {/* Selection / Correct Indicator */}
                               <div
                                 className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                                  isSelected
-                                    ? 'border-[#B91B1C] bg-[#B91B1C] text-white'
-                                    : 'border-[#D1D5DB] group-hover:border-[#9CA3AF]'
+                                  isCorrectOption
+                                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                                    : isWrongSelection
+                                      ? 'border-[#B91B1C] bg-[#B91B1C] text-white'
+                                      : isSelected
+                                        ? 'border-[#18181B] bg-[#18181B] text-white'
+                                        : 'border-[#D1D5DB] group-hover:border-[#9CA3AF]'
                                 }`}
                               >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                {isCorrectOption && <Check className="w-3 h-3 stroke-[3]" />}
+                                {isWrongSelection && <X className="w-3 h-3 stroke-[3]" />}
+                                {!isRevealed && isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                               </div>
                             </button>
                           );
                         })}
                       </div>
+
                     ) : (
                       /* Fill Blank Input */
                       <div className="space-y-2">

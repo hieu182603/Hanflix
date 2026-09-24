@@ -31,7 +31,7 @@ export class R2StorageService implements StorageService {
     return this.client;
   }
 
-  async createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm', maxBytes: number) {
+  async createUploadUrl(objectKey: string, contentType: 'video/mp4' | 'video/webm' | 'audio/mpeg' | 'audio/mp4' | 'audio/wav' | 'audio/x-wav', maxBytes: number) {
     const config = this.config();
     // SECURITY (H-4): R2 presigned URLs cannot enforce Content-Length server-side via S3 SDK.
     // To prevent oversized uploads, we set a content-length-range policy by including
@@ -50,11 +50,11 @@ export class R2StorageService implements StorageService {
     return { uploadUrl, objectKey, expiresIn: env.R2_UPLOAD_URL_TTL_SECONDS, maxBytes };
   }
 
-  async createDownloadUrl(objectKey: string) {
-    if (env.R2_PUBLIC_BASE_URL) return `${env.R2_PUBLIC_BASE_URL.replace(/\/$/, '')}/${encodeURI(objectKey)}`;
+  async createDownloadUrl(objectKey: string, expiresInSeconds = env.R2_DOWNLOAD_URL_TTL_SECONDS) {
+    if (env.R2_PUBLIC_BASE_URL && !objectKey.startsWith('processing/')) return `${env.R2_PUBLIC_BASE_URL.replace(/\/$/, '')}/${encodeURI(objectKey)}`;
     const config = this.config();
     return getSignedUrl(this.getClient(), new GetObjectCommand({ Bucket: config.bucket, Key: objectKey }), {
-      expiresIn: env.R2_DOWNLOAD_URL_TTL_SECONDS,
+      expiresIn: expiresInSeconds,
     });
   }
 
@@ -64,11 +64,11 @@ export class R2StorageService implements StorageService {
     return { sizeBytes: result.ContentLength ?? 0, contentType: result.ContentType, etag: result.ETag?.replaceAll('"', '') };
   }
 
-  async downloadToFile(objectKey: string, destinationPath: string) {
+  async downloadToFile(objectKey: string, destinationPath: string, signal?: AbortSignal) {
     const config = this.config();
-    const result = await this.getClient().send(new GetObjectCommand({ Bucket: config.bucket, Key: objectKey }));
+    const result = await this.getClient().send(new GetObjectCommand({ Bucket: config.bucket, Key: objectKey }), { abortSignal: signal });
     if (!result.Body) throw new AppError(502, 'R2_EMPTY_OBJECT', 'R2 không trả về dữ liệu video');
-    await pipeline(result.Body as Readable, createWriteStream(destinationPath, { flags: 'w' }));
+    await pipeline(result.Body as Readable, createWriteStream(destinationPath, { flags: 'w' }), { signal });
   }
 
   async uploadFile(objectKey: string, filePath: string, contentType: string) {

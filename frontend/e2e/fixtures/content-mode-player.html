@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content mode player regression harness</title>
+<div id="root"></div>
+<script type="module">
+  import React from 'react';
+  import { createRoot } from 'react-dom/client';
+  import KaraokePlayer from '/src/components/watch/KaraokePlayer.tsx';
+  import PodcastPlayer from '/src/components/watch/PodcastPlayer.tsx';
+  import DramaPlayer from '/src/components/watch/DramaPlayer.tsx';
+  import '/src/index.css';
+  const mode = new URL(location.href).searchParams.get('mode');
+  const Player = { song: KaraokePlayer, podcast: PodcastPlayer, drama: DramaPlayer }[mode];
+  function Harness() {
+    const [currentMs, setCurrentMs] = React.useState(0);
+    const [seeks, setSeeks] = React.useState(0);
+    return React.createElement('main', { style: { maxWidth: 1000, margin: '32px auto' } },
+      React.createElement(Player, {
+        src: '/test-content.wav', title: 'Kiểm tra nội dung', durationSeconds: 12, currentMs,
+        onTimeUpdate: video => setCurrentMs(video.currentTime * 1000),
+        onSeeking: () => setSeeks(value => value + 1),
+        cues: [{ cueId: 'cue1', startMs: 0, endMs: 12000, zh: '你好世界', pinyin: 'Nǐ hǎo shì jiè', vi: 'Xin chào thế giới', speakerId: 'speaker-1',
+          karaokeTokens: [{ text: '你好', startMs: 0, endMs: 6000 }, { text: '世界', startMs: 6000, endMs: 12000 }] }],
+        chapters: [{ chapterId: 'ch1', title: 'Phần mở đầu', startMs: 0, endMs: 6000 }, { chapterId: 'ch2', title: 'Phần tiếp theo', startMs: 6000, endMs: 12000 }],
+        characters: [{ speakerId: 'speaker-1', displayName: 'Nhân vật A', color: '#B91B1C' }],
+      }),
+      React.createElement('textarea', { 'aria-label': 'Ghi chú' }),
+      React.createElement('output', { 'data-testid': 'seeks' }, String(seeks)),
+    );
+  }
+  createRoot(document.getElementById('root')).render(React.createElement(Harness));
+</script>
+</html>

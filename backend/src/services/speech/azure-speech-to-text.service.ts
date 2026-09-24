@@ -10,13 +10,13 @@ const responseSchema = z.object({
     offsetMilliseconds: z.number().nonnegative(),
     durationMilliseconds: z.number().nonnegative(),
     text: z.string().trim().min(1),
-    confidence: z.number().optional(),
+    confidence: z.number().nullable().optional(),
     words: z.array(z.object({
       text: z.string(),
       offsetMilliseconds: z.number().nonnegative(),
       durationMilliseconds: z.number().nonnegative(),
     })).optional(),
-  })).min(1),
+  })),
 });
 
 type FetchLike = typeof fetch;
@@ -24,17 +24,19 @@ type FetchLike = typeof fetch;
 export class AzureSpeechToTextService implements SpeechToTextService {
   constructor(private readonly fetchImpl: FetchLike = fetch) {}
 
-  async transcribeFile(filePath: string): Promise<SpeechSegment[]> {
+  async transcribeFile(filePath: string, signal?: AbortSignal): Promise<SpeechSegment[]> {
     if (!env.AZURE_SPEECH_KEY || !env.AZURE_SPEECH_ENDPOINT) {
       throw new AppError(503, 'AZURE_SPEECH_NOT_CONFIGURED', 'Azure Speech chưa được cấu hình');
     }
 
+    signal?.throwIfAborted();
     const audio = await fs.readFile(filePath);
     const endpoint = env.AZURE_SPEECH_ENDPOINT.replace(/\/$/, '');
     const url = `${endpoint}/speechtotext/transcriptions:transcribe?api-version=${encodeURIComponent(env.AZURE_SPEECH_API_VERSION)}`;
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= env.AZURE_PROVIDER_MAX_RETRIES; attempt += 1) {
+      signal?.throwIfAborted();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), env.VIDEO_PROCESSING_TIMEOUT_MINUTES * 60_000);
       try {
@@ -48,7 +50,7 @@ export class AzureSpeechToTextService implements SpeechToTextService {
           method: 'POST',
           headers: { 'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY },
           body: form,
-          signal: controller.signal,
+          signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal,
         });
         const body = await response.json().catch(() => undefined);
         if (!response.ok) {
@@ -61,13 +63,17 @@ export class AzureSpeechToTextService implements SpeechToTextService {
         } else {
           const parsed = responseSchema.safeParse(body);
           if (!parsed.success) {
-            throw new AppError(502, 'FAILED_TRANSCRIPTION_RESPONSE', 'Azure Speech trả về dữ liệu không hợp lệ', parsed.error.flatten());
+            const issues = parsed.error.issues.slice(0, 3).map(issue => `${issue.path.join('.') || 'response'}:${issue.message}`).join('; ');
+            throw new AppError(502, 'FAILED_TRANSCRIPTION_RESPONSE', `Azure Speech response không hợp lệ: ${issues || 'schema mismatch'}`, parsed.error.flatten());
+          }
+          if (parsed.data.phrases.length === 0) {
+            throw new AppError(502, 'AZURE_ASR_EMPTY_TRANSCRIPT', 'Azure Speech không nhận dạng được câu thoại trong audio');
           }
           return parsed.data.phrases.map(phrase => ({
             startMs: phrase.offsetMilliseconds,
             endMs: phrase.offsetMilliseconds + phrase.durationMilliseconds,
             text: phrase.text,
-            confidence: phrase.confidence,
+            confidence: phrase.confidence ?? undefined,
             words: phrase.words?.map(word => ({
               text: word.text,
               startMs: word.offsetMilliseconds,
@@ -76,6 +82,7 @@ export class AzureSpeechToTextService implements SpeechToTextService {
           }));
         }
       } catch (error) {
+        signal?.throwIfAborted();
         if (error instanceof AppError) throw error;
         lastError = error;
         if (attempt === env.AZURE_PROVIDER_MAX_RETRIES) break;

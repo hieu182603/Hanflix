@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, BookOpen } from 'lucide-react';
+import { Home, PlaySquare } from 'lucide-react';
 
 interface NotFoundPageProps {
   onNavigateHome?: () => void;
@@ -145,7 +145,7 @@ export default function NotFoundPage({
             onClick={handleLessons}
             className="w-full sm:w-auto min-w-[170px] h-11 px-6 rounded-full bg-white/90 backdrop-blur-xs border border-[#E5D5C8] hover:border-[#B91B1C] hover:bg-white active:scale-[0.98] text-[#18181B] font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
           >
-            <BookOpen className="w-4 h-4 text-[#B91B1C]" />
+            <PlaySquare className="w-4 h-4 text-[#B91B1C]" />
             <span>Tiếp tục bài học</span>
           </button>
         </div>

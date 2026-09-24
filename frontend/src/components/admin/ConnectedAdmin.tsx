@@ -11,11 +11,12 @@ import AdminQuizManager from './AdminQuizManager';
 import AdminOverviewDashboard from './AdminOverviewDashboard';
 import AdminVideoList from './AdminVideoList';
 import AdminUserManager from './AdminUserManager';
-import AdminVideoUploader from './AdminVideoUploader';
+import AdminVideoUploader, { formatDurationMmSs } from './AdminVideoUploader';
 import AdminLessonReviewStudio from './AdminLessonReviewStudio';
 import { useNotification } from '../notifications';
 import { InlineBanner } from '../notifications';
 import { Spinner } from '../notifications';
+import { ApiRequestError } from '../../api/client';
 
 type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'quiz' | 'vocabulary' | 'grammar';
 
@@ -74,6 +75,9 @@ export default function ConnectedAdmin({
   const [descriptionVi, setDescriptionVi] = useState('');
   const [hsk, setHsk] = useState(3);
   const [autoGenerateQuizCount, setAutoGenerateQuizCount] = useState<number | ''>('');
+  const [characters, setCharacters] = useState<NonNullable<AdminLesson['characters']>>([]);
+  const [lyricsRaw, setLyricsRaw] = useState('');
+  const [contentMode, setContentMode] = useState<'lesson' | 'song' | 'podcast' | 'drama'>('lesson');
   const [topic, setTopic] = useState('daily-life');
   const [duration, setDuration] = useState(120);
   const [busy, setBusy] = useState(false);
@@ -157,6 +161,7 @@ export default function ConnectedAdmin({
         setTitleZh(lesson.titleZh ?? '');
         setDescriptionVi(lesson.descriptionVi);
         setHsk(lesson.hsk);
+        setCharacters(lesson.characters ?? []);
         setAutoGenerateQuizCount(lesson.autoGenerateQuizCount ?? '');
       }
       initialLoadDone.current = editingId;
@@ -226,13 +231,17 @@ export default function ConnectedAdmin({
         setTitleZh(lesson.titleZh ?? '');
         setDescriptionVi(lesson.descriptionVi);
         setHsk(lesson.hsk);
+        setCharacters(lesson.characters ?? []);
         setAutoGenerateQuizCount(lesson.autoGenerateQuizCount ?? '');
       }
       setDirty({ metadata: false, subtitles: false, quiz: false });
       initialLoadDone.current = editingId;
       setMessage('Đã tải lại nội dung.');
+      notify.success('Đã tải lại nội dung bài học.');
     } catch (reason) {
-      setError(errorText(reason));
+      const err = errorText(reason);
+      setError(err);
+      notify.error(err);
     }
   };
 
@@ -267,6 +276,9 @@ export default function ConnectedAdmin({
   useEffect(() => {
     if (tab !== 'processing' || !activeProcessingLessonId) return;
     let active = true;
+    // Never carry the previous lesson's stage/progress into a newly selected
+    // lesson while the first poll is in flight.
+    setProcessing(null);
     const poll = async () => {
       try {
         const [status, lessonItems, jobItems] = await Promise.all([
@@ -280,7 +292,16 @@ export default function ConnectedAdmin({
           setJobs(jobItems.items);
         }
       } catch (reason) {
-        if (active) setError(errorText(reason));
+        // Polling is background synchronization. A transient failure must not
+        // replace the upload/progress UI with a false action error; keep the
+        // last known snapshot and let the next poll repair it.
+        const isMissingJob = reason instanceof ApiRequestError
+          && reason.code === 'PROCESSING_JOB_NOT_FOUND';
+        if (active && !isMissingJob && !(reason instanceof Error && /Không tìm thấy tiến trình xử lý/i.test(reason.message))) {
+          // Network/provider hiccups during polling are non-blocking. Explicit
+          // lesson errors are still surfaced by the lesson/job snapshot.
+          if (reason instanceof ApiRequestError && reason.code === 'LESSON_NOT_FOUND') setError(errorText(reason));
+        }
       }
     };
     void poll();
@@ -297,6 +318,7 @@ export default function ConnectedAdmin({
    * editor state. The user must click "Tải lại" to pull fresh editor data.
    */
   const action = async (task: () => Promise<unknown>, success: string, options?: { refreshEditor?: boolean }) => {
+    // Clear stale message khi bắt đầu action mới → tránh hiện message cũ khi action mới fail.
     setBusy(true); setError(''); setMessage('');
     try {
       await task();
@@ -309,15 +331,44 @@ export default function ConnectedAdmin({
         setEditingId(editingId);
       }
       setMessage(success);
+      notify.success(success);
     }
-    catch (reason) { setError(errorText(reason)); }
+    catch (reason) {
+      const err = errorText(reason);
+      setError(err);
+      notify.error(err);
+    }
     finally { setBusy(false); }
   };
 
   const submitUpload = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    if (!file) { setError('Hãy chọn video MP4 hoặc WebM.'); return; }
-    if (!['video/mp4', 'video/webm'].includes(file.type)) { setError('Chỉ hỗ trợ MP4 hoặc WebM.'); return; }
+    if (!file) {
+      const msg = 'Hãy chọn video MP4 hoặc WebM.';
+      setError(msg);
+      notify.warning(msg);
+      return;
+    }
+    if (!['video/mp4', 'video/webm', ...(['song', 'podcast'].includes(contentMode) ? ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'] : [])].includes(file.type)) {
+      const msg = 'Định dạng tệp không phù hợp với loại nội dung đã chọn.';
+      setError(msg);
+      notify.error(msg);
+      return;
+    }
+    if (duration < 60) {
+      const msg = `Thời lượng video quá ngắn (${formatDurationMmSs(duration)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`;
+      setError(msg);
+      setUploadError(msg);
+      notify.warning(msg);
+      return;
+    }
+    if (contentMode !== 'podcast' && duration > 600) {
+      const msg = `Thời lượng video quá dài (${formatDurationMmSs(duration)}). Video phải có độ dài tối đa 10 phút (10:00).`;
+      setError(msg);
+      setUploadError(msg);
+      notify.warning(msg);
+      return;
+    }
     setBusy(true); setError(''); setMessage(''); setUploadError('');
     let lessonId: string | null = null;
     let uploadStarted = false;
@@ -336,6 +387,9 @@ export default function ConnectedAdmin({
         durationSeconds: duration,
         pinyin: '',
         autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number' ? autoGenerateQuizCount : undefined,
+        contentMode,
+        mediaType: 'AUTO',
+        ...(contentMode === 'song' && lyricsRaw.trim() ? { lyricsRaw, lyricsSource: 'lrc' as const } : {}),
       });
       lessonId = draft._id;
 
@@ -384,15 +438,21 @@ export default function ConnectedAdmin({
       setUploadStage('confirming');
       await confirmVideo(draft._id, signed.objectKey);
       setUploadStage('idle');
-      setMessage('Video đã tải lên Cloudflare R2 thành công. Đang tiến hành bóc tách âm thanh & AI.');
+      const okMsg = 'Video đã tải lên Cloudflare R2 thành công. Đang tiến hành bóc tách âm thanh & AI.';
+      setMessage(okMsg);
+      notify.success(okMsg);
       void reload();
     } catch (reason) {
       if (lessonId && uploadStarted) {
         try { await cancelVideoUpload(lessonId); } catch { /* Leave the draft visible for manual recovery. */ }
       }
       setUploadStage('idle');
-      setUploadError(errorText(reason));
-      setError(errorText(reason));
+      const msg = errorText(reason);
+      setUploadError(msg);
+      setError(msg);
+      notify.error(msg);
+      // Clear success message khi upload fail — tránh hiển thị 2 banner cùng lúc.
+      setMessage('');
       void reload();
     } finally {
       setBusy(false);
@@ -414,13 +474,23 @@ export default function ConnectedAdmin({
   const selected = lessons.find(item => item._id === editingId) || (lastUploadedLesson && lastUploadedLesson._id === editingId ? lastUploadedLesson : undefined);
   const statusLabel: Record<string, string> = { draft: 'Bản nháp', uploading: 'Đang tải lên', processing: 'Đang xử lý', ready_for_review: 'Chờ duyệt', published: 'Đã đăng', hidden: 'Đã ẩn', failed: 'Lỗi xử lý' };
 
+  // CONTENT MODE (2026-09-22): Clear stale error/message khi đổi tab.
+  // Trước đây banner lỗi của tab cũ vẫn hiển thị khi user chuyển sang tab mới →
+  // admin tưởng là lỗi mới của action vừa thực hiện.
+  useEffect(() => {
+    setError('');
+    setMessage('');
+  }, [tab]);
+
   return <div className="space-y-5">
-    {tab !== 'overview' && error && (
+    {/* CONTENT MODE (2026-09-22) banner ưu tiên: error > message > loading.
+        Trước đây 2 banner hiển thị cùng lúc khi error và message đều có → admin
+        không biết thao tác nào thực sự thành công. Bây giờ chỉ hiện 1 banner. */}
+    {tab !== 'overview' && error ? (
       <InlineBanner variant="error" message={error} />
-    )}
-    {message && (
+    ) : message ? (
       <InlineBanner variant="success" message={message} />
-    )}
+    ) : null}
     {tab !== 'overview' && loading && (
       <div className="flex items-center gap-2.5 rounded-2xl border border-[#F2E4D8] bg-white p-3.5 text-xs font-bold text-[#8C827A] shadow-2xs">
         <Spinner size="sm" tone="brand" />
@@ -486,8 +556,14 @@ export default function ConnectedAdmin({
             }
           }, 'Đã xóa bài học vĩnh viễn.');
         }}
-        onRetryProcessing={async (id) => {
-          await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');
+        onRetryProcessing={async (id, repairedLyrics?: string, repairedMode?: AdminLesson['contentMode']) => {
+          await action(async () => {
+            if (repairedMode || repairedLyrics?.trim()) await patchAdminLesson(id, {
+              ...(repairedMode ? { contentMode: repairedMode } : {}),
+              ...(repairedLyrics?.trim() ? { lyricsRaw: repairedLyrics, lyricsSource: 'lrc' } : {}),
+            });
+            await retryProcessing(id);
+          }, 'Đã yêu cầu xử lý lại tiến trình AI.');
         }}
       />
     )}
@@ -520,6 +596,10 @@ export default function ConnectedAdmin({
         setHsk={setHsk}
         autoGenerateQuizCount={autoGenerateQuizCount}
         setAutoGenerateQuizCount={(v) => { setAutoGenerateQuizCount(v); setDirty(d => ({ ...d, metadata: true })); }}
+        lyricsRaw={lyricsRaw}
+        setLyricsRaw={setLyricsRaw}
+        contentMode={contentMode}
+        setContentMode={(v) => { setContentMode(v); setDirty(d => ({ ...d, metadata: true })); }}
         topic={topic}
         setTopic={setTopic}
         duration={duration}
@@ -553,7 +633,9 @@ export default function ConnectedAdmin({
               processingProgress: processing?.stageProgress ?? fallbackJob.stageProgress ?? 0,
               processingStatus: processing?.status ?? fallbackJob.status ?? 'queued',
               processingStep: processing?.stage ?? fallbackJob.stage ?? 'inspect_media',
-              processingError: processing?.errorMessage ?? fallbackJob.errorMessage,
+              processingError: (fallbackJob.status === 'failed' || processing?.status === 'failed')
+                ? (processing?.errorMessage ?? fallbackJob.errorMessage)
+                : undefined,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             } as AdminLesson;
@@ -574,8 +656,14 @@ export default function ConnectedAdmin({
         onEditLesson={(id) => {
           void requestSwitchLesson(id);
         }}
-        onRetryProcessing={async (id) => {
-          await action(() => retryProcessing(id), 'Đã yêu cầu xử lý lại tiến trình AI.');
+        onRetryProcessing={async (id, repairedLyrics?: string, repairedMode?: AdminLesson['contentMode']) => {
+          await action(async () => {
+            if (repairedMode || repairedLyrics?.trim()) await patchAdminLesson(id, {
+              ...(repairedMode ? { contentMode: repairedMode } : {}),
+              ...(repairedLyrics?.trim() ? { lyricsRaw: repairedLyrics, lyricsSource: 'lrc' } : {}),
+            });
+            await retryProcessing(id);
+          }, 'Đã yêu cầu xử lý lại tiến trình AI.');
         }}
         onCancelVideoUpload={async (id) => {
           await action(() => cancelVideoUpload(id), 'Đã hủy phiên tải lên.');
@@ -601,6 +689,8 @@ export default function ConnectedAdmin({
           setTitleZh={(v) => { setTitleZh(v); setDirty(d => ({ ...d, metadata: true })); }}
           descriptionVi={descriptionVi}
           setDescriptionVi={(v) => { setDescriptionVi(v); setDirty(d => ({ ...d, metadata: true })); }}
+          characters={characters}
+          onCharactersChange={value => { setCharacters(value); setDirty(d => ({ ...d, metadata: true })); }}
           onCuesChange={(next) => { setCues(next); setDirty(d => ({ ...d, subtitles: true })); }}
           onQuestionsChange={(next) => { setQuestions(next); setDirty(d => ({ ...d, quiz: true })); }}
           onSaveMetadata={async () => {
@@ -609,6 +699,7 @@ export default function ConnectedAdmin({
                 titleVi,
                 titleZh,
                 descriptionVi,
+                ...(selected.contentMode === 'drama' ? { characters } : {}),
                 autoGenerateQuizCount: typeof autoGenerateQuizCount === 'number'
                   ? autoGenerateQuizCount
                   : null,
@@ -624,15 +715,15 @@ export default function ConnectedAdmin({
           }}
           onSaveQuiz={async () => {
             await action(async () => {
-              await saveAdminQuiz(selected._id, questions);
+              if (questions.length || (selected.contentMode ?? 'lesson') === 'lesson') await saveAdminQuiz(selected._id, questions);
               setDirty(d => ({ ...d, quiz: false }));
             }, 'Đã lưu bộ câu hỏi.');
           }}
           onPublishAll={async () => {
             await action(async () => {
-              await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi });
+              await patchAdminLesson(selected._id, { titleVi, titleZh, descriptionVi, ...(selected.contentMode === 'drama' ? { characters } : {}) });
               await saveAdminSubtitles(selected._id, cues);
-              await saveAdminQuiz(selected._id, questions);
+              if (questions.length || (selected.contentMode ?? 'lesson') === 'lesson') await saveAdminQuiz(selected._id, questions);
               await publishAdminLesson(selected._id);
               setDirty({ metadata: false, subtitles: false, quiz: false });
               initialLoadDone.current = null;

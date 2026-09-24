@@ -9,6 +9,7 @@ import { getVideoQueueMetrics } from './queue/video.queue.js';
 import { getPrometheusMetrics, metricsMiddleware } from './services/metrics.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
 import { globalLimiter } from './middleware/rate-limits.js';
+import { requireAuth, requireAdmin } from './middleware/auth.js';
 import { requestId } from './middleware/request-id.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminGrammarRoutes from './routes/admin-grammar.routes.js';
@@ -17,6 +18,7 @@ import aiRoutes from './routes/ai.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import learningRoutes from './routes/learning.routes.js';
 import lessonRoutes from './routes/lesson.routes.js';
+import grammarRoutes from './routes/grammar.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import vocabularyRoutes from './routes/vocabulary.routes.js';
@@ -57,6 +59,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
   exposedHeaders: ['Retry-After', 'RateLimit', 'RateLimit-Policy'],
 }));
+// Long podcast transcripts can exceed the ordinary request budget.
+app.use('/api/v1/admin/lessons/:lessonId/subtitles', requireAuth, requireAdmin, express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(cookieParser());
@@ -123,6 +127,7 @@ app.use(`${env.API_PREFIX}/auth`, authRoutes);
 app.use(`${env.API_PREFIX}/profile`, profileRoutes);
 app.use(`${env.API_PREFIX}/uploads`, uploadRoutes);
 app.use(`${env.API_PREFIX}/lessons`, lessonRoutes);
+app.use(`${env.API_PREFIX}/grammar`, grammarRoutes);
 app.use(`${env.API_PREFIX}/vocabulary`, vocabularyRoutes);
 app.use(`${env.API_PREFIX}/learning`, learningRoutes);
 app.use(`${env.API_PREFIX}/notifications`, notificationRoutes);

@@ -15,10 +15,10 @@
       "value": "production"
     },
     "minReplicas": {
-      "value": 0
+      "value": 1
     },
     "maxReplicas": {
-      "value": 3
+      "value": 1
     },
     "cpuCoreCount": {
       "value": "0.5"

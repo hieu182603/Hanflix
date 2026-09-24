@@ -12,6 +12,23 @@ export interface PublishedLesson {
   durationSeconds: number;
   media?: { url?: string | null } | null;
   thumbnailUrl?: string | null;
+  // CONTENT MODE (2026-09-22): thêm các field mở rộng cho 3 dạng nội dung.
+  // Tất cả optional — lesson thường không cần.
+  contentMode?: 'lesson' | 'song' | 'podcast' | 'drama';
+  lyricsRaw?: string;
+  characters?: Array<{
+    speakerId: string;
+    displayName: string;
+    color?: string;
+    avatarUrl?: string;
+  }>;
+  chapters?: Array<{
+    chapterId: string;
+    title: string;
+    startMs: number;
+    endMs: number;
+    summary?: string;
+  }>;
 }
 
 export interface LessonList {
@@ -50,7 +67,8 @@ export interface PublicQuestion {
   questionId: string;
   type: 'multiple_choice' | 'fill_blank';
   prompt: string;
-  options: Array<{ optionId: string; text: string }>;
+  // isCorrect is sent by backend so user sees correct answer immediately after selection
+  options: Array<{ optionId: string; text: string; isCorrect?: boolean }>;
 }
 
 export function getLessonQuiz(id: string, options: { signal?: AbortSignal } = {}): Promise<{ questions: PublicQuestion[] }> {
@@ -112,6 +130,16 @@ export interface SubtitleCue {
   pinyin: string;
   vi: string;
   tokens: Array<{ text: string; wordId?: { _id: string; hanzi: string; pinyin?: string; meaningVi?: string; partOfSpeech?: string } | null }>;
+  // CONTENT MODE (2026-09-22): các field mở rộng cho 3 dạng nội dung mới.
+  // Tất cả optional — lesson thường không có.
+  karaokeTokens?: Array<{
+    text: string;
+    startMs: number;
+    endMs: number;
+    wordId?: { _id: string } | null;
+  }>;
+  speakerId?: string;
+  chapterId?: string;
 }
 
 export interface LearningTip {

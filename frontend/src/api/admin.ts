@@ -2,6 +2,39 @@ import { apiFetch } from './client';
 
 export type AdminLessonStatus = 'draft' | 'uploading' | 'processing' | 'ready_for_review' | 'published' | 'hidden' | 'failed';
 
+/**
+ * CONTENT MODE (2026-09-22): loại nội dung của lesson.
+ *  - 'lesson'   — video bài học chuẩn (HSK, phụ đề song ngữ, quiz)
+ *  - 'song'     — bài hát/karaoke (word-level highlight, LRC)
+ *  - 'podcast'  — podcast dài (chapter list, audio-poster player)
+ *  - 'drama'    — clip kịch (multi-speaker, màu cue theo nhân vật)
+ */
+export type ContentMode = 'lesson' | 'song' | 'podcast' | 'drama';
+export type MediaType = 'AUTO' | 'MOVIE' | 'PODCAST' | 'MUSIC';
+
+/**
+ * Nhân vật trong drama. `color` dùng cho DramaPlayer viền cue,
+ * `avatarUrl` optional — admin có thể upload hoặc bỏ trống để dùng initial.
+ */
+export interface DramaCharacter {
+  speakerId: string;
+  displayName: string;
+  descriptionVi?: string;
+  color?: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Chapter cho podcast. Lưu trong lesson.chapters và trả qua API published.
+ */
+export interface PodcastChapter {
+  chapterId: string;
+  title: string;
+  startMs: number;
+  endMs: number;
+  summary?: string;
+}
+
 export interface AdminLesson {
   _id: string;
   slug: string;
@@ -25,6 +58,14 @@ export interface AdminLesson {
   thumbnailUrl?: string | null;
   thumbnailKey?: string;
   createdAt?: string;
+  // CONTENT MODE fields — backend populate khi lesson có mode tương ứng.
+  // Tất cả optional, lesson thường không cần.
+  contentMode?: ContentMode;
+  mediaType?: MediaType;
+  lyricsRaw?: string;
+  lyricsSource?: 'lrc' | 'manual' | 'auto';
+  characters?: DramaCharacter[];
+  chapters?: PodcastChapter[];
 }
 
 export interface AdminCue {
@@ -73,13 +114,34 @@ export interface AdminReview {
 }
 
 export interface ProcessingStatus {
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  lessonId?: string;
+  pipelineVersion?: number;
+  currentStep?: string;
+  status: 'idle' | 'uploading' | 'queued' | 'running' | 'completed' | 'failed';
   stage: string;
   stageProgress: number;
   attempts: number;
   errorCode?: string;
   errorMessage?: string;
   video?: Pick<AdminLesson, 'status' | 'processingStatus' | 'processingProgress' | 'processingStep' | 'processingError'>;
+  capabilities?: {
+    canRetry?: boolean;
+    canCancel?: boolean;
+    canPublish?: boolean;
+    noJob?: boolean;
+  };
+  lessonStatusSync?: 'synced' | 'drift';
+  correctedError?: string;
+  steps?: Record<string, {
+    status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
+    attempt?: number;
+    errorCode?: string;
+    errorMessage?: string;
+    startedAt?: string;
+    completedAt?: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  processingMetrics?: Record<string, unknown>;
 }
 
 export interface AdminUser {
@@ -98,6 +160,8 @@ export interface AdminLessonListParams {
   hsk?: number;
   status?: AdminLessonStatus;
   search?: string;
+  // CONTENT MODE: filter theo contentMode ở admin list.
+  contentMode?: ContentMode;
 }
 
 export interface AdminLessonListResponse {
@@ -114,6 +178,7 @@ export async function listAdminLessons(
   if (params.hsk !== undefined) searchParams.set('hsk', String(params.hsk));
   if (params.status) searchParams.set('status', params.status);
   if (params.search) searchParams.set('search', params.search);
+  if (params.contentMode) searchParams.set('contentMode', params.contentMode);
   const qs = searchParams.toString();
   const data = await apiFetch<{ items: AdminLesson[]; pagination: AdminLessonListResponse['pagination'] }>(
     `/admin/lessons${qs ? `?${qs}` : ''}`,
@@ -139,6 +204,12 @@ export function patchAdminLesson(
       | 'goalTags'
       | 'durationSeconds'
       | 'autoGenerateQuizCount'
+      | 'contentMode'
+      | 'mediaType'
+      | 'lyricsRaw'
+      | 'lyricsSource'
+      | 'characters'
+      | 'chapters'
     >
   >,
 ): Promise<AdminLesson> {
@@ -319,7 +390,7 @@ export function saveAdminSubtitleStyle(id: string, style: AdminSubtitleStyle): P
 }
 
 export function saveAdminSubtitles(id: string, cues: AdminCue[]): Promise<unknown> {
-  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitles`, { method: 'PUT', body: JSON.stringify({ cues }) });
+  return apiFetch(`/admin/lessons/${encodeURIComponent(id)}/subtitles`, { method: 'PUT', body: JSON.stringify({ cues: cues.map(({ cueId, startMs, endMs, zh, pinyin, vi }) => ({ cueId, startMs, endMs, zh, pinyin, vi })) }) });
 }
 
 export function saveAdminQuiz(id: string, questions: AdminQuestion[]): Promise<unknown> {

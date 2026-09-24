@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getLearnerDashboard,
@@ -18,7 +18,6 @@ import HanFlixLoadingScreen from './HanFlixLoadingScreen';
 // (SRS scheduler, flashcard modals, calendar charts) the user may never
 // open in a given session.
 const VocabularyPage = lazy(() => import('./vocabulary/VocabularyPage'));
-const SavedWordsPage = lazy(() => import('./vocabulary/SavedWordsPage'));
 const RoadmapPage = lazy(() => import('./RoadmapPage'));
 const StudyHistoryPage = lazy(() => import('./history/StudyHistoryPage'));
 import LessonCard from './LessonCard';
@@ -47,24 +46,45 @@ const HSK_OPTIONS = [
   { value: '9', label: 'HSK 9' },
 ];
 
+const TOPIC_OPTIONS = [
+  { value: '', label: 'Tất cả chủ đề' },
+  { value: 'daily-life', label: '☕ Đời sống thường nhật' },
+  { value: 'entertainment', label: '🎬 Phim ảnh & Giải trí' },
+  { value: 'food', label: '🍜 Ẩm thực & Nấu ăn' },
+  { value: 'business', label: '💼 Công sở & Kinh doanh' },
+  { value: 'travel', label: '✈️ Du lịch & Khám phá' },
+  { value: 'shopping', label: '🛍️ Mua sắm & Tiêu dùng' },
+];
+
+const TOPIC_PILLS = [
+  { value: '', label: 'Tất cả', icon: '✨' },
+  { value: 'daily-life', label: 'Đời sống', icon: '☕' },
+  { value: 'entertainment', label: 'Giải trí', icon: '🎬' },
+  { value: 'food', label: 'Ẩm thực', icon: '🍜' },
+  { value: 'business', label: 'Công sở', icon: '💼' },
+  { value: 'travel', label: 'Du lịch', icon: '✈️' },
+  { value: 'shopping', label: 'Mua sắm', icon: '🛍️' },
+];
+
 export default function ConnectedLearner({ section, onSelectLesson, onOpenPreferences, onNavigateSection }: {
   section: Section;
   onSelectLesson: (id: string) => void;
   onOpenPreferences: () => void;
   onNavigateSection?: (section: string) => void;
 }) {
-  // Synchronize lessons search, HSK level, and pagination with URL search params
+  // Synchronize lessons topic, HSK level, search, and pagination with URL search params
   const [searchParams, setSearchParams] = useSearchParams();
   const search = section === 'lessons' ? searchParams.get('q') || '' : '';
+  const topic = section === 'lessons' ? searchParams.get('topic') || '' : '';
   const hsk = section === 'lessons' ? searchParams.get('hsk') || '' : '';
   const page = section === 'lessons' ? Math.max(1, Number(searchParams.get('page')) || 1) : 1;
 
-  const setSearch = (val: string) => {
+  const setTopic = (val: string) => {
     if (section !== 'lessons') return;
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      if (val) next.set('q', val);
-      else next.delete('q');
+      if (val) next.set('topic', val);
+      else next.delete('topic');
       next.delete('page');
       return next;
     }, { replace: true });
@@ -81,6 +101,16 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
     }, { replace: true });
   };
 
+  const clearSearch = () => {
+    if (section !== 'lessons') return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('q');
+      next.delete('page');
+      return next;
+    }, { replace: true });
+  };
+
   const setPage = (p: number) => {
     if (section !== 'lessons') return;
     setSearchParams((prev) => {
@@ -92,8 +122,22 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   };
 
   const lessonsQuery = useQuery({
-    queryKey: lessonQueryKeys.list({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12 }),
-    queryFn: ({ signal }) => listPublishedLessons({ q: search || undefined, hsk: hsk ? Number(hsk) : undefined, page, limit: 12, signal } as never).then((data) => data),
+    queryKey: lessonQueryKeys.list({
+      q: search || undefined,
+      hsk: hsk ? Number(hsk) : undefined,
+      topic: topic || undefined,
+      page,
+      limit: 12,
+    }),
+    queryFn: ({ signal }) =>
+      listPublishedLessons({
+        q: search || undefined,
+        hsk: hsk ? Number(hsk) : undefined,
+        topic: topic || undefined,
+        page,
+        limit: 12,
+        signal,
+      } as never).then((data) => data),
     enabled: section === 'lessons',
     staleTime: LESSONS_LIST_STALE,
   });
@@ -122,7 +166,7 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
   const dueQuery = useQuery({
     queryKey: vocabularyQueryKeys.due(),
     queryFn: ({ signal }) => listDueWords({ signal }).then((data) => data.items),
-    enabled: section === 'saved',
+    enabled: section === 'saved' || section === 'vocabulary',
     staleTime: 30 * 1000,
   });
 
@@ -185,24 +229,22 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
     (section === 'lessons' && lessonsQuery.isPending)
     || (section === 'feed' && dashboardQuery.isPending)
     || (section === 'saved' && (savedQuery.isPending || dueQuery.isPending))
-    || (section === 'vocabulary' && savedQuery.isPending)
+    || (section === 'vocabulary' && (savedQuery.isPending || dueQuery.isPending))
     || (section === 'roadmap' && (activityQuery.isPending || dashboardQuery.isPending))
     || (section === 'history' && dashboardQuery.isPending);
 
   const controls = (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-      <label className="flex items-center gap-2 rounded-xl border border-[#E7E7EA] bg-white px-3 h-10 shadow-2xs focus-within:border-[#B91B1C]">
-        <Search className="w-4 h-4 text-[#8B9097] shrink-0" />
-        <input
-          className="w-full sm:w-48 text-xs sm:text-sm outline-none bg-transparent"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Tìm kiếm bài học…"
-        />
-      </label>
+    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      <CustomSelect
+        className="w-full sm:w-44"
+        value={topic}
+        onChange={(val) => {
+          setTopic(val);
+          setPage(1);
+        }}
+        options={TOPIC_OPTIONS}
+        ariaLabel="Lọc chủ đề video"
+      />
       <CustomSelect
         className="w-full sm:w-36"
         value={hsk}
@@ -213,6 +255,20 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
         options={HSK_OPTIONS}
         ariaLabel="Lọc HSK"
       />
+      {(topic || hsk) && (
+        <button
+          type="button"
+          onClick={() => {
+            setTopic('');
+            setHsk('');
+            setPage(1);
+          }}
+          className="text-xs font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-2.5 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
+          title="Đặt lại bộ lọc"
+        >
+          Đặt lại
+        </button>
+      )}
     </div>
   );
 
@@ -279,50 +335,117 @@ export default function ConnectedLearner({ section, onSelectLesson, onOpenPrefer
       )}
     {section === 'lessons' && (
       <section className="space-y-4">
+        {/* Header & Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black">Kho bài học đã xuất bản</h2>
-            <p className="text-sm text-neutral-500">{lessonsQuery.data?.total ?? 0} bài học</p>
+            <h2 className="text-xl font-black text-[#18181B]">Kho bài học đã xuất bản</h2>
+            <p className="text-sm text-[#5F6368]">
+              {lessonsQuery.data?.total ?? 0} bài học
+              {topic && (
+                <span className="ml-1 text-[#B91B1C] font-semibold">
+                  · {TOPIC_OPTIONS.find((t) => t.value === topic)?.label}
+                </span>
+              )}
+            </p>
           </div>
           {controls}
         </div>
-        {isLoading && lessonsQuery.isPending && (
-          <p className="text-sm">Đang tải bài học…</p>
+
+        {/* Global Search Notice if searched from top header bar */}
+        {search && (
+          <div className="flex items-center gap-2 bg-[#FDF1F1] text-[#B91B1C] px-3.5 py-1.5 rounded-full border border-red-200/80 w-fit text-xs font-semibold">
+            <span>Đang tìm: &ldquo;{search}&rdquo;</span>
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="text-[#B91B1C] hover:text-[#18181B] font-black cursor-pointer ml-1"
+              aria-label="Xóa từ khóa tìm kiếm"
+            >
+              ✕
+            </button>
+          </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-          {lessonsQuery.data?.items?.map((lesson) => (
-            <LessonCard
-              key={lesson._id}
-              lesson={lesson}
-              onClick={() => onSelectLesson(lesson._id)}
-            />
-          ))}
+
+        {/* Quick Topic Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {TOPIC_PILLS.map((pill) => {
+            const isActive = topic === pill.value;
+            return (
+              <button
+                key={pill.value}
+                type="button"
+                onClick={() => {
+                  setTopic(pill.value);
+                  setPage(1);
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#B91B1C] text-white shadow-2xs'
+                    : 'bg-white hover:bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] border border-[#E7E7EA]'
+                }`}
+              >
+                <span>{pill.icon}</span>
+                <span>{pill.label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {isLoading && lessonsQuery.isPending && (
+          <p className="text-sm text-[#5F6368]">Đang tải bài học…</p>
+        )}
+
+        {!isLoading && (!lessonsQuery.data?.items || lessonsQuery.data.items.length === 0) ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E7EA] p-8 max-w-md mx-auto space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center mx-auto text-xl">
+              🎬
+            </div>
+            <h3 className="font-black text-[#18181B] text-base">Không tìm thấy bài học phù hợp</h3>
+            <p className="text-xs text-[#5F6368]">
+              Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy thử chọn chủ đề khác nhé!
+            </p>
+            {(topic || hsk || search) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTopic('');
+                  setHsk('');
+                  clearSearch();
+                  setPage(1);
+                }}
+                className="mt-2 inline-flex items-center px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-colors cursor-pointer"
+              >
+                Xem tất cả bài học
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {lessonsQuery.data?.items?.map((lesson) => (
+              <LessonCard
+                key={lesson._id}
+                lesson={lesson}
+                onClick={() => onSelectLesson(lesson._id)}
+              />
+            ))}
+          </div>
+        )}
         {pagination(lessonsQuery.data?.pages ?? 0)}
       </section>
     )}
-    {section === 'saved' && (
+    {(section === 'saved' || section === 'vocabulary') && (
       <Suspense fallback={<HanFlixLoadingScreen />}>
-        <SavedWordsPage
+        <VocabularyPage
+          initialTab={section === 'saved' ? 'saved' : undefined}
           savedWords={savedQuery.data ?? []}
           dueWords={dueQuery.data ?? []}
           onReviewWord={(wordId, rating) => mutate(() => reviewMutation.mutateAsync({ wordId, rating }))}
-          onRemoveWord={(wordId) => mutate(() => removeMutation.mutateAsync(wordId))}
-          onNavigateToVocabulary={() => onNavigateSection?.('vocabulary')}
-          busy={reviewMutation.isPending || removeMutation.isPending}
+          onStartReviewSession={() => {}}
+          onSaveWord={async (word) => {
+            await mutate(() => saveMutation.mutateAsync(word.hanzi));
+          }}
+          onRemoveWord={(wordId) => void mutate(() => removeMutation.mutateAsync(wordId))}
         />
-      </Suspense>
-    )}
-    {section === 'vocabulary' && (
-      <Suspense fallback={<HanFlixLoadingScreen />}>
-        <VocabularyPage
-          savedWords={savedQuery.data ?? []}
-        onStartReviewSession={() => onNavigateSection?.('saved')}
-        onSaveWord={async (word) => {
-          await mutate(() => saveMutation.mutateAsync(word.hanzi));
-        }}
-        onRemoveWord={(wordId) => void mutate(() => removeMutation.mutateAsync(wordId))}
-      />
       </Suspense>
     )}
     {section === 'roadmap' && (

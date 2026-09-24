@@ -71,6 +71,8 @@ export interface AdminLessonReviewStudioProps {
   setTitleZh: (v: string) => void;
   descriptionVi: string;
   setDescriptionVi: (v: string) => void;
+  characters: NonNullable<AdminLesson['characters']>;
+  onCharactersChange: (characters: NonNullable<AdminLesson['characters']>) => void;
   onCuesChange: (cues: AdminCue[]) => void;
   onQuestionsChange: (questions: AdminQuestion[]) => void;
   onSaveMetadata: () => Promise<void>;
@@ -98,6 +100,8 @@ export default function AdminLessonReviewStudio({
   setTitleZh,
   descriptionVi,
   setDescriptionVi,
+  characters,
+  onCharactersChange,
   onCuesChange,
   onQuestionsChange,
   onSaveMetadata,
@@ -385,7 +389,7 @@ export default function AdminLessonReviewStudio({
               <input
                 value={titleZh}
                 onChange={(e) => setTitleZh(e.target.value)}
-                className="w-full px-3 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-serif font-bold text-xs text-[#B91B1C] transition-colors"
+                className="w-full px-3 py-2 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] font-bold text-xs text-[#18181B] transition-colors"
               />
             </div>
 
@@ -398,6 +402,23 @@ export default function AdminLessonReviewStudio({
                 className="w-full p-2.5 bg-[#FFF9F5] border border-[#F2E4D8] rounded-xl outline-none focus:border-[#B91B1C] resize-none leading-relaxed text-xs text-[#18181B] transition-colors"
               />
             </div>
+
+            {lesson.contentMode === 'drama' && characters.length > 0 && (
+              <fieldset className="space-y-2">
+                <legend className="font-bold mb-2">Nhân vật / người nói</legend>
+                {characters.map((character, index) => (
+                  <div key={character.speakerId} className="flex gap-2 items-center">
+                    <input type="color" aria-label={`Màu ${character.speakerId}`}
+                      value={/^#[0-9a-f]{6}$/i.test(character.color ?? '') ? character.color : '#B91B1C'}
+                      onChange={e => onCharactersChange(characters.map((item, i) => i === index ? { ...item, color: e.target.value } : item))}
+                      className="w-8 h-8 shrink-0" />
+                    <input aria-label={`Tên ${character.speakerId}`} value={character.displayName} maxLength={100}
+                      onChange={e => onCharactersChange(characters.map((item, i) => i === index ? { ...item, displayName: e.target.value } : item))}
+                      className="min-w-0 flex-1 rounded-xl border border-[#F2E4D8] p-2 text-xs" />
+                  </div>
+                ))}
+              </fieldset>
+            )}
 
             <button
               type="button"

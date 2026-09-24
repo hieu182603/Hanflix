@@ -114,6 +114,7 @@ export function canRemuxFaststart(probe: ProbeSummary): boolean {
 }
 
 export interface GenerateOptions {
+  outputKey?: string;
   lessonId: string;
   sourcePath: string;
   /** Skip if the lesson already has this playbackVersion. */
@@ -171,7 +172,7 @@ export async function generatePlaybackDerivative(options: GenerateOptions): Prom
     return null;
   }
 
-  const playbackKey = `lessons/${lessonId}/playback/v${PLAYBACK_DERIVATIVE_VERSION}-${randomUUID()}.mp4`;
+  const playbackKey = options.outputKey ?? `lessons/${lessonId}/playback/v${PLAYBACK_DERIVATIVE_VERSION}-${randomUUID()}.mp4`;
   try {
     await uploadR2File(playbackKey, tempOutput, 'video/mp4');
   } catch (error) {

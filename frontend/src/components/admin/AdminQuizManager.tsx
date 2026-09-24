@@ -64,9 +64,11 @@ const HSK_COLORS: Record<string, { bg: string; text: string; border: string }> =
 };
 
 function formatDuration(seconds = 0): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
+  if (isNaN(seconds) || seconds <= 0) return '0:00';
+  const total = Math.round(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 function formatCueTime(ms: number): string {

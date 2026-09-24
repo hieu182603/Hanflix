@@ -19,25 +19,25 @@
 }
 
 .panda-pet-button {
-  position: absolute;
+  position: fixed;
   display: block;
   width: calc(256px * var(--panda-scale));
   height: calc(256px * var(--panda-scale));
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: grab;
+  cursor: pointer;
   pointer-events: auto;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   overflow: visible;
-  transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), top 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .panda-pet-button[data-dragging='true'] {
-  cursor: grabbing;
+  cursor: pointer;
   transition: none;
 }
 .panda-pet-button:focus-visible { outline: 3px solid #2873cf; outline-offset: 2px; border-radius: 16px; }

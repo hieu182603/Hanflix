@@ -71,6 +71,6 @@ describe('AzureSpeechToTextService', () => {
     const { AzureSpeechToTextService } = await import('./azure-speech-to-text.service.js');
     const service = new AzureSpeechToTextService(fetchMock);
 
-    await expect(service.transcribeFile(audioPath)).rejects.toMatchObject({ code: 'FAILED_TRANSCRIPTION_RESPONSE' });
+    await expect(service.transcribeFile(audioPath)).rejects.toMatchObject({ code: 'AZURE_ASR_EMPTY_TRANSCRIPT' });
   });
 });

@@ -82,17 +82,34 @@ const envSchema = z.object({
   AZURE_SPEECH_ENDPOINT: optionalUrl,
   AZURE_SPEECH_LOCALE: z.string().trim().default('zh-CN'),
   AZURE_SPEECH_API_VERSION: z.string().trim().default('2025-10-15'),
+  AZURE_SPEECH_WHISPER_MODEL_SELF: optionalUrl,
+  AZURE_SPEECH_BATCH_API_VERSION: z.string().trim().default('2024-11-15'),
+  AZURE_SPEECH_BATCH_ENABLED: booleanFromString.default(true),
+  AZURE_SPEECH_MODEL_CACHE_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  R2_ASR_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(3600).max(86400).default(43200),
+  MIN_VIDEO_DURATION_SECONDS: z.coerce.number().int().min(1).default(60),
+  MAX_VIDEO_DURATION_SECONDS: z.coerce.number().int().min(1).max(600).default(420),
+  PROCESSING_PIPELINE_VERSION: z.coerce.number().int().min(1).max(10).default(2),
+  VIDEO_PROCESSING_PIPELINE_V2: booleanFromString.default(true),
+  MUSIC_PRESEPARATE_VOCALS: booleanFromString.default(false),
+  ASR_GOOD_THRESHOLD: z.coerce.number().min(0).max(1).default(0.72),
+  ASR_RETRY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.42),
+  ALIGNMENT_ENABLED: booleanFromString.default(true),
+  ALIGNMENT_MODE: z.enum(['DISABLED', 'APPROXIMATE_ALLOWED', 'REQUIRED']).default('APPROXIMATE_ALLOWED'),
+  ALIGNMENT_ALLOW_APPROXIMATE: booleanFromString.default(true),
+  PROCESSING_ARTIFACT_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  VIDEO_PROCESSING_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(1).default(1),
+  MEDIA_COMPUTE_PROVIDER: z.enum(['local', 'azure-container-apps']).default('local'),
+  AZURE_MEDIA_JOB_RESOURCE_ID: optionalString.pipe(z.string().regex(/^\/subscriptions\/[^/]+\/resourceGroups\/[^/]+\/providers\/Microsoft.App\/jobs\/[^/]+$/).optional()),
+  MEDIA_JOB_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(1800).default(900),
+  AZURE_CLIENT_ID: optionalString.pipe(z.string().uuid().optional()),
   AZURE_PROVIDER_MAX_RETRIES: z.coerce.number().int().min(1).max(5).default(2),
   VIDEO_PROCESSING_MAX_RETRIES: z.coerce.number().int().min(1).max(10).default(3),
   VIDEO_PROCESSING_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(120).default(30),
   VIDEO_PROCESSING_POLL_MS: z.coerce.number().int().min(1000).max(60000).default(5000),
   VIDEO_WORKER_MODE: z.enum(['embedded', 'standalone', 'disabled']).default('embedded'),
-  // F11 fix (2026-09-18): disable transactions explicitly. Some Atlas tiers
-  // (e.g. M0 free) advertise ReplicaSetWithPrimary but the driver still
-  // throws "Only servers in a sharded cluster can start a new transaction"
-  // on the second session — we fall back to sequential writes instead.
-  // Set DISABLE_TRANSACTIONS=true in .env to opt out for production runs
-  // that you control via your own Mongo replica set.
+  // Prefer transactions on production replica sets. Opt out only for local
+  // standalone MongoDB; revision reservations make partial writes retryable.
   // NOTE: we use a string → enum transform instead of z.coerce.boolean()
   // because Boolean("false") === true (any non-empty string is truthy).
   DISABLE_TRANSACTIONS: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
@@ -112,6 +129,9 @@ const envSchema = z.object({
   VIDEO_LEASE_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),
   // F04: heartbeat interval (seconds). Worker emits heartbeat at this rate.
   VIDEO_HEARTBEAT_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(120).default(20),
+  // CONTENT MODE (2026-09-22): max duration override cho từng mode.
+  // Lesson thường cap 600s (10 phút). Podcast thường dài 30-90 phút, set default 5400s (90 phút).
+  VIDEO_MAX_DURATION_PODCAST_SECONDS: z.coerce.number().int().min(60).max(21600).default(5400),
   // F12 fix (2026-09-19): playback derivative MP4 faststart + transcoding.
   // When enabled, the pipeline runs ffmpeg after audio extraction to either
   // remux (no re-encode when already H.264/AAC) or transcode to a
@@ -151,6 +171,9 @@ const envSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().email().default('admin@hanflix.local'),
   SEED_ADMIN_PASSWORD: z.string().min(10).default('ChangeMe123!'),
 }).superRefine((value, context) => {
+  if (value.ASR_RETRY_THRESHOLD >= value.ASR_GOOD_THRESHOLD) context.addIssue({ code: 'custom', path: ['ASR_RETRY_THRESHOLD'], message: 'Retry threshold must be lower than good threshold' });
+  if (value.VIDEO_HEARTBEAT_INTERVAL_SECONDS * 2 >= value.VIDEO_LEASE_TTL_SECONDS) context.addIssue({ code: 'custom', path: ['VIDEO_HEARTBEAT_INTERVAL_SECONDS'], message: 'Heartbeat interval must be less than half the lease TTL' });
+  if (value.VIDEO_PROCESSING_PIPELINE_V2 && value.AZURE_SPEECH_LOCALE !== 'zh-CN') context.addIssue({ code: 'custom', path: ['AZURE_SPEECH_LOCALE'], message: 'Pipeline V2 requires zh-CN' });
   const rejectPlaceholder = (name: keyof typeof value) => {
     const configured = value[name];
     if (typeof configured === 'string' && placeholderPattern.test(configured)) {

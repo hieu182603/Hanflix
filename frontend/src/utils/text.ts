@@ -53,7 +53,7 @@ export function cleanPinyinText(input: string): string {
  */
 export function formatDuration(seconds: number): string {
   if (isNaN(seconds) || seconds <= 0) return '0:00';
-  const totalSecs = Math.floor(seconds);
+  const totalSecs = Math.round(seconds);
   const m = Math.floor(totalSecs / 60);
   const s = totalSecs % 60;
   return `${m}:${s < 10 ? '0' : ''}${s}`;

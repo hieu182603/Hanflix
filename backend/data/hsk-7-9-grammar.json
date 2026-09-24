@@ -1,0 +1,2227 @@
+[
+  {
+    "no": 1,
+    "category": "词类",
+    "subcategory": "动词",
+    "name": "能愿动词：需",
+    "explanationVi": "能愿动词「需」用于表示客观上需要或要求，常用于正式书面语，表示动作或状态发生的必要性。",
+    "pattern": "主语+需+动词/小句",
+    "group": "能愿动词（Modal Verb）",
+    "example": {
+      "chinese": "父亲的身体需休养一段时间。",
+      "pinyin": "fùqīn de shēntǐ xiū yǎng yī duàn shíjiān.",
+      "vietnamese": "Cơ thể của cha cần nghỉ dưỡng một thời gian."
+    },
+    "example2": {
+      "chinese": "我们仍需耐心等待。",
+      "pinyin": "wǒmen réng xū nàixīn děngdài.",
+      "vietnamese": "Chúng ta vẫn cần kiên nhẫn chờ đợi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 2,
+    "category": "词类",
+    "subcategory": "代词",
+    "name": "疑问代词：何",
+    "explanationVi": "疑问代词「何」用于书面语，相当于「什么」「哪里」「什么时候」，询问事物、处所或时间。",
+    "pattern": "何+名词/动词",
+    "group": "代词（Pronoun）",
+    "example": {
+      "chinese": "我们何时出发？",
+      "pinyin": "wǒmen hé shí chūfā?",
+      "vietnamese": "Chúng ta khi nào khởi hành?"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 3,
+    "category": "词类",
+    "subcategory": "代词",
+    "name": "指示代词：该、另、兹",
+    "explanationVi": "指示代词「该、另、兹」为书面语，分别相当于「这个」「另外的」「现在/此」，用于正式文体的指示。",
+    "pattern": "该/另/兹+名词",
+    "group": "代词（Pronoun）",
+    "example": {
+      "chinese": "该企业、另一回事、兹日",
+      "pinyin": "gāi qǐyè, lìng yī huíshì, zī rì",
+      "vietnamese": "Doanh nghiệp này, một chuyện khác, ngày hôm nay"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 4,
+    "category": "词类",
+    "subcategory": "量词",
+    "name": "名量词（1）栋、粒、枚、则、盏（2）复合量词：人次",
+    "explanationVi": "学习高级量词「栋」(tòa, dùng cho nhà)、「粒」(hạt, dùng cho thuốc/hạt nhỏ)、「枚」(quân, dùng cho đồng xu/huy hiệu)、「则」(bản, dùng cho tin tức)、「盏」(chén, dùng cho đèn)以及复合量词「人次」(người-lượt, dùng cho lượt khách).",
+    "pattern": "数词+量词+名词",
+    "group": "量词（Measure Word）",
+    "example": {
+      "chinese": "四栋楼、三粒药、五枚硬币、一则新闻、一盏灯",
+      "pinyin": "sì dòng lóu, sān lì yào, wǔ méi yìngbì, yī zé xīnwén, yī zhǎn dēng",
+      "vietnamese": "Bốn toà nhà, ba viên thuốc, năm đồng xu, một bản tin, một ngọn đèn"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 5,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "极为",
+    "explanationVi": "程度副词「极为」表示很高的程度，相当于「非常」「极其」，多用于书面语和正式文体。",
+    "pattern": "极为+形容词/动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "能源汽车的发展前景极为广阔。",
+      "pinyin": "néngyuán qìchē de fāzhǎn qiánjǐng jíwéi guǎngkuò.",
+      "vietnamese": "Triển vọng phát triển của xe năng lượng mới cực kỳ rộng mở."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 6,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "尽",
+    "explanationVi": "程度副词「尽」表示最高的程度，对应「尽量」「尽可能」，置于动词前表示极限。",
+    "pattern": "尽+动词/动词短语",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "坐在尽前头的是我女朋友。",
+      "pinyin": "zuò zài jìn qiántou de shì wǒ nǚ péngyǒu.",
+      "vietnamese": "Người ngồi ở hàng đầu phía trước là bạn gái tôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 7,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "蛮",
+    "explanationVi": "程度副词「蛮」为口语用法，相当于「挺」「相当」，表示程度较高。",
+    "pattern": "蛮+形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "她的分数蛮高的。",
+      "pinyin": "tā de fēnshù mán gāo de.",
+      "vietnamese": "Điểm của cô ấy khá cao."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 8,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "颇",
+    "explanationVi": "程度副词「颇」为书面语，表示较高的程度，相当于「相当」「很」。",
+    "pattern": "颇+形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "我对这部电影的印象颇深。",
+      "pinyin": "wǒ duì zhè bù diànyǐng de yìnxiàng pō shēn.",
+      "vietnamese": "Ấn tượng của tôi về bộ phim này khá sâu sắc."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 9,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "稍稍",
+    "explanationVi": "程度副词「稍稍」表示轻微的程度，相当于「略微」「稍微」。",
+    "pattern": "稍稍+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "听了他的话，我稍稍松了一口气。",
+      "pinyin": "tīng le tā de huà, wǒ shāoshāo sōng le yī kǒuqì.",
+      "vietnamese": "Nghe lời anh ấy, tôi thở phào nhẹ nhõm."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 10,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "尤为",
+    "explanationVi": "程度副词「尤为」用于强调某种性质在某方面特别突出，常用于书面语。",
+    "pattern": "副词/形容词+尤为+形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "葡萄中的维生素含量尤为丰厚。",
+      "pinyin": "pútáo zhōng de wéishēngsù hánliàng yóuwéi fēnghòu.",
+      "vietnamese": "Hàm lượng vitamin trong nho đặc biệt dồi dào."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 11,
+    "category": "词类",
+    "subcategory": "程度副词",
+    "name": "越发",
+    "explanationVi": "程度副词「越发」表示程度随着某种情况加深而提高，相当于「更加」。",
+    "pattern": "越发+形容词/动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "随着年龄的增长，他越发不喜欢出去旅行了。",
+      "pinyin": "suízhe niánlíng de zēngzhǎng, tā yuèfā bù xǐhuān chūqù lǚxíng le.",
+      "vietnamese": "Theo tuổi tác tăng lên, anh ấy càng không thích đi du lịch nữa."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 12,
+    "category": "词类",
+    "subcategory": "范围副词",
+    "name": "凡",
+    "explanationVi": "范围副词「凡」用于书面语，表示「凡是」「只要是」，含总括意义。",
+    "pattern": "凡+名词/小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "凡年龄满十八岁的公民都有选举与被选举的权利。",
+      "pinyin": "fán niánlíng mǎn shíbā suì de gōngmín dōu yǒu xuǎnjǔ yǔ bèi xuǎnjǔ de quánlì.",
+      "vietnamese": "Bất kỳ công dân nào đủ 18 tuổi đều có quyền bầu cử và ứng cử."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 13,
+    "category": "词类",
+    "subcategory": "范围副词",
+    "name": "皆",
+    "explanationVi": "范围副词「皆」为书面语，表示总括全部，相当于「都」「全部」。",
+    "pattern": "主语+皆+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "这个比赛十六到十九岁的男性青少年皆可报名参加。",
+      "pinyin": "zhège bǐsài shíliù dào shíjiǔ suì de nánxìng qīngshàonián jiē kě bàomíng cānjiā.",
+      "vietnamese": "Thanh thiếu niên nam từ 16 đến 19 tuổi đều có thể đăng ký tham gia cuộc thi này."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 14,
+    "category": "词类",
+    "subcategory": "范围副词",
+    "name": "统统",
+    "explanationVi": "范围副词「统统」强调总括全部，相当于「全部」「都」，语气较强。",
+    "pattern": "主语+统统+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "我们不得不承认这些材料统统没有价值。",
+      "pinyin": "wǒmen bùdébù chéngrèn zhèxiē cáiliào tǒngtǒng méiyǒu jiàzhí.",
+      "vietnamese": "Chúng ta không thể không thừa nhận rằng tất cả những tài liệu này đều không có giá trị."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 15,
+    "category": "词类",
+    "subcategory": "范围副词",
+    "name": "唯独",
+    "explanationVi": "范围副词「唯独」表示「只是」「唯有」，强调例外，常与「都」呼应。",
+    "pattern": "...都...，唯独+例外",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "全班同学都在认真听讲，唯独他在睡觉。",
+      "pinyin": "quánbān tóngxué dōu zài rènzhēn tīngjiǎng, wéidú tā zài shuìjiào.",
+      "vietnamese": "Cả lớp đều đang chăm chú nghe giảng, chỉ mình anh ấy đang ngủ."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 16,
+    "category": "词类",
+    "subcategory": "时间副词",
+    "name": "即",
+    "explanationVi": "时间副词「即」表示「立即」「马上」，又可作连词表示因果「就是」。",
+    "pattern": "即+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "对待教育问题，不宜忽视，要严肃对待，有错即改。",
+      "pinyin": "duìdài jiàoyù wèntí, bù yí hūshì, yào yánsù duìdài, yǒu cuò jí gǎi.",
+      "vietnamese": "Đối với vấn đề giáo dục, không nên coi nhẹ, phải nghiêm túc xử lý, có sai là sửa ngay."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 17,
+    "category": "词类",
+    "subcategory": "时间副词",
+    "name": "历来",
+    "explanationVi": "时间副词「历来」表示「从过去到现在一直」，用于强调一贯性。",
+    "pattern": "历来+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "王老师历来重视培养学生的动手能力。",
+      "pinyin": "wáng lǎoshī lìlái zhòngshì péiyǎng xuésheng de dòngshǒu nénglì.",
+      "vietnamese": "Thầy Vương luôn coi trọng việc bồi dưỡng khả năng thực hành của học sinh."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 18,
+    "category": "词类",
+    "subcategory": "时间副词",
+    "name": "尚",
+    "explanationVi": "时间副词「尚」为书面语，表示动作状态还持续没变，相当于「还」「仍然」。",
+    "pattern": "尚+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "这个问题想研究明白，尚需努力。",
+      "pinyin": "zhège wèntí xiǎng yánjiū míngbai, shàng xū nǔlì.",
+      "vietnamese": "Để nghiên cứu rõ vấn đề này, vẫn cần cố gắng."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 19,
+    "category": "词类",
+    "subcategory": "时间副词",
+    "name": "向来",
+    "explanationVi": "时间副词「向来」表示从过去到现在的一贯情况，相当于「一向」「一直」。",
+    "pattern": "向来+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "他向来第一个到学校，从未迟到过。",
+      "pinyin": "tā xiànglái dì yī gè dào xuéxiào, cóngwèi chídào guò.",
+      "vietnamese": "Anh ấy luôn đến trường sớm nhất, chưa bao giờ đi muộn."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 20,
+    "category": "词类",
+    "subcategory": "频率副词",
+    "name": "频频",
+    "explanationVi": "频率副词「频频」表示动作在短时间内多次发生，相当于「连续多次」「屡次」。",
+    "pattern": "频频+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "气氛十分热烈，大家频频举杯，说笑不停。",
+      "pinyin": "qìfēn shífēn rèliè, dàjiā pínpín jǔbēi, shuō xiào bù tíng.",
+      "vietnamese": "Không khí rất sôi nổi, mọi người liên tục nâng cốc, nói cười không ngừng."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 21,
+    "category": "词类",
+    "subcategory": "频率副词",
+    "name": "再度",
+    "explanationVi": "频率副词「再度」表示动作再次发生，相当于「再次」「又一次」，书面语。",
+    "pattern": "再度+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "两位好友二十年后再度相遇。",
+      "pinyin": "liǎng wèi hǎoyǒu èrshí nián hòu zàidù xiāngyù.",
+      "vietnamese": "Hai người bạn tốt gặp lại nhau sau 20 năm."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 22,
+    "category": "词类",
+    "subcategory": "关联副词",
+    "name": "亦",
+    "explanationVi": "关联副词「亦」为文言虚词，相当于「也」，用于书面语。",
+    "pattern": "...亦+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "此人并不存在，将来亦不会出现，永远不会。",
+      "pinyin": "cǐ rén bìng bù cúnzài, jiānglái yì bù huì chūxiàn, yǒngyuǎn bù huì.",
+      "vietnamese": "Người này không tồn tại, tương lai cũng sẽ không xuất hiện, không bao giờ."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 23,
+    "category": "词类",
+    "subcategory": "否定副词",
+    "name": "未",
+    "explanationVi": "否定副词「未」为书面语，表示动作尚未发生，相当于「没有」「不曾」。",
+    "pattern": "未+动词/动词短语",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "他至今还未和我联系。",
+      "pinyin": "tā zhìjīn hái wèi hé wǒ liánxì.",
+      "vietnamese": "Anh ấy đến giờ vẫn chưa liên lạc với tôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 24,
+    "category": "词类",
+    "subcategory": "否定副词",
+    "name": "勿",
+    "explanationVi": "否定副词「勿」为文言副词，相当于「不要」，用于禁止或劝阻的语气。",
+    "pattern": "勿+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "希望各位勿忘十年后的约定。",
+      "pinyin": "xīwàng gèwèi wù wàng shí nián hòu de yuēdìng.",
+      "vietnamese": "Hy vọng mọi người đừng quên lời hẹn sau mười năm."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 25,
+    "category": "词类",
+    "subcategory": "方式副词",
+    "name": "不由得",
+    "explanationVi": "方式副词「不由得」表示不由自主地发生某事，相当于「不禁」「情不自禁」。",
+    "pattern": "不由得+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "看着父亲粗糙的手，我不由得流下了眼泪。",
+      "pinyin": "kànzhe fùqīn cūcāo de shǒu, wǒ bùyóude liúxià le yǎnlèi.",
+      "vietnamese": "Nhìn đôi tay thô ráp của cha, tôi không kìm được rơi nước mắt."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 26,
+    "category": "词类",
+    "subcategory": "方式副词",
+    "name": "顺便",
+    "explanationVi": "方式副词「顺便」表示在做某事的同时捎带做另一件事，相当于「就便」。",
+    "pattern": "顺便+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "去老师办公室的时候，他顺便把我的作业也交了。",
+      "pinyin": "qù lǎoshī bàngōngshì de shíhou, tā shùnbiàn bǎ wǒ de zuòyè yě jiāo le.",
+      "vietnamese": "Khi đến văn phòng thầy, anh ấy tiện nộp luôn bài tập của tôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 27,
+    "category": "词类",
+    "subcategory": "方式副词",
+    "name": "一连",
+    "explanationVi": "方式副词「一连」表示动作或状态持续不断，相当于「连续」「接连」。",
+    "pattern": "一连+动词/数量词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "这场大雨一连下了十多天。",
+      "pinyin": "zhè chǎng dàyǔ yīlián xià le shí duō tiān.",
+      "vietnamese": "Trận mưa lớn này đã liên tục kéo dài hơn mười ngày."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 28,
+    "category": "词类",
+    "subcategory": "情态副词",
+    "name": "按说",
+    "explanationVi": "情态副词「按说」表示根据常理或道理来说应该如此，用于引出实际情况的对比。",
+    "pattern": "按说+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "按说这个时候应该下雪了，可今年一场雪还没下。",
+      "pinyin": "àn shuō zhège shíhou yīnggāi xiàxuě le, kě jīnnián yī chǎng xuě hái méi xià.",
+      "vietnamese": "Theo lý thì lúc này phải có tuyết rồi, nhưng năm nay chưa có trận tuyết nào."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 29,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "必定",
+    "explanationVi": "语气副词「必定」表示强烈的肯定，相当于「一定」「必然会」，强调主观判断。",
+    "pattern": "必定+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "若是有一个太太照顾着他，他的生活必定不会那么乱七八糟了。",
+      "pinyin": "ruò shì yǒu yī gè tàitai zhàogù zhe tā, tā de shēnghuó bìdìng bù huì nàme luànqībāzāo le.",
+      "vietnamese": "Nếu có một người vợ chăm sóc anh ấy, cuộc sống của anh ấy chắc chắn sẽ không bừa bộn thế này."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 30,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "不妨",
+    "explanationVi": "语气副词「不妨」表示建议或提议，相当于「可以」「何不」，语气委婉。",
+    "pattern": "不妨+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "据说这个药效果很好，你不妨试一试。",
+      "pinyin": "jùshuō zhège yào xiàoguǒ hěn hǎo, nǐ bùfáng shì yī shì.",
+      "vietnamese": "Nghe nói loại thuốc này hiệu quả lắm, bạn có thể thử xem."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 31,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "何必",
+    "explanationVi": "语气副词「何必」用于反问，表示不必，相当于「用不着」「为什么非要」。",
+    "pattern": "何必+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "我只是和你开玩笑，何必当真呢？",
+      "pinyin": "wǒ zhǐshì hé nǐ kāi wánxiào, hébì dàngzhēn ne?",
+      "vietnamese": "Tôi chỉ đùa với bạn thôi, có cần phải nghiêm túc vậy không?"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 32,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "莫非",
+    "explanationVi": "语气副词「莫非」用于猜测或怀疑，相当于「难道」「不会是」，常带有反问语气。",
+    "pattern": "莫非+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "她今天没来学校，莫非出了什么事？",
+      "pinyin": "tā jīntiān méi lái xuéxiào, mòfēi chū le shénme shì?",
+      "vietnamese": "Hôm nay cô ấy không đến trường, chẳng lẽ xảy ra chuyện gì rồi?"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 33,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "白白",
+    "explanationVi": "语气副词「白白」表示徒劳或无效果，相当于「徒然」「白费力气」。",
+    "pattern": "白白+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "她忘了关水龙头，白白浪费了很多水。",
+      "pinyin": "tā wàng le guān shuǐ lóngtóu, báibái làngfèi le hěn duō shuǐ.",
+      "vietnamese": "Cô ấy quên không khóa vòi nước, uổng phí rất nhiều nước."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 34,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "反倒",
+    "explanationVi": "语气副词「反倒」表示与预期相反，相当于「反而」「恰恰相反」。",
+    "pattern": "反倒+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "明明是你的错，怎么反倒怪我了？",
+      "pinyin": "míngmíng shì nǐ de cuò, zěnme fǎndào guài wǒ le?",
+      "vietnamese": "Rõ ràng là lỗi của bạn, sao lại trách tôi?"
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 35,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "分明",
+    "explanationVi": "语气副词「分明」表示显然、明显，相当于「明明」「显然」。",
+    "pattern": "分明+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "让我三天就完成，你分明是在为难我。",
+      "pinyin": "ràng wǒ sān tiān jiù wánchéng, nǐ fēnmíng shì zài wéinán wǒ.",
+      "vietnamese": "Bảo tôi ba ngày hoàn thành, rõ ràng là bạn đang làm khó tôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 36,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "怪不得",
+    "explanationVi": "语气副词「怪不得」用于发现原因，表示「明白了原因所以不再奇怪」。",
+    "pattern": "怪不得+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "怪不得她没去爬山，原来昨天下雨了。",
+      "pinyin": "guàibude tā méi qù páshān, yuánlái zuótiān xiàyǔ le.",
+      "vietnamese": "Khó trách cô ấy không đi leo núi, hóa ra hôm qua trời mưa."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 37,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "好在",
+    "explanationVi": "语气副词「好在」表示某种有利情况，相当于「幸好」「幸而」，多用于补充有利的事实。",
+    "pattern": "好在+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "好在他病得不重，应该马上就能上班了。",
+      "pinyin": "hǎozài tā bìng de bù zhòng, yīnggāi mǎshàng jiù néng shàngbān le.",
+      "vietnamese": "May mà anh ấy bệnh không nặng, chắc là có thể đi làm ngay."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 38,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "乃",
+    "explanationVi": "文言副词「乃」相当于「是」「就是」「才」，用于书面语或文言色彩强的句子。",
+    "pattern": "主语+乃+名词/动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "《红楼梦》乃古代小说的杰出代表。",
+      "pinyin": "hóng lóu mèng nǎi gǔdài xiǎoshuō de jiéchū dàibiǎo.",
+      "vietnamese": "'Hồng Lâu Mộng' là tác phẩm tiêu biểu xuất sắc của tiểu thuyết cổ điển."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 39,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "难怪",
+    "explanationVi": "语气副词「难怪」表示怪不得，相当于「怪不得」，强调由此可以理解。",
+    "pattern": "难怪+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "他是个东北人，难怪他不怕冷。",
+      "pinyin": "tā shì gè dōngběi rén, nánguài tā bù pà lěng.",
+      "vietnamese": "Anh ấy là người Đông Bắc, khó trách anh ấy không sợ lạnh."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 40,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "偏偏",
+    "explanationVi": "语气副词「偏偏」表示与意愿或常理相反，相当于「偏要」「就是」。",
+    "pattern": "偏偏+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "我们已经穿好衣服准备要走了，可孩子偏偏又醒了。",
+      "pinyin": "wǒmen yǐjīng chuān hǎo yīfu zhǔnbèi yào zǒu le, kě háizi piānpiān yòu xǐng le.",
+      "vietnamese": "Chúng tôi đã mặc xong quần áo chuẩn bị đi rồi, nhưng đứa trẻ lại tỉnh dậy."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 41,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "索性",
+    "explanationVi": "语气副词「索性」表示干脆、直接，相当于「干脆」「一不做二不休」。",
+    "pattern": "索性+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "衣服已经被雨淋湿了，我索性就合上了伞。",
+      "pinyin": "yīfu yǐjīng bèi yǔ lín shī le, wǒ suǒxìng jiù hé shàng le sǎn.",
+      "vietnamese": "Quần áo đã bị ướt mưa, tôi đành đóng ô lại luôn."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 42,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "万万",
+    "explanationVi": "语气副词「万万」强调绝对禁止或不会发生，相当于「绝对」「千万」。",
+    "pattern": "万万+不/不要+动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "万万不能开着煤气出门。",
+      "pinyin": "wànwàn bù néng kāi zhe méiqì chūmén.",
+      "vietnamese": "Tuyệt đối không được mở ga đi ra ngoài."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 43,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "未免",
+    "explanationVi": "语气副词「未免」表示委婉的不以为然，相当于「实在有些」「不太」。",
+    "pattern": "未免+太/过于+形容词/动词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "你这样说她，未免也太过分了。",
+      "pinyin": "nǐ zhèyàng shuō tā, wèimiǎn yě tài guòfèn le.",
+      "vietnamese": "Bạn nói cô ấy như vậy, thật sự quá đáng rồi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 44,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "无非",
+    "explanationVi": "语气副词「无非」表示「不外乎」「只是」，常引出简单的原因或事实。",
+    "pattern": "无非+是+名词/小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "他这么做，无非是为了早点儿回家。",
+      "pinyin": "tā zhème zuò, wúfēi shì wèi le zǎo diǎnr huíjiā.",
+      "vietnamese": "Anh ấy làm vậy chẳng qua là để về nhà sớm hơn."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 45,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "幸好",
+    "explanationVi": "语气副词「幸好」表示某种有幸的情况使结果转好，相当于「多亏」「幸亏」。",
+    "pattern": "幸好+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "幸好你提醒了我，要不我就忘了。",
+      "pinyin": "xìnghǎo nǐ tíxǐng le wǒ, yào bù wǒ jiù wàng le.",
+      "vietnamese": "May mà bạn nhắc tôi, không thì tôi đã quên rồi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 46,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "幸亏",
+    "explanationVi": "语气副词「幸亏」与「幸好」相近，强调因某事避免了不好的结果。",
+    "pattern": "幸亏+小句",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "幸亏你回来得早，不然我就不知道怎么办才好了。",
+      "pinyin": "xìngkuī nǐ huílái de zǎo, bùrán wǒ jiù bù zhīdào zěnme bàn cái hǎo le.",
+      "vietnamese": "May mà bạn về sớm, không thì tôi không biết phải làm sao."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 47,
+    "category": "词类",
+    "subcategory": "语气副词",
+    "name": "终究",
+    "explanationVi": "语气副词「终究」表示最终结果如此，相当于「终究还是」「最终」。",
+    "pattern": "终究+动词/形容词",
+    "group": "副词（Adverb）",
+    "example": {
+      "chinese": "他终究是个孩子，你得耐心一点儿。",
+      "pinyin": "tā zhōngjiū shì gè háizi, nǐ děi nàixīn yīdiǎnr.",
+      "vietnamese": "Anh ấy dù sao cũng chỉ là đứa trẻ, bạn phải kiên nhẫn một chút."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 48,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "顺着",
+    "explanationVi": "介词「顺着」表示沿着某个方向或某种思路，相当于「沿着」「沿着...」。",
+    "pattern": "顺着+名词+动词",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "雨水顺着我的头发滴了下来。",
+      "pinyin": "yǔshuǐ shùnzhe wǒ de tóufa dī le xiàlái.",
+      "vietnamese": "Nước mưa nhỏ giọt xuống dọc theo tóc của tôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 49,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "当着",
+    "explanationVi": "介词「当着」表示在某人面前做某事，强调公开性。",
+    "pattern": "当着+某人+的面+动词",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "当着大家的面，我把礼物拆开了。",
+      "pinyin": "dāngzhe dàjiā de miàn, wǒ bǎ lǐwù chāi kāi le.",
+      "vietnamese": "Trước mặt mọi người, tôi đã mở món quà ra."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 50,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "就",
+    "explanationVi": "介词「就」（就5义项）表示「关于」「针对」，引出对象或话题。",
+    "pattern": "就+名词+动词",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "他就这个问题做了检讨。",
+      "pinyin": "tā jiù zhège wèntí zuò le jiǎntǎo.",
+      "vietnamese": "Anh ấy đã tự kiểm điểm về vấn đề này."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 51,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "趁",
+    "explanationVi": "介词「趁」表示利用某个时机，相当于「趁着」。",
+    "pattern": "趁+名词/小句",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "趁你还年轻，一定要多尝试。",
+      "pinyin": "chèn nǐ hái niánqīng, yīdìng yào duō chángshì.",
+      "vietnamese": "Tranh thủ lúc bạn còn trẻ, hãy thử nhiều thứ."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 52,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "基于",
+    "explanationVi": "介词「基于」表示以某事为基础或根据，相当于「根据」「以...为基础」。",
+    "pattern": "基于+名词/小句",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "这两种不同的人生态度是基于对人生不同的理解。",
+      "pinyin": "zhè liǎng zhǒng bùtóng de rénshēng tàidù shì jīyú duì rénshēng bùtóng de lǐjiě.",
+      "vietnamese": "Hai thái độ sống khác nhau này dựa trên những cách hiểu khác nhau về cuộc đời."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 53,
+    "category": "词类",
+    "subcategory": "介词",
+    "name": "依",
+    "explanationVi": "介词「依」表示依照、按照，相当于「根据」「按照」。",
+    "pattern": "依+名词/小句",
+    "group": "介词（Preposition）",
+    "example": {
+      "chinese": "这件事就依你的方案做吧。",
+      "pinyin": "zhè jiàn shì jiù yī nǐ de fāng'àn zuò ba.",
+      "vietnamese": "Việc này cứ làm theo phương án của bạn."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 54,
+    "category": "词类",
+    "subcategory": "连词",
+    "name": "连接词或词组：及",
+    "explanationVi": "连词「及」用于连接名词或名词短语，相当于「和」「以及」，书面语。",
+    "pattern": "A+及+B",
+    "group": "连词（Conjunction）",
+    "example": {
+      "chinese": "工人、农民及士兵都参加了此次会议。",
+      "pinyin": "gōngrén, nóngmín jí shìbīng dōu cānjiā le cǐ cì huìyì.",
+      "vietnamese": "Công nhân, nông dân và binh sĩ đều tham gia cuộc họp này."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 55,
+    "category": "词类",
+    "subcategory": "连词",
+    "name": "连接分句或句子：继而、要不是",
+    "explanationVi": "连词「继而」表示紧接的动作或情况，「要不是」相当于「如果不是」。",
+    "pattern": "...，继而+动词 / 要不是+小句，...",
+    "group": "连词（Conjunction）",
+    "example": {
+      "chinese": "人民币升值将会影响到中国的出口，继而影响中国的经济增长。",
+      "pinyin": "rénmínbì shēngzhí jiāng huì yǐngxiǎng dào zhōngguó de chūkǒu, jì'ér yǐngxiǎng zhōngguó de jīngjì zēngzhǎng.",
+      "vietnamese": "Việc đồng nhân dân tệ tăng giá sẽ ảnh hưởng đến xuất khẩu của Trung Quốc, từ đó ảnh hưởng đến tăng trưởng kinh tế."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 56,
+    "category": "词类",
+    "subcategory": "助词",
+    "name": "结构助词：之",
+    "explanationVi": "结构助词「之」为文言虚词，相当于「的」，用于书面语或文学语言。",
+    "pattern": "名词+之+名词",
+    "group": "助词（Particle）",
+    "example": {
+      "chinese": "我们可以将北京描绘为一本梦之书。",
+      "pinyin": "wǒmen kěyǐ jiāng běijīng miáohuì wéi yī běn mèng zhī shū.",
+      "vietnamese": "Chúng ta có thể miêu tả Bắc Kinh như một cuốn sách của giấc mơ."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 57,
+    "category": "词类",
+    "subcategory": "助词",
+    "name": "语气助词：而已",
+    "explanationVi": "语气助词「而已」用于陈述句末，强调仅此而已，相当于「罢了」。",
+    "pattern": "...而已",
+    "group": "助词（Particle）",
+    "example": {
+      "chinese": "这算什么，只是一堆纸而已。",
+      "pinyin": "zhè suàn shénme, zhǐshì yī duī zhǐ éryǐ.",
+      "vietnamese": "Cái này tính là gì, chỉ là một đống giấy thôi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 58,
+    "category": "词类",
+    "subcategory": "助词",
+    "name": "语气助词：矣",
+    "explanationVi": "语气助词「矣」为文言虚词，用于陈述句末表示已然或感叹，相当于「了」「啊」。",
+    "pattern": "小句+矣",
+    "group": "助词（Particle）",
+    "example": {
+      "chinese": "人生得一知己足矣。",
+      "pinyin": "rénshēng dé yī zhījǐ zú yǐ.",
+      "vietnamese": "Đời người có được một tri kỷ là đủ rồi."
+    },
+    "hskLevel": 7
+  },
+  {
+    "no": 59,
+    "category": "短语",
+    "subcategory": "结构类型",
+    "name": "数词+量词+抽象事物",
+    "explanationVi": "短语结构「数词+量词+抽象事物」表示整体概念，如「一身本领」。",
+    "pattern": "数词+量词+抽象名词",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "他有一身本领，颇有才华。",
+      "pinyin": "tā yǒu yī shēn běnlǐng, pō yǒu cáihuá.",
+      "vietnamese": "Anh ấy có một tài năng đầy mình, khá có tài hoa."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 60,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "爱A不A",
+    "explanationVi": "四字格「爱A不A」表示不太在意或不在乎如何，相当于「爱...不...」。",
+    "pattern": "爱+A+不+A",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "这是我的想法，你爱听不听。",
+      "pinyin": "zhè shì wǒ de xiǎngfǎ, nǐ ài tīng bù tīng.",
+      "vietnamese": "Đây là suy nghĩ của tôi, bạn muốn nghe hay không là tuỳ bạn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 61,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "半A半B",
+    "explanationVi": "四字格「半A半B」表示同时具有两种相反或相近的状态。",
+    "pattern": "半+A+半+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "他说话半真半假，你不要完全相信他。",
+      "pinyin": "tā shuōhuà bàn zhēn bàn jiǎ, nǐ bùyào wánquán xiāngxìn tā.",
+      "vietnamese": "Anh ấy nói nửa thật nửa giả, bạn đừng tin hoàn toàn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 62,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "东A西B",
+    "explanationVi": "四字格「东A西B」表示动作分散、范围广或杂乱无序。",
+    "pattern": "东+A+西+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "她买东西就喜欢东挑西选。",
+      "pinyin": "tā mǎi dōngxī jiù xǐhuān dōng tiāo xī xuǎn.",
+      "vietnamese": "Cô ấy mua đồ thích chọn khắp nơi."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 63,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "非A非B",
+    "explanationVi": "四字格「非A非B」表示既不是A也不是B，否定两者。",
+    "pattern": "非+A+非+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "我们非敌非友，只是那天见过一面而已。",
+      "pinyin": "wǒmen fēi dí fēi yǒu, zhǐshì nà tiān jiàn guò yī miàn éryǐ.",
+      "vietnamese": "Chúng tôi không thù không bạn, chỉ gặp mặt hôm đó một lần."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 64,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "忽A忽B",
+    "explanationVi": "四字格「忽A忽B」表示状态不稳定、交替出现。",
+    "pattern": "忽+A+忽+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "他十分紧张，心跳得忽快忽慢。",
+      "pinyin": "tā shífēn jǐnzhāng, xīn tiào de hū kuài hū màn.",
+      "vietnamese": "Anh ấy rất căng thẳng, tim đập lúc nhanh lúc chậm."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 65,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "连A带B",
+    "explanationVi": "四字格「连A带B」表示动作接连发生或包含两项内容。",
+    "pattern": "连+A+带+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "几个小孩儿吓得连哭带叫。",
+      "pinyin": "jǐ gè xiǎoháir xià de lián kū dài jiào.",
+      "vietnamese": "Mấy đứa trẻ sợ quá vừa khóc vừa kêu."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 66,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "时A时B",
+    "explanationVi": "四字格「时A时B」表示状态不断交替变化。",
+    "pattern": "时+A+时+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "小鸟发出的声音时长时短。",
+      "pinyin": "xiǎoniǎo fāchū de shēngyīn shí cháng shí duǎn.",
+      "vietnamese": "Tiếng chim phát ra lúc dài lúc ngắn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 67,
+    "category": "短语",
+    "subcategory": "四字格",
+    "name": "自A自B",
+    "explanationVi": "四字格「自A自B」表示动作施受同体，自己对自己做某事。",
+    "pattern": "自+A+自+B",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "一路上老板自说自话唠叨了半天。",
+      "pinyin": "yīlù shang lǎobǎn zì shuō zì huà lāodāo le bàntiān.",
+      "vietnamese": "Suốt dọc đường, ông chủ tự nói tự lẩm bẩm một lúc lâu."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 68,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "巴不得",
+    "explanationVi": "固定短语「巴不得」表示迫切希望，相当于「恨不得」「很想」。",
+    "pattern": "巴不得+动词",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "我恨这个行业，巴不得早点儿离开。",
+      "pinyin": "wǒ hèn zhège hángyè, bābude zǎo diǎnr líkāi.",
+      "vietnamese": "Tôi ghét ngành này, chỉ muốn rời đi sớm."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 69,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "别提了",
+    "explanationVi": "固定短语「别提了」用于不想详述某事，相当于「甭提了」，常避免叙述不愉快的事。",
+    "pattern": "别提了",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "别提了,我根本都不认识那个人。",
+      "pinyin": "bié tí le, wǒ gēnběn dōu bù rènshi nàgè rén.",
+      "vietnamese": "Đừng nhắc nữa, tôi căn bản không quen người đó."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 70,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "除此之外",
+    "explanationVi": "固定短语「除此之外」表示排除前述之后其他的部分，相当于「除此以外」。",
+    "pattern": "除此之外，...",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "我只带了一个书包，除此之外什么都没带。",
+      "pinyin": "wǒ zhǐ dài le yīgè shūbāo, chú cǐ zhī wài shénme dōu méi dài.",
+      "vietnamese": "Tôi chỉ mang một cái cặp, ngoài ra không mang gì cả."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 71,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "归根到底",
+    "explanationVi": "固定短语「归根到底」表示归根结底、追到底层原因，相当于「说到底」。",
+    "pattern": "归根到底+小句",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "人生归根到底是一个人的旅行。",
+      "pinyin": "rénshēng guīgēn dàodǐ shì yī gè rén de lǚxíng.",
+      "vietnamese": "Cuộc đời xét đến cùng là cuộc hành trình của một người."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 72,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "可不是",
+    "explanationVi": "固定短语「可不是」用于附和对方，表示肯定或同意对方的话，相当于「是啊」「没错」。",
+    "pattern": "甲：... 乙：可不是，...",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "甲：小孩子长得真快啊！ 乙：可不是，已经要上小学了。",
+      "pinyin": "jiǎ: xiǎoháizi zhǎng de zhēn kuài a! yǐ: kěbùshì, yǐjīng yào shàng xiǎoxué le.",
+      "vietnamese": "A: Trẻ con lớn nhanh thật! B: Đúng vậy, sắp vào tiểu học rồi."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 73,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "没说的",
+    "explanationVi": "固定短语「没说的」表示没意见或没问题，相当于「没问题」「不在话下」。",
+    "pattern": "没说的",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "我愿意做这件事，那是没说的。",
+      "pinyin": "wǒ yuànyì zuò zhè jiàn shì, nà shì méi shuō de.",
+      "vietnamese": "Tôi muốn làm việc này, điều đó không có gì phải bàn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 74,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "无论如何",
+    "explanationVi": "固定短语「无论如何」表示不管怎样都这样，相当于「不管怎样」「一定」。",
+    "pattern": "无论如何+小句",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "无论如何，他没有别的选择。",
+      "pinyin": "wúlùn rúhé, tā méiyǒu biéde xuǎnzé.",
+      "vietnamese": "Dù thế nào, anh ấy không có lựa chọn nào khác."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 75,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "由此可见",
+    "explanationVi": "固定短语「由此可见」用于从前述推出结论，相当于「由此可以推断」。",
+    "pattern": "...，由此可见+小句",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "很多中国孩子从小学习书法，由此可见书法在中国教育中的重要地位。",
+      "pinyin": "hěn duō zhōngguó háizi cóngxiǎo xuéxí shūfǎ, yóucǐ kějiàn shūfǎ zài zhōngguó jiàoyù zhōng de zhòngyào dìwèi.",
+      "vietnamese": "Nhiều trẻ em Trung Quốc học thư pháp từ nhỏ, từ đó có thể thấy vị trí quan trọng của thư pháp trong giáo dục Trung Quốc."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 76,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "与此同时",
+    "explanationVi": "固定短语「与此同时」表示同时发生，相当于「同时」「同一时间内」。",
+    "pattern": "...，与此同时+小句",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "太阳落山了，几乎与此同时下起了大雨。",
+      "pinyin": "tàiyáng luòshān le, jīhū yǔ cǐ tóngshí xià qǐ le dàyǔ.",
+      "vietnamese": "Mặt trời lặn, gần như cùng lúc đó trời đổ mưa lớn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 77,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "这样一来",
+    "explanationVi": "固定短语「这样一来」用于引出前述带来的结果，相当于「这样做导致...」。",
+    "pattern": "...，这样一来+小句",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "他听了医生的话，每天都去外面散步，这样一来，他的病很快就好了。",
+      "pinyin": "tā tīng le yīshēng de huà, měitiān dōu qù wàimiàn sànbù, zhèyàng yīlái, tā de bìng hěn kuài jiù hǎo le.",
+      "vietnamese": "Anh ấy nghe lời bác sĩ, mỗi ngày đều đi dạo bên ngoài, nhờ vậy bệnh của anh ấy nhanh chóng khỏi."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 78,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "综上所述",
+    "explanationVi": "固定短语「综上所述」用于总结前述，相当于「tổng hợp lại thì」「tóm lại」。",
+    "pattern": "综上所述，...",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "综上所述，如果希望交流顺利地进行，需要大家共同努力。",
+      "pinyin": "zōngshàng suǒshù, rúguǒ xīwàng jiāoliú shùnlì de jìnxíng, xūyào dàjiā gòngtóng nǔlì.",
+      "vietnamese": "Tổng hợp lại, nếu muốn giao tiếp diễn ra thuận lợi, cần mọi người cùng cố gắng."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 79,
+    "category": "短语",
+    "subcategory": "其他固定短语",
+    "name": "总的来说/总而言之",
+    "explanationVi": "固定短语「总的来说/总而言之」用于总结，相当于「总之」「nói chung」。",
+    "pattern": "总的来说/总而言之，...",
+    "group": "短语（Phrase）",
+    "example": {
+      "chinese": "总的来说，他的身体状态还算不错。",
+      "pinyin": "zǒngde lái shuō, tā de shēntǐ zhuàngtài hái suàn bùcuò.",
+      "vietnamese": "Nhìn chung, tình trạng sức khoẻ của anh ấy còn tạm ổn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 80,
+    "category": "固定格式",
+    "subcategory": "不知…好",
+    "name": "不知⋯⋯好",
+    "explanationVi": "固定格式「不知⋯⋯好」表示不知怎样做才好，带有为难的语气。",
+    "pattern": "不知+动词⋯⋯+好",
+    "group": "固定格式（Fixed Pattern）",
+    "example": {
+      "chinese": "看他紧张得手心都是汗，我也不知说什么好。",
+      "pinyin": "kàn tā jǐnzhāng de shǒuxīn dōu shì hàn, wǒ yě bù zhī shuō shénme hǎo.",
+      "vietnamese": "Nhìn anh ấy căng thẳng mồ hôi tay đầm đìa, tôi cũng không biết nói gì cho phải."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 81,
+    "category": "固定格式",
+    "subcategory": "所谓⋯⋯ 就是⋯⋯",
+    "name": "所谓⋯⋯ 就是⋯⋯",
+    "explanationVi": "固定格式「所谓⋯⋯ 就是⋯⋯」用于解释说明某事的具体含义。",
+    "pattern": "所谓+X+就是+Y",
+    "group": "固定格式（Fixed Pattern）",
+    "example": {
+      "chinese": "他所谓的好家庭就是住在一栋大房子里。",
+      "pinyin": "tā suǒwèi de hǎo jiātíng jiùshì zhù zài yī dòng dà fángzi lǐ.",
+      "vietnamese": "Cái gọi là gia đình tốt của anh ấy là sống trong một toà nhà lớn."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 82,
+    "category": "固定格式",
+    "subcategory": "无非/不过/只不过/只是…而已/罢了",
+    "name": "无非/不过/只不过/只是⋯⋯ 而已/罢了",
+    "explanationVi": "固定格式「无非/不过/只不过/只是⋯⋯ 而已/罢了」表示仅此而已、轻描淡写的语气。",
+    "pattern": "无非/不过/只不过/只是+Y+而已/罢了",
+    "group": "固定格式（Fixed Pattern）",
+    "example": {
+      "chinese": "她会做这道题，只不过假装不会而已。",
+      "pinyin": "tā huì zuò zhè dào tí, zhǐbùguò jiǎzhuāng bù huì éryǐ.",
+      "vietnamese": "Cô ấy làm được bài này, chỉ là giả vờ không làm được thôi."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 83,
+    "category": "固定格式",
+    "subcategory": "以…为…",
+    "name": "以⋯⋯ 为⋯⋯",
+    "explanationVi": "固定格式「以⋯⋯ 为⋯⋯」表示「把...当作...」「视...为...」。",
+    "pattern": "以+X+为+Y",
+    "group": "固定格式（Fixed Pattern）",
+    "example": {
+      "chinese": "我们不能以自己为中心，要考虑别人的感受。",
+      "pinyin": "wǒmen bù néng yǐ zìjǐ wéi zhōngxīn, yào kǎolǜ biérén de gǎnshòu.",
+      "vietnamese": "Chúng ta không thể lấy mình làm trung tâm, cần phải cân nhắc cảm nhận của người khác."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 84,
+    "category": "固定格式",
+    "subcategory": "因…而…",
+    "name": "因⋯⋯ 而⋯⋯",
+    "explanationVi": "固定格式「因⋯⋯ 而⋯⋯」表示因果关系，相当于「因为...而...」。",
+    "pattern": "因+X+而+Y",
+    "group": "固定格式（Fixed Pattern）",
+    "example": {
+      "chinese": "她胆子很大，不会因一些奇怪的声音而害怕。",
+      "pinyin": "tā dǎnzi hěn dà, bù huì yīn yīxiē qíguài de shēngyīn ér hàipà.",
+      "vietnamese": "Cô ấy rất can đảm, sẽ không sợ vì một số âm thanh kỳ lạ."
+    },
+    "hskLevel": 8
+  },
+  {
+    "no": 85,
+    "category": "句子成分",
+    "subcategory": "宾语",
+    "name": "宾语的语义类型3",
+    "explanationVi": "学习方式宾语、工具宾语、材料宾语、目的宾语四种特殊宾语的语义类型。",
+    "pattern": "动词+方式/工具/材料/目的宾语",
+    "group": "句子成分（Sentence Elements）",
+    "example": {
+      "chinese": "为了方便取出来，他把钱存了个活期。",
+      "pinyin": "wèile fāngbiàn qǔ chūlái, tā bǎ qián cún le gè huóqī.",
+      "vietnamese": "Để tiện lấy ra, anh ấy gửi tiền theo hình thức không kỳ hạn."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 86,
+    "category": "句子成分",
+    "subcategory": "补语",
+    "name": "程度补语3",
+    "explanationVi": "学习程度补语「形容词/动词+得+不行」「形容词/动词+得+要命/要死」。",
+    "pattern": "形容词/动词+得+不行 / 要命 / 要死",
+    "group": "句子成分（Sentence Elements）",
+    "example": {
+      "chinese": "终于要去旅游了，儿子兴奋得不行。",
+      "pinyin": "zhōngyú yào qù lǚyóu le, érzi xīngfèn de bùxíng.",
+      "vietnamese": "Cuối cùng cũng được đi du lịch, con trai hào hứng vô cùng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 87,
+    "category": "句子成分",
+    "subcategory": "补语",
+    "name": "状态补语3：「个」引导的补语",
+    "explanationVi": "学习状态补语「动词+个+不停/没完」，表示持续或程度。",
+    "pattern": "动词+个+不停/没完/痛快",
+    "group": "句子成分（Sentence Elements）",
+    "example": {
+      "chinese": "那个小女孩儿哭个不停，说是找不到妈妈了。",
+      "pinyin": "nàgè xiǎo nǚhái er kū ge bù tíng, shuō shì zhǎo bù dào māmā le.",
+      "vietnamese": "Cô bé khóc không ngừng, nói là không tìm thấy mẹ."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 88,
+    "category": "句子的类型",
+    "subcategory": "特殊句式",
+    "name": "「把」字句5：表致使",
+    "explanationVi": "学习表致使的「把」字句结构，主语使宾语（施事）发生某种动作。",
+    "pattern": "主语+把+宾语（施事）+动词+了",
+    "group": "句型（Sentence Pattern）",
+    "example": {
+      "chinese": "去年她把丈夫死了，后来父母也去世了。",
+      "pinyin": "qùnián tā bǎ zhàngfu sǐ le, hòulái fùmǔ yě qùshì le.",
+      "vietnamese": "Năm ngoái cô ấy bị chồng chết, sau đó cha mẹ cũng qua đời."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 89,
+    "category": "句子的类型",
+    "subcategory": "特殊句式",
+    "name": "被动句5",
+    "explanationVi": "学习被动句式「被...所...」「为...所...」，表示被动含义。",
+    "pattern": "主语+被/为+...+所+动词",
+    "group": "句型（Sentence Pattern）",
+    "example": {
+      "chinese": "没想到，他竟然会被一个小学生所欺骗。",
+      "pinyin": "méi xiǎngdào, tā jìngrán huì bèi yī gè xiǎoxuéshēng suǒ qīpiàn.",
+      "vietnamese": "Không ngờ, anh ấy lại bị một học sinh tiểu học lừa gạt."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 90,
+    "category": "句子的类型",
+    "subcategory": "特殊句式",
+    "name": "比较句6",
+    "explanationVi": "学习高级比较句式「比起...（来）」「A+形容词+于+B」「A+比+名词+还+名词」。",
+    "pattern": "比起+X+(来) / A+形容词+于+B / A+比+N+还+N",
+    "group": "句型（Sentence Pattern）",
+    "example": {
+      "chinese": "比起其他人,我的想法太简单了。",
+      "pinyin": "bǐ qǐ qítā rén, wǒ de xiǎngfǎ tài jiǎndān le.",
+      "vietnamese": "So với những người khác, suy nghĩ của tôi quá đơn giản."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 91,
+    "category": "复句",
+    "subcategory": "并列复句",
+    "name": "一面⋯⋯，一面⋯⋯",
+    "explanationVi": "并列复句「一面...，一面...」表示两个动作同时进行。",
+    "pattern": "一面+X，一面+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他一面听老师讲课，一面认真记笔记。",
+      "pinyin": "tā yīmiàn tīng lǎoshī jiǎngkè, yīmiàn rènzhēn jì bǐjì.",
+      "vietnamese": "Anh ấy vừa nghe thầy giảng bài, vừa chăm chú ghi chép."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 92,
+    "category": "复句",
+    "subcategory": "承接复句",
+    "name": "⋯⋯ ，此后⋯⋯",
+    "explanationVi": "承接复句「...，此后...」表示某一事件之后的事情。",
+    "pattern": "X，此后+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "我们三年前见过一面，此后再也没有见过。",
+      "pinyin": "wǒmen sān nián qián jiàn guò yīmiàn, cǐhòu zài yě méiyǒu jiàn guò.",
+      "vietnamese": "Ba năm trước chúng tôi gặp nhau một lần, sau đó không gặp lại nữa."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 93,
+    "category": "复句",
+    "subcategory": "承接复句",
+    "name": "起初⋯⋯ ，⋯⋯ 才⋯⋯",
+    "explanationVi": "承接复句「起初...，...才...」表示起初情况与最终结果。",
+    "pattern": "起初+X，...+才+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "我们起初不想参加的，只是不好意思拒绝，才去了那里。",
+      "pinyin": "wǒmen qǐchū bù xiǎng cānjiā de, zhǐshì bù hǎoyìsi jùjué, cái qù le nàlǐ.",
+      "vietnamese": "Lúc đầu chúng tôi không muốn tham gia, chỉ là không tiện từ chối, mới đến đó."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 94,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "别说⋯⋯，连⋯⋯ 也/都⋯⋯",
+    "explanationVi": "递进复句「别说...，连...也/都...」表示从轻到重的递进关系。",
+    "pattern": "别说+A，连+B+也/都+C",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "别说是大学生了，连小学生都比他写得好。",
+      "pinyin": "biéshuō shì dàxuéshēng le, lián xiǎoxuéshēng dōu bǐ tā xiě de hǎo.",
+      "vietnamese": "Đừng nói là sinh viên, ngay cả học sinh tiểu học cũng viết tốt hơn anh ấy."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 95,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯，何况⋯⋯",
+    "explanationVi": "递进复句「...，何况...」表示更有理由做某事，相当于「更不用说」。",
+    "pattern": "X，何况+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "我不道歉，何况根本不是我的错！",
+      "pinyin": "wǒ bù dàoqiàn, hékǒu gēnběn bùshì wǒ de cuò!",
+      "vietnamese": "Tôi không xin lỗi, huống chi đó không phải lỗi của tôi!"
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 96,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯，进而⋯⋯",
+    "explanationVi": "递进复句「...，进而...」表示在前一步基础上更进一步。",
+    "pattern": "X，进而+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "只有在这样的国家里，教师才能充分发展，进而保护他自己和公共利益。",
+      "pinyin": "zhǐyǒu zài zhèyàng de guójiā lǐ, jiàoshī cái néng chōngfèn fāzhǎn, jìn'ér bǎohù tā zìjǐ hé gōnggòng lìyì.",
+      "vietnamese": "Chỉ ở đất nước như vậy, giáo viên mới có thể phát triển đầy đủ, từ đó bảo vệ bản thân và lợi ích công cộng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 97,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯，况且",
+    "explanationVi": "递进复句「...，况且...」表示补充更进一层的理由。",
+    "pattern": "X，况且+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "北京这么大，况且你又是第一次来，怎么能一下子就找到我家呢？",
+      "pinyin": "běijīng zhème dà, kuàngqiě nǐ yòu shì dì yī cì lái, zěnme néng yīxià zi jiù zhǎodào wǒ jiā ne?",
+      "vietnamese": "Bắc Kinh lớn như vậy, hơn nữa bạn lại lần đầu đến, làm sao có thể tìm được nhà tôi ngay?"
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 98,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "连⋯⋯，更不用说⋯⋯",
+    "explanationVi": "递进复句「连...，更不用说...」强调前者都...，后者更不必说。",
+    "pattern": "连+X，更不用说+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "我连上次的考试都没通过，更不用说这次的了。",
+      "pinyin": "wǒ lián shàngcì de kǎoshì dōu méi tōngguò, gèng bùyòng shuō zhè cì de le.",
+      "vietnamese": "Tôi đã không vượt qua kỳ thi lần trước, nói chi đến lần này."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 99,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯ ，乃至⋯⋯",
+    "explanationVi": "递进复句「...，乃至...」表示从轻到重或从小到大的递进。",
+    "pattern": "X，乃至+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他熟悉北京，也熟悉巴黎，乃至全世界。",
+      "pinyin": "tā shúxī běijīng, yě shúxī bālí, nǎizhì quán shìjiè.",
+      "vietnamese": "Anh ấy quen thuộc Bắc Kinh, cũng quen thuộc Pari, thậm chí cả thế giới."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 100,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯ ，且⋯⋯",
+    "explanationVi": "递进复句「...，且...」表示递进关系，相当于「而且」。",
+    "pattern": "X，且+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他办事严谨而认真，且十分负责，获得了领导的信任。",
+      "pinyin": "tā bànshì yánjǐn ér rènzhēn, qiě shífēn fùzé, huòdé le lǐngdǎo de xìnrèn.",
+      "vietnamese": "Anh ấy làm việc nghiêm túc và chăm chỉ, lại rất có trách nhiệm, được lãnh đạo tin tưởng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 101,
+    "category": "复句",
+    "subcategory": "递进复句",
+    "name": "⋯⋯ ，甚至于⋯⋯",
+    "explanationVi": "递进复句「...，甚至于...」强调程度之深。",
+    "pattern": "X，甚至于+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "她不能忍受这种想法，甚至于一秒钟也受不了。",
+      "pinyin": "tā bù néng rěnshòu zhè zhǒng xiǎngfǎ, shènzhìyú yī miǎozhōng yě shòu bù liǎo.",
+      "vietnamese": "Cô ấy không chịu nổi ý nghĩ này, thậm chí một giây cũng không chịu được."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 102,
+    "category": "复句",
+    "subcategory": "选择复句",
+    "name": "或⋯⋯ ，或⋯⋯",
+    "explanationVi": "选择复句「或...，或...」表示在两种或多种情况中选择。",
+    "pattern": "或+X，或+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他把信藏在某个秘密的地方，或一块石头下面，或一棵树后面。",
+      "pinyin": "tā bǎ xìn cáng zài mǒu gè mìmì de dìfang, huò yī kuài shítou xiàmian, huò yī kē shù hòumian.",
+      "vietnamese": "Anh ấy giấu bức thư ở một nơi bí mật, hoặc dưới một tảng đá, hoặc sau một cái cây."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 103,
+    "category": "复句",
+    "subcategory": "选择复句",
+    "name": "宁可/宁愿⋯⋯",
+    "explanationVi": "选择复句「宁可/宁愿...」表示在比较之后做出选择。",
+    "pattern": "宁可/宁愿+X",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他宁可饿着肚子去上课，也不愿意吃垃圾食品。",
+      "pinyin": "tā nìngkě è zhe dùzi qù shàngkè, yě bù yuànyì chī lèsè shípǐn.",
+      "vietnamese": "Anh ấy thà đói bụng đi học còn hơn ăn đồ ăn vặt."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 104,
+    "category": "复句",
+    "subcategory": "选择复句",
+    "name": "与其⋯⋯ ，不如⋯⋯",
+    "explanationVi": "选择复句「与其...，不如...」建议后者更好的做法。",
+    "pattern": "与其+X，不如+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "与其去爬山，述不如在家看电视。",
+      "pinyin": "yǔqí qù páshān, shù bùrú zài jiā kàn diànshì.",
+      "vietnamese": "Thay vì đi leo núi, chi bằng ở nhà xem TV."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 105,
+    "category": "复句",
+    "subcategory": "选择复句",
+    "name": "与其⋯⋯ ，宁可/宁愿⋯⋯",
+    "explanationVi": "选择复句「与其...，宁可/宁愿...」强调宁愿前者也不要后者。",
+    "pattern": "与其+X，宁可/宁愿+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "与其跟他一组，我宁愿一个人做这个项目。",
+      "pinyin": "yǔqí gēn tā yī zǔ, wǒ nìngyuàn yī gè rén zuò zhège xiàngmù.",
+      "vietnamese": "Thà một mình làm dự án này còn hơn là đi chung nhóm với anh ấy."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 106,
+    "category": "复句",
+    "subcategory": "转折复句",
+    "name": "⋯⋯，而 ⋯⋯（则）⋯⋯",
+    "explanationVi": "转折复句「...，而...（则）...」表示前后对比或转折。",
+    "pattern": "X，而/则+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "北方人过春节往往吃饺子，而南方人的习俗则是吃汤圆。",
+      "pinyin": "běifāngrén guò chūnjié wǎngwǎng chī jiǎozi, ér nánfāngrén de xísú zé shì chī tāngyuán.",
+      "vietnamese": "Người miền Bắc ăn Tết thường ăn bánh chẻo, còn phong tục của người miền Nam là ăn bánh trôi nước."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 107,
+    "category": "复句",
+    "subcategory": "转折复句",
+    "name": "⋯⋯，⋯⋯倒/反倒⋯⋯",
+    "explanationVi": "转折复句「...，...倒/反倒...」表示与预期相反。",
+    "pattern": "X，Y+倒/反倒+Z",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "听护士这么一说，他反倒放松了下来。",
+      "pinyin": "tīng hùshì zhème yī shuō, tā fǎndào fàngsōng le xiàlái.",
+      "vietnamese": "Nghe y tá nói vậy, anh ấy lại thư giãn xuống."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 108,
+    "category": "复句",
+    "subcategory": "假设复句",
+    "name": "倘若/若⋯⋯，⋯⋯",
+    "explanationVi": "假设复句「倘若/若...，...」表示假设条件。",
+    "pattern": "倘若/若+X，Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "若不小心，是不是又会发生纠纷？",
+      "pinyin": "ruò bù xiǎoxīn, shìbushì yòu huì fāshēng jiūfēn?",
+      "vietnamese": "Nếu không cẩn thận, có phải lại xảy ra tranh chấp không?"
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 109,
+    "category": "复句",
+    "subcategory": "假设复句",
+    "name": "倘若/假设/假使/若⋯⋯ ，就/那（么）⋯⋯",
+    "explanationVi": "假设复句「倘若/假设/假使/若...，就/那(么)...」表示假设及其结果。",
+    "pattern": "倘若/假设/假使/若+X，就/那(么)+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "假设这是我们未来的家园，那这个世界就不会再有饥饿的儿童。",
+      "pinyin": "jiǎshè zhè shì wǒmen wèilái de jiāyuán, nà zhège shìjiè jiù bù huì zài yǒu jī'è de értóng.",
+      "vietnamese": "Giả sử đây là quê hương tương lai của chúng ta, thì thế giới này sẽ không còn trẻ em đói nữa."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 110,
+    "category": "复句",
+    "subcategory": "假设复句",
+    "name": "幸亏⋯⋯ ，要不然/不然/要不/否则⋯⋯",
+    "explanationVi": "假设复句「幸亏...，要不然/不然/要不/否则...」表示幸好...否则...。",
+    "pattern": "幸亏+X，要不然/不然/要不/否则+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "幸亏你提醒了我，要不然我就忘了。",
+      "pinyin": "xìngkuī nǐ tíxǐng le wǒ, yàobùrán wǒ jiù wàng le.",
+      "vietnamese": "May mà bạn nhắc tôi, không thì tôi đã quên."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 111,
+    "category": "复句",
+    "subcategory": "条件复句",
+    "name": "别管⋯⋯ ，都⋯⋯",
+    "explanationVi": "条件复句「别管...，都...」表示无论什么条件都如此。",
+    "pattern": "别管+X，Y+都+Z",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "别管台下坐的是谁，你都要充满信心。",
+      "pinyin": "biéguǎn táixià zuò de shì shéi, nǐ dōu yào chōngmǎn xìnxīn.",
+      "vietnamese": "Dù người ngồi dưới sân khấu là ai, bạn đều phải đầy tự tin."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 112,
+    "category": "复句",
+    "subcategory": "条件复句",
+    "name": "任⋯⋯ ，也⋯⋯",
+    "explanationVi": "条件复句「任...，也...」为书面语，相当于「无论...，都...」。",
+    "pattern": "任+X，也+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "任他们怎么推，也推不动。",
+      "pinyin": "rèn tāmen zěnme tuī, yě tuī bù dòng.",
+      "vietnamese": "Dù họ có đẩy thế nào, cũng không thể nhúc nhích được."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 113,
+    "category": "复句",
+    "subcategory": "因果复句",
+    "name": "（因）⋯⋯ ，故⋯⋯",
+    "explanationVi": "因果复句「(因)...，故...」为书面语，表示因果关系。",
+    "pattern": "(因)+X，故+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他已经适应了国外的生活，故不打算再回国。",
+      "pinyin": "tā yǐjīng shìyìng le guówài de shēnghuó, gù bù dǎsuàn zài huíguó.",
+      "vietnamese": "Anh ấy đã thích nghi với cuộc sống ở nước ngoài, vì vậy không định về nước nữa."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 114,
+    "category": "复句",
+    "subcategory": "因果复句",
+    "name": "鉴于⋯⋯ ，⋯⋯",
+    "explanationVi": "因果复句「鉴于...，...」表示根据或考虑到某种情况。",
+    "pattern": "鉴于+X，Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "鉴于他的表现良好，学校决定允许他回来上课。",
+      "pinyin": "jiànyú tā de biǎoxiàn liánghǎo, xuéxiào juédìng yǔnxǔ tā huílái shàngkè.",
+      "vietnamese": "Căn cứ vào việc biểu hiện tốt của anh ấy, nhà trường quyết định cho phép anh ấy trở lại học."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 115,
+    "category": "复句",
+    "subcategory": "因果复句",
+    "name": "（由于）⋯⋯ ，以致⋯⋯",
+    "explanationVi": "因果复句「(由于)...，以致...」强调由于前者导致不好的结果。",
+    "pattern": "(由于)+X，以致+Y（多表负面结果）",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他睡过头了，以致错过了第一节课。",
+      "pinyin": "tā shuì guòtóu le, yǐzhì cuòguò le dì yī jié kè.",
+      "vietnamese": "Anh ấy ngủ quá giấc, đến nỗi lỡ tiết học đầu tiên."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 116,
+    "category": "复句",
+    "subcategory": "因果复句",
+    "name": "⋯⋯，以至于⋯⋯",
+    "explanationVi": "因果复句「...，以至于...」表示程度之深。",
+    "pattern": "X，以至于+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "事情发展得太快，以至于大家都难以反应。",
+      "pinyin": "shìqíng fāzhǎn de tài kuài, yǐzhìyú dàjiā dōu nányǐ fǎnyìng.",
+      "vietnamese": "Sự việc phát triển quá nhanh, đến nỗi mọi người khó phản ứng kịp."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 117,
+    "category": "复句",
+    "subcategory": "因果复句",
+    "name": "之所以⋯⋯，是因为/是由于⋯⋯",
+    "explanationVi": "因果复句「之所以...，是因为/是由于...」先结果后原因。",
+    "pattern": "之所以+X，是因为/是由于+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "这部电影之所以好看，是因为内容很有趣。",
+      "pinyin": "zhè bù diànyǐng zhīsuǒyǐ hǎokàn, shì yīnwèi nèiróng hěn yǒuqù.",
+      "vietnamese": "Bộ phim này hay là vì nội dung rất thú vị."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 118,
+    "category": "复句",
+    "subcategory": "让步复句",
+    "name": "固然⋯⋯ ，也⋯⋯",
+    "explanationVi": "让步复句「固然...，也...」先承认事实再有转折。",
+    "pattern": "固然+X，也+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "那固然是我们的习惯，也还需要有另外的理由。",
+      "pinyin": "nà gùrán shì wǒmen de xíguàn, yě hái xūyào yǒu lìngwài de lǐyóu.",
+      "vietnamese": "Điều đó tuy là thói quen của chúng ta, nhưng cũng cần có lý do khác."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 119,
+    "category": "复句",
+    "subcategory": "让步复句",
+    "name": "⋯⋯ 固然⋯⋯ ，但是/可是/不过⋯⋯",
+    "explanationVi": "让步复句「...固然...，但是/可是/不过...」承认前者但补充后者。",
+    "pattern": "X 固然 +Y， 但是/可是/不过+Z",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "一个人的成功，聪明固然重要，但是努力更重要。",
+      "pinyin": "yī gè rén de chénggōng, cōngmíng gùrán zhòngyào, dànshì nǔlì gèng zhòngyào.",
+      "vietnamese": "Thành công của một người, thông minh tất nhiên quan trọng, nhưng nỗ lực quan trọng hơn."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 120,
+    "category": "复句",
+    "subcategory": "让步复句",
+    "name": "即便⋯⋯ ，也⋯⋯",
+    "explanationVi": "让步复句「即便...，也...」表示即使在前述条件下仍然。",
+    "pattern": "即便+X，也+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "即便你成绩好，也不能骄傲。",
+      "pinyin": "jíbiàn nǐ chéngjì hǎo, yě bù néng jiāo'ào.",
+      "vietnamese": "Dù thành tích của bạn tốt, cũng không được kiêu ngạo."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 121,
+    "category": "复句",
+    "subcategory": "让步复句",
+    "name": "虽说⋯⋯ ，但是/可是/不过⋯⋯",
+    "explanationVi": "让步复句「虽说...，但是/可是/不过...」表示虽然承认但有转折。",
+    "pattern": "虽说+X，但是/可是/不过+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "虽说中文很难，可是它很有趣。",
+      "pinyin": "suīshuō zhōngwén hěn nán, kěshì tā hěn yǒuqù.",
+      "vietnamese": "Dù tiếng Trung rất khó, nhưng nó rất thú vị."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 122,
+    "category": "复句",
+    "subcategory": "让步复句",
+    "name": "纵然⋯⋯ ，也⋯⋯",
+    "explanationVi": "让步复句「纵然...，也...」为文言色彩，相当于「即使」。",
+    "pattern": "纵然+X，也+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "我们的意见纵然不一致，也应当互相理解。",
+      "pinyin": "wǒmen de yìjiàn zòngrán bù yīzhì, yě yīngdāng hùxiāng lǐjiě.",
+      "vietnamese": "Ý kiến của chúng ta dù không thống nhất, cũng nên thông cảm cho nhau."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 123,
+    "category": "复句",
+    "subcategory": "目的复句",
+    "name": "⋯⋯， 以⋯⋯",
+    "explanationVi": "目的复句「...，以...」表示前项的目的。",
+    "pattern": "X，以+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "政府用他们的名字命名这条街，以纪念在战争中牺牲的战士。",
+      "pinyin": "zhèngfǔ yòng tāmen de míngzì mìngmíng zhè tiáo jiē, yǐ jìniàn zài zhànzhēng zhōng xīshēng de zhànshì.",
+      "vietnamese": "Chính phủ lấy tên họ để đặt tên cho con đường này, nhằm tưởng niệm các chiến sĩ đã hy sinh trong chiến tranh."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 124,
+    "category": "复句",
+    "subcategory": "目的复句",
+    "name": "⋯⋯，以免/免得⋯⋯",
+    "explanationVi": "目的复句「...，以免/免得...」表示为了避免某事。",
+    "pattern": "X，以免/免得+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "出门在外看好你的东西，以免丢失。",
+      "pinyin": "chūmén zàiwài kàn hǎo nǐ de dōngxi, yǐmiǎn diūshī.",
+      "vietnamese": "Ra ngoài hãy trông kỹ đồ đạc, để tránh bị mất."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 125,
+    "category": "复句",
+    "subcategory": "解说复句",
+    "name": "⋯⋯，也就是说⋯⋯",
+    "explanationVi": "解说复句「...，也就是说...」用于解释前项内容。",
+    "pattern": "X，也就是说+Y",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "他说这是他新买的书，也就是说不想借给我们看。",
+      "pinyin": "tā shuō zhè shì tā xīn mǎi de shū, yě jiùshì shuō bù xiǎng jiè gěi wǒmen kàn.",
+      "vietnamese": "Anh ấy nói đây là sách mới mua, nói cách khác là không muốn cho chúng tôi mượn xem."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 126,
+    "category": "复句",
+    "subcategory": "紧缩复句",
+    "name": "（要+）动词+就+动词+个+补语",
+    "explanationVi": "紧缩复句「要V就V个C」表示要做就做到极致。",
+    "pattern": "要+V 就+ V+个+C / V 就 V 个 C",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "要玩儿就玩儿个痛快，别总想工作。",
+      "pinyin": "yào wánr jiù wánr ge tòngkuài, bié zǒng xiǎng gōngzuò.",
+      "vietnamese": "Chơi thì chơi cho thật sướng, đừng nghĩ đến công việc."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 127,
+    "category": "复句",
+    "subcategory": "紧缩复句",
+    "name": "动词（+宾语1）+就+动词（+宾语1 ），别⋯⋯",
+    "explanationVi": "紧缩复句「V就V别...」表示做某事就直接做。",
+    "pattern": "V+就+V，别+...",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "走就走，别用这个威胁我！",
+      "pinyin": "zǒu jiù zǒu, bié yòng zhège wēixié wǒ!",
+      "vietnamese": "Muốn đi thì đi, đừng dùng cái này đe doạ tôi!"
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 128,
+    "category": "复句",
+    "subcategory": "多重复句",
+    "name": "三重或三重以上的复句",
+    "explanationVi": "多重复句由三个或更多分句组成，关系复杂，需要仔细分析层次。",
+    "pattern": "A+B+C+D（含多重关系）",
+    "group": "复句（Complex Sentence）",
+    "example": {
+      "chinese": "只要多练习，你的中文水平就会有进步，成绩也会提高，自然也会得到奖学金。",
+      "pinyin": "zhǐyào duō liànxí, nǐ de zhōngwén shuǐpíng jiù huì yǒu jìnbù, chéngjì yě huì tígāo, zìrán yě huì dédào jiǎngxuéjīn.",
+      "vietnamese": "Chỉ cần luyện tập nhiều, trình độ tiếng Trung của bạn sẽ tiến bộ, thành tích cũng sẽ tăng, tự nhiên sẽ nhận được học bổng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 129,
+    "category": "强调的方法",
+    "subcategory": "反问句",
+    "name": "反问句3：何必/何苦⋯⋯ 呢？",
+    "explanationVi": "反问句式「何必/何苦...呢？」用于强调事情不值得。",
+    "pattern": "何必/何苦+...+呢？",
+    "group": "强调（Emphasis）",
+    "example": {
+      "chinese": "我对谁都没有讲，何苦事先就让他们伤心呢？",
+      "pinyin": "wǒ duì shéi dōu méiyǒu jiǎng, hékǔ shìxiān jiù ràng tāmen shāngxīn ne?",
+      "vietnamese": "Tôi không nói với ai, việc gì phải làm cho họ buồn trước?"
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 130,
+    "category": "口语格式",
+    "subcategory": "话题回归",
+    "name": "（不过/但/可是）话又说回来，⋯⋯",
+    "explanationVi": "口语格式「(不过/但/可是)话又说回来，...」用于回归话题，引出另一面观点。",
+    "pattern": "(不过/但/可是)+话又说回来，...",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "话又说回来，不能因为生病就失去希望。",
+      "pinyin": "huà yòu shuō huílái, bù néng yīnwèi shēngbìng jiù shīqù xīwàng.",
+      "vietnamese": "Nói lại, không thể vì bị bệnh mà mất hy vọng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 131,
+    "category": "口语格式",
+    "subcategory": "左右为难",
+    "name": "X（也）不是，不X也不是",
+    "explanationVi": "口语格式「X(也)不是，不X也不是」表示左右为难的状况。",
+    "pattern": "X+(也)+不是，不X+也不是",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "走不是，不走也不是，弄得我们不知道怎么办才好。",
+      "pinyin": "zǒu bùshì, bù zǒu yě bùshì, nòng de wǒmen bù zhīdào zěnme bàn cái hǎo.",
+      "vietnamese": "Đi không phải, không đi cũng không phải, khiến chúng tôi không biết phải làm sao."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 132,
+    "category": "口语格式",
+    "subcategory": "列举等同",
+    "name": "X也好/也罢，Y也好/也罢",
+    "explanationVi": "口语格式「X也好/也罢，Y也好/也罢」表示列举两种情况无差别。",
+    "pattern": "X+也好/也罢，Y+也好/也罢",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "快乐也好，伤心也好，这个故事就要结束了。",
+      "pinyin": "kuàilè yěhǎo, shāngxīn yěhǎo, zhège gùshi jiù yào jiéshù le.",
+      "vietnamese": "Vui hay buồn, câu chuyện này sắp kết thúc rồi."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 133,
+    "category": "口语格式",
+    "subcategory": "重复动作",
+    "name": "X了又Y， Y了又X",
+    "explanationVi": "口语格式「X了又Y，Y了又X」表示动作反复交替。",
+    "pattern": "X了又Y，Y了又X",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "小朋友写了又擦，擦了又写，正在认真地练习写汉字。",
+      "pinyin": "xiǎopéngyǒu xiě le yòu cā, cā le yòu xiě, zhèngzài rènzhēn de liànxí xiě hànzì.",
+      "vietnamese": "Em bé viết rồi lại xoá, xoá rồi lại viết, đang chăm chú luyện viết chữ Hán."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 134,
+    "category": "口语格式",
+    "subcategory": "双重否定",
+    "name": "X也X不⋯⋯，Y也Y不⋯⋯",
+    "explanationVi": "口语格式「X也X不...，Y也Y不...」表示什么都做不好或两者皆空。",
+    "pattern": "X+也+X+不...，Y+也+Y+不...",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "妈妈还处于担心的状态中，吃也吃不下，睡也睡不着。",
+      "pinyin": "māmā hái chǔyú dānxīn de zhuàngtài zhōng, chī yě chī bù xià, shuì yě shuì bù zháo.",
+      "vietnamese": "Mẹ vẫn đang trong trạng thái lo lắng, ăn không xong, ngủ không yên."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 135,
+    "category": "口语格式",
+    "subcategory": "程度强烈",
+    "name": "别提（有）多X了",
+    "explanationVi": "口语格式「别提(有)多X了」强调程度之深。",
+    "pattern": "别提(有)+多+X+了",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "听到爸爸的声音，她别提有多兴奋了。",
+      "pinyin": "tīngdào bàba de shēngyīn, tā biétí yǒu duō xīngfèn le.",
+      "vietnamese": "Nghe giọng bố, cô ấy hào hứng không thể tả xiết."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 136,
+    "category": "口语格式",
+    "subcategory": "未知缘由",
+    "name": "不知X的",
+    "explanationVi": "口语格式「不知X的」表示不知道是什么原因。",
+    "pattern": "不知+X+的",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "不知怎么的，我的眼泪止不住地往下流。",
+      "pinyin": "bù zhī zěnme de, wǒ de yǎnlèi zhǐ bù zhù de wǎng xià liú.",
+      "vietnamese": "Không hiểu sao, nước mắt tôi cứ tuôn rơi xuống."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 137,
+    "category": "口语格式",
+    "subcategory": "承认观点",
+    "name": "话（说）是这么说，不过/可/可是⋯⋯",
+    "explanationVi": "口语格式「话(说)是这么说，不过/可/可是...」表示承认前项但有所保留。",
+    "pattern": "话(说)+是这么说，不过/可/可是+...",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "话是这么说，可对方要是真这么干，那我们也做不了什么。",
+      "pinyin": "huà shì zhème shuō, kě duìfāng yàoshì zhēn zhème gàn, nà wǒmen yě zuò bù liǎo shénme.",
+      "vietnamese": "Nói thì nói vậy, nhưng nếu đối phương thật sự làm thế, thì chúng ta cũng chẳng làm gì được."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 138,
+    "category": "口语格式",
+    "subcategory": "责备调侃",
+    "name": "看/瞧你那（X）样",
+    "explanationVi": "口语格式「看/瞧你那(X)样」用于对某人的状态进行调侃或责备。",
+    "pattern": "看/瞧+你那+X+样",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "看你那伤心样，还以为你这回真的好不到哪里去了。",
+      "pinyin": "kàn nǐ nà shāngxīn yàng, hái yǐwéi nǐ zhè huí zhēn de hǎo bù dào nǎlǐ qù le.",
+      "vietnamese": "Nhìn bộ dạng buồn kia của bạn kìa, còn tưởng lần này bạn đúng là không xong rồi."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 139,
+    "category": "口语格式",
+    "subcategory": "顾及人情",
+    "name": "看在X的面子上",
+    "explanationVi": "口语格式「看在X的面子上」表示因为某人/事的缘故而做某事。",
+    "pattern": "看在+X+的面子上",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "我是看在她的面子上才答应的。",
+      "pinyin": "wǒ shì kàn zài tā de miànzi shàng cái dāying de.",
+      "vietnamese": "Tôi đồng ý là vì nể mặt cô ấy thôi."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 140,
+    "category": "口语格式",
+    "subcategory": "反问责备",
+    "name": "哪有X这么Y的/有X这样Y的吗",
+    "explanationVi": "口语格式「哪有X这么Y的/有X这样Y的吗」用于强烈责备。",
+    "pattern": "哪有+X+这么+Y+的 / 有+X+这样+Y+的吗",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "哪有你这么直接的？给他留点儿面子呀。",
+      "pinyin": "nǎ yǒu nǐ zhème zhíjiē de? gěi tā liú diǎnr miànzi ya.",
+      "vietnamese": "Có ai trực tiếp như bạn không? Nên để cho anh ấy chút mặt mũi."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 141,
+    "category": "口语格式",
+    "subcategory": "概括包含",
+    "name": "什么X的Y的",
+    "explanationVi": "口语格式「什么X的Y的」用于概括同类事物，相当于「...什么的」。",
+    "pattern": "什么+X+的+Y+的",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "什么你的我的，都是大家的。",
+      "pinyin": "shénme nǐ de wǒ de, dōu shì dàjiā de.",
+      "vietnamese": "Cái gì của bạn của tôi, đều là của mọi người."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 142,
+    "category": "口语格式",
+    "subcategory": "话题偏离",
+    "name": "说到/想到哪儿去了",
+    "explanationVi": "口语格式「说到/想到哪儿去了」用于纠正对方把话题扯远。",
+    "pattern": "说到/想到+哪儿去了",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "你看你，说到哪儿去了，我说的是买蛋糕的问题。",
+      "pinyin": "nǐ kàn nǐ, shuō dào nǎr qù le, wǒ shuō de shì mǎi dàngāo de wèntí.",
+      "vietnamese": "Nhìn bạn kìa, nói đi đâu mất rồi, tôi đang nói vấn đề mua bánh."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 143,
+    "category": "口语格式",
+    "subcategory": "无所谓",
+    "name": "无所谓X不X",
+    "explanationVi": "口语格式「无所谓X不X」表示不在乎X。",
+    "pattern": "无所谓+X+不+X",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "无所谓贵不贵，质量好就可以。",
+      "pinyin": "wúsuǒwèi guì bù guì, zhìliàng hǎo jiù kěyǐ.",
+      "vietnamese": "Không quan trọng đắt hay rẻ, chất lượng tốt là được."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 144,
+    "category": "口语格式",
+    "subcategory": "列举条件",
+    "name": "要X有/没X，要Y有/没Y",
+    "explanationVi": "口语格式「要X有/没X，要Y有/没Y」用于列举多项有/无。",
+    "pattern": "要+X+有/没+X，要+Y+有/没+Y",
+    "group": "口语格式（Spoken Pattern）",
+    "example": {
+      "chinese": "她要成绩有成绩，要形象有形象。",
+      "pinyin": "tā yào chéngjì yǒu chéngjì, yào xíngxiàng yǒu xíngxiàng.",
+      "vietnamese": "Cô ấy có thành tích thì có thành tích, có hình tượng thì có hình tượng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 145,
+    "category": "句群",
+    "subcategory": "按形式分类",
+    "name": "带关联词语",
+    "explanationVi": "句群中分句间用关联词连接，使逻辑关系明确。",
+    "pattern": "句群+关联词语",
+    "group": "句群（Sentence Group）",
+    "example": {
+      "chinese": "因为我脑子慢、糊涂，周围环境稍有变化就会看不清楚。因此，即使是十分容易解开的谜，我也从不要求自己去解。",
+      "pinyin": "yīnwèi wǒ nǎozi màn, hútú, zhōuwéi huánjìng shāo yǒu biànhuà jiù huì kàn bù qīngchǔ. yīncǐ, jíshǐ shì shífēn róngyì jiěkāi de mí, wǒ yě cóng bù yāoqiú zìjǐ qù jiě.",
+      "vietnamese": "Vì đầu óc tôi chậm, hay nhầm lẫn, môi trường xung quanh hơi thay đổi là tôi không nhìn rõ được. Vì vậy, dù là câu đố rất dễ giải, tôi cũng không bao giờ đòi hỏi mình phải giải."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 146,
+    "category": "句群",
+    "subcategory": "按形式分类",
+    "name": "不带关联词语",
+    "explanationVi": "句群中分句间不用关联词，靠语序自然衔接。",
+    "pattern": "句群（无关联词）",
+    "group": "句群（Sentence Group）",
+    "example": {
+      "chinese": "风，更猛了。雪，更大了。我们每前进一步，更艰难了。",
+      "pinyin": "fēng, gèng měng le. xuě, gèng dà le. wǒmen měi qiánjìn yī bù, gèng jiānnán le.",
+      "vietnamese": "Gió, mạnh hơn. Tuyết, lớn hơn. Mỗi bước chúng tôi tiến lên, càng khó khăn hơn."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 147,
+    "category": "句群",
+    "subcategory": "按意义分类",
+    "name": "联合关系：并列句群、承接句群、递进句群、选择句群、解说句群、总括句群",
+    "explanationVi": "按意义分类的联合关系句群，包括并列、承接、递进、选择、解说、总括六种。",
+    "pattern": "多种联合关系",
+    "group": "句群（Sentence Group）",
+    "example": {
+      "chinese": "在一起一年多了。时间虽然不长，但是哥哥再也没有胃疼得起不来了，那是因为我每天早上硬拉他起来吃早饭。",
+      "pinyin": "zài yīqǐ yī nián duō le. shíjiān suīrán bù cháng, dànshì gēge zài yě méiyǒu wèi téng de qǐ bù lái le, nà shì yīnwèi wǒ měitiān zǎoshang yìng lā tā qǐlái chī zǎofàn.",
+      "vietnamese": "Ở bên nhau hơn một năm rồi. Thời gian tuy không dài, nhưng anh ấy không còn bị đau dạ dày không dậy nổi nữa, đó là vì mỗi sáng tôi đều cố kéo anh ấy dậy ăn sáng."
+    },
+    "hskLevel": 9
+  },
+  {
+    "no": 148,
+    "category": "句群",
+    "subcategory": "按意义分类",
+    "name": "偏正关系：条件句群、因果句群、目的句群、转折句群、假设句群、让步句群",
+    "explanationVi": "按意义分类的偏正关系句群，包括条件、因果、目的、转折、假设、让步六种。",
+    "pattern": "多种偏正关系",
+    "group": "句群（Sentence Group）",
+    "example": {
+      "chinese": "单位楼下的路口，新开了两家卖早餐的店，虽然卖着同样的早餐，味道差不多，价格也一样，而且每天早上每家店前都排满了顾客，但月底一计算，东边胖大姐的利润却是西边瘦大姐的两倍多。",
+      "pinyin": "dānwèi lóuxià de lùkǒu, xīn kāi le liǎng jiā mài zǎocān de diàn, suīrán mài zhe tóngyàng de zǎocān, wèidào chàbuduō, jiàgé yě yīyàng, érqiě měitiān zǎoshang měi jiā diàn qián dōu pái mǎn le gùkè, dàn yuèdǐ yī jìsuàn, dōngbian pàng dàjiě de lìrùn què shì xībian shòu dàjiě de liǎng bèi duō.",
+      "vietnamese": "Ngã tư dưới toà nhà cơ quan, mới mở hai cửa hàng bán đồ ăn sáng, dù bán cùng loại đồ ăn sáng, hương vị và giá cả gần giống nhau, và mỗi sáng trước cửa hàng đều xếp hàng đầy khách, nhưng đến cuối tháng tính ra, lợi nhuận của chị bán hàng mập phía đông lại gấp hơn hai lần chị gầy phía tây."
+    },
+    "hskLevel": 9
+  }
+]

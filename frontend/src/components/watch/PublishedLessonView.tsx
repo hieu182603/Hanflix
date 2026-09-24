@@ -37,10 +37,14 @@ import {
   listPublishedLessons,
 } from '../../api/learning';
 import { InlineBanner } from '../notifications';
+import { useNotification } from '../notifications';
 import { saveSubtitleWord } from '../../api/vocabulary';
 import { ApiRequestError } from '../../api/client';
 import { type SubtitleLanguageTrack } from './SubtitleOverlay';
 import YouTubePlayer from './YouTubePlayer';
+import KaraokePlayer from './KaraokePlayer';
+import PodcastPlayer from './PodcastPlayer';
+import DramaPlayer from './DramaPlayer';
 import LearningTipsPanel from './LearningTipsPanel';
 import AiImprovedBadge from './AiImprovedBadge';
 import WordExplanationPopover from './WordExplanationPopover';
@@ -67,6 +71,7 @@ export default function PublishedLessonView({
   onSelectLesson,
   onAskAI,
 }: PublishedLessonViewProps) {
+  const notify = useNotification();
   const videoRef = useRef<HTMLVideoElement>(null);
   const activeCueRef = useRef<HTMLDivElement | null>(null);
   const hasUserInitiatedPlayRef = useRef(false);
@@ -114,7 +119,7 @@ export default function PublishedLessonView({
     queryKey: lessonQueryKeys.quiz(lessonId),
     queryFn: ({ signal }) => getLessonQuiz(lessonId, { signal }),
     enabled: Boolean(lessonId),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
   });
@@ -201,7 +206,6 @@ export default function PublishedLessonView({
   const [autoScroll, setAutoScroll] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isSavedLesson, setIsSavedLesson] = useState(false);
-  const [savedWordToast, setSavedWordToast] = useState<string | null>(null);
 
   // Vocabulary tab detailed state & audio pronunciation
   const [speakingWord, setSpeakingWord] = useState<string | null>(null);
@@ -355,8 +359,7 @@ export default function PublishedLessonView({
     setMessage('');
     try {
       await saveSubtitleWord(wordId, lessonId, cueId);
-      setSavedWordToast('Đã lưu từ vào sổ ôn tập.');
-      setTimeout(() => setSavedWordToast(null), 3000);
+      notify.success('Đã lưu từ vào sổ ôn tập.');
     } catch (requestError) {
       setMessage(requestError instanceof Error ? requestError.message : 'Không thể lưu từ.');
     }
@@ -651,84 +654,148 @@ export default function PublishedLessonView({
         </div>
       )}
 
-      {/* Floating Word Save Toast */}
-      {savedWordToast && (
-        <div className="p-3 rounded-2xl bg-[#EBF5EE] border border-[#A4D8B6] text-[#1E7E44] text-xs font-bold flex items-center justify-between gap-2 shadow-sm animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-[#1E7E44]" />
-            <span>{savedWordToast}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSavedWordToast(null)}
-            className="text-[#1E7E44] hover:underline text-[11px] cursor-pointer"
-          >
-            Đóng
-          </button>
-        </div>
-      )}
+      {/* Word save notifications: now handled by global toast system */}
 
       {lesson && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 items-start">
           {/* ================= LEFT / THEATER COLUMN (YouTube Primary Stage) ================= */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-4 min-w-0">
-            {/* 1. Video Player Container (YouTube Cinema Stage) */}
+            {/* 1. Video Player Container — chọn player theo contentMode */}
             {lesson.media?.url ? (
-              <YouTubePlayer
-                src={lesson.media.url}
-                title={lesson.titleVi}
-                durationSeconds={lesson.durationSeconds}
-                cues={cues}
-                currentMs={currentMs}
-                topTrack={subtitlePrefs.top}
-                bottomTrack={subtitlePrefs.bottom}
-                subtitleStyle={subtitlePrefs.style}
-                subtitleScale={subtitlePrefs.scale}
-                videoRef={videoRef}
-                onSubtitleChange={(next) => {
-                  setSubtitleTop(next.top);
-                  setSubtitleBottom(next.bottom);
-                  if (next.style) setSubtitleStyle(next.style);
-                  if (next.scale) setSubtitleScale(next.scale);
-                }}
-                onTimeUpdate={onVideoTimeUpdate}
-                onSeeking={() => {
-                  if (videoRef.current) {
-                    flushProgress(videoRef.current.currentTime);
-                    lastPosition.current = null;
-                  }
-                }}
-                onPause={() => {
-                  if (videoRef.current) flushProgress(videoRef.current.currentTime);
-                }}
-                onEnded={() => {
-                  flushProgress(lesson.durationSeconds);
-                  setQuizOpen(true);
-                }}
-                onLoadedMetadata={(event) => {
-                  // Resume only on the very first metadata load. If the user
-                  // has already played or scrubbed, never snap the playhead
-                  // back to the cached position — it would yank the video
-                  // out from under them.
-                  if (hasUserInitiatedPlayRef.current) return;
-                  hasUserInitiatedPlayRef.current = true;
-                  if (
-                    progress?.lastPositionSeconds &&
-                    progress.lastPositionSeconds > 1 &&
-                    progress.lastPositionSeconds < lesson.durationSeconds - 2
-                  ) {
-                    event.currentTarget.currentTime = progress.lastPositionSeconds;
-                  }
-                }}
-                onTokenClick={(cueId, wordId, wordText, event) =>
-                  void requestExplanation(cueId, wordId, wordText, event)
-                }
-                onSaveWord={(cueId, wordId) => void saveWord(cueId, wordId)}
-              />
+              <>
+                {lesson.contentMode === 'song' && (
+                  <KaraokePlayer
+                    src={lesson.media.url}
+                    title={lesson.titleVi}
+                    durationSeconds={lesson.durationSeconds}
+                    cues={cues}
+                    videoRef={videoRef}
+                    onSeeking={() => {
+                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
+                      lastPosition.current = null;
+                    }}
+                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onLoadedMetadata={(event) => {
+                      if (hasUserInitiatedPlayRef.current) return;
+                      hasUserInitiatedPlayRef.current = true;
+                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                    }}
+                    onTimeUpdate={onVideoTimeUpdate}
+                    onEnded={() => {
+                      flushProgress(lesson.durationSeconds);
+                      if (quiz.length) setQuizOpen(true);
+                    }}
+                  />
+                )}
+                {lesson.contentMode === 'podcast' && (
+                  <PodcastPlayer
+                    src={lesson.media.url}
+                    posterUrl={lesson.thumbnailUrl ?? undefined}
+                    title={lesson.titleVi}
+                    durationSeconds={lesson.durationSeconds}
+                    cues={cues}
+                    chapters={lesson.chapters}
+                    videoRef={videoRef}
+                    onSeeking={() => {
+                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
+                      lastPosition.current = null;
+                    }}
+                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onLoadedMetadata={(event) => {
+                      if (hasUserInitiatedPlayRef.current) return;
+                      hasUserInitiatedPlayRef.current = true;
+                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                    }}
+                    onTimeUpdate={onVideoTimeUpdate}
+                    onEnded={() => {
+                      flushProgress(lesson.durationSeconds);
+                      if (quiz.length) setQuizOpen(true);
+                    }}
+                  />
+                )}
+                {lesson.contentMode === 'drama' && (
+                  <DramaPlayer
+                    src={lesson.media.url}
+                    title={lesson.titleVi}
+                    durationSeconds={lesson.durationSeconds}
+                    cues={cues}
+                    characters={lesson.characters}
+                    onTokenClick={(cueId, wordId, wordText, event) => void requestExplanation(cueId, wordId, wordText, event)}
+                    currentMs={currentMs}
+                    videoRef={videoRef}
+                    onSeeking={() => {
+                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
+                      lastPosition.current = null;
+                    }}
+                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onLoadedMetadata={(event) => {
+                      if (hasUserInitiatedPlayRef.current) return;
+                      hasUserInitiatedPlayRef.current = true;
+                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                    }}
+                    onTimeUpdate={(video) => {
+                      setCurrentMs(video.currentTime * 1000);
+                      onVideoTimeUpdate(video);
+                    }}
+                    onEnded={() => {
+                      flushProgress(lesson.durationSeconds);
+                      if (quiz.length) setQuizOpen(true);
+                    }}
+                  />
+                )}
+                {(lesson.contentMode === 'lesson' || !lesson.contentMode) && (
+                  <YouTubePlayer
+                    src={lesson.media.url}
+                    title={lesson.titleVi}
+                    durationSeconds={lesson.durationSeconds}
+                    cues={cues}
+                    currentMs={currentMs}
+                    topTrack={subtitlePrefs.top}
+                    bottomTrack={subtitlePrefs.bottom}
+                    subtitleStyle={subtitlePrefs.style}
+                    subtitleScale={subtitlePrefs.scale}
+                    videoRef={videoRef}
+                    onSubtitleChange={(next) => {
+                      setSubtitleTop(next.top);
+                      setSubtitleBottom(next.bottom);
+                      if (next.style) setSubtitleStyle(next.style);
+                      if (next.scale) setSubtitleScale(next.scale);
+                    }}
+                    onTimeUpdate={onVideoTimeUpdate}
+                    onSeeking={() => {
+                      if (videoRef.current) {
+                        flushProgress(videoRef.current.currentTime);
+                        lastPosition.current = null;
+                      }
+                    }}
+                    onPause={() => {
+                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
+                    }}
+                    onEnded={() => {
+                      flushProgress(lesson.durationSeconds);
+                      setQuizOpen(true);
+                    }}
+                    onLoadedMetadata={(event) => {
+                      if (hasUserInitiatedPlayRef.current) return;
+                      hasUserInitiatedPlayRef.current = true;
+                      if (
+                        progress?.lastPositionSeconds &&
+                        progress.lastPositionSeconds > 1 &&
+                        progress.lastPositionSeconds < lesson.durationSeconds - 2
+                      ) {
+                        event.currentTarget.currentTime = progress.lastPositionSeconds;
+                      }
+                    }}
+                    onTokenClick={(cueId, wordId, wordText, event) =>
+                      void requestExplanation(cueId, wordId, wordText, event)
+                    }
+                    onSaveWord={(cueId, wordId) => void saveWord(cueId, wordId)}
+                  />
+                )}
+              </>
             ) : (
-
               <div className="w-full aspect-video rounded-2xl md:rounded-3xl bg-neutral-900 flex flex-col items-center justify-center p-8 text-white border border-[#E7E7EA] shadow-xl">
-                <p className="text-sm font-medium">Video của bài học này chưa sẵn sàng để phát.</p>
+                <p className="text-sm font-medium">Nội dung chưa sẵn sàng để phát.</p>
               </div>
             )}
 
@@ -833,10 +900,7 @@ export default function PublishedLessonView({
                   type="button"
                   onClick={() => {
                     setIsSavedLesson((prev) => !prev);
-                    setSavedWordToast(
-                      isSavedLesson ? 'Đã bỏ lưu bài học.' : 'Đã lưu bài học vào sổ tay.',
-                    );
-                    setTimeout(() => setSavedWordToast(null), 2500);
+                    notify.success(isSavedLesson ? 'Đã bỏ lưu bài học.' : 'Đã lưu bài học vào sổ tay.');
                   }}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
                     isSavedLesson

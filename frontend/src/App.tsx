@@ -6,6 +6,7 @@ import AIAssistantDrawer from './components/AIAssistantDrawer';
 import PreferencesDrawer from './components/PreferencesDrawer';
 import LandingPage from './components/LandingPage';
 import { ExamPrepPage, LeaderboardPage, CommunityPage } from './components/ExamPrepPage';
+import GrammarPage from './components/grammar/GrammarPage';
 
 // Settings & Survey Modals
 import SettingsModal from './components/settings/SettingsModal';
@@ -54,7 +55,7 @@ import {
   UserLearningProfile,
 } from './data/hanflixData';
 import {
-  Home, BookOpen, Bookmark, BookMarked, Map
+  Home, PlaySquare, BookMarked, BookOpenCheck, Map
 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -65,13 +66,14 @@ function VideoToWatchRedirect() {
 
 type AuthView = 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
 
-const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'community', 'settings', 'profile'] as const;
+const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'grammar', 'settings', 'profile'] as const;
 type NavSection = typeof NAV_SECTIONS[number];
 
 // Map URL pathname → activeNav id (for learner pages).
 // Matches exact routes from <Routes> in AppRoutes. Falls back to last nav in localStorage.
 function pathToActiveNav(pathname: string): string | null {
   if (pathname === '/' || pathname === '') return 'feed';
+  if (pathname.startsWith('/saved')) return 'vocabulary';
   const seg = pathname.replace(/^\//, '').split('/')[0];
   if ((NAV_SECTIONS as readonly string[]).includes(seg)) return seg;
   return null;
@@ -79,6 +81,7 @@ function pathToActiveNav(pathname: string): string | null {
 
 function activeNavToPath(navId: string): string {
   if (navId === 'admin') return '/admin';
+  if (navId === 'saved') return '/vocabulary?tab=saved';
   return `/${navId}`;
 }
 
@@ -387,7 +390,8 @@ export default function App() {
       {/* Route Aliases & Redirects */}
       <Route path="/videos" element={<Navigate to="/lessons" replace />} />
       <Route path="/videos/:lessonId" element={<VideoToWatchRedirect />} />
-      <Route path="/favorites" element={<Navigate to="/saved" replace />} />
+      <Route path="/saved" element={<Navigate to="/vocabulary?tab=saved" replace />} />
+      <Route path="/favorites" element={<Navigate to="/vocabulary?tab=saved" replace />} />
 
       <Route path="/:section" element={
         !currentUser
@@ -492,9 +496,9 @@ function LearnerRouteShell({
   const { t } = useLanguage();
   const bottomNavItems = [
     { id: 'feed', label: t.nav.feed, icon: Home },
-    { id: 'lessons', label: t.nav.lessons, icon: BookOpen },
-    { id: 'saved', label: t.nav.saved, icon: Bookmark },
+    { id: 'lessons', label: t.nav.lessons, icon: PlaySquare },
     { id: 'vocabulary', label: t.nav.vocabulary, icon: BookMarked },
+    { id: 'grammar', label: t.nav.grammar, icon: BookOpenCheck },
     { id: 'roadmap', label: t.nav.roadmap, icon: Map },
   ];
 
@@ -560,17 +564,19 @@ function LearnerRouteShell({
       />
 
       <div className="flex-1 flex max-w-[1920px] w-full mx-auto min-w-0">
-        <Sidebar
-          activeNav={activeNav}
-          onNavChange={(navId) => navigate(activeNavToPath(navId))}
-          userProfile={userProfile}
-          onStartPractice={() => navigate('/lessons')}
-          isDrawerOpen={isSidebarOpen}
-          onCloseDrawer={() => setIsSidebarOpen(false)}
-          isCollapsed={isSidebarCollapsed}
-        />
+        <div className="shrink-0 sticky top-[68px] self-start h-[calc(100vh-68px)]">
+          <Sidebar
+            activeNav={activeNav}
+            onNavChange={(navId) => navigate(activeNavToPath(navId))}
+            userProfile={userProfile}
+            onStartPractice={() => navigate('/lessons')}
+            isDrawerOpen={isSidebarOpen}
+            onCloseDrawer={() => setIsSidebarOpen(false)}
+            isCollapsed={isSidebarCollapsed}
+          />
+        </div>
 
-        <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden">
+        <main className="flex-1 min-w-0 p-3 md:p-5 lg:p-6 pb-24 md:pb-6 space-y-5 overflow-x-hidden overflow-y-auto h-[calc(100vh-68px)]">
           {children}
         </main>
       </div>
@@ -668,6 +674,8 @@ function LearnerSectionRoute(props: ShellProps) {
     content = <LazyRouteBoundary><ExamPrepPage onStartPractice={() => navigate('/lessons')} /></LazyRouteBoundary>;
   } else if (activeNav === 'leaderboard') {
     content = <LazyRouteBoundary><LeaderboardPage onStartPractice={() => navigate('/lessons')} onSelectLesson={() => navigate('/lessons')} /></LazyRouteBoundary>;
+  } else if (activeNav === 'grammar') {
+    content = <GrammarPage onStartPractice={() => navigate('/lessons')} />;
   } else if (activeNav === 'community') {
     content = <LazyRouteBoundary><CommunityPage /></LazyRouteBoundary>;
   } else {

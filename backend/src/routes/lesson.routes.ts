@@ -132,14 +132,42 @@ router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(as
 router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeQuizRevision').lean();
   if (!lesson?.activeQuizRevision) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Bài học chưa có bài luyện tập');
-  // SECURITY (H-6): NEVER leak correctOptionId/acceptedAnswers/explanationVi to learners.
-  // Quiz model uses `select: false` on answer fields; here we also project them out explicitly
-  // so a future schema change cannot accidentally start returning answer keys.
+  // FEATURE (2026-09-23): Send isCorrect in options so learner sees correct answer immediately after selection.
+  // SECURITY (H-6): Still strip acceptedAnswers and explanationVi — those are answer keys, not just feedback.
   const quiz = await QuizModel.findOne({ lessonId: lesson._id, revision: lesson.activeQuizRevision, status: 'published' })
-    .select('-questions.correctOptionId -questions.acceptedAnswers -questions.explanationVi')
+    .select('+questions.correctOptionId -questions.acceptedAnswers -questions.explanationVi')
     .lean();
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài luyện tập');
-  res.json({ data: quiz });
+
+  // Add isCorrect flag to each option for immediate feedback after user selection
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const quizWithIsCorrect = {
+    ...quiz,
+    questions: (quiz.questions as any[]).map((q) => {
+      const { correctOptionId, ...restQ } = q;
+      return {
+        ...restQ,
+        options: (q.options as any[]).map((opt) => ({
+          ...opt,
+          isCorrect: Boolean(correctOptionId && opt.optionId === correctOptionId),
+        })),
+      };
+    }),
+  };
+
+  res.json({ data: quizWithIsCorrect });
+}));
+
+// CONTENT MODE (2026-09-22) - PODCAST: chapters endpoint.
+// Trả về danh sách chapter cho podcast player. Trả về [] nếu lesson không phải podcast
+// hoặc chưa có chapters (an toàn — caller check truthy trước khi render).
+router.get('/:lessonId/chapters', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+  const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' })
+    .select('contentMode chapters')
+    .lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  const chapters = lesson.contentMode === 'podcast' && Array.isArray(lesson.chapters) ? lesson.chapters : [];
+  res.json({ data: { chapters } });
 }));
 
 router.get('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), asyncHandler(async (req, res) => {
@@ -210,6 +238,7 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
     .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi');
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài luyện tập');
 
+  if (!quiz.questions.length) throw new AppError(422, 'QUIZ_EMPTY', 'Nội dung này không có bài luyện tập');
   const answerMap = new Map<string, AttemptInput['answers'][number]>(input.answers.map(answer => [answer.questionId, answer]));
   const graded = quiz.questions.map(question => {
     const answer = answerMap.get(question.questionId);

@@ -143,11 +143,17 @@ export default function AdminVideoList({
   }, [filteredLessons, startIndex, endIndex]);
 
   // Format seconds to mm:ss
+  // Format seconds to mm:ss or hh:mm:ss
   const formatDuration = (sec?: number) => {
-    const total = sec || 120;
-    const m = Math.floor(total / 60);
+    if (sec === undefined || sec === null || isNaN(sec) || sec <= 0) return '0:00';
+    const total = Math.round(sec);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
     const s = total % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${m}:${String(s).padStart(2, '0')}`;
   };
 
   // Get HSK Badge styling and category name (HSK 1..9)

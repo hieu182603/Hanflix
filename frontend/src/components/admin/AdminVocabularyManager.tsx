@@ -176,7 +176,7 @@ export default function AdminVocabularyManager() {
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.simplified.trim() || !formData.pinyin.trim() || !formData.meaningVi.trim()) {
-      alert('Vui lòng điền đủ Chữ Hán, Pinyin và Nghĩa tiếng Việt.');
+      notify.warning('Vui lòng điền đủ Chữ Hán, Pinyin và Nghĩa tiếng Việt.');
       return;
     }
 
@@ -204,18 +204,20 @@ export default function AdminVocabularyManager() {
 
       if (editingItem) {
         await updateAdminVocabulary(editingItem._id, payload);
+        notify.success(`Đã cập nhật từ vựng "${payload.simplified}" thành công.`);
       } else {
         await createAdminVocabulary({
           ...payload,
           source: [{ name: 'Admin HanFlix' }],
         });
+        notify.success(`Đã tạo mới từ vựng "${payload.simplified}" thành công.`);
       }
 
       setIsAddEditOpen(false);
       fetchList(pagination.page);
       fetchStats();
     } catch (err: any) {
-      alert(err?.message || 'Có lỗi xảy ra khi lưu từ vựng');
+      notify.error(err?.message || 'Có lỗi xảy ra khi lưu từ vựng');
     }
   };
 
@@ -226,8 +228,13 @@ export default function AdminVocabularyManager() {
       await updateAdminVocabulary(item._id, { status: nextStatus });
       setItems((prev) => prev.map((it) => (it._id === item._id ? { ...it, status: nextStatus } : it)));
       fetchStats();
+      notify.success(
+        nextStatus === 'published'
+          ? `Đã kích hoạt từ "${item.simplified}".`
+          : `Đã chuyển từ "${item.simplified}" sang bản nháp.`
+      );
     } catch {
-      alert('Không thể đổi trạng thái từ vựng');
+      notify.error('Không thể đổi trạng thái từ vựng');
     }
   };
 
@@ -243,8 +250,9 @@ export default function AdminVocabularyManager() {
       await deleteAdminVocabulary(item._id);
       setItems((prev) => prev.filter((it) => it._id !== item._id));
       fetchStats();
+      notify.success(`Đã xóa từ vựng "${item.simplified}" thành công.`);
     } catch {
-      alert('Không thể xóa từ vựng');
+      notify.error('Không thể xóa từ vựng');
     }
   };
 
@@ -314,9 +322,9 @@ export default function AdminVocabularyManager() {
         items: rawItems,
       });
 
-      setImportSuccessMsg(
-        `Nhập thành công: ${res.summary.inserted} từ mới, ${res.summary.updated} từ cập nhật, bỏ qua ${res.summary.skipped} từ trùng lặp.`
-      );
+      const successText = `Nhập thành công: ${res.summary.inserted} từ mới, ${res.summary.updated} từ cập nhật, bỏ qua ${res.summary.skipped} từ trùng lặp.`;
+      setImportSuccessMsg(successText);
+      notify.success(successText);
       setImportPreview(null);
       setImportFile(null);
       setImportJsonText('');
@@ -327,7 +335,9 @@ export default function AdminVocabularyManager() {
         setImportSuccessMsg(null);
       }, 2500);
     } catch (err: any) {
-      setImportError(err.message || 'Lỗi khi nhập dữ liệu vào database');
+      const errorMsg = err.message || 'Lỗi khi nhập dữ liệu vào database';
+      setImportError(errorMsg);
+      notify.error(errorMsg);
     } finally {
       setImportLoading(false);
     }
