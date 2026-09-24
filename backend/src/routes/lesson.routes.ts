@@ -135,7 +135,7 @@ router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (
   // FEATURE (2026-09-23): Send isCorrect in options so learner sees correct answer immediately after selection.
   // SECURITY (H-6): Still strip acceptedAnswers and explanationVi — those are answer keys, not just feedback.
   const quiz = await QuizModel.findOne({ lessonId: lesson._id, revision: lesson.activeQuizRevision, status: 'published' })
-    .select('-questions.acceptedAnswers -questions.explanationVi')
+    .select('+questions.correctOptionId -questions.acceptedAnswers -questions.explanationVi')
     .lean();
   if (!quiz) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Không tìm thấy bài luyện tập');
 
@@ -143,13 +143,16 @@ router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const quizWithIsCorrect = {
     ...quiz,
-    questions: (quiz.questions as any[]).map((q) => ({
-      ...q,
-      options: (q.options as any[]).map((opt) => ({
-        ...opt,
-        isCorrect: opt.optionId === q.correctOptionId,
-      })),
-    })),
+    questions: (quiz.questions as any[]).map((q) => {
+      const { correctOptionId, ...restQ } = q;
+      return {
+        ...restQ,
+        options: (q.options as any[]).map((opt) => ({
+          ...opt,
+          isCorrect: Boolean(correctOptionId && opt.optionId === correctOptionId),
+        })),
+      };
+    }),
   };
 
   res.json({ data: quizWithIsCorrect });
