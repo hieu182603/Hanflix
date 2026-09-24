@@ -136,7 +136,7 @@ export class VocabularyService {
 
     if (params.hskLevel) {
       const lvl = params.hskLevel === '7-9' ? '7-9' : Number(params.hskLevel);
-      filter.hskLevel = lvl;
+      filter.hskLevel = params.hskLevel === '7-9' ? { $in: [7, 8, 9, '7', '8', '9', '7-9'] } : { $in: [lvl, String(lvl)] };
     }
 
     if (params.tag) {

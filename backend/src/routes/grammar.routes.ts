@@ -1,3 +1,4 @@
+import { grammarService } from '../services/grammar.service.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { validateQuery } from '../middleware/validate.js';
@@ -15,65 +16,9 @@ const listQuerySchema = z.object({
 
 // GET /api/v1/grammar - Public grammar list for learners
 router.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
-  const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listQuerySchema>;
-  const page = query.page;
-  const limit = query.limit;
-  const skip = (page - 1) * limit;
-
-  const filter: Record<string, unknown> = { status: 'published' };
-  const hskLevelConditions: Record<string, unknown>[] = [];
-  if (query.hskLevel) {
-    const asNumber = Number(query.hskLevel);
-    if (!isNaN(asNumber)) {
-      // Match either Number (HSK 1-9) or String form
-      hskLevelConditions.push({ hskLevel: asNumber });
-      hskLevelConditions.push({ hskLevel: query.hskLevel });
-    } else {
-      hskLevelConditions.push({ hskLevel: query.hskLevel });
-    }
-  }
-
-  const searchConditions: Record<string, unknown>[] = [];
-  if (query.search) {
-    searchConditions.push(
-      { structure: { $regex: query.search, $options: 'i' } },
-      { explanationVi: { $regex: query.search, $options: 'i' } },
-      { tags: { $in: [new RegExp(query.search, 'i')] } },
-    );
-  }
-
-  // Combine $or blocks via $and
-  const orBlocks: Record<string, unknown>[] = [];
-  if (hskLevelConditions.length > 0) orBlocks.push({ $or: hskLevelConditions });
-  if (searchConditions.length > 0) orBlocks.push({ $or: searchConditions });
-
-  if (orBlocks.length === 1) {
-    const single = orBlocks[0];
-    Object.assign(filter, single);
-  } else if (orBlocks.length > 1) {
-    filter.$and = orBlocks;
-  }
-
-  const [items, total] = await Promise.all([
-    GrammarModel.find(filter)
-      .sort({ hskLevel: 1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    GrammarModel.countDocuments(filter),
-  ]);
-
-  res.json({
-    data: {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    },
-  });
+  const query = (req as unknown as { parsedQuery: z.infer<typeof listQuerySchema> }).parsedQuery;
+  const result = await grammarService.searchGrammar({ ...query, status: 'published' });
+  res.json({ data: result });
 }));
 
 // GET /api/v1/grammar/stats - Get grammar statistics

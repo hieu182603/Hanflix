@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
+
 import {
   Clock,
   CheckCircle2,
@@ -14,7 +15,9 @@ import {
   Film,
   Calendar,
   Layers,
-} from 'lucide-react';
+  X,
+} from "lucide-react"
+
 import {
   getLearningHistory,
   getLearnerDashboard,
@@ -23,137 +26,202 @@ import {
   type HistoryStats,
   type PublishedLesson,
   type LearningActivity,
-} from '../../api/learning';
-import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from '../admin/AdminPaginationBar';
-import { formatDuration } from '../../utils/text';
+} from "../../api/learning"
+
+import AdminPaginationBar, {
+  DEFAULT_ADMIN_PAGE_SIZE,
+} from "../admin/AdminPaginationBar"
+
+import { formatDuration } from "../../utils/text"
 
 export interface StudyHistoryPageProps {
-  onSelectLesson: (lessonId: string) => void;
-  onNavigateToLessons?: () => void;
+  onSelectLesson: (lessonId: string) => void
+
+  onNavigateToLessons?: () => void
 }
 
 export default function StudyHistoryPage({
   onSelectLesson,
+
   onNavigateToLessons,
 }: StudyHistoryPageProps) {
   // Filters & Pagination state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
-  const [hskFilter, setHskFilter] = useState<string>('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_ADMIN_PAGE_SIZE);
+
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+
+  const [statusFilter, setStatusFilter] =
+    useState<"all" | "in_progress" | "completed">("all")
+
+  const [hskFilter, setHskFilter] = useState<string>("")
+
+  const [page, setPage] = useState(1)
+
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_ADMIN_PAGE_SIZE)
+
+  // Debounce search query
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+
+      setPage(1)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   // Data states
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [historyItems, setHistoryItems] = useState<HistoryProgressItem[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
+
+  const [loading, setLoading] = useState(true)
+
+  const [error, setError] = useState<string | null>(null)
+
+  const [historyItems, setHistoryItems] = useState<HistoryProgressItem[]>([])
+
+  const [totalItems, setTotalItems] = useState(0)
+
   const [stats, setStats] = useState<HistoryStats>({
     totalLessonsLearned: 0,
+
     completedCount: 0,
+
     inProgressCount: 0,
+
     totalStudySeconds: 0,
+
     averageQuizScore: null,
-  });
+  })
+
   const [continueLesson, setContinueLesson] = useState<{
-    lesson: PublishedLesson;
-    lastPositionSeconds: number;
-  } | null>(null);
-  const [activity, setActivity] = useState<LearningActivity | null>(null);
+    lesson: PublishedLesson
+
+    lastPositionSeconds: number
+  } | null>(null)
+
+  const [activity, setActivity] = useState<LearningActivity | null>(null)
 
   // Fetch History Data
+
+  const historyRequest = useRef(0)
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    const request = ++historyRequest.current
+
+    setLoading(true)
+
+    setError(null)
+
     try {
       // Parallel fetch for history list, dashboard resume card, and activity
+
       const [historyRes, dashboardRes, activityRes] = await Promise.all([
         getLearningHistory({
           page,
+
           limit: pageSize,
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          q: searchQuery.trim() || undefined,
+
+          status: statusFilter === "all" ? undefined : statusFilter,
+
+          q: debouncedSearch.trim() || undefined,
+
           hsk: hskFilter ? Number(hskFilter) : undefined,
         }).catch(() => null),
+
         getLearnerDashboard().catch(() => null),
+
         getLearningActivity().catch(() => null),
-      ]);
+      ])
+
+      if (request !== historyRequest.current) return
 
       if (historyRes) {
-        setHistoryItems(historyRes.items || []);
-        setTotalItems(historyRes.total || 0);
+        setHistoryItems(historyRes.items || [])
+
+        setTotalItems(historyRes.total || 0)
+
         if (historyRes.stats) {
-          setStats(historyRes.stats);
+          setStats(historyRes.stats)
         }
-      } else if (dashboardRes) {
-        // Fallback: use dashboard recent progress if history endpoint has issues
-        const items = (dashboardRes.recentProgress || []).map((p, idx) => ({
-          _id: p.lessonId?._id || String(idx),
-          lessonId: p.lessonId,
-          lesson: p.lessonId,
-          lastPositionSeconds: p.lastPositionSeconds || 0,
-          completed: p.completed,
-          updatedAt: new Date().toISOString(),
-        }));
-        setHistoryItems(items);
-        setTotalItems(items.length);
-        setStats({
-          totalLessonsLearned: items.length,
-          completedCount: dashboardRes.metrics?.completedLessons || 0,
-          inProgressCount: Math.max(0, items.length - (dashboardRes.metrics?.completedLessons || 0)),
-          totalStudySeconds: items.reduce((sum, i) => sum + i.lastPositionSeconds, 0),
-          averageQuizScore: dashboardRes.metrics?.averageQuizScore ?? null,
-        });
+      } else {
+        setHistoryItems([])
+
+        setTotalItems(0)
+
+        setError("Không thể tải lịch sử học tập. Vui lòng thử lại.")
       }
 
       if (dashboardRes?.continueLearning?.lessonId) {
         setContinueLesson({
           lesson: dashboardRes.continueLearning.lessonId,
-          lastPositionSeconds: dashboardRes.continueLearning.lastPositionSeconds || 0,
-        });
+
+          lastPositionSeconds:
+            dashboardRes.continueLearning.lastPositionSeconds || 0,
+        })
       } else if (historyRes?.items) {
-        const inProgress = historyRes.items.find((i) => !i.completed && (i.lesson || i.lessonId));
+        const inProgress = historyRes.items.find(
+          (i) => !i.completed && (i.lesson || i.lessonId),
+        )
+
         if (inProgress) {
-          const lesson = inProgress.lesson || inProgress.lessonId;
+          const lesson = inProgress.lesson || inProgress.lessonId
+
           if (lesson) {
             setContinueLesson({
               lesson,
+
               lastPositionSeconds: inProgress.lastPositionSeconds || 0,
-            });
+            })
           }
         }
       }
 
       if (activityRes) {
-        setActivity(activityRes);
+        setActivity(activityRes)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải lịch sử học tập.');
+      if (request !== historyRequest.current) return
+
+      setError(
+        err instanceof Error ? err.message : "Không thể tải lịch sử học tập.",
+      )
     } finally {
-      setLoading(false);
+      if (request === historyRequest.current) setLoading(false)
     }
-  }, [page, pageSize, statusFilter, searchQuery, hskFilter]);
+  }, [page, pageSize, statusFilter, debouncedSearch, hskFilter])
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData()
+
+    return () => {
+      ++historyRequest.current
+    }
+  }, [fetchData])
 
   // Format Total Study Time nicely in Vietnamese
+
   const formattedStudyTime = useMemo(() => {
-    const totalSeconds = stats.totalStudySeconds || 0;
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const totalSeconds = stats.totalStudySeconds || 0
+
+    const hours = Math.floor(totalSeconds / 3600)
+
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+
     if (hours > 0) {
-      return `${(totalSeconds / 3600).toFixed(1)} giờ`;
+      return `${(totalSeconds / 3600).toFixed(1)} giờ`
     }
-    return `${Math.max(1, minutes)} phút`;
-  }, [stats.totalStudySeconds]);
+
+    return `${Math.max(1, minutes)} phút`
+  }, [stats.totalStudySeconds])
 
   // Calculate completion percentage
+
   const completionPercent = useMemo(() => {
-    if (stats.totalLessonsLearned === 0) return 0;
-    return Math.round((stats.completedCount / stats.totalLessonsLearned) * 100);
-  }, [stats.completedCount, stats.totalLessonsLearned]);
+    if (stats.totalLessonsLearned === 0) return 0
+
+    return Math.round((stats.completedCount / stats.totalLessonsLearned) * 100)
+  }, [stats.completedCount, stats.totalLessonsLearned])
 
   return (
     <div className="space-y-7 max-w-7xl mx-auto pb-10">
@@ -174,7 +242,8 @@ export default function StudyHistoryPage({
               Lịch Sử Học Tập
             </h1>
             <p className="text-xs sm:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
-              Theo dõi quá trình chinh phục tiếng Trung qua video, lưu giữ từng cột mốc hoàn thành bài học và kết quả bài tập theo chuẩn HSK.
+              Theo dõi quá trình chinh phục tiếng Trung qua video, lưu giữ từng
+              cột mốc hoàn thành bài học và kết quả bài tập theo chuẩn HSK.
             </p>
           </div>
 
@@ -199,7 +268,9 @@ export default function StudyHistoryPage({
         {/* Card 1: Thời gian học tích lũy */}
         <div className="bg-white rounded-3xl p-5 border border-[#E7E7EA] shadow-xs relative overflow-hidden group hover:border-[#B91B1C]/40 transition-all duration-300">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-xs font-bold text-[#5F6368]">Thời gian học</span>
+            <span className="text-xs font-bold text-[#5F6368]">
+              Thời gian học
+            </span>
             <div className="w-8 h-8 rounded-xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center border border-[#B91B1C]/15 group-hover:scale-110 transition-transform">
               <Clock className="w-4 h-4" />
             </div>
@@ -218,7 +289,9 @@ export default function StudyHistoryPage({
         {/* Card 2: Đã hoàn thành */}
         <div className="bg-white rounded-3xl p-5 border border-[#E7E7EA] shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all duration-300">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-xs font-bold text-[#5F6368]">Đã hoàn thành</span>
+            <span className="text-xs font-bold text-[#5F6368]">
+              Đã hoàn thành
+            </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 group-hover:scale-110 transition-transform">
               <CheckCircle2 className="w-4 h-4" />
             </div>
@@ -227,7 +300,9 @@ export default function StudyHistoryPage({
             <span className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
               {stats.completedCount}
             </span>
-            <span className="text-xs text-[#8B9097] font-bold">/ {stats.totalLessonsLearned} bài</span>
+            <span className="text-xs text-[#8B9097] font-bold">
+              / {stats.totalLessonsLearned} bài
+            </span>
           </div>
           <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg w-fit">
             <span>{completionPercent}% hoàn thành</span>
@@ -237,7 +312,9 @@ export default function StudyHistoryPage({
         {/* Card 3: Đang học dở */}
         <div className="bg-white rounded-3xl p-5 border border-[#E7E7EA] shadow-xs relative overflow-hidden group hover:border-blue-300 transition-all duration-300">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-xs font-bold text-[#5F6368]">Đang học dở</span>
+            <span className="text-xs font-bold text-[#5F6368]">
+              Đang học dở
+            </span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 group-hover:scale-110 transition-transform">
               <BookOpen className="w-4 h-4" />
             </div>
@@ -256,14 +333,18 @@ export default function StudyHistoryPage({
         {/* Card 4: Điểm Quiz trung bình */}
         <div className="bg-white rounded-3xl p-5 border border-[#E7E7EA] shadow-xs relative overflow-hidden group hover:border-purple-300 transition-all duration-300">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-xs font-bold text-[#5F6368]">Điểm Quiz TB</span>
+            <span className="text-xs font-bold text-[#5F6368]">
+              Điểm Quiz TB
+            </span>
             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200 group-hover:scale-110 transition-transform">
               <Trophy className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
-              {stats.averageQuizScore !== null ? `${stats.averageQuizScore}%` : '—'}
+              {stats.averageQuizScore !== null
+                ? `${stats.averageQuizScore}%`
+                : "—"}
             </span>
           </div>
           <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg w-fit">
@@ -292,7 +373,9 @@ export default function StudyHistoryPage({
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-[#1F1F23] via-[#2D1517] to-[#121214] flex flex-col items-center justify-center p-3 relative overflow-hidden">
                   <span className="absolute -right-3 -bottom-4 text-6xl font-black text-white/5 font-hanzi select-none">
-                    {continueLesson.lesson.titleZh ? continueLesson.lesson.titleZh.slice(0, 2) : '学'}
+                    {continueLesson.lesson.titleZh
+                      ? continueLesson.lesson.titleZh.slice(0, 2)
+                      : "学"}
                   </span>
                   <div className="w-11 h-11 rounded-full bg-[#B91B1C]/25 border border-[#B91B1C]/50 flex items-center justify-center text-[#B91B1C] mb-2 shadow-inner">
                     <Play className="w-5 h-5 fill-current ml-0.5" />
@@ -328,7 +411,9 @@ export default function StudyHistoryPage({
                   <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-bold border border-[#B91B1C]/20 uppercase tracking-wider">
                     Tiếp tục bài học
                   </span>
-                  <span className="text-xs text-[#8B9097] font-medium">Gần đây nhất</span>
+                  <span className="text-xs text-[#8B9097] font-medium">
+                    Gần đây nhất
+                  </span>
                 </div>
 
                 <h3
@@ -354,12 +439,14 @@ export default function StudyHistoryPage({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-bold text-[#5F6368]">
                   <span>
-                    Đã xem: {formatDuration(continueLesson.lastPositionSeconds)} / {formatDuration(continueLesson.lesson.durationSeconds || 0)}
+                    Đã xem: {formatDuration(continueLesson.lastPositionSeconds)}{" "}
+                    /{" "}
+                    {formatDuration(continueLesson.lesson.durationSeconds || 0)}
                   </span>
                   <span className="text-[#B91B1C] font-mono font-black">
                     {continueLesson.lesson.durationSeconds
                       ? `${Math.min(100, Math.round((continueLesson.lastPositionSeconds / continueLesson.lesson.durationSeconds) * 100))}%`
-                      : '0%'}
+                      : "0%"}
                   </span>
                 </div>
                 <div className="w-full bg-[#E7E7EA] h-2 rounded-full overflow-hidden">
@@ -368,7 +455,12 @@ export default function StudyHistoryPage({
                     style={{
                       width: `${
                         continueLesson.lesson.durationSeconds
-                          ? Math.min(100, (continueLesson.lastPositionSeconds / continueLesson.lesson.durationSeconds) * 100)
+                          ? Math.min(
+                              100,
+                              (continueLesson.lastPositionSeconds /
+                                continueLesson.lesson.durationSeconds) *
+                                100,
+                            )
                           : 0
                       }%`,
                     }}
@@ -405,8 +497,9 @@ export default function StudyHistoryPage({
               placeholder="Tìm bài học theo tên tiếng Việt hoặc chữ Hán..."
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
+                setSearchQuery(e.target.value)
+
+                setPage(1)
               }}
               className="w-full pl-11 pr-10 py-2.5 bg-[#F7F7F9] border border-[#E7E7EA] rounded-2xl text-xs sm:text-sm font-medium text-[#18181B] placeholder-[#8B9097] outline-none focus:border-[#B91B1C] focus:bg-white transition-all shadow-inner"
             />
@@ -414,12 +507,16 @@ export default function StudyHistoryPage({
               <button
                 type="button"
                 onClick={() => {
-                  setSearchQuery('');
-                  setPage(1);
+                  setSearchQuery("")
+
+                  setDebouncedSearch("")
+
+                  setPage(1)
                 }}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 text-xs font-bold p-1 cursor-pointer"
+                title="Xóa tìm kiếm"
               >
-                ✕
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -431,13 +528,14 @@ export default function StudyHistoryPage({
               <button
                 type="button"
                 onClick={() => {
-                  setStatusFilter('all');
-                  setPage(1);
+                  setStatusFilter("all")
+
+                  setPage(1)
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'all'
-                    ? 'bg-[#18181B] text-white shadow-2xs'
-                    : 'text-[#5F6368] hover:text-[#18181B]'
+                  statusFilter === "all"
+                    ? "bg-[#18181B] text-white shadow-2xs"
+                    : "text-[#5F6368] hover:text-[#18181B]"
                 }`}
               >
                 Tất cả ({stats.totalLessonsLearned})
@@ -446,13 +544,14 @@ export default function StudyHistoryPage({
               <button
                 type="button"
                 onClick={() => {
-                  setStatusFilter('in_progress');
-                  setPage(1);
+                  setStatusFilter("in_progress")
+
+                  setPage(1)
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'in_progress'
-                    ? 'bg-[#B91B1C] text-white shadow-2xs'
-                    : 'text-[#5F6368] hover:text-[#18181B]'
+                  statusFilter === "in_progress"
+                    ? "bg-[#B91B1C] text-white shadow-2xs"
+                    : "text-[#5F6368] hover:text-[#18181B]"
                 }`}
               >
                 Đang học ({stats.inProgressCount})
@@ -461,13 +560,14 @@ export default function StudyHistoryPage({
               <button
                 type="button"
                 onClick={() => {
-                  setStatusFilter('completed');
-                  setPage(1);
+                  setStatusFilter("completed")
+
+                  setPage(1)
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === 'completed'
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'text-[#5F6368] hover:text-[#18181B]'
+                  statusFilter === "completed"
+                    ? "bg-emerald-600 text-white shadow-2xs"
+                    : "text-[#5F6368] hover:text-[#18181B]"
                 }`}
               >
                 Đã xong ({stats.completedCount})
@@ -478,13 +578,14 @@ export default function StudyHistoryPage({
             <select
               value={hskFilter}
               onChange={(e) => {
-                setHskFilter(e.target.value);
-                setPage(1);
+                setHskFilter(e.target.value)
+
+                setPage(1)
               }}
               className="h-10 px-3 rounded-2xl bg-[#F7F7F9] border border-[#E7E7EA] text-xs font-bold text-[#18181B] outline-none hover:border-[#B91B1C] transition-colors cursor-pointer"
             >
               <option value="">Tất cả HSK</option>
-              {[1, 2, 3, 4, 5, 6].map((lvl) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => (
                 <option key={lvl} value={lvl}>
                   HSK {lvl}
                 </option>
@@ -499,7 +600,9 @@ export default function StudyHistoryPage({
         {loading ? (
           <div className="bg-white rounded-3xl p-12 border border-[#E7E7EA] text-center space-y-3">
             <div className="w-8 h-8 border-3 border-[#B91B1C] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-bold text-[#5F6368]">Đang tải lịch sử học tập...</p>
+            <p className="text-xs font-bold text-[#5F6368]">
+              Đang tải lịch sử học tập...
+            </p>
           </div>
         ) : error ? (
           <div className="bg-white rounded-3xl p-8 border border-red-200 text-center space-y-2">
@@ -514,19 +617,20 @@ export default function StudyHistoryPage({
           </div>
         ) : historyItems.length === 0 ? (
           /* Empty state */
+
           <div className="bg-white rounded-3xl p-10 md:p-16 border border-[#E7E7EA] text-center max-w-2xl mx-auto shadow-2xs">
             <div className="w-16 h-16 rounded-3xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center mx-auto mb-4 border border-[#B91B1C]/15 shadow-inner">
               <BookOpen className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-black text-[#18181B]">
-              {searchQuery || statusFilter !== 'all' || hskFilter
-                ? 'Không tìm thấy bài học nào phù hợp'
-                : 'Chưa có bài học nào trong lịch sử'}
+              {searchQuery || statusFilter !== "all" || hskFilter
+                ? "Không tìm thấy bài học nào phù hợp"
+                : "Chưa có bài học nào trong lịch sử"}
             </h3>
             <p className="text-xs sm:text-sm text-[#5F6368] mt-2 max-w-md mx-auto leading-relaxed">
-              {searchQuery || statusFilter !== 'all' || hskFilter
-                ? 'Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái / HSK.'
-                : 'Khám phá ngay các video bài học phong phú trên HanFlix để bắt đầu tích lũy kiến thức và xây dựng chuỗi ngày học tập.'}
+              {searchQuery || statusFilter !== "all" || hskFilter
+                ? "Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái / HSK."
+                : "Khám phá ngay các video bài học phong phú trên HanFlix để bắt đầu tích lũy kiến thức và xây dựng chuỗi ngày học tập."}
             </p>
             {onNavigateToLessons && (
               <button
@@ -542,16 +646,26 @@ export default function StudyHistoryPage({
           </div>
         ) : (
           /* Lesson History Rows */
+
           <div className="space-y-4">
             <div className="bg-white rounded-3xl border border-[#E7E7EA] overflow-hidden shadow-2xs divide-y divide-[#E7E7EA]/70">
               {historyItems.map((item, index) => {
-                const lesson = item.lesson || item.lessonId;
-                if (!lesson) return null;
+                const lesson = item.lesson || item.lessonId
 
-                const duration = lesson.durationSeconds || 0;
-                const watched = item.lastPositionSeconds || 0;
-                const percent = duration > 0 ? Math.min(100, Math.round((watched / duration) * 100)) : item.completed ? 100 : 0;
-                const isCompleted = item.completed || percent >= 95;
+                if (!lesson) return null
+
+                const duration = lesson.durationSeconds || 0
+
+                const watched = item.lastPositionSeconds || 0
+
+                const percent =
+                  duration > 0
+                    ? Math.min(100, Math.round((watched / duration) * 100))
+                    : item.completed
+                      ? 100
+                      : 0
+
+                const isCompleted = item.completed || percent >= 95
 
                 return (
                   <div
@@ -573,7 +687,7 @@ export default function StudyHistoryPage({
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-[#1F1F23] to-[#2D1517] flex items-center justify-center text-white/20 font-hanzi font-black text-2xl">
-                            {lesson.titleZh ? lesson.titleZh[0] : '汉'}
+                            {lesson.titleZh ? lesson.titleZh[0] : "汉"}
                           </div>
                         )}
 
@@ -603,8 +717,8 @@ export default function StudyHistoryPage({
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold border inline-flex items-center gap-1 ${
                               isCompleted
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}
                           >
                             {isCompleted ? (
@@ -629,7 +743,10 @@ export default function StudyHistoryPage({
 
                           {item.updatedAt && (
                             <span className="text-[11px] text-[#8B9097] hidden sm:inline-block">
-                              Học lúc: {new Date(item.updatedAt).toLocaleDateString('vi-VN')}
+                              Học lúc:{" "}
+                              {new Date(item.updatedAt).toLocaleDateString(
+                                "vi-VN",
+                              )}
                             </span>
                           )}
                         </div>
@@ -659,13 +776,14 @@ export default function StudyHistoryPage({
                           <div className="flex-1 bg-[#E7E7EA] h-1.5 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
-                                isCompleted ? 'bg-emerald-500' : 'bg-[#B91B1C]'
+                                isCompleted ? "bg-emerald-500" : "bg-[#B91B1C]"
                               }`}
                               style={{ width: `${percent}%` }}
                             />
                           </div>
                           <span className="text-[10px] font-mono font-bold text-[#8B9097] shrink-0">
-                            {formatDuration(watched)} / {formatDuration(duration)}
+                            {formatDuration(watched)} /{" "}
+                            {formatDuration(duration)}
                           </span>
                         </div>
                       </div>
@@ -678,8 +796,8 @@ export default function StudyHistoryPage({
                         onClick={() => onSelectLesson(lesson._id)}
                         className={`h-10 px-5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 ${
                           isCompleted
-                            ? 'bg-white hover:bg-[#F7F7F9] text-[#18181B] border border-[#E7E7EA] hover:border-[#B91B1C]/30 hover:text-[#B91B1C]'
-                            : 'bg-[#B91B1C] hover:bg-[#A3181A] text-white shadow-md shadow-[#B91B1C]/15'
+                            ? "bg-white hover:bg-[#F7F7F9] text-[#18181B] border border-[#E7E7EA] hover:border-[#B91B1C]/30 hover:text-[#B91B1C]"
+                            : "bg-[#B91B1C] hover:bg-[#A3181A] text-white shadow-md shadow-[#B91B1C]/15"
                         }`}
                       >
                         {isCompleted ? (
@@ -696,7 +814,7 @@ export default function StudyHistoryPage({
                       </button>
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
 
@@ -710,13 +828,14 @@ export default function StudyHistoryPage({
               ariaLabel="Phân trang lịch sử học tập"
               onPageChange={(newPage) => setPage(newPage)}
               onPageSizeChange={(newSize) => {
-                setPageSize(newSize);
-                setPage(1);
+                setPageSize(newSize)
+
+                setPage(1)
               }}
             />
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

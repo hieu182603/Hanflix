@@ -158,7 +158,7 @@ const lessonListQuerySchema = z.object({
 });
 
 router.get('/lessons', validateQuery(lessonListQuerySchema), asyncHandler(async (req, res) => {
-  const { page, limit, hsk, status, search, contentMode } = req.query as unknown as z.infer<typeof lessonListQuerySchema>;
+  const { page, limit, hsk, status, search, contentMode } = (req as unknown as { parsedQuery: z.infer<typeof lessonListQuerySchema> }).parsedQuery;
   const filter: Record<string, unknown> = {};
   if (hsk !== undefined) filter.hsk = hsk;
   if (status) filter.status = status;
@@ -167,7 +167,7 @@ router.get('/lessons', validateQuery(lessonListQuerySchema), asyncHandler(async 
   if (search) {
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(escaped, 'i');
-    filter.$or = [{ titleVi: re }, { titleZh: re }, { pinyin: re }];
+    filter.$or = [{ titleVi: re }, { titleZh: re }, { pinyin: re }, { descriptionVi: re }];
   }
 
   const skip = (page - 1) * limit;
@@ -1012,8 +1012,9 @@ router.post('/lessons/:lessonId/restore', validate(lessonIdSchema, 'params'), as
 router.get('/users', asyncHandler(async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
   const filter = q ? { $text: { $search: q } } : {};
-  const users = await UserModel.find(filter).select('name email role status learningProfile createdAt').sort({ createdAt: -1 }).limit(100).lean();
-  res.json({ data: { items: users } });
+  const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+  const users = await UserModel.find(filter).select('name email role status learningProfile createdAt').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 100).limit(100).lean();
+  res.json({ data: { items: users, hasMore: users.length === 100 } });
 }));
 
 router.patch('/users/:userId/status', validate(userIdSchema, 'params'), validate(statusSchema), asyncHandler(async (req, res) => {

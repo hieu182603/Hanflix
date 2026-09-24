@@ -40,7 +40,7 @@ router.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) =>
     page: query.page,
     limit: query.limit,
     hskLevel: query.hskLevel,
-    status: query.status,
+    status: query.status ?? 'all',
     search: query.search,
     tag: query.tag,
     sort: query.sort,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,8 +17,9 @@ import {
   Share2,
   Sparkles,
   Volume2,
-} from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+  X,
+} from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   explainWord,
   submitLessonQuiz,
@@ -35,34 +36,34 @@ import {
   getLessonProgress,
   getLessonQuiz,
   listPublishedLessons,
-} from '../../api/learning';
-import { InlineBanner } from '../notifications';
-import { useNotification } from '../notifications';
-import { saveSubtitleWord } from '../../api/vocabulary';
-import { ApiRequestError } from '../../api/client';
-import { type SubtitleLanguageTrack } from './SubtitleOverlay';
-import YouTubePlayer from './YouTubePlayer';
-import KaraokePlayer from './KaraokePlayer';
-import PodcastPlayer from './PodcastPlayer';
-import DramaPlayer from './DramaPlayer';
-import LearningTipsPanel from './LearningTipsPanel';
-import AiImprovedBadge from './AiImprovedBadge';
-import WordExplanationPopover from './WordExplanationPopover';
-import LessonQuizModal from './LessonQuizModal';
-import { useSubtitlePreferences } from '../../hooks/useSubtitlePreferences';
-import { cleanPinyinText, stripTrailingPunctuation } from '../../utils/text';
-import { COMMON_VOCAB_DB, enrichVocabItem } from '../../utils/vocabDict';
-import { lessonQueryKeys } from '../../api/queryKeys';
-import { perfMarks } from '../../lib/perfMarks';
-import { awardXP } from '../../lib/xp';
-import { recordLearningActivity } from '../../lib/streak';
+} from "../../api/learning"
+import { InlineBanner } from "../notifications"
+import { useNotification } from "../notifications"
+import { saveSubtitleWord } from "../../api/vocabulary"
+import { ApiRequestError } from "../../api/client"
+import { type SubtitleLanguageTrack } from "./SubtitleOverlay"
+import YouTubePlayer from "./YouTubePlayer"
+import KaraokePlayer from "./KaraokePlayer"
+import PodcastPlayer from "./PodcastPlayer"
+import DramaPlayer from "./DramaPlayer"
+import LearningTipsPanel from "./LearningTipsPanel"
+import AiImprovedBadge from "./AiImprovedBadge"
+import WordExplanationPopover from "./WordExplanationPopover"
+import LessonQuizModal from "./LessonQuizModal"
+import { useSubtitlePreferences } from "../../hooks/useSubtitlePreferences"
+import { cleanPinyinText, stripTrailingPunctuation } from "../../utils/text"
+import { COMMON_VOCAB_DB, enrichVocabItem } from "../../utils/vocabDict"
+import { lessonQueryKeys } from "../../api/queryKeys"
+import { perfMarks } from "../../lib/perfMarks"
+import { awardXP } from "../../lib/xp"
+import { recordLearningActivity } from "../../lib/streak"
 
 export interface PublishedLessonViewProps {
-  lessonId: string;
-  onBack: () => void;
-  subtitlePreference?: string;
-  onSelectLesson?: (id: string) => void;
-  onAskAI?: (prompt: string) => void;
+  lessonId: string
+  onBack: () => void
+  subtitlePreference?: string
+  onSelectLesson?: (id: string) => void
+  onAskAI?: (prompt: string) => void
 }
 
 export default function PublishedLessonView({
@@ -71,10 +72,10 @@ export default function PublishedLessonView({
   onSelectLesson,
   onAskAI,
 }: PublishedLessonViewProps) {
-  const notify = useNotification();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const activeCueRef = useRef<HTMLDivElement | null>(null);
-  const hasUserInitiatedPlayRef = useRef(false);
+  const notify = useNotification()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const activeCueRef = useRef<HTMLDivElement | null>(null)
+  const hasUserInitiatedPlayRef = useRef(false)
 
   /**
    * Data layer (React Query):
@@ -87,7 +88,7 @@ export default function PublishedLessonView({
    *   - When `lessonId` changes we cancel the previous lesson's queries so
    *     a late-arriving response never lands in the new lesson's state.
    */
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   const lessonQuery = useQuery({
     queryKey: lessonQueryKeys.lesson(lessonId),
@@ -95,7 +96,7 @@ export default function PublishedLessonView({
     enabled: Boolean(lessonId),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-  });
+  })
 
   const subtitlesQuery = useQuery({
     queryKey: lessonQueryKeys.subtitles(lessonId),
@@ -104,7 +105,7 @@ export default function PublishedLessonView({
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
-  });
+  })
 
   const progressQuery = useQuery({
     queryKey: lessonQueryKeys.progress(lessonId),
@@ -113,7 +114,7 @@ export default function PublishedLessonView({
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 1,
-  });
+  })
 
   const quizQuery = useQuery({
     queryKey: lessonQueryKeys.quiz(lessonId),
@@ -122,12 +123,12 @@ export default function PublishedLessonView({
     staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
-  });
+  })
 
   // Cancel in-flight queries when the user navigates to a different lesson,
   // so a stale response for lesson A can never paint into lesson B.
   useEffect(() => {
-    perfMarks.mark('watch_open:start', { lessonId });
+    perfMarks.mark("watch_open:start", { lessonId })
     return () => {
       for (const key of [
         lessonQueryKeys.lesson(lessonId),
@@ -135,108 +136,119 @@ export default function PublishedLessonView({
         lessonQueryKeys.progress(lessonId),
         lessonQueryKeys.quiz(lessonId),
       ]) {
-        void queryClient.cancelQueries({ queryKey: key, exact: true });
+        void queryClient.cancelQueries({ queryKey: key, exact: true })
       }
-    };
-  }, [lessonId, queryClient]);
+    }
+  }, [lessonId, queryClient])
 
-  const lesson = lessonQuery.data ?? null;
-  const subtitleTrack = subtitlesQuery.data ?? null;
-  const cues: SubtitleCue[] = useMemo(() => subtitleTrack?.cues ?? [], [subtitleTrack]);
-  const translationImproved = Boolean(subtitleTrack?.translationImproved);
-  const learningTips: LearningTip[] = subtitleTrack?.learningTips ?? [];
-  const drillWords: string[] = subtitleTrack?.drillWords ?? [];
-  const progress: LessonProgress | null = progressQuery.data ?? null;
-  const quiz: PublicQuestion[] = useMemo(() => quizQuery.data?.questions ?? [], [quizQuery.data]);
+  const lesson = lessonQuery.data ?? null
+  const subtitleTrack = subtitlesQuery.data ?? null
+  const cues: SubtitleCue[] = useMemo(
+    () => subtitleTrack?.cues ?? [],
+    [subtitleTrack],
+  )
+  const translationImproved = Boolean(subtitleTrack?.translationImproved)
+  const learningTips: LearningTip[] = subtitleTrack?.learningTips ?? []
+  const drillWords: string[] = subtitleTrack?.drillWords ?? []
+  const progress: LessonProgress | null = progressQuery.data ?? null
+  const quiz: PublicQuestion[] = useMemo(
+    () => quizQuery.data?.questions ?? [],
+    [quizQuery.data],
+  )
 
   // Recommendation list (Up Next) — only fires once we know the lesson's HSK.
   const recommendedQuery = useQuery({
-    queryKey: ['lesson-recommendations', lesson?.hsk ?? 0, lessonId],
+    queryKey: ["lesson-recommendations", lesson?.hsk ?? 0, lessonId],
     queryFn: ({ signal }) =>
-      listPublishedLessons({ limit: 6, hsk: lesson?.hsk, signal }).then((catalog) =>
-        catalog.items.filter((item) => item._id !== lessonId),
+      listPublishedLessons({ limit: 6, hsk: lesson?.hsk, signal }).then(
+        (catalog) => catalog.items.filter((item) => item._id !== lessonId),
       ),
     enabled: Boolean(lesson && Number.isFinite(lesson.hsk)),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-  });
-  const recommendedLessons = recommendedQuery.data ?? [];
+  })
+  const recommendedLessons = recommendedQuery.data ?? []
 
   // Mark media ready as soon as the lesson doc has a URL.
   useEffect(() => {
     if (lesson?.media?.url) {
-      perfMarks.since('lesson_media:ready', 'watch_open:start', { lessonId });
+      perfMarks.since("lesson_media:ready", "watch_open:start", { lessonId })
     }
-  }, [lesson?.media?.url, lessonId]);
+  }, [lesson?.media?.url, lessonId])
 
   // Record learning activity for daily streak
   useEffect(() => {
     if (lessonId) {
-      recordLearningActivity('video');
+      recordLearningActivity("video")
     }
-  }, [lessonId]);
+  }, [lessonId])
 
-  const [currentMs, setCurrentMs] = useState(0);
-  const [loading] = useState(false); // retained for type compatibility; no longer used to gate the player
-  const [error] = useState('');
+  const [currentMs, setCurrentMs] = useState(0)
+  const [loading] = useState(false) // retained for type compatibility; no longer used to gate the player
+  const [error] = useState("")
 
   // Explanation popover state
-  const [explanation, setExplanation] = useState<WordExplanation | null>(null);
-  const [explaining, setExplaining] = useState(false);
-  const [explanationError, setExplanationError] = useState('');
+  const [explanation, setExplanation] = useState<WordExplanation | null>(null)
+  const [explaining, setExplaining] = useState(false)
+  const [explanationError, setExplanationError] = useState("")
   const [popoverAnchor, setPopoverAnchor] = useState<{
-    x: number;
-    y: number;
-    cueId: string;
-    wordId: string;
-    wordText: string;
-  } | null>(null);
+    x: number
+    y: number
+    cueId: string
+    wordId: string
+    wordText: string
+  } | null>(null)
 
   // Progress and quiz state
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
-  const [quizOpen, setQuizOpen] = useState(false);
-  const [quizBusy, setQuizBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null)
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [quizBusy, setQuizBusy] = useState(false)
+  const [message, setMessage] = useState("")
 
   // YouTube layout interaction states
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'transcript' | 'vocabulary' | 'tips'>('transcript');
-  const [searchCueQuery, setSearchCueQuery] = useState('');
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [isSavedLesson, setIsSavedLesson] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [activeTab, setActiveTab] =
+    useState<"transcript" | "vocabulary" | "tips">("transcript")
+  const [searchCueQuery, setSearchCueQuery] = useState("")
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [isSavedLesson, setIsSavedLesson] = useState(false)
 
   // Vocabulary tab detailed state & audio pronunciation
-  const [speakingWord, setSpeakingWord] = useState<string | null>(null);
-  const [searchVocabQuery, setSearchVocabQuery] = useState('');
-  const [vocabFilter, setVocabFilter] = useState<'all' | 'drill'>('all');
-  const [vocabViewMode, setVocabViewMode] = useState<'list' | 'flashcard'>('list');
-  const [flashcardIndex, setFlashcardIndex] = useState(0);
-  const [isCardFlipped, setIsCardFlipped] = useState(false);
-  const [masteredWords, setMasteredWords] = useState<Set<string>>(new Set());
-  const [selectedHskFilter, setSelectedHskFilter] = useState<number | null>(null);
+  const [speakingWord, setSpeakingWord] = useState<string | null>(null)
+  const [searchVocabQuery, setSearchVocabQuery] = useState("")
+  const [vocabFilter, setVocabFilter] = useState<"all" | "drill">("all")
+  const [vocabViewMode, setVocabViewMode] = useState<"list" | "flashcard">(
+    "list",
+  )
+  const [flashcardIndex, setFlashcardIndex] = useState(0)
+  const [isCardFlipped, setIsCardFlipped] = useState(false)
+  const [masteredWords, setMasteredWords] = useState<Set<string>>(new Set())
+  const [selectedHskFilter, setSelectedHskFilter] = useState<number | null>(
+    null,
+  )
 
   const playPronunciation = useCallback((text: string) => {
-    setSpeakingWord(text);
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'zh-CN';
-      utterance.rate = 0.85;
-      utterance.onend = () => setSpeakingWord(null);
-      utterance.onerror = () => setSpeakingWord(null);
-      window.speechSynthesis.speak(utterance);
+    setSpeakingWord(text)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = "zh-CN"
+      utterance.rate = 0.85
+      utterance.onend = () => setSpeakingWord(null)
+      utterance.onerror = () => setSpeakingWord(null)
+      window.speechSynthesis.speak(utterance)
     } else {
-      setTimeout(() => setSpeakingWord(null), 1200);
+      setTimeout(() => setSpeakingWord(null), 1200)
     }
-  }, []);
+  }, [])
 
-  const pendingRange = useRef<{ start: number; end: number } | null>(null);
-  const lastPosition = useRef<number | null>(null);
-  const lastFlush = useRef(0);
-  const progressRequest = useRef<Promise<void>>(Promise.resolve());
-  const quizAttemptKey = useRef(crypto.randomUUID());
+  const pendingRange = useRef<{ start: number; end: number } | null>(null)
+  const lastPosition = useRef<number | null>(null)
+  const lastFlush = useRef(0)
+  const progressRequest = useRef<Promise<void>>(Promise.resolve())
+  const quizAttemptKey = useRef(crypto.randomUUID())
 
   const {
     prefs: subtitlePrefs,
@@ -244,133 +256,162 @@ export default function PublishedLessonView({
     setBottom: setSubtitleBottom,
     setStyle: setSubtitleStyle,
     setScale: setSubtitleScale,
-  } = useSubtitlePreferences();
+  } = useSubtitlePreferences()
 
   const setSubtitleTracks = useCallback(
     (next: { top: SubtitleLanguageTrack; bottom: SubtitleLanguageTrack }) => {
-      setSubtitleTop(next.top);
-      setSubtitleBottom(next.bottom);
+      setSubtitleTop(next.top)
+      setSubtitleBottom(next.bottom)
     },
     [setSubtitleTop, setSubtitleBottom],
-  );
+  )
 
   const flushProgress = (position: number) => {
-    const range = pendingRange.current;
-    pendingRange.current = null;
-    lastFlush.current = Date.now();
-    if (!range) return;
-    const duration = lesson?.durationSeconds ?? position;
-    const boundedPosition = Math.min(Math.max(position, 0), duration);
+    const range = pendingRange.current
+    pendingRange.current = null
+    lastFlush.current = Date.now()
+    if (!range) return
+    const duration = lesson?.durationSeconds ?? position
+    const boundedPosition = Math.min(Math.max(position, 0), duration)
     progressRequest.current = progressRequest.current
       .catch(() => undefined)
       .then(async () => {
         const res = await updateLessonProgress(lessonId, {
           positionSeconds: boundedPosition,
-          watchedRange: { start: Math.max(0, range.start), end: Math.min(range.end, duration) },
-          activeStudyDeltaSeconds: Math.min(120, Math.max(0, Math.round(range.end - range.start))),
-        });
+          watchedRange: {
+            start: Math.max(0, range.start),
+            end: Math.min(range.end, duration),
+          },
+          activeStudyDeltaSeconds: Math.min(
+            120,
+            Math.max(0, Math.round(range.end - range.start)),
+          ),
+        })
         if (res?.isNewCompletion && (res.xpEarned || 50) > 0) {
-          awardXP(res.xpEarned || 50, 'Hoàn thành bài học video (+50 XP)', 'lesson');
-          recordLearningActivity('video');
+          awardXP(
+            res.xpEarned || 50,
+            "Hoàn thành bài học video (+50 XP)",
+            "lesson",
+          )
+          recordLearningActivity("video")
         }
         // Refresh the cached progress in the background so coverage/completed
         // reflects the latest write, without blocking playback.
-        void queryClient.invalidateQueries({ queryKey: lessonQueryKeys.progress(lessonId) });
-        window.dispatchEvent(new Event('hanflix:activity-updated'));
+        void queryClient.invalidateQueries({
+          queryKey: lessonQueryKeys.progress(lessonId),
+        })
+        window.dispatchEvent(new Event("hanflix:activity-updated"))
       })
-      .catch(() => setMessage('Chưa lưu được tiến độ. Hãy thử phát lại video.'));
-  };
+      .catch(() => setMessage("Chưa lưu được tiến độ. Hãy thử phát lại video."))
+  }
 
   useEffect(() => {
-    perfMarks.mark('watch_open:start', { lessonId });
+    perfMarks.mark("watch_open:start", { lessonId })
     // Reset transient state when navigating between lessons so we never
     // confuse lesson A's modal/quiz state with lesson B's.
-    hasUserInitiatedPlayRef.current = false;
-    setCurrentMs(0);
-    setQuizResult(null);
-    setQuizOpen(false);
-    setAnswers({});
-    quizAttemptKey.current = crypto.randomUUID();
-  }, [lessonId]);
+    hasUserInitiatedPlayRef.current = false
+    setCurrentMs(0)
+    setQuizResult(null)
+    setQuizOpen(false)
+    setAnswers({})
+    quizAttemptKey.current = crypto.randomUUID()
+  }, [lessonId])
 
-  const activeCue = cues.find((cue) => cue.startMs <= currentMs && currentMs < cue.endMs);
+  const activeCue = cues.find(
+    (cue) => cue.startMs <= currentMs && currentMs < cue.endMs,
+  )
 
   // Close the explanation popover when the active cue changes
-  const activeCueId = activeCue?.cueId;
+  const activeCueId = activeCue?.cueId
   useEffect(() => {
-    setPopoverAnchor((previous) => (previous && previous.cueId === activeCueId ? previous : null));
-  }, [activeCueId]);
+    setPopoverAnchor((previous) =>
+      previous && previous.cueId === activeCueId ? previous : null,
+    )
+  }, [activeCueId])
 
   // Auto-scroll transcript container to active cue
   useEffect(() => {
     if (autoScroll && activeCueRef.current) {
-      activeCueRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      activeCueRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      })
     }
-  }, [activeCueId, autoScroll]);
+  }, [activeCueId, autoScroll])
 
   const onVideoTimeUpdate = (video: HTMLVideoElement) => {
-    const position = video.currentTime;
-    setCurrentMs(position * 1000);
-    const previous = lastPosition.current;
-    lastPosition.current = position;
-    if (video.paused || previous === null) return;
-    const delta = position - previous;
-    if (delta <= 0 || delta > 3) return;
-    const pending = pendingRange.current;
-    if (pending && previous - pending.end < 1) pending.end = position;
+    const position = video.currentTime
+    setCurrentMs(position * 1000)
+    const previous = lastPosition.current
+    lastPosition.current = position
+    if (video.paused || previous === null) return
+    const delta = position - previous
+    if (delta <= 0 || delta > 3) return
+    const pending = pendingRange.current
+    if (pending && previous - pending.end < 1) pending.end = position
     else {
-      if (pending) flushProgress(previous);
-      pendingRange.current = { start: previous, end: position };
+      if (pending) flushProgress(previous)
+      pendingRange.current = { start: previous, end: position }
     }
-    if (Date.now() - lastFlush.current > 15000) flushProgress(position);
-  };
+    if (Date.now() - lastFlush.current > 15000) flushProgress(position)
+  }
 
   const submitQuiz = async () => {
     if (quiz.some((question) => !answers[question.questionId]?.trim())) {
-      setMessage('Hãy trả lời tất cả câu hỏi trước khi nộp.');
-      return;
+      setMessage("Hãy trả lời tất cả câu hỏi trước khi nộp.")
+      return
     }
-    setQuizBusy(true);
-    setMessage('');
+    setQuizBusy(true)
+    setMessage("")
     try {
       const result = await submitLessonQuiz(
         lessonId,
         quiz.map((question) => ({
           questionId: question.questionId,
-          ...(question.type === 'multiple_choice'
+          ...(question.type === "multiple_choice"
             ? { selectedOptionId: answers[question.questionId] }
             : { textAnswer: answers[question.questionId] }),
         })),
         quizAttemptKey.current,
-      );
-      setQuizResult(result);
-      const earnedXP = result.xpEarned || (result.score === 100 ? 50 : result.score >= 80 ? 40 : 25);
-      awardXP(earnedXP, `Hoàn thành bài tập Quiz (+${earnedXP} XP)`, 'quiz');
-      recordLearningActivity('practice');
-      window.dispatchEvent(new Event('hanflix:activity-updated'));
+      )
+      setQuizResult(result)
+      const earnedXP =
+        result.xpEarned ||
+        (result.score === 100 ? 50 : result.score >= 80 ? 40 : 25)
+      awardXP(earnedXP, `Hoàn thành bài tập Quiz (+${earnedXP} XP)`, "quiz")
+      recordLearningActivity("practice")
+      window.dispatchEvent(new Event("hanflix:activity-updated"))
     } catch (requestError) {
-      setMessage(requestError instanceof Error ? requestError.message : 'Không thể nộp bài.');
+      setMessage(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể nộp bài.",
+      )
     } finally {
-      setQuizBusy(false);
+      setQuizBusy(false)
     }
-  };
+  }
 
   const saveWord = async (cueId: string, wordId: string) => {
-    setMessage('');
+    setMessage("")
     try {
-      await saveSubtitleWord(wordId, lessonId, cueId);
-      notify.success('Đã lưu từ vào sổ ôn tập.');
+      await saveSubtitleWord(wordId, lessonId, cueId)
+      notify.success("Đã lưu từ vào sổ ôn tập.")
     } catch (requestError) {
-      setMessage(requestError instanceof Error ? requestError.message : 'Không thể lưu từ.');
+      setMessage(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không thể lưu từ.",
+      )
     }
-  };
+  }
 
   const closePopover = () => {
-    setPopoverAnchor(null);
-    setExplanation(null);
-    setExplanationError('');
-    setExplaining(false);
-  };
+    setPopoverAnchor(null)
+    setExplanation(null)
+    setExplanationError("")
+    setExplaining(false)
+  }
 
   const requestExplanation = async (
     cueId: string,
@@ -378,78 +419,87 @@ export default function PublishedLessonView({
     wordText: string,
     event: React.MouseEvent,
   ) => {
-    setPopoverAnchor({ x: event.clientX, y: event.clientY, cueId, wordId, wordText });
-    setExplaining(true);
-    setExplanation(null);
-    setExplanationError('');
+    setPopoverAnchor({
+      x: event.clientX,
+      y: event.clientY,
+      cueId,
+      wordId,
+      wordText,
+    })
+    setExplaining(true)
+    setExplanation(null)
+    setExplanationError("")
     try {
-      setExplanation(await explainWord(lessonId, cueId, wordId));
+      setExplanation(await explainWord(lessonId, cueId, wordId))
     } catch (requestError) {
       setExplanationError(
         requestError instanceof ApiRequestError
           ? requestError.message
-          : 'Không thể giải thích từ này lúc này.',
-      );
+          : "Không thể giải thích từ này lúc này.",
+      )
     } finally {
-      setExplaining(false);
+      setExplaining(false)
     }
-  };
+  }
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
-      void navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
+      void navigator.clipboard.writeText(window.location.href)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2500)
     }
-  };
+  }
 
   const formatTimestamp = (ms: number) => {
-    const totalSec = Math.floor(ms / 1000);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${m}:${String(s).padStart(2, '0')}`;
-  };
+    const totalSec = Math.floor(ms / 1000)
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return `${m}:${String(s).padStart(2, "0")}`
+  }
 
   const filteredCues = cues.filter((cue) => {
-    if (!searchCueQuery.trim()) return true;
-    const query = searchCueQuery.toLowerCase().trim();
+    if (!searchCueQuery.trim()) return true
+    const query = searchCueQuery.toLowerCase().trim()
     return (
       (cue.zh && cue.zh.toLowerCase().includes(query)) ||
       (cue.pinyin && cue.pinyin.toLowerCase().includes(query)) ||
       (cue.vi && cue.vi.toLowerCase().includes(query))
-    );
-  });
+    )
+  })
 
   interface DetailedVocabItem {
-    key: string;
-    word: string;
-    pinyin?: string;
-    hanViet?: string;
-    meaningVi?: string;
-    partOfSpeech?: string;
-    hsk?: number;
-    occurrences: number;
-    collocations?: string[];
-    isDrill: boolean;
-    cueId?: string;
-    wordId?: string;
-    startMs?: number;
-    contextZh?: string;
-    contextPinyin?: string;
-    contextVi?: string;
+    key: string
+    word: string
+    pinyin?: string
+    hanViet?: string
+    meaningVi?: string
+    partOfSpeech?: string
+    hsk?: number
+    occurrences: number
+    collocations?: string[]
+    isDrill: boolean
+    cueId?: string
+    wordId?: string
+    startMs?: number
+    contextZh?: string
+    contextPinyin?: string
+    contextVi?: string
   }
 
   const detailedVocabList = useMemo(() => {
-    const map = new Map<string, DetailedVocabItem>();
+    const map = new Map<string, DetailedVocabItem>()
 
-    const enrich = (word: string, partial: Partial<DetailedVocabItem>): DetailedVocabItem => {
+    const enrich = (
+      word: string,
+      partial: Partial<DetailedVocabItem>,
+    ): DetailedVocabItem => {
       const dict = enrichVocabItem(word, {
         pinyin: partial.pinyin,
         meaningVi: partial.meaningVi,
         partOfSpeech: partial.partOfSpeech,
         hanViet: partial.hanViet,
         hsk: partial.hsk,
-      });
+      })
       return {
         key: word,
         word,
@@ -467,23 +517,23 @@ export default function PublishedLessonView({
         contextZh: partial.contextZh,
         contextPinyin: partial.contextPinyin,
         contextVi: partial.contextVi,
-      };
-    };
+      }
+    }
 
     // 1. Process cues with tokens that have wordId or text
     cues.forEach((cue) => {
       cue.tokens?.forEach((token) => {
-        const text = token.text.trim();
-        if (!text || text.length < 1) return;
-        if (/^[\p{P}\p{S}]+$/u.test(text)) return;
+        const text = token.text.trim()
+        if (!text || text.length < 1) return
+        if (/^[\p{P}\p{S}]+$/u.test(text)) return
 
-        const isDrill = drillWords.includes(text);
-        const wordId = token.wordId?._id;
-        const pinyin = token.wordId?.pinyin;
-        const meaningVi = token.wordId?.meaningVi;
-        const partOfSpeech = token.wordId?.partOfSpeech;
+        const isDrill = drillWords.includes(text)
+        const wordId = token.wordId?._id
+        const pinyin = token.wordId?.pinyin
+        const meaningVi = token.wordId?.meaningVi
+        const partOfSpeech = token.wordId?.partOfSpeech
 
-        const existing = map.get(text);
+        const existing = map.get(text)
         if (!existing) {
           map.set(
             text,
@@ -500,32 +550,33 @@ export default function PublishedLessonView({
               contextVi: cue.vi,
               occurrences: 1,
             }),
-          );
+          )
         } else {
-          existing.occurrences += 1;
-          if (!existing.wordId && wordId) existing.wordId = wordId;
-          if (!existing.pinyin && pinyin) existing.pinyin = pinyin;
-          if (!existing.meaningVi && meaningVi) existing.meaningVi = meaningVi;
-          if (!existing.partOfSpeech && partOfSpeech) existing.partOfSpeech = partOfSpeech;
-          if (!existing.isDrill && isDrill) existing.isDrill = true;
+          existing.occurrences += 1
+          if (!existing.wordId && wordId) existing.wordId = wordId
+          if (!existing.pinyin && pinyin) existing.pinyin = pinyin
+          if (!existing.meaningVi && meaningVi) existing.meaningVi = meaningVi
+          if (!existing.partOfSpeech && partOfSpeech)
+            existing.partOfSpeech = partOfSpeech
+          if (!existing.isDrill && isDrill) existing.isDrill = true
         }
-      });
-    });
+      })
+    })
 
     // 2. Scan cue text for common vocabulary in dictionary
     Object.keys(COMMON_VOCAB_DB).forEach((dictWord) => {
-      let occurrences = 0;
-      let matchingCue: SubtitleCue | undefined;
+      let occurrences = 0
+      let matchingCue: SubtitleCue | undefined
 
       cues.forEach((c) => {
         if (c.zh && c.zh.includes(dictWord)) {
-          occurrences += 1;
-          if (!matchingCue) matchingCue = c;
+          occurrences += 1
+          if (!matchingCue) matchingCue = c
         }
-      });
+      })
 
       if (occurrences > 0 || drillWords.includes(dictWord)) {
-        const existing = map.get(dictWord);
+        const existing = map.get(dictWord)
         if (!existing) {
           map.set(
             dictWord,
@@ -538,21 +589,21 @@ export default function PublishedLessonView({
               contextPinyin: matchingCue?.pinyin,
               contextVi: matchingCue?.vi,
             }),
-          );
+          )
         } else {
-          existing.occurrences = Math.max(existing.occurrences, occurrences);
+          existing.occurrences = Math.max(existing.occurrences, occurrences)
           if (!existing.meaningVi || !existing.hanViet) {
-            const enriched = enrich(dictWord, existing);
-            map.set(dictWord, enriched);
+            const enriched = enrich(dictWord, existing)
+            map.set(dictWord, enriched)
           }
         }
       }
-    });
+    })
 
     // 3. Ensure all drillWords from AI tips are included & enriched
     drillWords.forEach((word) => {
-      const cue = cues.find((c) => c.zh && c.zh.includes(word));
-      const existing = map.get(word);
+      const cue = cues.find((c) => c.zh && c.zh.includes(word))
+      const existing = map.get(word)
       if (!existing) {
         map.set(
           word,
@@ -565,37 +616,40 @@ export default function PublishedLessonView({
             contextVi: cue?.vi,
             occurrences: 1,
           }),
-        );
+        )
       } else {
-        existing.isDrill = true;
+        existing.isDrill = true
       }
-    });
+    })
 
     // Sort: drill words first, then higher frequency, then alphabetical
     return Array.from(map.values()).sort((a, b) => {
-      if (a.isDrill && !b.isDrill) return -1;
-      if (!a.isDrill && b.isDrill) return 1;
-      if (b.occurrences !== a.occurrences) return b.occurrences - a.occurrences;
-      return a.word.localeCompare(b.word);
-    });
-  }, [cues, drillWords]);
+      if (a.isDrill && !b.isDrill) return -1
+      if (!a.isDrill && b.isDrill) return 1
+      if (b.occurrences !== a.occurrences) return b.occurrences - a.occurrences
+      return a.word.localeCompare(b.word)
+    })
+  }, [cues, drillWords])
 
   const filteredVocabList = useMemo(() => {
     return detailedVocabList.filter((item) => {
-      if (vocabFilter === 'drill' && !item.isDrill) return false;
-      if (selectedHskFilter !== null && item.hsk !== selectedHskFilter) return false;
-      if (!searchVocabQuery.trim()) return true;
-      const q = searchVocabQuery.toLowerCase().trim();
+      if (vocabFilter === "drill" && !item.isDrill) return false
+      if (
+        selectedHskFilter !== null &&
+        Number(item.hsk) !== Number(selectedHskFilter)
+      )
+        return false
+      if (!searchVocabQuery.trim()) return true
+      const q = searchVocabQuery.toLowerCase().trim()
       return (
         item.word.toLowerCase().includes(q) ||
         (item.pinyin && item.pinyin.toLowerCase().includes(q)) ||
         (item.hanViet && item.hanViet.toLowerCase().includes(q)) ||
         (item.meaningVi && item.meaningVi.toLowerCase().includes(q)) ||
         (item.contextVi && item.contextVi.toLowerCase().includes(q))
-      );
-    });
-  }, [detailedVocabList, vocabFilter, selectedHskFilter, searchVocabQuery]);
-
+      )
+    })
+  }, [detailedVocabList, vocabFilter, selectedHskFilter, searchVocabQuery])
 
   return (
     <div className="w-full max-w-[1720px] mx-auto space-y-4 pb-12 animate-in fade-in duration-200">
@@ -626,13 +680,22 @@ export default function PublishedLessonView({
       {lessonQuery.isPending && (
         <div className="rounded-3xl bg-white border border-[#E7E7EA] p-8 text-center shadow-xs">
           <div className="inline-block w-8 h-8 border-3 border-[#B91B1C] border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-sm font-semibold text-[#5F6368]">Đang tải video bài học…</p>
+          <p className="text-sm font-semibold text-[#5F6368]">
+            Đang tải video bài học…
+          </p>
         </div>
       )}
 
       {lessonQuery.error && (
         <div className="my-4">
-          <InlineBanner variant="error" message={lessonQuery.error instanceof ApiRequestError ? lessonQuery.error.message : 'Không thể tải bài học.'} />
+          <InlineBanner
+            variant="error"
+            message={
+              lessonQuery.error instanceof ApiRequestError
+                ? lessonQuery.error.message
+                : "Không thể tải bài học."
+            }
+          />
         </div>
       )}
 
@@ -640,17 +703,26 @@ export default function PublishedLessonView({
           has a chance to play, so a slow API never blocks the video. */}
       {lesson && subtitlesQuery.isError && (
         <div className="my-2">
-          <InlineBanner variant="warning" message="Không thể tải phụ đề. Vẫn có thể xem video." />
+          <InlineBanner
+            variant="warning"
+            message="Không thể tải phụ đề. Vẫn có thể xem video."
+          />
         </div>
       )}
       {lesson && quizQuery.isError && (
         <div className="my-2">
-          <InlineBanner variant="warning" message="Không thể tải bài tập. Có thể thử lại sau." />
+          <InlineBanner
+            variant="warning"
+            message="Không thể tải bài tập. Có thể thử lại sau."
+          />
         </div>
       )}
       {lesson && progressQuery.isError && (
         <div className="my-2">
-          <InlineBanner variant="warning" message="Không thể đồng bộ tiến độ." />
+          <InlineBanner
+            variant="warning"
+            message="Không thể đồng bộ tiến độ."
+          />
         </div>
       )}
 
@@ -663,7 +735,7 @@ export default function PublishedLessonView({
             {/* 1. Video Player Container — chọn player theo contentMode */}
             {lesson.media?.url ? (
               <>
-                {lesson.contentMode === 'song' && (
+                {lesson.contentMode === "song" && (
                   <KaraokePlayer
                     src={lesson.media.url}
                     title={lesson.titleVi}
@@ -671,23 +743,33 @@ export default function PublishedLessonView({
                     cues={cues}
                     videoRef={videoRef}
                     onSeeking={() => {
-                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
-                      lastPosition.current = null;
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                      lastPosition.current = null
                     }}
-                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onPause={() => {
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                    }}
                     onLoadedMetadata={(event) => {
-                      if (hasUserInitiatedPlayRef.current) return;
-                      hasUserInitiatedPlayRef.current = true;
-                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                      if (hasUserInitiatedPlayRef.current) return
+                      hasUserInitiatedPlayRef.current = true
+                      if (
+                        progress?.lastPositionSeconds &&
+                        progress.lastPositionSeconds <
+                          lesson.durationSeconds - 2
+                      )
+                        event.currentTarget.currentTime =
+                          progress.lastPositionSeconds
                     }}
                     onTimeUpdate={onVideoTimeUpdate}
                     onEnded={() => {
-                      flushProgress(lesson.durationSeconds);
-                      if (quiz.length) setQuizOpen(true);
+                      flushProgress(lesson.durationSeconds)
+                      if (quiz.length) setQuizOpen(true)
                     }}
                   />
                 )}
-                {lesson.contentMode === 'podcast' && (
+                {lesson.contentMode === "podcast" && (
                   <PodcastPlayer
                     src={lesson.media.url}
                     posterUrl={lesson.thumbnailUrl ?? undefined}
@@ -697,53 +779,75 @@ export default function PublishedLessonView({
                     chapters={lesson.chapters}
                     videoRef={videoRef}
                     onSeeking={() => {
-                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
-                      lastPosition.current = null;
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                      lastPosition.current = null
                     }}
-                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onPause={() => {
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                    }}
                     onLoadedMetadata={(event) => {
-                      if (hasUserInitiatedPlayRef.current) return;
-                      hasUserInitiatedPlayRef.current = true;
-                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                      if (hasUserInitiatedPlayRef.current) return
+                      hasUserInitiatedPlayRef.current = true
+                      if (
+                        progress?.lastPositionSeconds &&
+                        progress.lastPositionSeconds <
+                          lesson.durationSeconds - 2
+                      )
+                        event.currentTarget.currentTime =
+                          progress.lastPositionSeconds
                     }}
                     onTimeUpdate={onVideoTimeUpdate}
                     onEnded={() => {
-                      flushProgress(lesson.durationSeconds);
-                      if (quiz.length) setQuizOpen(true);
+                      flushProgress(lesson.durationSeconds)
+                      if (quiz.length) setQuizOpen(true)
                     }}
                   />
                 )}
-                {lesson.contentMode === 'drama' && (
+                {lesson.contentMode === "drama" && (
                   <DramaPlayer
                     src={lesson.media.url}
                     title={lesson.titleVi}
                     durationSeconds={lesson.durationSeconds}
                     cues={cues}
                     characters={lesson.characters}
-                    onTokenClick={(cueId, wordId, wordText, event) => void requestExplanation(cueId, wordId, wordText, event)}
+                    onTokenClick={(cueId, wordId, wordText, event) =>
+                      void requestExplanation(cueId, wordId, wordText, event)
+                    }
                     currentMs={currentMs}
                     videoRef={videoRef}
                     onSeeking={() => {
-                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
-                      lastPosition.current = null;
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                      lastPosition.current = null
                     }}
-                    onPause={() => { if (videoRef.current) flushProgress(videoRef.current.currentTime); }}
+                    onPause={() => {
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
+                    }}
                     onLoadedMetadata={(event) => {
-                      if (hasUserInitiatedPlayRef.current) return;
-                      hasUserInitiatedPlayRef.current = true;
-                      if (progress?.lastPositionSeconds && progress.lastPositionSeconds < lesson.durationSeconds - 2) event.currentTarget.currentTime = progress.lastPositionSeconds;
+                      if (hasUserInitiatedPlayRef.current) return
+                      hasUserInitiatedPlayRef.current = true
+                      if (
+                        progress?.lastPositionSeconds &&
+                        progress.lastPositionSeconds <
+                          lesson.durationSeconds - 2
+                      )
+                        event.currentTarget.currentTime =
+                          progress.lastPositionSeconds
                     }}
                     onTimeUpdate={(video) => {
-                      setCurrentMs(video.currentTime * 1000);
-                      onVideoTimeUpdate(video);
+                      setCurrentMs(video.currentTime * 1000)
+                      onVideoTimeUpdate(video)
                     }}
                     onEnded={() => {
-                      flushProgress(lesson.durationSeconds);
-                      if (quiz.length) setQuizOpen(true);
+                      flushProgress(lesson.durationSeconds)
+                      if (quiz.length) setQuizOpen(true)
                     }}
                   />
                 )}
-                {(lesson.contentMode === 'lesson' || !lesson.contentMode) && (
+                {(lesson.contentMode === "lesson" || !lesson.contentMode) && (
                   <YouTubePlayer
                     src={lesson.media.url}
                     title={lesson.titleVi}
@@ -756,34 +860,37 @@ export default function PublishedLessonView({
                     subtitleScale={subtitlePrefs.scale}
                     videoRef={videoRef}
                     onSubtitleChange={(next) => {
-                      setSubtitleTop(next.top);
-                      setSubtitleBottom(next.bottom);
-                      if (next.style) setSubtitleStyle(next.style);
-                      if (next.scale) setSubtitleScale(next.scale);
+                      setSubtitleTop(next.top)
+                      setSubtitleBottom(next.bottom)
+                      if (next.style) setSubtitleStyle(next.style)
+                      if (next.scale) setSubtitleScale(next.scale)
                     }}
                     onTimeUpdate={onVideoTimeUpdate}
                     onSeeking={() => {
                       if (videoRef.current) {
-                        flushProgress(videoRef.current.currentTime);
-                        lastPosition.current = null;
+                        flushProgress(videoRef.current.currentTime)
+                        lastPosition.current = null
                       }
                     }}
                     onPause={() => {
-                      if (videoRef.current) flushProgress(videoRef.current.currentTime);
+                      if (videoRef.current)
+                        flushProgress(videoRef.current.currentTime)
                     }}
                     onEnded={() => {
-                      flushProgress(lesson.durationSeconds);
-                      setQuizOpen(true);
+                      flushProgress(lesson.durationSeconds)
+                      setQuizOpen(true)
                     }}
                     onLoadedMetadata={(event) => {
-                      if (hasUserInitiatedPlayRef.current) return;
-                      hasUserInitiatedPlayRef.current = true;
+                      if (hasUserInitiatedPlayRef.current) return
+                      hasUserInitiatedPlayRef.current = true
                       if (
                         progress?.lastPositionSeconds &&
                         progress.lastPositionSeconds > 1 &&
-                        progress.lastPositionSeconds < lesson.durationSeconds - 2
+                        progress.lastPositionSeconds <
+                          lesson.durationSeconds - 2
                       ) {
-                        event.currentTarget.currentTime = progress.lastPositionSeconds;
+                        event.currentTarget.currentTime =
+                          progress.lastPositionSeconds
                       }
                     }}
                     onTokenClick={(cueId, wordId, wordText, event) =>
@@ -795,7 +902,9 @@ export default function PublishedLessonView({
               </>
             ) : (
               <div className="w-full aspect-video rounded-2xl md:rounded-3xl bg-neutral-900 flex flex-col items-center justify-center p-8 text-white border border-[#E7E7EA] shadow-xl">
-                <p className="text-sm font-medium">Nội dung chưa sẵn sàng để phát.</p>
+                <p className="text-sm font-medium">
+                  Nội dung chưa sẵn sàng để phát.
+                </p>
               </div>
             )}
 
@@ -807,9 +916,13 @@ export default function PublishedLessonView({
               {(lesson.titleZh || lesson.pinyin) && (
                 <p className="text-sm sm:text-base text-[#5F6368] font-medium flex flex-wrap items-center gap-2">
                   {lesson.titleZh && (
-                    <span className="font-hanzi font-bold text-[#18181B]">{lesson.titleZh}</span>
+                    <span className="font-hanzi font-bold text-[#18181B]">
+                      {lesson.titleZh}
+                    </span>
                   )}
-                  {lesson.titleZh && lesson.pinyin && <span className="text-[#8B9097]">·</span>}
+                  {lesson.titleZh && lesson.pinyin && (
+                    <span className="text-[#8B9097]">·</span>
+                  )}
                   {lesson.pinyin && (
                     <span className="font-mono text-xs sm:text-sm text-[#B91B1C]">
                       {lesson.pinyin}
@@ -830,7 +943,7 @@ export default function PublishedLessonView({
                     className="w-full h-full object-contain select-none"
                     onError={(e) => {
                       // Fallback icon if favicon isn't loaded
-                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.style.display = "none"
                     }}
                   />
                   <div className="text-xs font-black text-[#B91B1C] flex items-center justify-center">
@@ -868,7 +981,9 @@ export default function PublishedLessonView({
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer"
                   >
                     <BookOpenCheck className="w-4 h-4 text-white" />
-                    <span>{quizResult ? 'Xem kết quả bài tập' : 'Làm bài luyện tập'}</span>
+                    <span>
+                      {quizResult ? "Xem kết quả bài tập" : "Làm bài luyện tập"}
+                    </span>
                     <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-white/20 text-[11px] font-mono">
                       {quiz.length}
                     </span>
@@ -879,13 +994,15 @@ export default function PublishedLessonView({
                 <button
                   type="button"
                   onClick={() => {
-                    const prompt = `Hãy giải thích ngữ pháp, từ vựng và mẹo học cho bài "${lesson.titleVi}" (${lesson.titleZh ?? ''})`;
+                    const prompt = `Hãy giải thích ngữ pháp, từ vựng và mẹo học cho bài "${lesson.titleVi}" (${lesson.titleZh ?? ""})`
                     if (onAskAI) {
-                      onAskAI(prompt);
+                      onAskAI(prompt)
                     } else {
                       window.dispatchEvent(
-                        new CustomEvent('hanflix:open-ai', { detail: { prompt } }),
-                      );
+                        new CustomEvent("hanflix:open-ai", {
+                          detail: { prompt },
+                        }),
+                      )
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F7F7F9] hover:bg-[#ECECED] border border-[#E7E7EA] text-[#18181B] text-xs font-bold transition-all cursor-pointer shadow-2xs"
@@ -899,20 +1016,28 @@ export default function PublishedLessonView({
                 <button
                   type="button"
                   onClick={() => {
-                    setIsSavedLesson((prev) => !prev);
-                    notify.success(isSavedLesson ? 'Đã bỏ lưu bài học.' : 'Đã lưu bài học vào sổ tay.');
+                    setIsSavedLesson((prev) => !prev)
+                    notify.success(
+                      isSavedLesson
+                        ? "Đã bỏ lưu bài học."
+                        : "Đã lưu bài học vào sổ tay.",
+                    )
                   }}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
                     isSavedLesson
-                      ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30'
-                      : 'bg-[#F7F7F9] hover:bg-[#ECECED] border-[#E7E7EA] text-[#18181B]'
+                      ? "bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30"
+                      : "bg-[#F7F7F9] hover:bg-[#ECECED] border-[#E7E7EA] text-[#18181B]"
                   }`}
-                  title={isSavedLesson ? 'Đã lưu bài học' : 'Lưu bài học'}
+                  title={isSavedLesson ? "Đã lưu bài học" : "Lưu bài học"}
                 >
                   <Bookmark
-                    className={`w-3.5 h-3.5 ${isSavedLesson ? 'fill-current text-[#B91B1C]' : 'text-[#5F6368]'}`}
+                    className={`w-3.5 h-3.5 ${
+                      isSavedLesson
+                        ? "fill-current text-[#B91B1C]"
+                        : "text-[#5F6368]"
+                    }`}
                   />
-                  <span>{isSavedLesson ? 'Đã lưu' : 'Lưu bài'}</span>
+                  <span>{isSavedLesson ? "Đã lưu" : "Lưu bài"}</span>
                 </button>
 
                 {/* 4. Share Button */}
@@ -927,7 +1052,7 @@ export default function PublishedLessonView({
                   ) : (
                     <Share2 className="w-3.5 h-3.5" />
                   )}
-                  <span>{copiedLink ? 'Đã sao chép' : 'Chia sẻ'}</span>
+                  <span>{copiedLink ? "Đã sao chép" : "Chia sẻ"}</span>
                 </button>
               </div>
             </div>
@@ -942,25 +1067,29 @@ export default function PublishedLessonView({
                 <div className="flex flex-wrap items-center gap-2 text-[#5F6368]">
                   <span className="font-semibold text-[#18181B]">
                     {lesson.durationSeconds
-                      ? `${Math.floor(lesson.durationSeconds / 60)}:${String(lesson.durationSeconds % 60).padStart(2, '0')}`
-                      : '0:00'}
+                      ? `${Math.floor(lesson.durationSeconds / 60)}:${String(lesson.durationSeconds % 60).padStart(2, "0")}`
+                      : "0:00"}
                   </span>
                   <span>•</span>
                   <span>
                     {progress
                       ? `Đã học ${Math.round(progress.coverage * 100)}%`
-                      : 'Chưa có tiến độ'}
+                      : "Chưa có tiến độ"}
                   </span>
                   <span>•</span>
-                  <span className="text-[#B91B1C] font-semibold">#HSK{lesson.hsk}</span>
-                  <span className="text-[#B91B1C] font-semibold">#TiengTrung</span>
+                  <span className="text-[#B91B1C] font-semibold">
+                    #HSK{lesson.hsk}
+                  </span>
+                  <span className="text-[#B91B1C] font-semibold">
+                    #TiengTrung
+                  </span>
                 </div>
 
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 font-bold text-[#18181B] hover:text-[#B91B1C] text-xs cursor-pointer"
                 >
-                  <span>{isDescriptionExpanded ? 'Rút gọn' : 'Hiện thêm'}</span>
+                  <span>{isDescriptionExpanded ? "Rút gọn" : "Hiện thêm"}</span>
                   {isDescriptionExpanded ? (
                     <ChevronUp className="w-3.5 h-3.5" />
                   ) : (
@@ -972,11 +1101,11 @@ export default function PublishedLessonView({
               {/* Description Content */}
               <p
                 className={`text-[#5F6368] leading-relaxed ${
-                  isDescriptionExpanded ? '' : 'line-clamp-2'
+                  isDescriptionExpanded ? "" : "line-clamp-2"
                 }`}
               >
                 {lesson.descriptionVi ||
-                  'Video học tiếng Trung tương tác cùng HanFlix: luyện nghe phát âm chuẩn, ghi nhớ từ vựng qua phụ đề song ngữ và củng cố phản xạ tự nhiên.'}
+                  "Video học tiếng Trung tương tác cùng HanFlix: luyện nghe phát âm chuẩn, ghi nhớ từ vựng qua phụ đề song ngữ và củng cố phản xạ tự nhiên."}
               </p>
 
               {/* Expanded Extra Details */}
@@ -985,16 +1114,27 @@ export default function PublishedLessonView({
                   className="pt-3 border-t border-[#E7E7EA] space-y-2 text-xs text-[#5F6368] animate-in fade-in"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <p className="font-bold text-[#18181B]">💡 Hướng dẫn học tập:</p>
+                  <p className="font-bold text-[#18181B]">
+                    💡 Hướng dẫn học tập:
+                  </p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Bấm vào các từ Hán tự trên phụ đề để tra cứu và xem giải thích ngữ nghĩa.</li>
-                    <li>Xem chi tiết tại tab <strong>Mẹo học ({learningTips.length})</strong> ở bảng phụ đề bên phải.</li>
-                    <li>Hoàn thành bài tập trắc nghiệm sau video để củng cố kiến thức và ghi nhận tiến độ.</li>
+                    <li>
+                      Bấm vào các từ Hán tự trên phụ đề để tra cứu và xem giải
+                      thích ngữ nghĩa.
+                    </li>
+                    <li>
+                      Xem chi tiết tại tab{" "}
+                      <strong>Mẹo học ({learningTips.length})</strong> ở bảng
+                      phụ đề bên phải.
+                    </li>
+                    <li>
+                      Hoàn thành bài tập trắc nghiệm sau video để củng cố kiến
+                      thức và ghi nhận tiến độ.
+                    </li>
                   </ul>
                 </div>
               )}
             </div>
-
 
             {message && (
               <p
@@ -1014,33 +1154,33 @@ export default function PublishedLessonView({
               <div className="flex border-b border-[#E7E7EA] bg-[#F7F7F9]">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('transcript')}
+                  onClick={() => setActiveTab("transcript")}
                   className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                    activeTab === 'transcript'
-                      ? 'border-[#B91B1C] text-[#B91B1C] bg-white'
-                      : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
+                    activeTab === "transcript"
+                      ? "border-[#B91B1C] text-[#B91B1C] bg-white"
+                      : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
                 >
                   Phụ đề ({cues.length})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('vocabulary')}
+                  onClick={() => setActiveTab("vocabulary")}
                   className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                    activeTab === 'vocabulary'
-                      ? 'border-[#B91B1C] text-[#B91B1C] bg-white'
-                      : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
+                    activeTab === "vocabulary"
+                      ? "border-[#B91B1C] text-[#B91B1C] bg-white"
+                      : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
                 >
                   Từ vựng ({detailedVocabList.length})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('tips')}
+                  onClick={() => setActiveTab("tips")}
                   className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                    activeTab === 'tips'
-                      ? 'border-[#B91B1C] text-[#B91B1C] bg-white'
-                      : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
+                    activeTab === "tips"
+                      ? "border-[#B91B1C] text-[#B91B1C] bg-white"
+                      : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
                 >
                   Mẹo học ({learningTips.length})
@@ -1048,7 +1188,7 @@ export default function PublishedLessonView({
               </div>
 
               {/* Sub-header inside transcript: Search & Auto-scroll toggle */}
-              {activeTab === 'transcript' && (
+              {activeTab === "transcript" && (
                 <div className="p-3 border-b border-[#E7E7EA] bg-[#FAFAFA] flex items-center justify-between gap-2 text-xs">
                   <div className="relative flex-1">
                     <Search className="w-3.5 h-3.5 text-[#8B9097] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1064,15 +1204,19 @@ export default function PublishedLessonView({
                   <button
                     type="button"
                     onClick={() => setAutoScroll((v) => !v)}
-                    title={autoScroll ? 'Bật tự động cuộn' : 'Tắt tự động cuộn'}
+                    title={autoScroll ? "Bật tự động cuộn" : "Tắt tự động cuộn"}
                     className={`shrink-0 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       autoScroll
-                        ? 'bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30'
-                        : 'bg-white text-[#5F6368] border-[#E7E7EA]'
+                        ? "bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30"
+                        : "bg-white text-[#5F6368] border-[#E7E7EA]"
                     }`}
                   >
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${autoScroll ? 'bg-[#B91B1C] animate-pulse' : 'bg-neutral-400'}`}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        autoScroll
+                          ? "bg-[#B91B1C] animate-pulse"
+                          : "bg-neutral-400"
+                      }`}
                     />
                     <span>Cuộn tự động</span>
                   </button>
@@ -1080,23 +1224,25 @@ export default function PublishedLessonView({
               )}
 
               {/* Tab 1: Transcript View */}
-              {activeTab === 'transcript' && (
+              {activeTab === "transcript" && (
                 <div className="p-3 overflow-y-auto max-h-[480px] space-y-2.5">
                   {filteredCues.length === 0 ? (
                     <p className="text-xs text-[#5F6368] text-center py-6">
-                      {searchCueQuery ? 'Không tìm thấy câu phù hợp.' : 'Bài học chưa có phụ đề khả dụng.'}
+                      {searchCueQuery
+                        ? "Không tìm thấy câu phù hợp."
+                        : "Bài học chưa có phụ đề khả dụng."}
                     </p>
                   ) : (
                     filteredCues.map((cue) => {
-                      const isActive = cue.cueId === activeCue?.cueId;
+                      const isActive = cue.cueId === activeCue?.cueId
                       return (
                         <div
                           key={cue.cueId}
                           ref={isActive ? activeCueRef : null}
                           className={`p-3 rounded-2xl border transition-all ${
                             isActive
-                              ? 'border-[#B91B1C] bg-[#FFF5F5] ring-2 ring-[#B91B1C]/20 shadow-2xs'
-                              : 'border-[#E7E7EA] bg-[#F7F7F9] hover:bg-[#F2F2F5]'
+                              ? "border-[#B91B1C] bg-[#FFF5F5] ring-2 ring-[#B91B1C]/20 shadow-2xs"
+                              : "border-[#E7E7EA] bg-[#F7F7F9] hover:bg-[#F2F2F5]"
                           }`}
                         >
                           <div className="flex items-center justify-between text-xs mb-1">
@@ -1104,8 +1250,9 @@ export default function PublishedLessonView({
                               type="button"
                               onClick={() => {
                                 if (videoRef.current) {
-                                  videoRef.current.currentTime = cue.startMs / 1000;
-                                  void videoRef.current.play();
+                                  videoRef.current.currentTime =
+                                    cue.startMs / 1000
+                                  void videoRef.current.play()
                                 }
                               }}
                               className="inline-flex items-center gap-1 font-mono font-bold text-[#B91B1C] hover:underline cursor-pointer"
@@ -1144,14 +1291,18 @@ export default function PublishedLessonView({
                                       </button>
                                     </span>
                                   ) : (
-                                    <span key={`${cue.cueId}-${index}`}>{token.text}</span>
+                                    <span key={`${cue.cueId}-${index}`}>
+                                      {token.text}
+                                    </span>
                                   ),
                                 )
                               : cue.zh}
                           </p>
 
                           {cue.pinyin && (
-                            <p className="text-xs text-[#8B9097] font-mono mt-0.5">{cleanPinyinText(cue.pinyin)}</p>
+                            <p className="text-xs text-[#8B9097] font-mono mt-0.5">
+                              {cleanPinyinText(cue.pinyin)}
+                            </p>
                           )}
                           {cue.vi && (
                             <p className="text-xs text-[#5F6368] font-medium mt-1">
@@ -1159,14 +1310,14 @@ export default function PublishedLessonView({
                             </p>
                           )}
                         </div>
-                      );
+                      )
                     })
                   )}
                 </div>
               )}
 
               {/* Tab 2: Detailed Vocabulary List & Flashcard Mode */}
-              {activeTab === 'vocabulary' && (
+              {activeTab === "vocabulary" && (
                 <div className="flex flex-col h-[520px]">
                   {/* Search and Filters inside Vocabulary tab */}
                   <div className="p-3 border-b border-[#E7E7EA] bg-[#FAFAFA] space-y-2.5 shrink-0">
@@ -1178,19 +1329,29 @@ export default function PublishedLessonView({
                           value={searchVocabQuery}
                           onChange={(e) => setSearchVocabQuery(e.target.value)}
                           placeholder="Tìm chữ Hán, pinyin, Hán-Việt hoặc nghĩa…"
-                          className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-[#E7E7EA] bg-white text-xs outline-none focus:border-[#B91B1C] transition-all"
+                          className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-[#E7E7EA] bg-white text-xs outline-none focus:border-[#B91B1C] transition-all"
                         />
+                        {searchVocabQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchVocabQuery("")}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8B9097] hover:text-[#18181B] transition-colors p-0.5 cursor-pointer"
+                            title="Xóa tìm kiếm"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
 
                       {/* Toggle List View vs Flashcard View */}
                       <div className="flex items-center p-0.5 rounded-xl bg-neutral-200 border border-neutral-300/60 shrink-0">
                         <button
                           type="button"
-                          onClick={() => setVocabViewMode('list')}
+                          onClick={() => setVocabViewMode("list")}
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                            vocabViewMode === 'list'
-                              ? 'bg-white text-[#18181B] shadow-3xs'
-                              : 'text-neutral-600 hover:text-neutral-900'
+                            vocabViewMode === "list"
+                              ? "bg-white text-[#18181B] shadow-3xs"
+                              : "text-neutral-600 hover:text-neutral-900"
                           }`}
                           title="Xem danh sách chi tiết"
                         >
@@ -1200,13 +1361,13 @@ export default function PublishedLessonView({
                         <button
                           type="button"
                           onClick={() => {
-                            setVocabViewMode('flashcard');
-                            setIsCardFlipped(false);
+                            setVocabViewMode("flashcard")
+                            setIsCardFlipped(false)
                           }}
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                            vocabViewMode === 'flashcard'
-                              ? 'bg-white text-[#18181B] shadow-3xs'
-                              : 'text-neutral-600 hover:text-neutral-900'
+                            vocabViewMode === "flashcard"
+                              ? "bg-white text-[#18181B] shadow-3xs"
+                              : "text-neutral-600 hover:text-neutral-900"
                           }`}
                           title="Luyện tập với Flashcard"
                         >
@@ -1222,13 +1383,13 @@ export default function PublishedLessonView({
                         <button
                           type="button"
                           onClick={() => {
-                            setVocabFilter('all');
-                            setSelectedHskFilter(null);
+                            setVocabFilter("all")
+                            setSelectedHskFilter(null)
                           }}
                           className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                            vocabFilter === 'all' && selectedHskFilter === null
-                              ? 'bg-[#18181B] text-white'
-                              : 'bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#18181B]'
+                            vocabFilter === "all" && selectedHskFilter === null
+                              ? "bg-[#18181B] text-white"
+                              : "bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#18181B]"
                           }`}
                         >
                           Tất cả ({detailedVocabList.length})
@@ -1237,13 +1398,13 @@ export default function PublishedLessonView({
                           <button
                             type="button"
                             onClick={() => {
-                              setVocabFilter('drill');
-                              setSelectedHskFilter(null);
+                              setVocabFilter("drill")
+                              setSelectedHskFilter(null)
                             }}
                             className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                              vocabFilter === 'drill'
-                                ? 'bg-[#B91B1C] text-white'
-                                : 'bg-white border border-[#E7E7EA] text-[#B91B1C] hover:bg-[#FFF5F5]'
+                              vocabFilter === "drill"
+                                ? "bg-[#B91B1C] text-white"
+                                : "bg-white border border-[#E7E7EA] text-[#B91B1C] hover:bg-[#FFF5F5]"
                             }`}
                           >
                             <Sparkles className="w-3 h-3 text-[#E7A92F]" />
@@ -1251,27 +1412,31 @@ export default function PublishedLessonView({
                           </button>
                         )}
 
-                        {/* Quick HSK Filters */}
-                        {[1, 2, 3].map((lvl) => {
-                          const count = detailedVocabList.filter((v) => v.hsk === lvl).length;
-                          if (count === 0) return null;
+                        {/* Quick HSK Filters (HSK 1-9) */}
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((lvl) => {
+                          const count = detailedVocabList.filter(
+                            (v) => Number(v.hsk) === lvl,
+                          ).length
+                          if (count === 0) return null
                           return (
                             <button
                               key={lvl}
                               type="button"
                               onClick={() => {
-                                setSelectedHskFilter((prev) => (prev === lvl ? null : lvl));
-                                setVocabFilter('all');
+                                setSelectedHskFilter((prev) =>
+                                  prev === lvl ? null : lvl,
+                                )
+                                setVocabFilter("all")
                               }}
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                                 selectedHskFilter === lvl
-                                  ? 'bg-[#1D4ED8] text-white'
-                                  : 'bg-white border border-[#DBEAFE] text-[#1D4ED8] hover:bg-[#EFF6FF]'
+                                  ? "bg-[#1D4ED8] text-white"
+                                  : "bg-white border border-[#DBEAFE] text-[#1D4ED8] hover:bg-[#EFF6FF]"
                               }`}
                             >
                               HSK {lvl} ({count})
                             </button>
-                          );
+                          )
                         })}
                       </div>
 
@@ -1282,13 +1447,13 @@ export default function PublishedLessonView({
                   </div>
 
                   {/* Mode 1: Detailed Cards List View */}
-                  {vocabViewMode === 'list' && (
+                  {vocabViewMode === "list" && (
                     <div className="p-3 overflow-y-auto flex-1 space-y-3">
                       {filteredVocabList.length === 0 ? (
                         <p className="text-xs text-[#5F6368] text-center py-8">
                           {searchVocabQuery
-                            ? 'Không tìm thấy từ vựng phù hợp với tìm kiếm.'
-                            : 'Chưa có dữ liệu từ vựng cho bài học này.'}
+                            ? "Không tìm thấy từ vựng phù hợp với tìm kiếm."
+                            : "Chưa có dữ liệu từ vựng cho bài học này."}
                         </p>
                       ) : (
                         filteredVocabList.map((item) => (
@@ -1296,8 +1461,8 @@ export default function PublishedLessonView({
                             key={item.key}
                             className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
                               item.isDrill
-                                ? 'border-[#FDE68A] bg-linear-to-b from-[#FFFDF5] to-white shadow-2xs'
-                                : 'border-[#E7E7EA] bg-[#FDFDFD] hover:bg-white hover:border-[#B91B1C]/40 hover:shadow-xs'
+                                ? "border-[#FDE68A] bg-linear-to-b from-[#FFFDF5] to-white shadow-2xs"
+                                : "border-[#E7E7EA] bg-[#FDFDFD] hover:bg-white hover:border-[#B91B1C]/40 hover:shadow-xs"
                             }`}
                           >
                             {/* Top Row: Hanzi, Pinyin, Hán-Việt, Tags, Audio & Action Buttons */}
@@ -1352,7 +1517,7 @@ export default function PublishedLessonView({
                                 {/* Frequency & Status Info */}
                                 <div className="text-[11px] text-[#71717A] flex items-center gap-2">
                                   <span>
-                                    Xuất hiện trong bài:{' '}
+                                    Xuất hiện trong bài:{" "}
                                     <strong className="text-[#18181B] font-semibold">
                                       {item.occurrences} lần
                                     </strong>
@@ -1373,8 +1538,8 @@ export default function PublishedLessonView({
                                   onClick={() => playPronunciation(item.word)}
                                   className={`p-2 rounded-full border transition-all cursor-pointer ${
                                     speakingWord === item.word
-                                      ? 'bg-[#B91B1C] text-white border-[#B91B1C] scale-105 shadow-xs'
-                                      : 'bg-white border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/30'
+                                      ? "bg-[#B91B1C] text-white border-[#B91B1C] scale-105 shadow-xs"
+                                      : "bg-white border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/30"
                                   }`}
                                   title={`Nghe phát âm chuẩn: ${item.word}`}
                                 >
@@ -1385,7 +1550,9 @@ export default function PublishedLessonView({
                                 {item.wordId && item.cueId && (
                                   <button
                                     type="button"
-                                    onClick={() => void saveWord(item.cueId!, item.wordId!)}
+                                    onClick={() =>
+                                      void saveWord(item.cueId!, item.wordId!)
+                                    }
                                     className="p-2 rounded-full bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/30 transition-all cursor-pointer"
                                     title={`Lưu từ "${item.word}" vào sổ ôn tập`}
                                   >
@@ -1403,11 +1570,11 @@ export default function PublishedLessonView({
                                         item.wordId,
                                         item.word,
                                         event,
-                                      );
+                                      )
                                     } else if (onAskAI) {
                                       onAskAI(
-                                        `Hãy giải thích chi tiết từ vựng tiếng Trung: "${item.word}" (${item.pinyin || ''}) - Âm Hán-Việt: ${item.hanViet || ''}. Nghĩa là: "${item.meaningVi || ''}". Hãy phân tích cấu tạo chữ Hán, bộ thủ, cách nhớ dễ thuộc, các cụm từ phổ biến và 3 câu ví dụ giao tiếp.`,
-                                      );
+                                        `Hãy giải thích chi tiết từ vựng tiếng Trung: "${item.word}" (${item.pinyin || ""}) - Âm Hán-Việt: ${item.hanViet || ""}. Nghĩa là: "${item.meaningVi || ""}". Hãy phân tích cấu tạo chữ Hán, bộ thủ, cách nhớ dễ thuộc, các cụm từ phổ biến và 3 câu ví dụ giao tiếp.`,
+                                      )
                                     }
                                   }}
                                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#F7F7F9] hover:bg-[#FFF5F5] border border-[#E7E7EA] hover:border-[#B91B1C]/30 text-[#18181B] hover:text-[#B91B1C] text-[11px] font-bold transition-all cursor-pointer"
@@ -1426,35 +1593,41 @@ export default function PublishedLessonView({
                                   Nghĩa:
                                 </span>
                                 <span className="text-xs font-semibold text-[#18181B]">
-                                  {item.meaningVi || 'Đang cập nhật nghĩa chi tiết'}
+                                  {item.meaningVi ||
+                                    "Đang cập nhật nghĩa chi tiết"}
                                 </span>
                               </div>
                             </div>
 
                             {/* Collocations / Cụm từ hay gặp */}
-                            {item.collocations && item.collocations.length > 0 && (
-                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                <span className="text-[11px] font-semibold text-[#71717A]">
-                                  Cụm từ hay gặp:
-                                </span>
-                                {item.collocations.map((colloc, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="text-[11px] font-hanzi font-medium text-[#18181B] bg-white border border-[#E4E4E7] px-2 py-0.5 rounded-lg shadow-3xs"
-                                  >
-                                    {colloc}
+                            {item.collocations &&
+                              item.collocations.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  <span className="text-[11px] font-semibold text-[#71717A]">
+                                    Cụm từ hay gặp:
                                   </span>
-                                ))}
-                              </div>
-                            )}
+                                  {item.collocations.map((colloc, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[11px] font-hanzi font-medium text-[#18181B] bg-white border border-[#E4E4E7] px-2 py-0.5 rounded-lg shadow-3xs"
+                                    >
+                                      {colloc}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
 
                             {/* Bottom Row: Context Sentence from Lesson Video with Click-to-Jump */}
                             {item.contextZh && (
                               <div
                                 onClick={() => {
-                                  if (videoRef.current && item.startMs !== undefined) {
-                                    videoRef.current.currentTime = item.startMs / 1000;
-                                    void videoRef.current.play();
+                                  if (
+                                    videoRef.current &&
+                                    item.startMs !== undefined
+                                  ) {
+                                    videoRef.current.currentTime =
+                                      item.startMs / 1000
+                                    void videoRef.current.play()
                                   }
                                 }}
                                 className="p-2.5 rounded-xl bg-[#F8F9FA] hover:bg-[#F2F4F7] border border-[#E5E7EB] transition-all cursor-pointer group space-y-1"
@@ -1496,7 +1669,7 @@ export default function PublishedLessonView({
                   )}
 
                   {/* Mode 2: Interactive Flashcard Study Mode */}
-                  {vocabViewMode === 'flashcard' && (
+                  {vocabViewMode === "flashcard" && (
                     <div className="p-3 overflow-y-auto flex-1 flex flex-col justify-between space-y-3">
                       {filteredVocabList.length === 0 ? (
                         <p className="text-xs text-[#5F6368] text-center py-8">
@@ -1506,42 +1679,46 @@ export default function PublishedLessonView({
                         (() => {
                           const currentCard =
                             filteredVocabList[
-                              Math.min(flashcardIndex, filteredVocabList.length - 1)
-                            ];
-                          if (!currentCard) return null;
+                              Math.min(
+                                flashcardIndex,
+                                filteredVocabList.length - 1,
+                              )
+                            ]
+                          if (!currentCard) return null
 
                           return (
                             <div className="flex flex-col h-full justify-between space-y-3">
                               {/* Header stats & progress */}
                               <div className="flex items-center justify-between text-xs">
                                 <span className="font-bold text-[#18181B]">
-                                  Thẻ {flashcardIndex + 1} / {filteredVocabList.length}
+                                  Thẻ {flashcardIndex + 1} /{" "}
+                                  {filteredVocabList.length}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setMasteredWords((prev) => {
-                                        const next = new Set(prev);
+                                        const next = new Set(prev)
                                         if (next.has(currentCard.word)) {
-                                          next.delete(currentCard.word);
+                                          next.delete(currentCard.word)
                                         } else {
-                                          next.add(currentCard.word);
+                                          next.add(currentCard.word)
                                         }
-                                        return next;
-                                      });
+                                        return next
+                                      })
                                     }}
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
                                       masteredWords.has(currentCard.word)
-                                        ? 'bg-emerald-500 text-white border-emerald-500'
-                                        : 'bg-white text-neutral-600 border-[#E7E7EA] hover:border-emerald-500'
+                                        ? "bg-emerald-500 text-white border-emerald-500"
+                                        : "bg-white text-neutral-600 border-[#E7E7EA] hover:border-emerald-500"
                                     }`}
                                   >
                                     <Check className="w-2.5 h-2.5" />
                                     <span>
                                       {masteredWords.has(currentCard.word)
-                                        ? 'Đã thuộc'
-                                        : 'Chưa thuộc'}
+                                        ? "Đã thuộc"
+                                        : "Chưa thuộc"}
                                     </span>
                                   </button>
                                 </div>
@@ -1552,8 +1729,8 @@ export default function PublishedLessonView({
                                 onClick={() => setIsCardFlipped((f) => !f)}
                                 className={`relative min-h-[260px] flex-1 p-6 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between items-center text-center select-none ${
                                   isCardFlipped
-                                    ? 'bg-linear-to-b from-[#FFF9F5] to-white border-[#B91B1C]/40 shadow-sm'
-                                    : 'bg-white border-[#E7E7EA] hover:border-[#B91B1C]/30 shadow-xs'
+                                    ? "bg-linear-to-b from-[#FFF9F5] to-white border-[#B91B1C]/40 shadow-sm"
+                                    : "bg-white border-[#E7E7EA] hover:border-[#B91B1C]/30 shadow-xs"
                                 }`}
                               >
                                 {/* Top badges on card */}
@@ -1575,8 +1752,8 @@ export default function PublishedLessonView({
                                   <button
                                     type="button"
                                     onClick={(e) => {
-                                      e.stopPropagation();
-                                      playPronunciation(currentCard.word);
+                                      e.stopPropagation()
+                                      playPronunciation(currentCard.word)
                                     }}
                                     className="p-2 rounded-full bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#B91B1C] hover:text-white transition-all cursor-pointer shadow-3xs"
                                     title="Nghe phát âm"
@@ -1593,7 +1770,9 @@ export default function PublishedLessonView({
                                     </h2>
                                     <p className="text-xs text-[#8B9097] flex items-center justify-center gap-1">
                                       <RotateCcw className="w-3 h-3 text-[#B91B1C]" />
-                                      <span>Chạm để lật thẻ xem Pinyin & nghĩa</span>
+                                      <span>
+                                        Chạm để lật thẻ xem Pinyin & nghĩa
+                                      </span>
                                     </p>
                                   </div>
                                 ) : (
@@ -1616,7 +1795,8 @@ export default function PublishedLessonView({
 
                                     <div className="bg-[#FAF9F6] p-2.5 rounded-xl border border-[#F0ECE1] text-xs">
                                       <p className="font-bold text-neutral-800 text-sm">
-                                        {currentCard.meaningVi || 'Chưa cập nhật nghĩa'}
+                                        {currentCard.meaningVi ||
+                                          "Chưa cập nhật nghĩa"}
                                       </p>
                                       {currentCard.partOfSpeech && (
                                         <p className="text-[10px] text-neutral-500 mt-0.5">
@@ -1628,14 +1808,14 @@ export default function PublishedLessonView({
                                     {currentCard.contextZh && (
                                       <div
                                         onClick={(e) => {
-                                          e.stopPropagation();
+                                          e.stopPropagation()
                                           if (
                                             videoRef.current &&
                                             currentCard.startMs !== undefined
                                           ) {
                                             videoRef.current.currentTime =
-                                              currentCard.startMs / 1000;
-                                            void videoRef.current.play();
+                                              currentCard.startMs / 1000
+                                            void videoRef.current.play()
                                           }
                                         }}
                                         className="p-2 rounded-lg bg-neutral-50 border border-neutral-200 text-left hover:border-[#B91B1C] transition-colors"
@@ -1646,7 +1826,9 @@ export default function PublishedLessonView({
                                         </p>
                                         {currentCard.contextVi && (
                                           <p className="text-[10px] text-neutral-500">
-                                            {stripTrailingPunctuation(currentCard.contextVi)}
+                                            {stripTrailingPunctuation(
+                                              currentCard.contextVi,
+                                            )}
                                           </p>
                                         )}
                                       </div>
@@ -1656,7 +1838,9 @@ export default function PublishedLessonView({
 
                                 {/* Bottom flip reminder */}
                                 <div className="text-[10px] font-medium text-neutral-400">
-                                  {isCardFlipped ? 'Chạm để lật lại' : 'Nhấn để lật thẻ'}
+                                  {isCardFlipped
+                                    ? "Chạm để lật lại"
+                                    : "Nhấn để lật thẻ"}
                                 </div>
                               </div>
 
@@ -1666,8 +1850,8 @@ export default function PublishedLessonView({
                                   type="button"
                                   disabled={flashcardIndex === 0}
                                   onClick={() => {
-                                    setFlashcardIndex((i) => Math.max(0, i - 1));
-                                    setIsCardFlipped(false);
+                                    setFlashcardIndex((i) => Math.max(0, i - 1))
+                                    setIsCardFlipped(false)
                                   }}
                                   className="flex-1 py-2 rounded-xl border border-[#E7E7EA] bg-white text-xs font-bold text-[#18181B] hover:bg-[#F7F7F9] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-1"
                                 >
@@ -1686,12 +1870,18 @@ export default function PublishedLessonView({
 
                                 <button
                                   type="button"
-                                  disabled={flashcardIndex >= filteredVocabList.length - 1}
+                                  disabled={
+                                    flashcardIndex >=
+                                    filteredVocabList.length - 1
+                                  }
                                   onClick={() => {
                                     setFlashcardIndex((i) =>
-                                      Math.min(filteredVocabList.length - 1, i + 1),
-                                    );
-                                    setIsCardFlipped(false);
+                                      Math.min(
+                                        filteredVocabList.length - 1,
+                                        i + 1,
+                                      ),
+                                    )
+                                    setIsCardFlipped(false)
                                   }}
                                   className="flex-1 py-2 rounded-xl bg-[#18181B] hover:bg-neutral-800 text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                                 >
@@ -1700,7 +1890,7 @@ export default function PublishedLessonView({
                                 </button>
                               </div>
                             </div>
-                          );
+                          )
                         })()
                       )}
                     </div>
@@ -1708,9 +1898,8 @@ export default function PublishedLessonView({
                 </div>
               )}
 
-
               {/* Tab 3: Mẹo học tập cho video này (Replaces Gợi ý) */}
-              {activeTab === 'tips' && (
+              {activeTab === "tips" && (
                 <div className="p-3.5 overflow-y-auto max-h-[480px] space-y-3">
                   {learningTips.length > 0 || drillWords.length > 0 ? (
                     <LearningTipsPanel
@@ -1735,7 +1924,9 @@ export default function PublishedLessonView({
                     <Compass className="w-4 h-4 text-[#B91B1C]" />
                     <span>Bài học tiếp theo</span>
                   </h3>
-                  <span className="text-[11px] font-bold text-[#5F6368]">Tự động phát</span>
+                  <span className="text-[11px] font-bold text-[#5F6368]">
+                    Tự động phát
+                  </span>
                 </div>
 
                 <div className="space-y-2.5">
@@ -1785,14 +1976,18 @@ export default function PublishedLessonView({
 
       {/* Word explanation popover */}
       <WordExplanationPopover
-        anchor={popoverAnchor ? { x: popoverAnchor.x, y: popoverAnchor.y } : null}
-        wordText={popoverAnchor?.wordText ?? ''}
+        anchor={
+          popoverAnchor ? { x: popoverAnchor.x, y: popoverAnchor.y } : null
+        }
+        wordText={popoverAnchor?.wordText ?? ""}
         loading={explaining}
         error={explanationError}
         explanation={explanation}
         onClose={closePopover}
         onSaveWord={
-          popoverAnchor ? () => void saveWord(popoverAnchor.cueId, popoverAnchor.wordId) : undefined
+          popoverAnchor
+            ? () => void saveWord(popoverAnchor.cueId, popoverAnchor.wordId)
+            : undefined
         }
       />
 
@@ -1811,12 +2006,12 @@ export default function PublishedLessonView({
           onSubmitQuiz={submitQuiz}
           bestScore={progress?.bestQuizScore}
           onRetry={() => {
-            setQuizResult(null);
-            setAnswers({});
-            quizAttemptKey.current = crypto.randomUUID();
+            setQuizResult(null)
+            setAnswers({})
+            quizAttemptKey.current = crypto.randomUUID()
           }}
         />
       )}
     </div>
-  );
+  )
 }

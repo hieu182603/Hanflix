@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
   cancelVideoUpload, confirmVideo, createAdminLesson, getAdminMedia, getAdminReview, getProcessingStatus,
-  deleteAdminLesson, hideAdminLesson, listAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
+  deleteAdminLesson, hideAdminLesson, listAllAdminLessons, listAdminUsers, listProcessingJobs, patchAdminLesson,
   presignVideo, publishAdminLesson, restoreAdminLesson, retryProcessing, saveAdminQuiz,
   saveAdminSubtitles, setAdminUserStatus, uploadVideoToR2,
   type AdminCue, type AdminLesson, type AdminQuestion, type AdminReview, type AdminUser, type LearningTip,
@@ -116,14 +116,14 @@ export default function ConnectedAdmin({
   }, []);
 
   const reload = async () => {
-    const [lessonItems, userItems, jobItems] = await Promise.all([listAdminLessons(), listAdminUsers(), listProcessingJobs()]);
+    const [lessonItems, userItems, jobItems] = await Promise.all([listAllAdminLessons(), listAdminUsers(), listProcessingJobs()]);
     setLessons(lessonItems.items); setUsers(userItems); setJobs(jobItems.items);
   };
 
   useEffect(() => {
     let active = true;
     setLoading(true); setError('');
-    void Promise.all([listAdminLessons(), listAdminUsers(), listProcessingJobs()]).then(([lessonItems, userItems, jobItems]) => {
+    void Promise.all([listAllAdminLessons(), listAdminUsers(), listProcessingJobs()]).then(([lessonItems, userItems, jobItems]) => {
       if (active) { setLessons(lessonItems.items); setUsers(userItems); setJobs(jobItems.items); }
     }).catch(reason => { if (active) setError(errorText(reason)); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -283,7 +283,7 @@ export default function ConnectedAdmin({
       try {
         const [status, lessonItems, jobItems] = await Promise.all([
           getProcessingStatus(activeProcessingLessonId),
-          listAdminLessons(),
+          listAllAdminLessons(),
           listProcessingJobs(),
         ]);
         if (active) {
@@ -323,7 +323,7 @@ export default function ConnectedAdmin({
     try {
       await task();
       // Refresh lessons list (sidebar) but keep editor state intact.
-      const [lessonItems, jobItems] = await Promise.all([listAdminLessons(), listProcessingJobs()]);
+      const [lessonItems, jobItems] = await Promise.all([listAllAdminLessons(), listProcessingJobs()]);
       setLessons(lessonItems.items); setJobs(jobItems.items);
       if (options?.refreshEditor && editingId) {
         initialLoadDone.current = null;

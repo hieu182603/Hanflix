@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNotification } from '../notifications';
 import { Spinner } from '../notifications';
 import { AdminSearchBar } from './AdminSearchBar';
@@ -87,7 +87,9 @@ export default function AdminGrammarManager() {
     }
   };
 
+  const listRequest = useRef(0);
   const fetchList = async (page = 1, limit = pageSize) => {
+    const request = ++listRequest.current;
     setLoading(true);
     try {
       const res = await getAdminGrammarList({
@@ -97,12 +99,15 @@ export default function AdminGrammarManager() {
         status: statusFilter === 'all' ? undefined : statusFilter,
         search: searchQuery.trim() || undefined,
       });
+      if (request !== listRequest.current) return;
       setItems(res.items);
       setPagination(res.pagination);
     } catch (err) {
+      if (request !== listRequest.current) return;
+      setItems([]);
       console.error('Failed to load grammar list', err);
     } finally {
-      setLoading(false);
+      if (request === listRequest.current) setLoading(false);
     }
   };
 
@@ -112,7 +117,8 @@ export default function AdminGrammarManager() {
 
   useEffect(() => {
     fetchList(1);
-  }, [hskFilter, statusFilter]);
+    return () => { ++listRequest.current; };
+  }, [hskFilter, statusFilter, searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
