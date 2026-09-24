@@ -1,5 +1,8 @@
 import { connectDatabase, disconnectDatabase } from '../src/config/database.js';
 import { GrammarModel } from '../src/models/grammar.model.js';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Vietnamese translation map for grammar categories
 const CAT_VI: Record<string, string> = {
@@ -96,37 +99,41 @@ function parseCsvLine(line: string): string[] {
 }
 
 async function seedGrammar() {
-  console.log('Downloading official HSK 3.0 grammar dataset...');
-  const res = await fetch('https://raw.githubusercontent.com/ivankra/hsk30/master/hsk30-grammar.csv');
-  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-  const csvText = await res.text();
-  const lines = csvText.split(/\r?\n/).filter(Boolean);
+  console.log('Loading official HSK 7-9 grammar dataset from local JSON...');
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const jsonPath = path.resolve(__dirname, '../data/hsk-7-9-grammar.json');
+  const raw = await fs.readFile(jsonPath, 'utf8');
+  const items = JSON.parse(raw) as Array<{
+    no: number;
+    category: string;
+    subcategory: string;
+    name: string;
+    explanationVi: string;
+    pattern: string;
+    group: string;
+    example?: { chinese: string; pinyin?: string; vietnamese?: string };
+  }>;
 
   await connectDatabase();
-  console.log('Connected to MongoDB. Parsing grammar items...');
+  console.log('Connected to MongoDB. Deleting old HSK 7-9 entries...');
+  await GrammarModel.deleteMany({ code: { $regex: /^GF7-/ } });
+  console.log('Upserting new grammar items...');
 
   const bulkOps: any[] = [];
   let processed = 0;
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    const cols = parseCsvLine(line);
-    // No,Level,Group,Category,Details,Content
-    const [no, levelStr, group, category, details, content] = cols.map(c => c?.trim() || '');
-    if (!levelStr || (!category && !details && !content)) continue;
-
-    let hskLevel: 1 | 2 | 3 | 4 | 5 | 6 | '7-9' = 1;
-    if (levelStr === '7-9' || levelStr === '7' || levelStr === '8' || levelStr === '9') {
-      hskLevel = '7-9';
-    } else {
-      const num = Number(levelStr);
-      if (num >= 1 && num <= 6) hskLevel = num as any;
+  for (const item of items) {
+    const code = `GF7-${String(item.no).padStart(3, '0')}`;
+    const hskLevel: number = item.hskLevel ?? 7;
+    const examples: any[] = [];
+    if (item.example) {
+      examples.push({
+        chinese: item.example.chinese,
+        pinyin: item.example.pinyin || '',
+        vietnamese: item.example.vietnamese || '',
+      });
     }
-
-    const structureName = details || category || content || `Điểm ngữ pháp #${no}`;
-    const code = `GF-${String(no).padStart(3, '0')}`;
-    const viExplanation = CAT_VI[details] || CAT_VI[category] || CAT_VI[group] || `Cấu trúc ${structureName}`;
-    const patternStr = content ? `Ví dụ / Từ vựng: ${content}` : '';
 
     bulkOps.push({
       updateOne: {
@@ -134,20 +141,21 @@ async function seedGrammar() {
         update: {
           $set: {
             code,
-            structure: structureName,
-            pattern: patternStr,
-            group: group || 'Ngữ pháp',
-            category: category || '',
-            details: details || '',
-            explanationVi: viExplanation,
-            explanationEn: `Grammar structure: ${structureName} (${group})`,
+            structure: item.name,
+            pattern: item.pattern,
+            group: item.group,
+            category: item.category,
+            details: item.subcategory,
+            explanationVi: item.explanationVi,
+            explanationEn: `HSK ${hskLevel} Grammar: ${item.name} (${item.group})`,
             hskLevel,
             status: 'published',
+            tags: [`HSK ${hskLevel}`, item.subcategory, item.no >= 89 && item.no <= 90 ? '复句' : item.category].filter(Boolean),
             updatedAt: new Date(),
           },
           $setOnInsert: {
             createdAt: new Date(),
-            examples: content ? [{ chinese: content.split('、')[0] || content, pinyin: '', vietnamese: viExplanation }] : [],
+            examples,
           },
         },
         upsert: true,
@@ -158,6 +166,7 @@ async function seedGrammar() {
       await GrammarModel.bulkWrite(bulkOps);
       processed += bulkOps.length;
       bulkOps.length = 0;
+      if (processed % 50 === 0) console.log(`Processed ${processed} items...`);
     }
   }
 
@@ -166,7 +175,7 @@ async function seedGrammar() {
     processed += bulkOps.length;
   }
 
-  console.log(`Seeded ${processed} official HSK grammar points successfully into MongoDB Atlas!`);
+  console.log(`Seeded ${processed} official HSK 7-9 grammar points into MongoDB Atlas!`);
   await disconnectDatabase();
 }
 

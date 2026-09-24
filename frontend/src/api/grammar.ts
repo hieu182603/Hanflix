@@ -47,6 +47,28 @@ export async function getAdminGrammarStats(): Promise<GrammarStats> {
   return apiFetch<GrammarStats>('/admin/grammar/stats');
 }
 
+export async function getLearnerGrammarList(params: {
+  page?: number;
+  limit?: number;
+  hskLevel?: string;
+  search?: string;
+}): Promise<GrammarListResponse> {
+  const q = new URLSearchParams();
+  if (params.page) q.set('page', String(params.page));
+  if (params.limit) q.set('limit', String(params.limit));
+  if (params.hskLevel) q.set('hskLevel', params.hskLevel);
+  if (params.search) q.set('search', params.search);
+  return apiFetch<GrammarListResponse>(`/grammar?${q.toString()}`);
+}
+
+export async function getLearnerGrammarStats(): Promise<{ total: number; byLevel: Record<string, number> }> {
+  return apiFetch('/grammar/stats');
+}
+
+export async function getLearnerGrammarById(id: string): Promise<GrammarItem> {
+  return apiFetch<GrammarItem>(`/grammar/${id}`);
+}
+
 export async function getAdminGrammarList(params: {
   page?: number;
   limit?: number;
