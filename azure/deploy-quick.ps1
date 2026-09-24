@@ -48,7 +48,7 @@ param(
   [switch] $NoWait
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 function Write-Success($m) { Write-Host "[OK] $m" -ForegroundColor Green }
 function Write-Info($m)    { Write-Host "[INFO] $m" -ForegroundColor Cyan }
