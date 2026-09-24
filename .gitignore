@@ -57,3 +57,7 @@ skills-lock.json
 
 # Cursor Agent Store (local only - không push lên git)
 .cursor/
+
+# Local Docker overrides (per-developer; must never be committed)
+docker-compose.override.yml
+**/docker-compose.override.yml

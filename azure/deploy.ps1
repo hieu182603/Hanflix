@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   HanFlix Backend - Azure Deployment Script (PowerShell)
@@ -68,6 +68,11 @@ param(
 
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "Continue"
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
+$projectRoot = Split-Path -Parent $scriptDir
+$backendDir = Join-Path $projectRoot "backend"
 
 # ---- Color helpers ----
 function Write-Success($msg) { Write-Host "[OK] $msg" -ForegroundColor Green }
@@ -246,9 +251,15 @@ if (-not $SkipInfra) {
     --query "properties.outputs.acrLoginServer.value" -o tsv 2>$null
 
   if (-not $acrLoginServer) {
-    # GHCR deployment - registry is not tracked in outputs.
-    $acrLoginServer = "ghcr.io"
-    Write-Info "  Registry: GHCR (ghcr.io)"
+    # Check if there is an existing ACR in the resource group
+    $acrLoginServer = az acr list -g $rgName --query "[0].loginServer" -o tsv 2>$null
+    if ($acrLoginServer) {
+      Write-Info "  Found existing ACR: $acrLoginServer"
+    } else {
+      # GHCR deployment - registry is not tracked in outputs.
+      $acrLoginServer = "ghcr.io"
+      Write-Info "  Registry: GHCR (ghcr.io)"
+    }
   }
 }
 
@@ -295,10 +306,8 @@ if (-not $SkipImageBuild) {
       $imageLatest = "$acrLoginServer/hanflix-backend:latest"
     }
 
-    $backendDir = Split-Path -Parent (Split-Path -Parent $scriptDir)
-
-    Write-Info "Building Docker image..."
-    docker build -t $imageTag -t $imageLatest "$backendDir/backend"
+    Write-Info "Building Docker image from $backendDir..."
+    docker build -t $imageTag -t $imageLatest "$backendDir"
     if ($LASTEXITCODE -ne 0) {
       Write-Fail "Docker build failed"
       exit 1
@@ -447,10 +456,13 @@ Write-Host "-- Step 7: Verifying Deployment ---------------------" -ForegroundCo
 
 Start-Sleep -Seconds 10
 
-$backendFqdn = az deployment group show `
-  --resource-group $rgName `
-  --name (Get-LatestDeploymentName -ResourceGroup $rgName) `
-  --query "properties.outputs.backendFqdn.value" -o tsv 2>$null
+$backendFqdn = az containerapp show --name "$($ResourcePrefix)backend" --resource-group $rgName --query "properties.configuration.ingress.fqdn" -o tsv 2>$null
+if (-not $backendFqdn) {
+  $backendFqdn = az deployment group show `
+    --resource-group $rgName `
+    --name (Get-LatestDeploymentName -ResourceGroup $rgName) `
+    --query "properties.outputs.backendFqdn.value" -o tsv 2>$null
+}
 
 $healthUrl = "https://$backendFqdn/health"
 Write-Info "Checking health endpoint: $healthUrl"
