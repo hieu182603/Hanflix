@@ -23,6 +23,7 @@ export interface SavedWordsPageProps {
   onRemoveWord: (wordId: string) => Promise<unknown>;
   onNavigateToVocabulary?: () => void;
   busy?: boolean;
+  hideTopBanner?: boolean;
 }
 
 export default function SavedWordsPage({
@@ -32,6 +33,7 @@ export default function SavedWordsPage({
   onRemoveWord,
   onNavigateToVocabulary,
   busy = false,
+  hideTopBanner = false,
 }: SavedWordsPageProps) {
   // Flashcard state (rendered directly on page)
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -221,23 +223,25 @@ export default function SavedWordsPage({
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Banner Overview (No buttons) */}
-      <div className="relative overflow-hidden rounded-3xl bg-white p-6 md:p-8 border border-[#E7E7EA] shadow-xs">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#B91B1C] via-[#E85D5D] to-[#B91B1C]" />
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#B91B1C]/5 rounded-full blur-3xl pointer-events-none" />
+      {!hideTopBanner && (
+        <div className="relative overflow-hidden rounded-3xl bg-white p-6 md:p-8 border border-[#E7E7EA] shadow-xs">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#B91B1C] via-[#E85D5D] to-[#B91B1C]" />
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#B91B1C]/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/15 text-[#B91B1C] text-xs font-bold mb-2">
-            <Bookmark className="w-3.5 h-3.5 fill-[#B91B1C]" />
-            <span>Sổ Từ & Luyện Tập SRS</span>
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/15 text-[#B91B1C] text-xs font-bold mb-2">
+              <Bookmark className="w-3.5 h-3.5 fill-[#B91B1C]" />
+              <span>Sổ Từ & Luyện Tập SRS</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">
+              Kho Lưu Trữ Từ Vựng
+            </h1>
+            <p className="text-xs md:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
+              Hệ thống ôn tập ngắt quãng (SRS) tự động tính toán thời điểm vàng để đưa từ vựng trở lại bộ nhớ, giúp bạn nhớ từ sâu và lâu bền nhất.
+            </p>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">
-            Kho Lưu Trữ Từ Vựng
-          </h1>
-          <p className="text-xs md:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
-            Hệ thống ôn tập ngắt quãng (SRS) tự động tính toán thời điểm vàng để đưa từ vựng trở lại bộ nhớ, giúp bạn nhớ từ sâu và lâu bền nhất.
-          </p>
         </div>
-      </div>
+      )}
 
       {/* ========================================================= */}
       {/* ON-PAGE QUIZLET 3D FLASHCARD STATION (NGAY TRÊN TÌM KIẾM) */}

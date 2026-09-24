@@ -248,7 +248,7 @@ export default function LearningSurveyModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-5 animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-2xl rounded-none sm:rounded-3xl overflow-hidden shadow-2xl border-0 sm:border border-[#E7E7EA] flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh]">
         {/* Top Header Bar */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#E7E7EA] flex items-center justify-between bg-white shrink-0 safe-area-top">
+        <div className="px-4 sm:px-6 pt-10 pb-6 sm:pt-12 sm:pb-7 border-b border-[#E7E7EA] flex items-center justify-between bg-white shrink-0 safe-area-top">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center shrink-0">
               <Compass className="w-5 h-5 stroke-[2.2]" />
@@ -566,7 +566,7 @@ export default function LearningSurveyModal({
 
         {saveError && <div className="px-6 mb-3"><InlineBanner variant="error" message={saveError} /></div>}
         {/* Modal Footer */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0 safe-area-bottom">
+        <div className="px-4 sm:px-6 pt-6 pb-10 sm:pt-7 sm:pb-12 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0 safe-area-bottom">
           <div>
             {step > 1 ? (
               <button

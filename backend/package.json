@@ -26,7 +26,8 @@
     "vocab:normalize": "tsx scripts/vocabulary/normalize-hsk-data.ts",
     "vocab:validate": "tsx scripts/vocabulary/validate-vocabulary.ts",
     "vocab:seed": "tsx scripts/vocabulary/seed-vocabulary.ts",
-    "seed:users": "tsx scripts/seed-realistic-users.ts"
+    "seed:users": "tsx scripts/seed-realistic-users.ts",
+    "cleanup:processing-artifacts": "tsx scripts/cleanup-processing-artifacts.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1134.0",

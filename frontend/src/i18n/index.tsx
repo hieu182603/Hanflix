@@ -13,6 +13,7 @@ export interface Translations {
     exam: string;
     leaderboard: string;
     community: string;
+    grammar: string;
     startReview: string;
     settings: string;
     logout: string;
@@ -192,6 +193,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       exam: 'Thi HSK',
       leaderboard: 'Bảng xếp hạng',
       community: 'Cộng đồng',
+      grammar: 'Ngữ pháp',
       startReview: 'Bắt đầu ôn tập',
       settings: 'Cài đặt',
       logout: 'Đăng xuất',
@@ -370,6 +372,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       exam: 'HSK Exam',
       leaderboard: 'Leaderboard',
       community: 'Community',
+      grammar: 'Grammar',
       startReview: 'Start Review',
       settings: 'Settings',
       logout: 'Log Out',
@@ -548,6 +551,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       exam: 'HSK 考试',
       leaderboard: '排行榜',
       community: '学习社区',
+      grammar: '语法',
       startReview: '开始复习',
       settings: '设置',
       logout: '退出登录',

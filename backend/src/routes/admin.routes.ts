@@ -9,6 +9,7 @@ import { uploadLimiter } from '../middleware/rate-limits.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
+import { processingStatusDto } from '../services/pipeline/processing-status.js';
 import { QuizModel } from '../models/quiz.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
@@ -43,16 +44,32 @@ const lessonInput = z.object({
   hsk: z.number().int().min(1).max(9),
   topicIds: z.array(z.string().trim().min(1).max(50)).min(1).max(5),
   goalTags: z.array(z.enum(['daily', 'travel', 'work', 'hsk', 'culture', 'other'])).max(6).default([]),
-  durationSeconds: z.number().min(60).max(300),
+  // CONTENT MODE (2026-09-22): nới duration theo mode. Lesson cap 300s cũ vẫn là default.
+  // Podcast cho phép tới VIDEO_MAX_DURATION_PODCAST_SECONDS (default 5400s).
+  durationSeconds: z.number().min(60, 'Thời lượng video tối thiểu là 1 phút (60 giây)').max(21600),
   // Optional override for AI-generated quiz question count (1-15).
   // Undefined / null = use HSK-based heuristic.
   autoGenerateQuizCount: z.number().int().min(1).max(15).optional().nullable(),
+  // CONTENT MODE: loại nội dung. Default 'lesson' để tương thích ngược.
+  contentMode: z.enum(['lesson', 'song', 'podcast', 'drama']).default('lesson'),
+  mediaType: z.enum(['AUTO', 'MOVIE', 'PODCAST', 'MUSIC']).optional(),
+  // SONG-specific
+  lyricsRaw: z.string().max(20000).optional(),
+  lyricsSource: z.enum(['lrc', 'manual', 'auto']).optional(),
+  // DRAMA-specific
+  characters: z.array(z.object({
+    speakerId: z.string().min(1).max(50),
+    displayName: z.string().min(1).max(100),
+    descriptionVi: z.string().max(500).optional(),
+    color: z.string().max(20).optional(),
+    avatarUrl: z.string().max(500).optional(),
+  })).max(20).optional(),
 });
 const lessonIdSchema = z.object({ lessonId: z.string().refine(Types.ObjectId.isValid) });
 const presignSchema = z.object({
   lessonId: z.string().refine(Types.ObjectId.isValid),
   fileName: z.string().trim().min(1).max(180),
-  contentType: z.enum(['video/mp4', 'video/webm']),
+  contentType: z.enum(['video/mp4', 'video/webm', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav']),
   sizeBytes: z.number().int().positive(),
 });
 const confirmSchema = z.object({ lessonId: z.string().refine(Types.ObjectId.isValid), objectKey: z.string().min(1).max(500) });
@@ -71,7 +88,7 @@ const cueInput = z.object({
   pinyin: z.string().trim().min(1).max(2000).optional(),
   vi: z.string().trim().min(1).max(2000),
 }).refine(cue => cue.endMs > cue.startMs, { message: 'endMs phải lớn hơn startMs' });
-const subtitleDraftSchema = z.object({ cues: z.array(cueInput).min(1).max(500) }).superRefine((value, context) => {
+const subtitleDraftSchema = z.object({ cues: z.array(cueInput).min(1).max(10000) }).superRefine((value, context) => {
   const ids = new Set<string>();
   value.cues.forEach((cue, index) => {
     if (ids.has(cue.cueId)) context.addIssue({ code: 'custom', path: ['cues', index, 'cueId'], message: 'cueId bị trùng' });
@@ -115,7 +132,9 @@ const quizGenerationInput = z.object({
 });
 
 router.post('/lessons', validate(lessonInput), asyncHandler(async (req, res) => {
-  const lesson = await LessonModel.create({ ...req.body, createdBy: req.auth!.userId, status: 'draft' });
+  if (req.body.durationSeconds < 60) throw new AppError(422, 'VIDEO_DURATION_TOO_SHORT', 'Thời lượng video phải từ 1 phút đến 10 phút (60s – 600s)');
+  if (req.body.durationSeconds > (req.body.contentMode === 'podcast' ? env.VIDEO_MAX_DURATION_PODCAST_SECONDS : 600)) throw new AppError(422, 'VIDEO_DURATION_EXCEEDED', 'Thời lượng video vượt quá giới hạn tối đa (10 phút)');
+  const lesson = await LessonModel.create({ ...req.body, mediaType: req.body.mediaType ?? 'AUTO', createdBy: req.auth!.userId, status: 'draft' });
   res.status(201).json({ data: lesson });
 }));
 
@@ -134,13 +153,17 @@ const lessonListQuerySchema = z.object({
   hsk: z.coerce.number().int().min(1).max(9).optional(),
   status: z.enum(['draft', 'uploading', 'processing', 'ready_for_review', 'published', 'hidden', 'failed']).optional(),
   search: z.string().trim().min(1).max(120).optional(),
+  // CONTENT MODE (2026-09-22): filter theo contentMode ở admin list.
+  contentMode: z.enum(['lesson', 'song', 'podcast', 'drama']).optional(),
 });
 
 router.get('/lessons', validateQuery(lessonListQuerySchema), asyncHandler(async (req, res) => {
-  const { page, limit, hsk, status, search } = req.query as unknown as z.infer<typeof lessonListQuerySchema>;
+  const { page, limit, hsk, status, search, contentMode } = req.query as unknown as z.infer<typeof lessonListQuerySchema>;
   const filter: Record<string, unknown> = {};
   if (hsk !== undefined) filter.hsk = hsk;
   if (status) filter.status = status;
+  if (contentMode === 'lesson') filter.$and = [{ $or: [{ contentMode: 'lesson' }, { contentMode: { $exists: false } }, { contentMode: null }] }];
+  else if (contentMode) filter.contentMode = contentMode;
   if (search) {
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const re = new RegExp(escaped, 'i');
@@ -179,7 +202,7 @@ router.get('/lessons/:lessonId', validate(lessonIdSchema, 'params'), asyncHandle
   res.json({ data: withProcessingCompatibility({ ...lesson, thumbnailUrl }) });
 }));
 
-router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(lessonInput.partial()), asyncHandler(async (req, res) => {
+router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(lessonInput.partial().extend({ contentMode: z.enum(['lesson', 'song', 'podcast', 'drama']).optional(), goalTags: z.array(z.enum(['daily', 'travel', 'work', 'hsk', 'culture', 'other'])).max(6).optional() })), asyncHandler(async (req, res) => {
   // Handle the optional override separately:
   //   - undefined or missing → leave untouched.
   //   - null → $unset the field (return to HSK heuristic).
@@ -188,6 +211,14 @@ router.patch('/lessons/:lessonId', validate(lessonIdSchema, 'params'), validate(
     autoGenerateQuizCount?: number | null;
     [k: string]: unknown;
   };
+  if ('contentMode' in rest || 'lyricsRaw' in rest || 'lyricsSource' in rest || 'durationSeconds' in rest) {
+    const existing = await LessonModel.findById(req.params.lessonId).select('status contentMode durationSeconds').lean();
+    if (!existing) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+    if (!['draft', 'failed'].includes(existing.status)) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Không đổi nguồn sau khi đã sinh phụ đề');
+    const mode = rest.contentMode ?? existing.contentMode ?? 'lesson';
+    const duration = Number(rest.durationSeconds ?? existing.durationSeconds);
+    if (duration > (mode === 'podcast' ? env.VIDEO_MAX_DURATION_PODCAST_SECONDS : 600)) throw new AppError(422, 'VIDEO_DURATION_EXCEEDED', 'Thời lượng vượt giới hạn của loại nội dung');
+  }
   const setOps: Record<string, unknown> = { ...rest };
   const unsetOps: Record<string, 1> = {};
   if (autoGenerateQuizCount === null) {
@@ -212,7 +243,8 @@ router.post('/uploads/presign', uploadLimiter, validate(presignSchema), asyncHan
   if (req.body.sizeBytes > env.MAX_VIDEO_BYTES) throw new AppError(413, 'VIDEO_TOO_LARGE', 'Video vượt giới hạn dung lượng cấu hình');
   const lesson = await LessonModel.findOne({ _id: req.body.lessonId, createdBy: req.auth!.userId, status: { $in: ['draft', 'failed'] } });
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bản nháp video');
-  const extension = req.body.contentType === 'video/mp4' ? 'mp4' : 'webm';
+  if (req.body.contentType.startsWith('audio/') && !['song', 'podcast'].includes(lesson.contentMode)) throw new AppError(422, 'INVALID_MEDIA_TYPE', 'Chỉ bài hát và podcast hỗ trợ tệp âm thanh');
+  const extension = ({ 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/wav': 'wav', 'audio/x-wav': 'wav' } as Record<string, string>)[req.body.contentType];
   const objectKey = `videos/${lesson._id}/${randomUUID()}.${extension}`;
   const signed = await createVideoUploadUrl(objectKey, req.body.contentType, env.MAX_VIDEO_BYTES);
   lesson.status = 'uploading';
@@ -272,12 +304,12 @@ router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHan
         throw new AppError(422, 'INVALID_OBJECT_KEY', 'Đường dẫn R2 không khớp phiên tải lên');
       }
       const object = await confirmR2Object(req.body.objectKey);
-      if (!['video/mp4', 'video/webm'].includes(object.contentType ?? '') || object.sizeBytes > env.MAX_VIDEO_BYTES) {
+      if (!['video/mp4', 'video/webm', ...(['song', 'podcast'].includes(lesson.contentMode) ? ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'] : [])].includes(object.contentType ?? '') || object.sizeBytes > env.MAX_VIDEO_BYTES) {
         throw new AppError(422, 'INVALID_UPLOADED_VIDEO', 'Object R2 không đúng định dạng hoặc dung lượng');
       }
       lesson.media = {
         objectKey: req.body.objectKey,
-        mimeType: object.contentType as 'video/mp4' | 'video/webm',
+        mimeType: object.contentType as 'video/mp4' | 'video/webm' | 'audio/mpeg' | 'audio/mp4' | 'audio/wav' | 'audio/x-wav',
         sizeBytes: object.sizeBytes,
         etag: object.etag,
       };
@@ -291,6 +323,7 @@ router.post('/uploads/confirm', uploadLimiter, validate(confirmSchema), asyncHan
       const job = await addVideoProcessingJob({
         lessonId: lesson._id.toString(),
         objectKey: req.body.objectKey,
+        mediaType: lesson.mediaType ?? 'AUTO',
       }, { session: sess });
       if (!job) {
         // F02: signal back to the transaction so both writes are rolled back.
@@ -329,7 +362,40 @@ router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), 
     ProcessingJobModel.findOne({ lessonId: req.params.lessonId }).sort({ createdAt: -1 }).lean(),
     LessonModel.findById(req.params.lessonId).select('status media processingStatus processingProgress processingStep processingError').lean(),
   ]);
-  if (!job) throw new AppError(404, 'PROCESSING_JOB_NOT_FOUND', 'Không tìm thấy tiến trình xử lý');
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+
+  // A lesson is visible in the processing screen before the upload is
+  // confirmed and before the durable processing job is created. This is an
+  // expected transition (draft/uploading), not a missing-resource error.
+  // Return a normalized snapshot so the admin UI can keep showing the upload
+  // state without flashing "Không tìm thấy tiến trình xử lý".
+  if (!job) {
+    const status = lesson.status === 'uploading'
+      ? 'uploading'
+      : lesson.status === 'processing'
+        ? 'queued'
+        : 'idle';
+    res.json({
+      data: {
+        lessonId: req.params.lessonId,
+        status,
+        stage: lesson.processingStep ?? (status === 'uploading' ? 'upload' : 'waiting'),
+        stageProgress: lesson.processingProgress ?? 0,
+        attempts: 0,
+        video: lesson,
+        capabilities: {
+          canRetry: false,
+          canCancel: lesson.status === 'uploading',
+          canPublish: false,
+          noJob: true,
+        },
+        lessonStatusSync: 'synced',
+        correctedError: lesson.processingError,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    return;
+  }
   // F03 fix (2026-09-18): publish a normalized status payload so the admin UI
   // does not have to reconcile lesson vs job itself. We surface:
   //   - canRetry: lesson is in 'failed' AND has a media objectKey (ready for retry)
@@ -345,14 +411,14 @@ router.get('/lessons/:lessonId/processing', validate(lessonIdSchema, 'params'), 
   const drift = lesson?.status === 'processing' && job.status !== 'running' && job.status !== 'queued';
   res.json({
     data: {
-      ...job,
+      ...processingStatusDto(job),
       video: lesson,
       capabilities: {
         ...lessonStates,
         canPublish: lesson?.status === 'ready_for_review',
       },
       lessonStatusSync: drift ? 'drift' : 'synced',
-      correctedError: lesson?.processingError ?? job.errorMessage,
+      correctedError: (lesson?.status === 'failed' || job.status === 'failed') ? (lesson?.processingError ?? job.errorMessage) : undefined,
       updatedAt: job.heartbeatAt ?? job.lockedAt ?? job.completedAt ?? job.createdAt,
     },
   });
@@ -366,7 +432,7 @@ router.get('/processing-jobs', validateQuery(processingListSchema), asyncHandler
       .skip((page - 1) * limit).limit(limit).lean(),
     ProcessingJobModel.countDocuments(filter),
   ]);
-  res.json({ data: { items, page, limit, total, pages: Math.ceil(total / limit) } });
+  res.json({ data: { items: items.map(processingStatusDto), page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
 /**
@@ -462,6 +528,52 @@ router.get('/lessons/:lessonId/media', validate(lessonIdSchema, 'params'), async
   } });
 }));
 
+// CONTENT MODE (2026-09-22) - SONG/PODCAST/DRAMA endpoints.
+// Lưu ý: validate nội dung mode trước khi cho phép các field đặc thù.
+
+// POST /admin/lessons/:lessonId/lyrics — upload LRC text cho mode=song.
+const lyricsUploadSchema = z.object({
+  lyricsRaw: z.string().min(1).max(20000),
+  lyricsSource: z.enum(['lrc', 'manual', 'auto']).default('lrc'),
+});
+router.post('/lessons/:lessonId/lyrics', validate(lessonIdSchema, 'params'), validate(lyricsUploadSchema), asyncHandler(async (req, res) => {
+  const { lessonId } = req.params as z.infer<typeof lessonIdSchema>;
+  const { lyricsRaw, lyricsSource } = req.body as z.infer<typeof lyricsUploadSchema>;
+  const lesson = await LessonModel.findOne({ _id: lessonId }).select('contentMode status').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (lesson.contentMode !== 'song') {
+    throw new AppError(422, 'INVALID_CONTENT_MODE', 'Chỉ bài học mode=song mới nhận lyrics');
+  }
+  if (!['draft', 'failed'].includes(lesson.status)) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Chỉ sửa lời nguồn khi bài hát còn nháp hoặc xử lý thất bại');
+  const updated = await LessonModel.updateOne({ _id: lessonId, status: { $in: ['draft', 'failed'] } }, { $set: { lyricsRaw, lyricsSource } });
+  if (!updated.matchedCount) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Trạng thái bài hát đã thay đổi');
+  res.json({ data: { ok: true, lyricsSource } });
+}));
+
+// PATCH /admin/lessons/:lessonId/characters — rename / recolor characters cho mode=drama.
+const charactersUpdateSchema = z.object({
+  characters: z.array(z.object({
+    speakerId: z.string().min(1).max(50),
+    displayName: z.string().min(1).max(100),
+    descriptionVi: z.string().max(500).optional(),
+    color: z.string().max(20).optional(),
+    avatarUrl: z.string().max(500).optional(),
+  })).min(1).max(20),
+});
+router.patch('/lessons/:lessonId/characters', validate(lessonIdSchema, 'params'), validate(charactersUpdateSchema), asyncHandler(async (req, res) => {
+  const { lessonId } = req.params as z.infer<typeof lessonIdSchema>;
+  const { characters } = req.body as z.infer<typeof charactersUpdateSchema>;
+  const lesson = await LessonModel.findOne({ _id: lessonId }).select('contentMode status').lean();
+  if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (lesson.contentMode !== 'drama') {
+    throw new AppError(422, 'INVALID_CONTENT_MODE', 'Chỉ bài học mode=drama mới có characters');
+  }
+  if (!['draft', 'failed', 'ready_for_review'].includes(lesson.status)) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Chỉ sửa nhân vật trong bản nháp');
+  const updated = await LessonModel.updateOne({ _id: lessonId, status: { $in: ['draft', 'failed', 'ready_for_review'] } }, { $set: { characters } });
+  if (!updated.matchedCount) throw new AppError(409, 'LESSON_NOT_EDITABLE', 'Trạng thái bài học đã thay đổi');
+  res.json({ data: { ok: true, count: characters.length } });
+}));
+
 router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), validate(subtitleDraftSchema), asyncHandler(async (req, res) => {
   const lessonId = String(req.params.lessonId);
   const lesson = await LessonModel.findOne({ _id: lessonId, status: 'ready_for_review' }).select('durationSeconds').lean();
@@ -508,6 +620,13 @@ router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), v
       ...cue,
       pinyin: cue.pinyin || pinyinService.convert(cue.zh),
       tokens,
+      speakerId: old?.speakerId,
+      chapterId: old?.chapterId,
+      rawText: old?.rawText ?? undefined,
+      quality: old?.quality ?? undefined,
+      normalizedText: zhChanged ? cue.zh.normalize('NFKC') : old?.normalizedText ?? undefined,
+      needsFineAlignment: zhChanged || old?.startMs !== cue.startMs || old?.endMs !== cue.endMs ? true : old?.needsFineAlignment ?? undefined,
+      karaokeTokens: !zhChanged && old?.startMs === cue.startMs && old?.endMs === cue.endMs ? old?.karaokeTokens : undefined,
     };
   });
 
@@ -529,6 +648,13 @@ router.put('/lessons/:lessonId/subtitles', validate(lessonIdSchema, 'params'), v
         zh: cue.zh,
         pinyin: cue.pinyin,
         vi: cue.vi,
+        speakerId: cue.speakerId ?? undefined,
+        chapterId: cue.chapterId ?? undefined,
+        karaokeTokens: cue.karaokeTokens ?? undefined,
+        rawText: cue.rawText,
+        quality: cue.quality,
+        normalizedText: cue.normalizedText,
+        needsFineAlignment: cue.needsFineAlignment,
         tokens: (cue.tokens ?? []).map(token => ({ text: token.text, wordId: token.wordId ?? null })),
       })),
       dirty: zhChangedCount > 0
@@ -739,9 +865,10 @@ const retryProcessing = asyncHandler(async (req, res) => {
   lesson.processingStep = 'QUEUED';
   lesson.processingProgress = 0;
   lesson.processingError = undefined;
+  await LessonModel.updateOne({ _id: lesson._id }, { $unset: { processingError: 1 } });
   await lesson.save();
   wakeVideoProcessingWorker();
-  res.json({ data: job });
+  res.json({ data: processingStatusDto(job.toObject()) });
 });
 
 router.post('/lessons/:lessonId/processing/retry', uploadLimiter, validate(lessonIdSchema, 'params'), retryProcessing);
@@ -783,7 +910,7 @@ router.post('/lessons/:lessonId/publish', validate(lessonIdSchema, 'params'), as
       if (!subtitle || subtitle.cues.length === 0) {
         throw new AppError(422, 'CONTENT_INCOMPLETE', 'Phụ đề chưa có nội dung');
       }
-      if (!quiz || quiz.questions.length === 0) {
+      if (!quiz || ((lesson.contentMode ?? 'lesson') === 'lesson' && quiz.questions.length === 0)) {
         throw new AppError(422, 'CONTENT_INCOMPLETE', 'Bài tập chưa có câu hỏi');
       }
       const lastCue = subtitle.cues[subtitle.cues.length - 1]!;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   BookOpen,
   Volume2,
@@ -15,6 +16,7 @@ import {
   Film,
   Sparkles,
   CheckCircle2,
+  Bookmark,
   BookmarkPlus,
   ArrowLeft,
   ChevronLeft,
@@ -25,12 +27,16 @@ import {
 } from 'lucide-react';
 import { getPublicVocabulary, type SavedVocabulary, type VocabularyItem } from '../../api/vocabulary';
 import TopicFlashcardModal from './TopicFlashcardModal';
+import SavedWordsPage from './SavedWordsPage';
 
 export interface VocabularyPageProps {
   savedWords?: SavedVocabulary[];
+  dueWords?: SavedVocabulary[];
   onStartReviewSession?: () => void;
+  onReviewWord?: (wordId: string, rating: 'again' | 'hard' | 'good' | 'easy') => Promise<unknown>;
   onSaveWord?: (word: { wordId?: string; hanzi: string; pinyin: string; meaningVi: string; partOfSpeech?: string }) => Promise<void>;
-  onRemoveWord?: (wordId: string) => void | Promise<void>;
+  onRemoveWord?: (wordId: string) => void | Promise<unknown>;
+  initialTab?: 'topics' | 'saved';
 }
 
 export interface WordExample {
@@ -664,12 +670,45 @@ const TOPICS: TopicConfig[] = [
 
 export default function VocabularyPage({
   savedWords = [],
+  dueWords = [],
   onStartReviewSession,
+  onReviewWord,
   onSaveWord,
   onRemoveWord,
+  initialTab,
 }: VocabularyPageProps) {
-  const [activeTab, setActiveTab] = useState<'topics' | 'notebook'>('topics');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<'topics' | 'saved'>(() => {
+    if (initialTab) return initialTab;
+    if (tabFromUrl === 'saved' || tabFromUrl === 'notebook') return 'saved';
+    return 'topics';
+  });
   const [selectedTopic, setSelectedTopic] = useState<TopicConfig | null>(null);
+
+  useEffect(() => {
+    if (tabFromUrl === 'saved' || tabFromUrl === 'notebook') {
+      setActiveTab('saved');
+      setSelectedTopic(null);
+    } else if (tabFromUrl === 'topics') {
+      setActiveTab('topics');
+    }
+  }, [tabFromUrl]);
+
+  const handleTabChange = (nextTab: 'topics' | 'saved') => {
+    setActiveTab(nextTab);
+    setSelectedTopic(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (nextTab === 'saved') {
+        next.set('tab', 'saved');
+      } else {
+        next.delete('tab');
+      }
+      return next;
+    }, { replace: true });
+  };
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -915,49 +954,104 @@ export default function VocabularyPage({
           {/* Right: Stats Grid */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-4">
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#F7F7F9] rounded-2xl p-4 border border-[#E7E7EA] min-w-[100px]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+              <div className="bg-[#F7F7F9] rounded-2xl p-3 sm:p-4 border border-[#E7E7EA] min-w-[95px]">
                 <div className="text-[10px] font-bold text-[#8B9097] uppercase tracking-wider mb-1">Tổng kho</div>
-                <div className="text-xl font-black text-[#18181B]">12,500+</div>
+                <div className="text-lg sm:text-xl font-black text-[#18181B]">12,500+</div>
               </div>
-              <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 min-w-[100px]">
+              <div className="bg-emerald-50 rounded-2xl p-3 sm:p-4 border border-emerald-100 min-w-[95px]">
                 <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Làm chủ</div>
-                <div className="text-xl font-black text-emerald-600">68%</div>
+                <div className="text-lg sm:text-xl font-black text-emerald-600">68%</div>
               </div>
-              <div className="bg-red-50 rounded-2xl p-4 border border-red-100 min-w-[100px]">
-                <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Cần ôn</div>
-                <div className="text-xl font-black text-red-600">{dueCount}</div>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange('saved')}
+                className={`text-left rounded-2xl p-3 sm:p-4 border min-w-[95px] transition-all cursor-pointer ${
+                  activeTab === 'saved'
+                    ? 'bg-[#FDF1F1] border-[#B91B1C]/30 shadow-xs'
+                    : 'bg-white hover:bg-neutral-50 border-[#E7E7EA]'
+                }`}
+                title="Bấm để mở Sổ từ đã lưu"
+              >
+                <div className="text-[10px] font-bold text-[#5F6368] uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Đã lưu</span>
+                  <Bookmark className="w-3 h-3 text-[#B91B1C]" />
+                </div>
+                <div className="text-lg sm:text-xl font-black text-[#B91B1C]">{totalSavedCount}</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange('saved')}
+                className={`text-left rounded-2xl p-3 sm:p-4 border min-w-[95px] transition-all cursor-pointer ${
+                  dueCount > 0
+                    ? 'bg-red-50 hover:bg-red-100/80 border-red-200'
+                    : 'bg-[#F7F7F9] hover:bg-neutral-100 border-[#E7E7EA]'
+                }`}
+                title="Bấm để ôn tập các từ đến hạn"
+              >
+                <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Cần ôn</span>
+                  <Clock className="w-3 h-3 text-red-500" />
+                </div>
+                <div className="text-lg sm:text-xl font-black text-red-600">{dueCount}</div>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Tabs Selection */}
-      <div className="flex items-center justify-between border-b border-[#E7E7EA] pb-1">
-        <div className="flex items-center gap-3">
+      {/* Main Tabs Selection: Chủ đề (Topic Hub) vs. Kho Lưu Trữ (Sổ từ & SRS) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E7E7EA] pb-1">
+        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
+          {/* Tab 1: Các Hộp Chủ Đề */}
           <button
-            onClick={() => {
-              setActiveTab('topics');
-              setSelectedTopic(null);
-            }}
-            className={`pb-3 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer ${
-              activeTab === 'topics' && !selectedTopic
+            type="button"
+            onClick={() => handleTabChange('topics')}
+            className={`pb-3 px-3 text-xs sm:text-sm font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer shrink-0 ${
+              activeTab === 'topics'
                 ? 'border-[#B91B1C] text-[#B91B1C]'
                 : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
             }`}
           >
-            <span>🗂️ Các Hộp Chủ Đề (Topic Hub)</span>
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span>Các Hộp Chủ Đề (Topic Hub)</span>
           </button>
 
+          {/* Breadcrumb if inside topic */}
           {selectedTopic && activeTab === 'topics' && (
-            <div className="flex items-center gap-1.5 text-xs font-black text-[#B91B1C] pb-3 px-2 border-b-2 border-[#B91B1C]">
-              <span>/</span>
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#B91B1C] pb-3 px-2 border-b-2 border-[#B91B1C] shrink-0">
+              <span className="text-[#8B9097]">/</span>
               <span>{selectedTopic.nameVi}</span>
               <span className="text-zinc-400 font-normal">({selectedTopic.nameZh})</span>
             </div>
           )}
+
+          {/* Tab 2: Kho Lưu Trữ (Sổ từ & SRS) */}
+          <button
+            type="button"
+            onClick={() => handleTabChange('saved')}
+            className={`pb-3 px-3 text-xs sm:text-sm font-black transition-all border-b-2 flex items-center gap-2 cursor-pointer shrink-0 ${
+              activeTab === 'saved'
+                ? 'border-[#B91B1C] text-[#B91B1C]'
+                : 'border-transparent text-[#5F6368] hover:text-[#18181B]'
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 shrink-0 ${activeTab === 'saved' ? 'fill-[#B91B1C]' : ''}`} />
+            <span>Kho Lưu Trữ (Sổ Từ Của Bạn)</span>
+          </button>
         </div>
+
+        {/* Back button if inside topic */}
+        {selectedTopic && activeTab === 'topics' && (
+          <button
+            type="button"
+            onClick={() => setSelectedTopic(null)}
+            className="self-start sm:self-auto text-xs font-bold text-[#5F6368] hover:text-[#B91B1C] flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-[#FDF1F1] transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Tất cả chủ đề</span>
+          </button>
+        )}
       </div>
 
       {/* VIEW 1: THEMATIC TOPIC BOXES GRID (APPROVED DESIGN 1) */}
@@ -1415,105 +1509,18 @@ export default function VocabularyPage({
         </div>
       )}
 
-      {/* VIEW 3: MY NOTEBOOK (SỔ TAY SRS ĐÃ LƯU) */}
-      {activeTab === 'notebook' && (
-        <div className="space-y-4">
-          <div className="bg-white p-4 rounded-2xl border border-[#E7E7EA] flex items-center justify-between gap-4">
-            <div className="relative max-w-md w-full">
-              <Search className="w-4 h-4 text-[#8B9097] absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Tìm từ đã lưu theo chữ Hán hoặc Pinyin..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs outline-none focus:border-[#B91B1C]"
-              />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-[#E7E7EA] overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F7F9] border-b border-[#E7E7EA] text-[#8B9097] uppercase font-bold text-[10px]">
-                <tr>
-                  <th className="p-4">Chữ Hán</th>
-                  <th className="p-4">Phiên âm Pinyin</th>
-                  <th className="p-4">Trạng thái SRS</th>
-                  <th className="p-4">Phát âm AI</th>
-                  <th className="p-4 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E7E7EA]">
-                {savedWords.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-8 text-center text-[#5F6368] text-sm">
-                      Chưa có từ vựng nào trong sổ tay. Hãy mở các hộp chủ đề để lưu thêm từ vựng mới!
-                    </td>
-                  </tr>
-                ) : (
-                  savedWords.map((word) => (
-                    <tr key={word._id} className="hover:bg-[#F7F7F9]/50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-black text-xl text-[#18181B] leading-tight">
-                          {word.wordId?.hanzi || '—'}
-                        </div>
-                        {word.wordId?.meaningVi && (
-                          <div className="text-xs text-[#5F6368] mt-0.5 line-clamp-1">
-                            {word.wordId.meaningVi}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span className="font-mono font-bold text-[#B91B1C]">
-                          {word.wordId?.pinyin || '—'}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs text-[#5F6368]">
-                            Lặp lại: <span className="font-bold text-[#18181B]">{word.repetitions ?? 0}</span> lần
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-md font-bold text-[10px] inline-block w-fit ${
-                              new Date(word.nextReviewAt).getTime() < Date.now()
-                                ? 'bg-red-50 text-[#B91B1C]'
-                                : 'bg-emerald-50 text-emerald-700'
-                            }`}
-                          >
-                            {new Date(word.nextReviewAt).getTime() < Date.now() ? 'Cần ôn tập' : 'Đang ghi nhớ'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => playPronunciation(word.wordId?.hanzi || '')}
-                          aria-label={`Phát âm ${word.wordId?.hanzi || ''}`}
-                          className={`p-1.5 rounded-full border transition-colors ${
-                            speakingWord === word.wordId?.hanzi
-                              ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
-                              : 'border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C]'
-                          }`}
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                      <td className="p-4 text-right">
-                        {onRemoveWord && (
-                          <button
-                            onClick={() => onRemoveWord(word.wordId?._id || word._id)}
-                            className="p-1.5 rounded-lg border border-[#E7E7EA] hover:bg-[#FDF1F1] text-[#B91B1C] cursor-pointer"
-                            title="Bỏ lưu từ vựng"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* VIEW 3: KHO LƯU TRỮ (SỔ TAY TỪ VỰNG & SRS FLASHCARD) */}
+      {activeTab === 'saved' && (
+        <SavedWordsPage
+          savedWords={savedWords}
+          dueWords={dueWords}
+          onReviewWord={onReviewWord || (async () => {})}
+          onRemoveWord={async (wordId) => {
+            if (onRemoveWord) await onRemoveWord(wordId);
+          }}
+          onNavigateToVocabulary={() => handleTabChange('topics')}
+          hideTopBanner={true}
+        />
       )}
 
       {/* Topic Flashcard Practice Modal */}

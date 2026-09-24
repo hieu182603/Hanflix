@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Home,
-  BookOpen,
+  PlaySquare,
   Bookmark,
   Map,
   GraduationCap,
@@ -13,6 +13,7 @@ import {
   History,
   Sparkles,
   Shield,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardQueryKeys } from '../api/queryKeys';
@@ -25,7 +26,7 @@ interface SidebarProps {
   activeNav: string;
   onNavChange: (navId: string) => void;
   userProfile: UserProfile;
-  onStartPractice: () => void;
+  onStartPractice?: () => void;
   isDrawerOpen?: boolean;
   onCloseDrawer?: () => void;
   isCollapsed?: boolean;
@@ -104,14 +105,14 @@ export default function Sidebar({
 
   const navItems = [
     { id: 'feed', label: t.nav.feed, icon: Home },
-    { id: 'lessons', label: t.nav.lessons, icon: BookOpen },
-    { id: 'saved', label: t.nav.saved, icon: Bookmark },
+    { id: 'lessons', label: t.nav.lessons, icon: PlaySquare },
     { id: 'vocabulary', label: t.nav.vocabulary, icon: BookMarked },
+    { id: 'grammar', label: t.nav.grammar, icon: BookOpenCheck },
     { id: 'roadmap', label: t.nav.roadmap, icon: Map },
     { id: 'history', label: t.nav.history, icon: History },
     { id: 'exam', label: t.nav.exam, icon: GraduationCap },
     { id: 'leaderboard', label: t.nav.leaderboard, icon: Trophy },
-    { id: 'community', label: t.nav.community, icon: Users },
+    // { id: 'community', label: t.nav.community, icon: Users }, // TEMPORARILY HIDDEN
   ];
 
   const renderContent = (collapsed: boolean) => (
@@ -215,7 +216,7 @@ export default function Sidebar({
             <NavButton
               key={item.id}
               item={item}
-              isActive={activeNav === item.id}
+              isActive={activeNav === item.id || (item.id === 'vocabulary' && activeNav === 'saved')}
               onNavChange={(id) => {
                 onNavChange(id);
                 onCloseDrawer?.();
@@ -241,28 +242,6 @@ export default function Sidebar({
         </nav>
       </div>
 
-      {/* CTA Bottom Button */}
-      <div className="shrink-0 px-3 pb-4 pt-3 border-t border-[#E7E7EA]">
-        <div className="relative group">
-          <button
-            onClick={onStartPractice}
-            aria-label={t.nav.startReview}
-            className={`w-full h-[44px] bg-[#B91B1C] hover:bg-[#A3181A] active:scale-[0.98] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer ${
-              collapsed ? 'px-2' : 'px-4'
-            }`}
-          >
-            <Zap className="w-4 h-4 shrink-0 fill-current" />
-            {!collapsed && <span className="truncate">{t.nav.startReview}</span>}
-          </button>
-
-          {collapsed && (
-            <div className="hidden lg:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-              {t.nav.startReview}
-              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#18181B]" />
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 

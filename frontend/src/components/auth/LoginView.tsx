@@ -196,8 +196,15 @@ export default function LoginView({ onLoginSuccess, onNavigateToSignup, onNaviga
           {errorMsg}
         </div>
       )}
-      {canResendVerification && <button type="button" onClick={resendVerification}
-        className="mb-3 text-sm font-semibold text-[#E50914] hover:underline">Gửi lại mã xác minh</button>}
+      {canResendVerification && (
+        <button
+          type="button"
+          onClick={resendVerification}
+          className="mb-3 text-sm font-semibold text-[#E50914] hover:underline"
+        >
+          Gửi lại mã xác minh
+        </button>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5 auth-field-gap">
         {/* Email */}

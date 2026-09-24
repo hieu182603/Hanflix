@@ -12,8 +12,40 @@ import {
   X,
 } from "lucide-react"
 import { askPanda } from "../api/learning"
-import { ApiRequestError } from "../api/client"
 import { usePandaPet } from "./panda-pet"
+
+// ——————————————————————————————————————————————————————————
+// TOPIC GUARD — mirrors backend blocklist for instant client-side feedback
+// ——————————————————————————————————————————————————————————
+const OFFTOPIC_PATTERNS: RegExp[] = [
+  /^(how do I|write|code|program|coding|debug|compile|run)\s+\w+\s+(code|program|in |with |using )/i,
+  /function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=/,
+  /def\s+\w+\s*\(|class\s+\w+|import\s+\w+/,
+  /python|javascript|java|c\+\+|typescript|golang|rust\s+(code|program)/i,
+  /giải\s+(bài\s+)?toán|phương\s+trình|tích\s+phân|đạo\s+hàm/i,
+  /(đầu\s+tư|cổ\s+phiếu|chứng\s+khoán|forex|bitcoin|tiền\s+điện\s+tử|crypto|nft)\b/i,
+  /thị\s+trường\s+(chứng|forex|coin)|mua\s+(cổ\s+phiếu|trái\s+phiếu)/i,
+  /tôi\s+bị\s+(đau|ốm|bệnh|sốt|viêm|nhiễm)/i,
+  /thuốc\s+(chữa|uống|chích|tiêm)|bác\s+sĩ\b/i,
+  /chính\s+phủ\s+|đảng\s+(cộng|sản)|bầu\s+cử|chính\s+trị/i,
+  /luật\s+sư|tố\s+cáo|kiện\s+(tụng|法院)|phạt\s+(tù|giam)|tù\s+(nhân|giam)/i,
+  /công\s+thức\s+(nấu|làm)\s+(ă|n)?(ấm|ưm)|nấu\s+(cơm|canh|thịt|cá)/i,
+  /\b(sexy|nude|porn|naked|xxx|erotic|18\+|giường)\b/i,
+  /\b(mua\s+(bán)\s+(thuốc|drug|cocaine|heroin)|ma\s+túy)\b/i,
+  /^(what is|tell me|explain)\s+(the\s+)?(weather|stock|news|sport|score|result)\b/i,
+]
+
+const OFFTOPIC_HINT = 'Câu hỏi ngoài phạm vi hỗ trợ của Panda. Hãy hỏi về từ vựng, ngữ pháp hoặc bài học nhé.'
+
+function validateQuestion(question: string): { valid: boolean; hint: string } {
+  const trimmed = question.trim()
+  if (trimmed.length < 3) return { valid: true, hint: '' }
+  if (trimmed.length > 600) return { valid: false, hint: 'Câu hỏi quá dài. Hãy chia nhỏ ý.' }
+  for (const pattern of OFFTOPIC_PATTERNS) {
+    if (pattern.test(trimmed)) return { valid: false, hint: OFFTOPIC_HINT }
+  }
+  return { valid: true, hint: '' }
+}
 
 interface AIAssistantDrawerProps {
   isOpen: boolean
@@ -181,6 +213,23 @@ export default function AIAssistantDrawer({
     const query = (textToSend ?? inputText).trim()
     if (!query || isTyping) return
 
+    // Client-side topic guard — instant feedback without API call
+    const validation = validateQuestion(query)
+    if (!validation.valid) {
+      const hintMessage: ChatMessage = {
+        id: `${Date.now()}-ai`,
+        sender: 'ai',
+        text: validation.hint,
+        time: new Date().toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      }
+      setMessages((previous) => [...previous, hintMessage])
+      if (!textToSend) setInputText('')
+      return
+    }
+
     const userMessage: ChatMessage = {
       id: `${Date.now()}-user`,
       sender: "user",
@@ -221,21 +270,13 @@ export default function AIAssistantDrawer({
       panda.handlePandaAIEvent({ type: "completed" })
     } catch (error) {
       window.clearTimeout(workTimer)
-      // Sanitize error message from API: strip HTML/control chars and cap length
-      const rawMessage =
-        error instanceof ApiRequestError
-          ? error.message
-          : "Không thể kết nối Panda AI lúc này. Vui lòng thử lại."
-      const errorMessage = rawMessage
-        .replace(/[\x00-\x1F\x7F]/g, '')
-        .replace(/<[^>]*>/g, '')
-        .slice(0, 200)
+      // Show generic message — never surface Gemini/technical internals to user
       setMessages((previous) => [
         ...previous,
         {
           id: `${Date.now()}-error`,
           sender: "ai",
-          text: errorMessage,
+          text: "Hệ thống đang quá tải, thử lại sau.",
           time: "Vừa xong",
           isError: true,
         },

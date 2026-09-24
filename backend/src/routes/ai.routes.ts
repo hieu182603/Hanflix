@@ -9,7 +9,8 @@ import { LessonModel } from '../models/lesson.model.js';
 import { SubtitleTrackModel } from '../models/subtitle-track.model.js';
 import { UserModel } from '../models/user.model.js';
 import { WordModel } from '../models/word.model.js';
-import { answerLearningQuestion, explainChineseInContext } from '../services/gemini.js';
+import { answerLearningQuestion, explainChineseInContext, isOffTopicQuestion, normalizeAiError, type AiExplanation } from '../services/gemini.js';
+import { answerSchema } from '../services/gemini.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
@@ -27,12 +28,23 @@ const askSchema = z.object({
 });
 
 router.post('/ask', requireAuth, aiLimiter, validate(askSchema), asyncHandler(async (req, res) => {
+  // Server-side topic guard
+  const guard = isOffTopicQuestion(req.body.question);
+  if (guard.blocked) {
+    throw new AppError(400, 'OFF_TOPIC', guard.reason);
+  }
+
   const learner = await UserModel.findById(req.auth!.userId).select('learningProfile').lean();
-  const answer = await answerLearningQuestion({
-    question: req.body.question,
-    profile: learner?.learningProfile ?? {},
-    context: req.body.context,
-  });
+  let answer: z.infer<typeof answerSchema>;
+  try {
+    answer = await answerLearningQuestion({
+      question: req.body.question,
+      profile: learner?.learningProfile ?? {},
+      context: req.body.context,
+    });
+  } catch (err) {
+    throw normalizeAiError(err);
+  }
   res.json({ data: answer });
 }));
 
@@ -52,15 +64,20 @@ router.post('/explain', requireAuth, aiLimiter, validate(explainSchema), asyncHa
   const cue = track?.cues.find(item => item.cueId === req.body.cueId);
   if (!cue) throw new AppError(422, 'INVALID_CONTEXT', 'Từ không thuộc câu phụ đề đã chọn');
 
-  const explanation = await explainChineseInContext({
-    hanzi: word.hanzi,
-    pinyin: word.pinyin ?? undefined,
-    meaningVi: word.meaningVi ?? undefined,
-    sentenceZh: cue.zh,
-    sentenceVi: cue.vi,
-    learnerHsk: learner?.learningProfile?.currentHsk ?? undefined,
-    question: req.body.question,
-  });
+  let explanation: AiExplanation;
+  try {
+    explanation = await explainChineseInContext({
+      hanzi: word.hanzi,
+      pinyin: word.pinyin ?? undefined,
+      meaningVi: word.meaningVi ?? undefined,
+      sentenceZh: cue.zh,
+      sentenceVi: cue.vi,
+      learnerHsk: learner?.learningProfile?.currentHsk ?? undefined,
+      question: req.body.question,
+    });
+  } catch (err) {
+    throw normalizeAiError(err);
+  }
   res.json({ data: { ...explanation, context: { lessonId: lesson._id, cueId: cue.cueId, wordId: word._id } } });
 }));
 

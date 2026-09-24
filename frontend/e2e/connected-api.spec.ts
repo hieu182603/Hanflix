@@ -54,9 +54,11 @@ test('learner opens a published lesson, submits its quiz, and saves a subtitle w
   expect(quizPayload.idempotencyKey?.length).toBeGreaterThan(8);
 });
 
-test('admin upload creates a draft, sends bytes to R2, and confirms processing', async ({ page }) => {
+for (const mode of ['lesson', 'song', 'podcast', 'drama'] as const) test(`admin upload ${mode} creates a draft, sends bytes to R2, and confirms processing`, async ({ page }) => {
   let draftInput: Record<string, unknown> = {};
   let confirmed: Record<string, string> = {};
+  const mimeType = mode === 'song' || mode === 'podcast' ? 'audio/mpeg' : 'video/mp4';
+  const fileName = mimeType === 'audio/mpeg' ? 'lesson.mp3' : 'lesson.mp4';
   let r2Uploads = 0;
   let created = false;
   await page.route('https://r2.test/upload', route => { r2Uploads++; return route.fulfill({ status: 200, body: '' }); });
@@ -69,7 +71,7 @@ test('admin upload creates a draft, sends bytes to R2, and confirms processing',
     else if (path === '/api/v1/admin/processing-jobs') data = { items: [], total: 0 };
     else if (path === '/api/v1/admin/lessons' && method === 'POST') {
       draftInput = JSON.parse(route.request().postData() ?? '{}'); created = true; data = { ...lesson, status: 'draft' };
-    } else if (path === '/api/v1/admin/uploads/presign') data = { uploadUrl: 'https://r2.test/upload', objectKey: `videos/${lessonId}/video.mp4`, requiredHeaders: { 'Content-Type': 'video/mp4' }, maxBytes: 104857600 };
+    } else if (path === '/api/v1/admin/uploads/presign') data = { uploadUrl: 'https://r2.test/upload', objectKey: `videos/${lessonId}/video.mp4`, requiredHeaders: { 'Content-Type': mimeType }, maxBytes: 104857600 };
     else if (path === '/api/v1/admin/uploads/confirm') {
       confirmed = JSON.parse(route.request().postData() ?? '{}'); data = { lessonId, status: 'processing', processingJobId: 'job-1' };
     } else if (path === `/api/v1/admin/lessons/${lessonId}/processing`) data = { status: 'queued', stage: 'inspect_media', stageProgress: 5, attempts: 0, video: { status: 'processing' } };
@@ -77,13 +79,17 @@ test('admin upload creates a draft, sends bytes to R2, and confirms processing',
   });
   await mockSession(page, 'admin');
   await page.goto('/');
-  await page.getByRole('button', { name: 'Tải video mới', exact: true }).click();
-  await page.getByLabel('Video MP4/WebM').setInputFiles({ name: 'lesson.mp4', mimeType: 'video/mp4', buffer: Buffer.from('test-video') });
+  await page.getByRole('complementary').getByRole('button', { name: 'Tải video mới', exact: true }).click();
+  if (mode !== 'lesson') await page.getByRole('button', { name: mode === 'song' ? /Bài hát.*Karaoke/ : mode === 'podcast' ? /Podcast.*Chapter/ : /Drama.*Multi/ }).click();
+  if (mode === 'song') await page.getByLabel('Lời bài hát LRC (khuyên dùng)').fill('[00:00.00]你好');
+  if (mode === 'podcast') await page.getByLabel('Thời lượng (giây)').fill('1800');
+  await page.getByLabel('Video MP4/WebM').setInputFiles({ name: fileName, mimeType, buffer: Buffer.from('test-media') });
   await page.getByLabel('Tiêu đề bài học (Tiếng Việt)').fill('Bài học từ API');
   await page.getByLabel('Mô tả').fill('Một bài học thử nghiệm từ API backend.');
-  await page.getByRole('button', { name: 'Tạo Bài Học & Khởi Động AI Pipeline' }).click();
+  await page.getByRole('button', { name: 'Tạo Bài Học & Khởi Động AI', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tiến Trình Xử Lý AI Pipeline' })).toBeVisible();
-  expect(draftInput).toMatchObject({ titleVi: 'Bài học từ API', hsk: 3, durationSeconds: 120 });
-  expect(r2Uploads).toBe(1);
-  expect(confirmed).toEqual({ lessonId, objectKey: `videos/${lessonId}/video.mp4` });
+  expect(draftInput).toMatchObject({ titleVi: 'Bài học từ API', hsk: 3, durationSeconds: mode === 'podcast' ? 1800 : 120, contentMode: mode });
+  if (mode === 'song') expect(draftInput).toMatchObject({ lyricsRaw: '[00:00.00]你好', lyricsSource: 'lrc' });
+  await expect.poll(() => r2Uploads).toBe(1);
+  await expect.poll(() => confirmed).toEqual({ lessonId, objectKey: `videos/${lessonId}/video.mp4` });
 });

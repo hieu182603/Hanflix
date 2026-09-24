@@ -3,64 +3,28 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent,
 } from "react"
 import { pandaLabels } from "./panda.config"
 import { usePandaPet } from "./PandaPetContext"
 import { PandaSprite } from "./PandaSprite"
 import "./panda.css"
 
-const STORAGE_KEY = "panda-pet-position"
-
 type Position = {
   x: number
   y: number
-}
-type Drag = {
-  pointerId: number
-  startX: number
-  startY: number
-  origin: Position
-  moved: boolean
 }
 
 function petSize(): number {
   return window.innerWidth <= 600 ? 72 : window.innerWidth <= 1024 ? 88 : 104
 }
 
-function clampPosition(position: Position): Position {
-  return {
-    x: Math.min(
-      Math.max(0, position.x),
-      Math.max(0, window.innerWidth - petSize()),
-    ),
-    y: Math.min(
-      Math.max(0, position.y),
-      Math.max(0, window.innerHeight - petSize()),
-    ),
-  }
-}
-
 function defaultPosition(): Position {
   const margin = window.innerWidth <= 600 ? 12 : 24
   const bottom = window.innerWidth <= 600 ? 80 : 24
-  return clampPosition({
+  return {
     x: window.innerWidth - petSize() - margin,
     y: window.innerHeight - petSize() - bottom,
-  })
-}
-
-function savedPosition(): Position {
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) ?? "null",
-    ) as Position | null
-    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y))
-      return clampPosition(saved)
-  } catch {
-    /* Ignore malformed or blocked storage. */
   }
-  return defaultPosition()
 }
 
 export interface PandaPetProps {
@@ -104,18 +68,24 @@ const BUBBLE_MESSAGES: Record<import("./panda.types").PandaState, {
 
 export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
   const { state, triggerReaction } = usePandaPet()
-  const [position, setPosition] = useState<Position>(savedPosition)
+  const [position, setPosition] = useState<Position>(defaultPosition)
   const [bubbleOpen, setBubbleOpen] = useState(false)
-  const [dragging, setDragging] = useState(false)
   const [pageHidden, setPageHidden] = useState(document.hidden)
   const rootRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<Drag | null>(null)
-  const positionRef = useRef(position)
-  positionRef.current = position
 
   useEffect(() => {
-    const onResize = () => setPosition((current) => clampPosition(current))
+    const onResize = () => {
+      // Recompute fixed bottom-right anchor on resize
+      const margin = window.innerWidth <= 600 ? 12 : 24
+      const bottom = window.innerWidth <= 600 ? 80 : 24
+      const size = petSize()
+      setPosition({
+        x: window.innerWidth - size - margin,
+        y: window.innerHeight - size - bottom,
+      })
+    }
     const onVisibility = () => setPageHidden(document.hidden)
+    onResize()
     window.addEventListener("resize", onResize)
     document.addEventListener("visibilitychange", onVisibility)
     return () => {
@@ -139,71 +109,6 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
       window.removeEventListener("keydown", onEscape)
     }
   }, [bubbleOpen])
-
-  const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
-    if (
-      !event.isPrimary ||
-      (event.pointerType === "mouse" && event.button !== 0)
-    )
-      return
-    event.currentTarget.setPointerCapture(event.pointerId)
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      origin: positionRef.current,
-      moved: false,
-    }
-  }
-
-  const onPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    const dx = event.clientX - drag.startX
-    const dy = event.clientY - drag.startY
-    if (!drag.moved && Math.hypot(dx, dy) > 7) {
-      drag.moved = true
-      setDragging(true)
-      setBubbleOpen(false)
-    }
-    if (drag.moved)
-      setPosition(
-        clampPosition({ x: drag.origin.x + dx, y: drag.origin.y + dy }),
-      )
-  }
-
-  const endPointer = (
-    event: PointerEvent<HTMLButtonElement>,
-    cancelled = false,
-  ) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    dragRef.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId))
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    if (drag.moved) {
-      setDragging(false)
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(positionRef.current))
-      } catch {
-        /* Storage optional. */
-      }
-      window.dispatchEvent(
-        new CustomEvent("panda-pet:position", { detail: positionRef.current }),
-      )
-    } else if (!cancelled) {
-      if (onOpenAI) {
-        if (!isAIOpen) {
-          triggerReaction("thinking", 1000)
-          onOpenAI()
-        } else {
-          setBubbleOpen((open) => !open)
-        }
-      } else {
-        setBubbleOpen((open) => !open)
-      }
-    }
-  }
 
   const size = petSize()
   const isDesktop = typeof window !== "undefined" && window.innerWidth > 640
@@ -283,7 +188,7 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
       <button
         type="button"
         className="panda-pet-button group"
-        data-dragging={dragging}
+        data-dragging="false"
         style={{ left: effectiveX, top: position.y }}
         aria-label={
           isAIOpen
@@ -292,22 +197,16 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
         }
         aria-expanded={bubbleOpen}
         aria-controls="panda-pet-bubble"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={(event) => endPointer(event)}
-        onPointerCancel={(event) => endPointer(event, true)}
-        onClick={(event) => {
-          if (event.detail === 0) {
-            if (onOpenAI) {
-              if (!isAIOpen) {
-                triggerReaction("thinking", 1000)
-                onOpenAI()
-              } else {
-                setBubbleOpen((open) => !open)
-              }
+        onClick={() => {
+          if (onOpenAI) {
+            if (!isAIOpen) {
+              triggerReaction("thinking", 1000)
+              onOpenAI()
             } else {
               setBubbleOpen((open) => !open)
             }
+          } else {
+            setBubbleOpen((open) => !open)
           }
         }}
       >

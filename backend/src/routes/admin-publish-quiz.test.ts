@@ -24,6 +24,19 @@ beforeAll(async () => {
 
 afterEach(() => vi.restoreAllMocks());
 
+it.each(['song', 'podcast', 'drama', 'lesson'])('publish %s applies the correct quiz requirement', async contentMode => {
+  const userId = new Types.ObjectId(); const lessonId = new Types.ObjectId();
+  vi.spyOn(UserModel, 'findById').mockReturnValue({ select: () => ({ lean: async () => ({ _id: userId, role: 'admin', status: 'active' }) }) } as never);
+  const save = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(LessonModel, 'findOne').mockReturnValue({ session: async () => ({ _id: lessonId, status: 'ready_for_review', contentMode, media: {}, durationSeconds: 1800, save }) } as never);
+  vi.spyOn(SubtitleTrackModel, 'findOne').mockReturnValue({ sort: () => ({ session: async () => ({ revision: 1, cues: [{ endMs: 1800000 }], save }) }) } as never);
+  vi.spyOn(QuizModel, 'findOne').mockReturnValue({ sort: () => ({ select: () => ({ session: async () => ({ revision: 1, questions: [], save }) }) }) } as never);
+  const response = await request(app).post(`/api/v1/admin/lessons/${lessonId}/publish`)
+    .set('Authorization', `Bearer ${signAccessToken(userId.toString(), 'admin')}`);
+  expect(response.status).toBe(contentMode === 'lesson' ? 422 : 200);
+  if (contentMode === 'lesson') expect(save).not.toHaveBeenCalled();
+});
+
 it.each(['multiple_choice', 'fill_blank', 'invalid'])(
   'publish explicitly loads hidden answers and validates %s', async (kind) => {
     const userId = new Types.ObjectId();
