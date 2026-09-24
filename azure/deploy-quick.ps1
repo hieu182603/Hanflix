@@ -88,42 +88,67 @@ $currentImage = az containerapp show `
 Write-Info "Current image: $currentImage"
 
 # ---- (Optional) build + push ----
-if ($BuildLocal) {
-  if (-not $env:GHCR_USERNAME -or -not $env:GHCR_TOKEN) {
-    Write-Fail "GHCR_USERNAME / GHCR_TOKEN env vars required for -BuildLocal"
-    exit 1
-  }
-
-  Write-Host ""
-  Write-Host "-- Build & Push -----------------------------------" -ForegroundColor Gray
-
-  $env:GHCR_TOKEN | docker login ghcr.io -u $env:GHCR_USERNAME --password-stdin | Out-Null
-  if ($LASTEXITCODE -ne 0) { Write-Fail "GHCR login failed"; exit 1 }
-
-  $tagVersion = "v$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-  $imageTag = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:$tagVersion"
-  $imageLatest = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:latest"
-
+if ($BuildLocal -or (-not $GhcrImage)) {
+  $acrLoginServer = az acr list -g $rgName --query "[0].loginServer" -o tsv 2>$null
   $backendDir = Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "backend"
 
-  Write-Info "Building $imageTag (with BuildKit cache)..."
-  # BuildKit cache-from/export so repeated builds reuse layers
-  $env:DOCKER_BUILDKIT = "1"
-  docker build `
-    --cache-from "type=registry,ref=ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache" `
-    --cache-to   "type=registry,ref=ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache,mode=max" `
-    -t $imageTag -t $imageLatest -t "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache" `
-    $backendDir | Out-Null
-  if ($LASTEXITCODE -ne 0) { Write-Fail "docker build failed"; exit 1 }
-  Write-Success "Built $imageTag"
+  if ($acrLoginServer) {
+    Write-Host ""
+    Write-Host "-- Build & Push to ACR ----------------------------" -ForegroundColor Gray
+    Write-Info "Logging into ACR: $acrLoginServer..."
+    az acr login --name ($acrLoginServer.Split('.')[0]) | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Fail "ACR login failed"; exit 1 }
 
-  Write-Info "Pushing to GHCR..."
-  docker push $imageTag | Out-Null
-  docker push $imageLatest | Out-Null
-  if ($LASTEXITCODE -ne 0) { Write-Fail "docker push failed"; exit 1 }
-  Write-Success "Pushed"
+    $tagVersion = "v$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    $imageTag = "$acrLoginServer/hanflix-backend:$tagVersion"
+    $imageLatest = "$acrLoginServer/hanflix-backend:latest"
 
-  $GhcrImage = $imageTag
+    Write-Info "Building $imageTag..."
+    docker build -t $imageTag -t $imageLatest $backendDir
+    if ($LASTEXITCODE -ne 0) { Write-Fail "docker build failed"; exit 1 }
+    Write-Success "Built $imageTag"
+
+    Write-Info "Pushing to ACR..."
+    docker push $imageTag
+    docker push $imageLatest
+    if ($LASTEXITCODE -ne 0) { Write-Fail "docker push failed"; exit 1 }
+    Write-Success "Pushed to ACR"
+
+    $GhcrImage = $imageTag
+  } else {
+    if (-not $env:GHCR_USERNAME -or -not $env:GHCR_TOKEN) {
+      Write-Fail "GHCR_USERNAME / GHCR_TOKEN env vars required when ACR is not used"
+      exit 1
+    }
+
+    Write-Host ""
+    Write-Host "-- Build & Push to GHCR ---------------------------" -ForegroundColor Gray
+
+    $env:GHCR_TOKEN | docker login ghcr.io -u $env:GHCR_USERNAME --password-stdin | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Fail "GHCR login failed"; exit 1 }
+
+    $tagVersion = "v$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    $imageTag = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:$tagVersion"
+    $imageLatest = "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:latest"
+
+    Write-Info "Building $imageTag..."
+    $env:DOCKER_BUILDKIT = "1"
+    docker build `
+      --cache-from "type=registry,ref=ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache" `
+      --cache-to   "type=registry,ref=ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache,mode=max" `
+      -t $imageTag -t $imageLatest -t "ghcr.io/$($env:GHCR_USERNAME)/hanflix-backend:cache" `
+      $backendDir | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Fail "docker build failed"; exit 1 }
+    Write-Success "Built $imageTag"
+
+    Write-Info "Pushing to GHCR..."
+    docker push $imageTag | Out-Null
+    docker push $imageLatest | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Fail "docker push failed"; exit 1 }
+    Write-Success "Pushed"
+
+    $GhcrImage = $imageTag
+  }
 }
 
 if (-not $GhcrImage) {
