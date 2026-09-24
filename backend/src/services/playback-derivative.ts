@@ -44,11 +44,38 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { accessSync, constants } from 'node:fs';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { env } from '../config/env.js';
 import { logger } from './logger.js';
 import { uploadR2File, deleteR2Object } from './r2.js';
 
 export const PLAYBACK_DERIVATIVE_VERSION = 1;
+
+/**
+ * Resolve the path to the bundled ffmpeg/ffprobe binaries. On Windows,
+ * `spawn('ffprobe')` fails with ENOENT because `spawn` does NOT append
+ * `.exe`. The `@ffmpeg-installer` packages ship platform-specific
+ * executables (e.g. `ffprobe.exe`), so we must use the installer's full
+ * path. Falls back to the bare command name if the installer binary is
+ * missing or not executable (e.g. in minimal containers) — Linux/macOS
+ * CI usually has ffmpeg on PATH.
+ */
+function resolveBinary(installerPath: string | undefined, systemCommand: string): string {
+  if (installerPath) {
+    try {
+      accessSync(installerPath, constants.X_OK);
+      return installerPath;
+    } catch {
+      // Installer binary present but not executable; fall through to system PATH.
+    }
+  }
+  return systemCommand;
+}
+
+const FFMPEG_BIN = resolveBinary(ffmpegInstaller?.path, 'ffmpeg');
+const FFPROBE_BIN = resolveBinary(ffprobeInstaller?.path, 'ffprobe');
 
 export interface ProbeSummary {
   format: 'mp4' | 'webm' | 'mov' | 'mkv' | 'avi' | 'other';
@@ -68,7 +95,7 @@ export interface ProbeSummary {
  */
 export async function probeForDerivative(localPath: string, signal?: AbortSignal): Promise<ProbeSummary | null> {
   try {
-    const json = await runProcess('ffprobe', [
+    const json = await runProcess(FFPROBE_BIN, [
       '-v', 'error',
       '-print_format', 'json',
       '-show_format',
@@ -214,7 +241,7 @@ export async function generatePlaybackDerivative(options: GenerateOptions): Prom
  */
 async function remuxFaststart(source: string, output: string, signal?: AbortSignal): Promise<boolean> {
   try {
-    await runProcess('ffmpeg', [
+    await runProcess(FFMPEG_BIN, [
       '-y',
       '-i', source,
       '-c', 'copy',
@@ -254,7 +281,7 @@ async function transcodeFaststart(source: string, output: string, probe: ProbeSu
   args.push('-f', 'mp4', output);
 
   try {
-    await runProcess('ffmpeg', args, signal);
+    await runProcess(FFMPEG_BIN, args, signal);
     return true;
   } catch (error) {
     logger.warn({ error: error instanceof Error ? error.message : String(error) }, '[PlaybackDerivative] transcode failed');

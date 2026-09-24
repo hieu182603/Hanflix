@@ -254,17 +254,23 @@ it("silence and corrupt media never create fake subtitles", async () => {
   )
   await expect(run()).rejects.toThrow("corrupt")
 })
-it("propagates the 420-second budget into media validation", async () => {
-  mocks.probe.mockRejectedValue(
-    new AppError(413, "VIDEO_DURATION_EXCEEDED", "421s"),
-  )
-  await expect(run()).rejects.toThrow("421s")
-  expect(mocks.probe).toHaveBeenCalledWith(
-    "/tmp/source.mp4",
-    expect.anything(),
-    { maxDurationSeconds: 420 },
-  )
-  expect(mocks.asr).not.toHaveBeenCalled()
+it.each([300, 600])("propagates the configured %i-second budget into media validation", async (limit) => {
+  const previousLimit = env.MAX_VIDEO_DURATION_SECONDS
+  env.MAX_VIDEO_DURATION_SECONDS = limit
+  try {
+    mocks.probe.mockRejectedValue(
+      new AppError(413, "VIDEO_DURATION_EXCEEDED", `${limit + 1}s`),
+    )
+    await expect(run()).rejects.toThrow(`${limit + 1}s`)
+    expect(mocks.probe).toHaveBeenCalledWith(
+      "/tmp/source.mp4",
+      expect.anything(),
+      { maxDurationSeconds: limit },
+    )
+    expect(mocks.asr).not.toHaveBeenCalled()
+  } finally {
+    env.MAX_VIDEO_DURATION_SECONDS = previousLimit
+  }
 })
 it("lease loss prevents expensive work and final commit", async () => {
   mocks.failLease = true

@@ -88,7 +88,7 @@ const envSchema = z.object({
   AZURE_SPEECH_MODEL_CACHE_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   R2_ASR_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(3600).max(86400).default(43200),
   MIN_VIDEO_DURATION_SECONDS: z.coerce.number().int().min(1).default(60),
-  MAX_VIDEO_DURATION_SECONDS: z.coerce.number().int().min(1).max(600).default(420),
+  MAX_VIDEO_DURATION_SECONDS: z.coerce.number().int().min(1).max(600).default(600),
   PROCESSING_PIPELINE_VERSION: z.coerce.number().int().min(1).max(10).default(2),
   VIDEO_PROCESSING_PIPELINE_V2: booleanFromString.default(true),
   MUSIC_PRESEPARATE_VOCALS: booleanFromString.default(false),

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react"
 import {
   Upload,
   Video,
@@ -17,110 +17,125 @@ import {
   RefreshCw,
   Cpu,
   ChevronDown,
-} from 'lucide-react';
-import type { AdminLesson, ProcessingJob, ProcessingStatus, UploadProgressEvent } from '../../api/admin';
+  Timer,
+  AlertTriangle,
+} from "lucide-react"
+import type {
+  AdminLesson,
+  ProcessingJob,
+  ProcessingStatus,
+  UploadProgressEvent,
+} from "../../api/admin"
+import { validateMediaFile } from "./media-file-validation"
 
-const HSK_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+const HSK_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
 // Unified 3-Tier Imperial & Scholar Palette
 const HSK_COLORS: Record<number, { bg: string; text: string; border: string }> = {
-  1: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
-  2: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
-  3: { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
-  4: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
-  5: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
-  6: { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
-  7: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
-  8: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
-  9: { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
-};
+  1: { bg: "bg-[#EAF5F1]", text: "text-[#188A5A]", border: "border-[#C6E7DA]" },
+  2: { bg: "bg-[#EAF5F1]", text: "text-[#188A5A]", border: "border-[#C6E7DA]" },
+  3: { bg: "bg-[#EAF5F1]", text: "text-[#188A5A]", border: "border-[#C6E7DA]" },
+  4: { bg: "bg-[#FFF8EC]", text: "text-[#B45309]", border: "border-[#FDE6BA]" },
+  5: { bg: "bg-[#FFF8EC]", text: "text-[#B45309]", border: "border-[#FDE6BA]" },
+  6: { bg: "bg-[#FFF8EC]", text: "text-[#B45309]", border: "border-[#FDE6BA]" },
+  7: { bg: "bg-[#FDF1F1]", text: "text-[#B91B1C]", border: "border-[#F9D2D2]" },
+  8: { bg: "bg-[#FDF1F1]", text: "text-[#B91B1C]", border: "border-[#F9D2D2]" },
+  9: { bg: "bg-[#FDF1F1]", text: "text-[#B91B1C]", border: "border-[#F9D2D2]" },
+}
 
 const TOPIC_OPTIONS = [
-  { id: 'daily-life', label: 'Đời sống thường nhật (Daily Life)' },
-  { id: 'food', label: 'Ẩm thực & Nhà hàng (Food & Dining)' },
-  { id: 'travel', label: 'Du lịch & Giao thông (Travel & Transport)' },
-  { id: 'shopping', label: 'Mua sắm & Giá cả (Shopping & Market)' },
-  { id: 'business', label: 'Công việc & Thương mại (Business & Work)' },
-  { id: 'entertainment', label: 'Giải trí & Phim ảnh (Entertainment & Cinema)' },
-];
+  { id: "daily-life", label: "Đời sống thường nhật (Daily Life)" },
+  { id: "food", label: "Ẩm thực & Nhà hàng (Food & Dining)" },
+  { id: "travel", label: "Du lịch & Giao thông (Travel & Transport)" },
+  { id: "shopping", label: "Mua sắm & Giá cả (Shopping & Market)" },
+  { id: "business", label: "Công việc & Thương mại (Business & Work)" },
+  {
+    id: "entertainment",
+    label: "Giải trí & Phim ảnh (Entertainment & Cinema)",
+  },
+]
 
 export function formatDurationMmSs(sec?: number): string {
-  if (sec === undefined || sec === null || isNaN(sec) || sec <= 0) return '';
-  const total = Math.round(sec);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
+  if (sec === undefined || sec === null || isNaN(sec) || sec <= 0) return ""
+  const total = Math.round(sec)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
   if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
   }
-  return `${m}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, "0")}`
 }
 
 export function parseDurationText(text: string): number {
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  if (trimmed.includes(':')) {
-    const parts = trimmed.split(':').map((p) => Number(p));
+  const trimmed = text.trim()
+  if (!trimmed) return 0
+  if (trimmed.includes(":")) {
+    const parts = trimmed.split(":").map((p) => Number(p))
     if (parts.every((p) => Number.isFinite(p) && p >= 0)) {
       if (parts.length === 2) {
-        return Math.round(parts[0] * 60 + parts[1]);
+        return Math.round(parts[0] * 60 + parts[1])
       }
       if (parts.length === 3) {
-        return Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]);
+        return Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2])
       }
     }
   }
-  const mMatch = /(\d+)\s*m/i.exec(trimmed);
-  const sMatch = /(\d+)\s*s/i.exec(trimmed);
+  const mMatch = /(\d+)\s*m/i.exec(trimmed)
+  const sMatch = /(\d+)\s*s/i.exec(trimmed)
   if (mMatch || sMatch) {
-    const m = mMatch ? Number(mMatch[1]) : 0;
-    const s = sMatch ? Number(sMatch[1]) : 0;
-    return Math.round(m * 60 + s);
+    const m = mMatch ? Number(mMatch[1]) : 0
+    const s = sMatch ? Number(sMatch[1]) : 0
+    return Math.round(m * 60 + s)
   }
-  const num = Number(trimmed);
+  const num = Number(trimmed)
   if (Number.isFinite(num) && num > 0) {
-    return Math.round(num);
+    return Math.round(num)
   }
-  return 0;
+  return 0
 }
 
 export interface AdminVideoUploaderProps {
-  activeTab: 'upload' | 'processing';
-  onTabChange: (tab: 'upload' | 'processing' | 'editor' | 'videos') => void;
-  titleVi: string;
-  setTitleVi: (v: string) => void;
-  titleZh: string;
-  setTitleZh: (v: string) => void;
-  descriptionVi: string;
-  setDescriptionVi: (v: string) => void;
-  hsk: number;
-  setHsk: (v: number) => void;
-  autoGenerateQuizCount: number | '';
-  setAutoGenerateQuizCount: (v: number | '') => void;
-  topic: string;
-  setTopic: (v: string) => void;
-  duration: number;
-  setDuration: (v: number) => void;
-  file: File | null;
-  setFile: (f: File | null) => void;
-  busy: boolean;
-  uploadStage: 'idle' | 'presigning' | 'uploading' | 'confirming';
-  uploadProgress: { percent: number; bytesSent: number; totalBytes: number };
-  uploadError: string;
-  onSubmitUpload: (e: React.FormEvent) => void;
-  onCancelUpload: () => void;
-  selectedLesson?: AdminLesson;
-  processingStatus?: ProcessingStatus | null;
-  jobs: ProcessingJob[];
-  lessons: AdminLesson[];
-  onSelectLesson: (id: string) => void;
-  onEditLesson?: (id: string) => void;
-  onRetryProcessing: (id: string, lyricsRaw?: string, mode?: AdminLesson['contentMode']) => Promise<void>;
-  onCancelVideoUpload: (id: string) => Promise<void>;
-  lyricsRaw: string;
-  setLyricsRaw: (value: string) => void;
-  contentMode: 'lesson' | 'song' | 'podcast' | 'drama';
-  setContentMode: (v: 'lesson' | 'song' | 'podcast' | 'drama') => void;
+  activeTab: "upload" | "processing"
+  onTabChange: (tab: "upload" | "processing" | "editor" | "videos") => void
+  titleVi: string
+  setTitleVi: (v: string) => void
+  titleZh: string
+  setTitleZh: (v: string) => void
+  descriptionVi: string
+  setDescriptionVi: (v: string) => void
+  hsk: number
+  setHsk: (v: number) => void
+  autoGenerateQuizCount: number | ""
+  setAutoGenerateQuizCount: (v: number | "") => void
+  topic: string
+  setTopic: (v: string) => void
+  duration: number
+  setDuration: (v: number) => void
+  file: File | null
+  setFile: (f: File | null) => void
+  busy: boolean
+  uploadStage: "idle" | "presigning" | "uploading" | "confirming"
+  uploadProgress: { percent: number; bytesSent: number; totalBytes: number }
+  uploadError: string
+  onSubmitUpload: (e: React.FormEvent) => void
+  onCancelUpload: () => void
+  selectedLesson?: AdminLesson
+  processingStatus?: ProcessingStatus | null
+  jobs: ProcessingJob[]
+  lessons: AdminLesson[]
+  onSelectLesson: (id: string) => void
+  onEditLesson?: (id: string) => void
+  onRetryProcessing: (
+    id: string,
+    lyricsRaw?: string,
+    mode?: AdminLesson["contentMode"],
+  ) => Promise<void>
+  onCancelVideoUpload: (id: string) => Promise<void>
+  lyricsRaw: string
+  setLyricsRaw: (value: string) => void
+  contentMode: "lesson" | "song" | "podcast" | "drama"
+  setContentMode: (v: "lesson" | "song" | "podcast" | "drama") => void
 }
 
 export default function AdminVideoUploader({
@@ -161,98 +176,222 @@ export default function AdminVideoUploader({
   contentMode,
   setContentMode,
 }: AdminVideoUploaderProps) {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileSelectionRef = useRef(0)
 
-  const [durationError, setDurationError] = useState<string | null>(null);
-  const [durationText, setDurationText] = useState<string>(() => formatDurationMmSs(duration));
+  interface ValidationPopupState {
+    type: "duration" | "file"
+    message: string
+    detail?: string
+    durationInfo?: {
+      currentSec: number
+      minSec: number
+      maxSec: number
+      isTooShort: boolean
+      diffSec: number
+    }
+    fileInfo?: {
+      fileName: string
+      fileSize?: number
+      acceptedFormats: string[]
+    }
+  }
+
+  const [durationError, setDurationError] = useState<string | null>(null)
+  const [durationText, setDurationText] = useState<string>(() =>
+    formatDurationMmSs(duration),
+  )
+  const [validationPopup, setValidationPopup] =
+    useState<ValidationPopupState | null>(null)
+
+  // Close popup on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && validationPopup) {
+        setValidationPopup(null)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [validationPopup])
 
   useEffect(() => {
     if (duration > 0) {
-      const parsedCurrent = parseDurationText(durationText);
+      const parsedCurrent = parseDurationText(durationText)
       if (parsedCurrent !== duration) {
-        setDurationText(formatDurationMmSs(duration));
+        setDurationText(formatDurationMmSs(duration))
       }
     } else if (!durationText) {
-      setDurationText('');
+      setDurationText("")
     }
-  }, [duration]);
+  }, [duration])
 
-  const [repairModes, setRepairModes] = useState<Record<string, NonNullable<AdminLesson['contentMode']>>>({});
-  const [repairLyrics, setRepairLyrics] = useState<Record<string, string>>({});
-  const acceptedTypes = ['video/mp4', 'video/webm', ...(['song', 'podcast'].includes(contentMode) ? ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'] : [])];
+  const [repairModes, setRepairModes] =
+    useState<Record<string, NonNullable<AdminLesson["contentMode"]>>>({})
+  const [repairLyrics, setRepairLyrics] = useState<Record<string, string>>({})
+  const acceptedTypes = [
+    "video/mp4",
+    "video/webm",
+    ...(["song", "podcast"].includes(contentMode)
+      ? ["audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav"]
+      : []),
+  ]
   const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile && acceptedTypes.includes(droppedFile.type)) {
-      setFile(droppedFile);
-      extractVideoDuration(droppedFile);
-    }
-  };
+    e.preventDefault()
+    setIsDragOver(false)
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) void selectFile(droppedFile)
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] || null;
-    if (selected) {
-      setFile(selected);
-      extractVideoDuration(selected);
-    }
-  };
+    const selected = e.target.files?.[0] || null
+    if (selected) void selectFile(selected)
+  }
 
-  const extractVideoDuration = (videoFile: File) => {
-    try {
-      const url = URL.createObjectURL(videoFile);
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      v.onloadedmetadata = () => {
-        URL.revokeObjectURL(url);
-        const sec = Math.round(v.duration);
-        if (Number.isFinite(sec) && sec > 0 && sec <= 21600) {
-          setDuration(sec);
-          setDurationText(formatDurationMmSs(sec));
-          if (sec < 60) {
-            setDurationError(`Thời lượng video quá ngắn (${formatDurationMmSs(sec)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`);
-          } else if (contentMode !== 'podcast' && sec > 600) {
-            setDurationError(`Thời lượng video quá dài (${formatDurationMmSs(sec)}). Video phải có độ dài tối đa 10 phút (10:00).`);
-          } else {
-            setDurationError(null);
-          }
-        }
-      };
-      v.onerror = () => URL.revokeObjectURL(url);
-      v.src = url;
-    } catch {
-      // Ignore if browser fails metadata parse
+  const selectFile = async (selected: File) => {
+    const selection = ++fileSelectionRef.current
+    setFile(null)
+    setDuration(0)
+    setDurationText("")
+    setDurationError(null)
+    setValidationPopup(null)
+    // Validate file type via magic bytes (not just extension)
+    const isValid = await validateMediaFile(
+      selected,
+      ["song", "podcast"].includes(contentMode),
+    )
+    if (selection !== fileSelectionRef.current) return
+    if (!isValid) {
+      setValidationPopup({
+        type: "file",
+        message: "Tệp tải lên không đúng định dạng",
+        detail: `"${selected.name}" không khớp với định dạng được hỗ trợ cho loại nội dung đã chọn.`,
+        fileInfo: {
+          fileName: selected.name,
+          fileSize: selected.size,
+          acceptedFormats: [
+            "MP4",
+            "WebM",
+            ...(["song", "podcast"].includes(contentMode)
+              ? ["MP3", "M4A", "WAV"]
+              : []),
+          ],
+        },
+      })
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
     }
-  };
+    setFile(selected)
+    extractVideoDuration(selected, selection)
+  }
+
+  const extractVideoDuration = (videoFile: File, selection: number) => {
+    const metadataFailed = () => {
+      if (selection !== fileSelectionRef.current) return
+      setDurationError(
+        "Không đọc được thời lượng. Vui lòng nhập thời lượng bên dưới.",
+      )
+    }
+    try {
+      const url = URL.createObjectURL(videoFile)
+      const v = document.createElement("video")
+      v.preload = "metadata"
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(url)
+        if (selection !== fileSelectionRef.current) return
+        const sec = Math.round(v.duration)
+        if (Number.isFinite(sec) && sec > 0 && sec <= 21600) {
+          setDuration(sec)
+          setDurationText(formatDurationMmSs(sec))
+          const min = 60
+          const max = contentMode === "podcast" ? 5400 : 600
+          if (sec < min) {
+            const diff = min - sec
+            const over = formatDurationMmSs(diff)
+            const msg = `Thời lượng ${formatDurationMmSs(sec)} chưa đạt tối thiểu ${formatDurationMmSs(min)} (thiếu ${over})`
+            setDurationError(msg)
+            setValidationPopup({
+              type: "duration",
+              message: msg,
+              detail: `Hanflix thiết kế bài học theo mô hình micro-learning cần tối thiểu 1 phút để người học tiếp thu trọn vẹn ngữ cảnh giao tiếp.`,
+              durationInfo: {
+                currentSec: sec,
+                minSec: min,
+                maxSec: max,
+                isTooShort: true,
+                diffSec: diff,
+              },
+            })
+          } else if (contentMode !== "podcast" && sec > max) {
+            const diff = sec - max
+            const over = formatDurationMmSs(diff)
+            const msg = `Thời lượng ${formatDurationMmSs(sec)} vượt quá giới hạn tối đa ${formatDurationMmSs(max)} (dài hơn ${over})`
+            setDurationError(msg)
+            setValidationPopup({
+              type: "duration",
+              message: msg,
+              detail: `Để tối ưu khả năng tập trung theo chuẩn vi học (micro-learning), mỗi video giới hạn tối đa 10 phút.`,
+              durationInfo: {
+                currentSec: sec,
+                minSec: min,
+                maxSec: max,
+                isTooShort: false,
+                diffSec: diff,
+              },
+            })
+          } else {
+            setDurationError(null)
+            setValidationPopup(null)
+          }
+        } else metadataFailed()
+      }
+      v.onerror = () => {
+        URL.revokeObjectURL(url)
+        metadataFailed()
+      }
+      v.src = url
+    } catch {
+      metadataFailed()
+    }
+  }
 
   const formatFileSize = (bytes: number): string => {
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+  }
 
   const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || seconds <= 0) return '0m 00s';
-    const total = Math.round(seconds);
-    const m = Math.floor(total / 60);
-    const s = total % 60;
-    return `${m}m ${String(s).padStart(2, '0')}s`;
-  };
+    if (isNaN(seconds) || seconds <= 0) return "0m 00s"
+    const total = Math.round(seconds)
+    const m = Math.floor(total / 60)
+    const s = total % 60
+    return `${m}m ${String(s).padStart(2, "0")}s`
+  }
 
   // Pipeline stages definition
   const PIPELINE_STAGES = [
-    { key: 'upload', label: '1. Lưu Trữ R2', desc: 'Tải video lên Cloud' },
-    { key: 'audio', label: '2. Tách Âm Thanh', desc: 'FFmpeg Audio Extract' },
-    { key: 'speech', label: '3. Nhận Diện Lời Thoại', desc: 'Azure Speech ASR' },
-    { key: 'subtitles', label: '4. Phân Đoạn & Dịch', desc: 'Cue Segmentation' },
-    { key: 'review', label: '5. Sẵn Sàng Duyệt', desc: 'Ready for Review' },
-  ];
+    { key: "upload", label: "1. Lưu Trữ R2", desc: "Tải video lên Cloud" },
+    { key: "audio", label: "2. Tách Âm Thanh", desc: "FFmpeg Audio Extract" },
+    {
+      key: "speech",
+      label: "3. Nhận Diện Lời Thoại",
+      desc: "Azure Speech ASR",
+    },
+    {
+      key: "subtitles",
+      label: "4. Phân Đoạn & Dịch",
+      desc: "Cue Segmentation",
+    },
+    { key: "review", label: "5. Sẵn Sàng Duyệt", desc: "Ready for Review" },
+  ]
 
   // Cleanup any lingering legacy portal element from document body
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const oldPortal = document.getElementById('hanflix-fab-root');
-    if (oldPortal) oldPortal.remove();
-  }, []);
+    if (typeof document === "undefined") return
+    const oldPortal = document.getElementById("hanflix-fab-root")
+    if (oldPortal) oldPortal.remove()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -264,21 +403,27 @@ export default function AdminVideoUploader({
         <div className="relative z-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FDF1F1] text-[#B91B1C] shadow-2xs ring-1 ring-[#B91B1C]/20">
-              {activeTab === 'upload' ? <Upload className="h-5 w-5" /> : <Cpu className="h-5 w-5" />}
+              {activeTab === "upload" ? (
+                <Upload className="h-5 w-5" />
+              ) : (
+                <Cpu className="h-5 w-5" />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black tracking-tight text-[#2B2826]">
-                  {activeTab === 'upload' ? 'Tải Lên Video Bài Học' : 'Tiến Trình Xử Lý AI Pipeline'}
+                  {activeTab === "upload"
+                    ? "Tải Lên Video Bài Học"
+                    : "Tiến Trình Xử Lý AI Pipeline"}
                 </h1>
                 <span className="rounded-full border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-[#B91B1C]">
                   HSK 1 - 9
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-[#8C827A]">
-                {activeTab === 'upload'
-                  ? 'Chuẩn bị tệp video MP4/WebM, nhập thông tin bài học và kích hoạt chuỗi AI tự động trích xuất phụ đề song ngữ.'
-                  : 'Theo dõi thời gian thực tiến trình bóc tách âm thanh, nhận diện Azure Speech ASR và phân đoạn câu thoại.'}
+                {activeTab === "upload"
+                  ? "Chuẩn bị tệp video MP4/WebM, nhập thông tin bài học và kích hoạt chuỗi AI tự động trích xuất phụ đề song ngữ."
+                  : "Theo dõi thời gian thực tiến trình bóc tách âm thanh, nhận diện Azure Speech ASR và phân đoạn câu thoại."}
               </p>
             </div>
           </div>
@@ -287,22 +432,24 @@ export default function AdminVideoUploader({
           <div className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] p-1.5 shadow-2xs">
             <button
               type="button"
-              onClick={() => onTabChange('upload')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${activeTab === 'upload'
-                ? 'border border-[#F2E4D8] bg-white text-[#2B2826] shadow-2xs'
-                : 'text-[#8C827A] hover:text-[#2B2826]'
-                }`}
+              onClick={() => onTabChange("upload")}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                activeTab === "upload"
+                  ? "border border-[#F2E4D8] bg-white text-[#2B2826] shadow-2xs"
+                  : "text-[#8C827A] hover:text-[#2B2826]"
+              }`}
             >
               <Upload className="h-3.5 w-3.5" />
               <span>Tải video mới</span>
             </button>
             <button
               type="button"
-              onClick={() => onTabChange('processing')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${activeTab === 'processing'
-                ? 'bg-[#B91B1C] text-white shadow-2xs'
-                : 'text-[#8C827A] hover:text-[#2B2826]'
-                }`}
+              onClick={() => onTabChange("processing")}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                activeTab === "processing"
+                  ? "bg-[#B91B1C] text-white shadow-2xs"
+                  : "text-[#8C827A] hover:text-[#2B2826]"
+              }`}
             >
               <Cpu className="h-3.5 w-3.5" />
               <span>Theo dõi tiến trình AI ({jobs.length})</span>
@@ -312,16 +459,19 @@ export default function AdminVideoUploader({
       </div>
 
       {/* Upload In-Flight Progress Bar (Top - spans both tabs) */}
-      {uploadStage !== 'idle' && (
+      {uploadStage !== "idle" && (
         <div className="overflow-hidden rounded-2xl border border-[#F2E4D8] bg-white shadow-2xs animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F2E4D8] bg-[#FFF9F5] px-5 py-3 text-xs">
             <span className="flex items-center gap-2 font-black text-[#2B2826]">
               <RefreshCw className="h-4 w-4 animate-spin text-[#B91B1C]" />
-              {uploadStage === 'presigning' && 'Đang xin mã cấp quyền tải lên Cloudflare R2...'}
-              {uploadStage === 'uploading' && `Đang truyền luồng video lên R2 (${uploadProgress.percent}%)`}
-              {uploadStage === 'confirming' && 'Đang xác nhận tệp và khởi động AI Pipeline...'}
+              {uploadStage === "presigning" &&
+                "Đang xin mã cấp quyền tải lên Cloudflare R2..."}
+              {uploadStage === "uploading" &&
+                `Đang truyền luồng video lên R2 (${uploadProgress.percent}%)`}
+              {uploadStage === "confirming" &&
+                "Đang xác nhận tệp và khởi động AI Pipeline..."}
             </span>
-            {uploadStage === 'uploading' && (
+            {uploadStage === "uploading" && (
               <button
                 type="button"
                 onClick={onCancelUpload}
@@ -335,19 +485,30 @@ export default function AdminVideoUploader({
           <div className="px-5 py-3">
             <div className="h-2.5 w-full overflow-hidden rounded-full border border-[#F2E4D8] bg-[#FFF9F5]">
               <div
-                className={`h-full rounded-full transition-all duration-300 ${uploadStage === 'uploading'
-                  ? 'bg-linear-to-r from-[#B91B1C] via-[#B45309] to-[#188A5A]'
-                  : uploadStage === 'confirming'
-                    ? 'bg-[#188A5A]'
-                    : 'bg-[#B45309] animate-pulse'
-                  }`}
-                style={{ width: `${uploadStage === 'uploading' ? uploadProgress.percent : uploadStage === 'confirming' ? 100 : 5}%` }}
+                className={`h-full rounded-full transition-all duration-300 ${
+                  uploadStage === "uploading"
+                    ? "bg-linear-to-r from-[#B91B1C] via-[#B45309] to-[#188A5A]"
+                    : uploadStage === "confirming"
+                      ? "bg-[#188A5A]"
+                      : "bg-[#B45309] animate-pulse"
+                }`}
+                style={{
+                  width: `${
+                    uploadStage === "uploading"
+                      ? uploadProgress.percent
+                      : uploadStage === "confirming"
+                        ? 100
+                        : 5
+                  }%`,
+                }}
               />
             </div>
-            {uploadStage === 'uploading' && (
+            {uploadStage === "uploading" && (
               <div className="mt-2 flex items-center justify-between text-[11px] text-[#8C827A]">
                 <span>Đã tải: {formatFileSize(uploadProgress.bytesSent)}</span>
-                <span>Tổng dung lượng: {formatFileSize(uploadProgress.totalBytes)}</span>
+                <span>
+                  Tổng dung lượng: {formatFileSize(uploadProgress.totalBytes)}
+                </span>
               </div>
             )}
           </div>
@@ -357,8 +518,300 @@ export default function AdminVideoUploader({
       {/* ========================================================================= */}
       {/* TAB 1: UPLOAD FORM & DRAG-AND-DROP                                        */}
       {/* ========================================================================= */}
-      {activeTab === 'upload' && (
-        <form id="admin-video-uploader-form" onSubmit={onSubmitUpload} className="space-y-6">
+      {activeTab === "upload" && (
+        <form
+          id="admin-video-uploader-form"
+          onSubmit={onSubmitUpload}
+          className="space-y-6"
+        >
+          {/* Validation Notice Popup Modal - Hanflix Brand Synced */}
+          {validationPopup &&
+            (() => {
+              const isDuration = validationPopup.type === "duration"
+              const info = validationPopup.durationInfo
+              const currentSec = info?.currentSec ?? duration
+              const minSec = info?.minSec ?? 60
+              const maxSec =
+                info?.maxSec ?? (contentMode === "podcast" ? 5400 : 600)
+              const isTooShort = info?.isTooShort ?? currentSec < minSec
+              const diffSec =
+                info?.diffSec ??
+                (isTooShort
+                  ? minSec - currentSec
+                  : Math.max(0, currentSec - maxSec))
+
+              // Visual duration timeline track calculation
+              const rulerMaxSec = Math.max(
+                maxSec,
+                Math.ceil((currentSec * 1.15) / 60) * 60,
+                600,
+              )
+              const minPercent = Math.min(
+                Math.max((minSec / rulerMaxSec) * 100, 5),
+                85,
+              )
+              const maxPercent = Math.min(
+                Math.max((maxSec / rulerMaxSec) * 100, 15),
+                95,
+              )
+              const currentPercent = Math.min(
+                Math.max((currentSec / rulerMaxSec) * 100, 4),
+                96,
+              )
+
+              return (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 animate-in fade-in duration-150"
+                  onClick={() => setValidationPopup(null)}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative w-full max-w-[520px] overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-[0_24px_48px_-12px_rgba(43,40,38,0.22),0_2px_8px_rgba(43,40,38,0.06)] animate-in fade-in zoom-in-95 duration-200"
+                  >
+                    {/* Top brand red hairline accent */}
+                    <div className="h-1 w-full bg-linear-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415]" />
+
+                    <div className="px-7 pt-6 pb-6 sm:px-8">
+                      {/* Header bar: Brand notice badge + close button */}
+                      <div className="mb-5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-[#B91B1C]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#B91B1C] animate-pulse" />
+                            {isDuration ? "Notice · 02" : "Notice · 01"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setValidationPopup(null)}
+                          className="group/close -mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-full text-[#8C827A] transition-all hover:bg-[#FDF1F1] hover:text-[#B91B1C]"
+                          aria-label="Đóng thông báo"
+                        >
+                          <X
+                            className="h-4 w-4 transition-transform duration-300 group-hover/close:rotate-90"
+                            strokeWidth={2}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Headline and Icon Badge */}
+                      <div className="mb-6 flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-[22px] sm:text-[24px] font-black leading-[1.25] tracking-tight text-[#2B2826]">
+                            {isDuration
+                              ? "Thời lượng chưa phù hợp"
+                              : "Tệp không đúng định dạng"}
+                          </h3>
+                          <p className="mt-1 text-[13px] font-medium text-[#5F5852]">
+                            {isDuration
+                              ? isTooShort
+                                ? "Video ngắn hơn chuẩn tối thiểu của Hanflix"
+                                : "Video vượt quá giới hạn tối đa"
+                              : "Định dạng tệp không khớp với yêu cầu hệ thống"}
+                          </p>
+                        </div>
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C] shadow-2xs">
+                          {isDuration ? (
+                            <Timer className="h-5 w-5" strokeWidth={2} />
+                          ) : (
+                            <FileVideo className="h-5 w-5" strokeWidth={2} />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* DURATION CONTENT: Visual Timeline + 3-Col Bento Metrics */}
+                      {isDuration && (
+                        <div className="space-y-5">
+                          {/* Interactive Visual Timeline Scrubber */}
+                          <div className="rounded-2xl border border-[#F2E4D8] bg-[#FFF9F5] p-4 pt-8 pb-3.5">
+                            <div className="relative">
+                              {/* Floating Tooltip Indicator pointing at current position */}
+                              <div
+                                className="absolute -top-7 -translate-x-1/2 flex flex-col items-center transition-all duration-300 z-10"
+                                style={{ left: `${currentPercent}%` }}
+                              >
+                                <div className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#B91B1C] px-2.5 py-0.5 font-mono text-[11px] font-black text-white shadow-sm">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                  <span>{formatDurationMmSs(currentSec)}</span>
+                                </div>
+                                <div className="h-0 w-0 border-x-4 border-x-transparent border-t-4 border-t-[#B91B1C]" />
+                              </div>
+
+                              {/* Timeline Track Bar */}
+                              <div className="relative h-3 w-full rounded-full bg-[#EFE4D8] overflow-hidden">
+                                {/* Valid Range Highlight Region (Jade Green) */}
+                                <div
+                                  className="absolute top-0 bottom-0 rounded-full bg-[#C6E7DA] border-x border-[#8FB9A7] transition-all"
+                                  style={{
+                                    left: `${minPercent}%`,
+                                    width: `${Math.max(0, maxPercent - minPercent)}%`,
+                                  }}
+                                />
+                              </div>
+
+                              {/* Current Position Pin Notch */}
+                              <div
+                                className="absolute top-[-2px] -translate-x-1/2 pointer-events-none"
+                                style={{ left: `${currentPercent}%` }}
+                              >
+                                <div className="h-4 w-1 rounded-full bg-[#B91B1C] shadow-2xs" />
+                              </div>
+
+                              {/* Ruler Tick Marks & Timecode Labels with Zero Overlap */}
+                              <div className="relative mt-2.5 flex items-center justify-between font-mono text-[11px] font-bold text-[#8C827A]">
+                                <span>00:00</span>
+                                <span className="inline-flex items-center gap-1 rounded-md bg-[#EAF5F1] px-2 py-0.5 text-[10px] font-black text-[#188A5A]">
+                                  Vùng hợp lệ: {formatDurationMmSs(minSec)} —{" "}
+                                  {formatDurationMmSs(maxSec)}
+                                </span>
+                                <span>{formatDurationMmSs(maxSec)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 3-Column Bento Stat Cards */}
+                          <div className="grid grid-cols-3 gap-2.5">
+                            {/* Card 1: Đang chọn */}
+                            <div className="rounded-2xl border border-[#F9D2D2] bg-[#FFF9F5] p-3 shadow-2xs">
+                              <span className="block font-mono text-[10px] font-black uppercase tracking-wider text-[#B91B1C]">
+                                Đang chọn
+                              </span>
+                              <div className="mt-1 font-mono text-[17px] font-black text-[#B91B1C]">
+                                {formatDurationMmSs(currentSec)}
+                              </div>
+                              <span className="mt-0.5 block text-[11px] font-black text-[#B91B1C]">
+                                {isTooShort
+                                  ? `Thiếu -${formatDurationMmSs(diffSec)}`
+                                  : `Vượt +${formatDurationMmSs(diffSec)}`}
+                              </span>
+                            </div>
+
+                            {/* Card 2: Tiêu chuẩn */}
+                            <div className="rounded-2xl border border-[#F2E4D8] bg-white p-3 shadow-2xs">
+                              <span className="block font-mono text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
+                                Yêu cầu
+                              </span>
+                              <div className="mt-1 font-mono text-[17px] font-black text-[#2B2826]">
+                                {isTooShort
+                                  ? `≥ ${formatDurationMmSs(minSec)}`
+                                  : `≤ ${formatDurationMmSs(maxSec)}`}
+                              </div>
+                              <span className="mt-0.5 block text-[11px] text-[#5F5852]">
+                                {isTooShort
+                                  ? "Tối thiểu 1 phút"
+                                  : "Tối đa 10 phút"}
+                              </span>
+                            </div>
+
+                            {/* Card 3: Hợp lệ */}
+                            <div className="rounded-2xl border border-[#C6E7DA] bg-[#EAF5F1]/50 p-3 shadow-2xs">
+                              <span className="block font-mono text-[10px] font-black uppercase tracking-wider text-[#188A5A]">
+                                Hợp lệ
+                              </span>
+                              <div className="mt-1 font-mono text-[15px] sm:text-[16px] font-black text-[#188A5A]">
+                                {formatDurationMmSs(minSec)} —{" "}
+                                {formatDurationMmSs(maxSec)}
+                              </div>
+                              <span className="mt-0.5 block text-[11px] font-bold text-[#188A5A]">
+                                Chuẩn bài học
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Explanation description */}
+                          <p className="text-[13px] leading-relaxed text-[#5F5852]">
+                            {validationPopup.detail || validationPopup.message}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* FILE FORMAT CONTENT: File info card and accepted formats */}
+                      {!isDuration && (
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]">
+                                <FileVideo
+                                  className="h-5 w-5"
+                                  strokeWidth={1.5}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[13px] font-black text-[#2B2826]">
+                                  {validationPopup.fileInfo?.fileName ||
+                                    "Tệp đã chọn"}
+                                </p>
+                                <p className="text-[11px] font-bold text-[#B91B1C]">
+                                  {validationPopup.fileInfo?.fileSize
+                                    ? `${formatFileSize(validationPopup.fileInfo.fileSize)} · `
+                                    : ""}
+                                  Định dạng tệp không hợp lệ
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3.5 border-t border-[#F2E4D8] pt-3">
+                              <span className="mb-2 block font-mono text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
+                                Định dạng được hỗ trợ
+                              </span>
+                              <div className="flex flex-wrap gap-2">
+                                {(
+                                  validationPopup.fileInfo?.acceptedFormats || [
+                                    "MP4",
+                                    "WebM",
+                                  ]
+                                ).map((fmt) => (
+                                  <span
+                                    key={fmt}
+                                    className="rounded-lg border border-[#C6E7DA] bg-[#EAF5F1] px-2.5 py-1 font-mono text-[11px] font-black text-[#188A5A]"
+                                  >
+                                    {fmt}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-[13px] leading-relaxed text-[#5F5852]">
+                            {validationPopup.detail || validationPopup.message}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Actions Row */}
+                      <div className="mt-7 flex items-center justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setValidationPopup(null)}
+                          className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-5 py-2.5 text-xs font-bold text-[#5F5852] transition-colors hover:bg-white hover:text-[#2B2826] active:scale-[0.98]"
+                        >
+                          Đóng
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValidationPopup(null)
+                            fileInputRef.current?.click()
+                          }}
+                          className="group/cta flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415] px-6 py-2.5 text-xs font-black uppercase tracking-[0.06em] text-white shadow-[0_6px_16px_-2px_rgba(185,27,28,0.4)] transition-all hover:from-[#A3181A] hover:to-[#831112] active:scale-[0.98]"
+                        >
+                          <span>
+                            {isDuration ? "Chọn video khác" : "Chọn tệp khác"}
+                          </span>
+                          <ArrowRight
+                            className="h-3.5 w-3.5 transition-transform duration-300 group-hover/cta:translate-x-0.5"
+                            strokeWidth={2.5}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bottom hairline */}
+                    <div className="h-px w-full bg-linear-to-r from-transparent via-[#F2E4D8] to-transparent" />
+                  </div>
+                </div>
+              )
+            })()}
+
           {/* Main 2-Column Bento Form */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             {/* Left Column: Drag & Drop Zone & Video Specs */}
@@ -366,51 +819,68 @@ export default function AdminVideoUploader({
               {/* Dropzone Card */}
               <div
                 onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
+                  e.preventDefault()
+                  setIsDragOver(true)
                 }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={handleFileDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`flex min-h-[340px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all shadow-2xs ${isDragOver
-                  ? 'scale-[1.01] border-[#B91B1C] bg-[#FDF1F1]/60'
-                  : file
-                    ? 'border-[#188A5A] bg-[#EAF5F1]/40'
-                    : 'border-[#F2E4D8] bg-[#FFFDFB] hover:border-[#B91B1C]/50 hover:bg-[#FFF9F5]'
-                  }`}
+                className={`flex min-h-[340px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center transition-all shadow-2xs ${
+                  isDragOver
+                    ? "scale-[1.01] border-[#B91B1C] bg-[#FDF1F1]/60"
+                    : file
+                      ? "border-[#188A5A] bg-[#EAF5F1]/40"
+                      : "border-[#F2E4D8] bg-[#FFFDFB] hover:border-[#B91B1C]/50 hover:bg-[#FFF9F5]"
+                }`}
               >
                 <input
                   ref={fileInputRef}
                   type="file"
                   aria-label="Video MP4/WebM"
-                  accept={acceptedTypes.join(',')}
+                  accept={acceptedTypes.join(",")}
                   onChange={handleFileChange}
                   className="hidden"
                 />
 
                 <div
-                  className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${file
-                    ? 'bg-[#EAF5F1] text-[#188A5A]'
-                    : isDragOver
-                      ? 'bg-[#B91B1C] text-white'
-                      : 'border border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]'
-                    }`}
+                  className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
+                    file
+                      ? "bg-[#EAF5F1] text-[#188A5A]"
+                      : isDragOver
+                        ? "bg-[#B91B1C] text-white"
+                        : "border border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]"
+                  }`}
                 >
-                  {file ? <CheckCircle2 className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
+                  {file ? (
+                    <CheckCircle2 className="h-7 w-7" />
+                  ) : (
+                    <Upload className="h-7 w-7" />
+                  )}
                 </div>
 
                 {file ? (
                   <div className="space-y-1.5">
-                    <p className="max-w-[280px] truncate text-sm font-black text-[#2B2826]">{file.name}</p>
-                    <p className="text-xs font-bold text-[#188A5A]">
-                      {formatFileSize(file.size)} · {file.type.replace('video/', '').toUpperCase()}
+                    <p className="max-w-[280px] truncate text-sm font-black text-[#2B2826]">
+                      {file.name}
                     </p>
-                    <p className="mt-1 text-[11px] text-[#8C827A]">Bấm hoặc kéo thả tệp khác để thay thế</p>
+                    <p className="text-xs font-bold text-[#188A5A]">
+                      {formatFileSize(file.size)} ·{" "}
+                      {file.type.replace("video/", "").toUpperCase()}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#8C827A]">
+                      Bấm hoặc kéo thả tệp khác để thay thế
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <p className="text-sm font-black text-[#2B2826]">Kéo thả video vào đây hoặc chọn tệp</p>
-                    <p className="text-xs text-[#8C827A]">{['song', 'podcast'].includes(contentMode) ? 'MP4/WebM hoặc MP3/M4A/WAV. Dung lượng theo cấu hình máy chủ.' : 'MP4/WebM. Dung lượng theo cấu hình máy chủ.'}</p>
+                    <p className="text-sm font-black text-[#2B2826]">
+                      Kéo thả video vào đây hoặc chọn tệp
+                    </p>
+                    <p className="text-xs text-[#8C827A]">
+                      {["song", "podcast"].includes(contentMode)
+                        ? "MP4/WebM hoặc MP3/M4A/WAV. Dung lượng theo cấu hình máy chủ."
+                        : "MP4/WebM. Dung lượng theo cấu hình máy chủ."}
+                    </p>
                     <span className="mt-3 inline-block rounded-xl bg-[#2B2826] px-4 py-2 text-xs font-bold text-white shadow-2xs transition-colors hover:bg-[#1A1817]">
                       Chọn tệp video từ máy
                     </span>
@@ -418,15 +888,7 @@ export default function AdminVideoUploader({
                 )}
               </div>
 
-              {/* Duration Error Alert below dropzone */}
-              {durationError && (
-                <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-3 text-xs font-bold text-[#B91B1C]">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{durationError}</span>
-                </div>
-              )}
-
-              {/* Technical Specifications Guide */}
+              {/* Main 2-Column Bento Form */}
               <div className="rounded-3xl border border-[#F2E4D8] bg-white p-4 text-[11px] shadow-2xs">
                 <div className="mb-2.5 flex items-center gap-1.5 font-black text-[#2B2826]">
                   <Info className="h-3.5 w-3.5 text-[#B91B1C]" />
@@ -435,7 +897,9 @@ export default function AdminVideoUploader({
                 <div className="grid grid-cols-1 gap-1.5 text-[#5F5852]">
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
                     <span className="shrink-0">Độ phân giải</span>
-                    <strong className="text-right text-[#2B2826]">1080p / 720p</strong>
+                    <strong className="text-right text-[#2B2826]">
+                      1080p / 720p
+                    </strong>
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
                     <span className="shrink-0">Tỉ lệ khung hình</span>
@@ -444,12 +908,16 @@ export default function AdminVideoUploader({
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#FFF9F5] px-2.5 py-1.5">
                     <span className="shrink-0">Thời lượng</span>
                     <strong className="text-right text-[#2B2826] font-bold">
-                      {contentMode === 'podcast' ? 'Theo giới hạn podcast của máy chủ' : '1 phút – 10 phút'}
+                      {contentMode === "podcast"
+                        ? "Theo giới hạn podcast của máy chủ"
+                        : "1 phút – 10 phút"}
                     </strong>
                   </div>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#EAF5F1]/40 px-2.5 py-1.5">
                     <span className="shrink-0">Âm thanh</span>
-                    <strong className="text-right text-[#188A5A]">Tiếng Trong rõ</strong>
+                    <strong className="text-right text-[#188A5A]">
+                      Tiếng Trong rõ
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -464,8 +932,12 @@ export default function AdminVideoUploader({
 
                 {/* Tiêu đề tiếng Việt */}
                 <div>
-                  <label htmlFor="video-title-vi" className="mb-1.5 block text-xs font-bold text-[#2B2826]">
-                    Tiêu đề bài học (Tiếng Việt) <span className="text-[#B91B1C]">*</span>
+                  <label
+                    htmlFor="video-title-vi"
+                    className="mb-1.5 block text-xs font-bold text-[#2B2826]"
+                  >
+                    Tiêu đề bài học (Tiếng Việt){" "}
+                    <span className="text-[#B91B1C]">*</span>
                   </label>
                   <input
                     type="text"
@@ -497,10 +969,16 @@ export default function AdminVideoUploader({
                 {/* Mô tả nội dung */}
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
-                    <label htmlFor="video-description" className="text-xs font-bold text-[#2B2826]">
-                      Mô tả nội dung bài học <span className="text-[#B91B1C]">*</span>
+                    <label
+                      htmlFor="video-description"
+                      className="text-xs font-bold text-[#2B2826]"
+                    >
+                      Mô tả nội dung bài học{" "}
+                      <span className="text-[#B91B1C]">*</span>
                     </label>
-                    <span className="text-[10px] text-[#8C827A]">{descriptionVi.length}/1000 ký tự</span>
+                    <span className="text-[10px] text-[#8C827A]">
+                      {descriptionVi.length}/1000 ký tự
+                    </span>
                   </div>
                   <textarea
                     id="video-description"
@@ -519,7 +997,10 @@ export default function AdminVideoUploader({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                   {/* Cấp độ HSK 3.0 Dropdown */}
                   <div className="sm:col-span-4">
-                    <label htmlFor="video-hsk-select" className="mb-1.5 block text-xs font-bold text-[#2B2826]">
+                    <label
+                      htmlFor="video-hsk-select"
+                      className="mb-1.5 block text-xs font-bold text-[#2B2826]"
+                    >
                       Cấp độ HSK 3.0 <span className="text-[#B91B1C]">*</span>
                     </label>
                     <div className="relative">
@@ -531,7 +1012,12 @@ export default function AdminVideoUploader({
                       >
                         {HSK_LEVELS.map((level) => (
                           <option key={level} value={level}>
-                            HSK {level} {level <= 3 ? '(Sơ cấp)' : level <= 6 ? '(Trung cấp)' : '(Cao cấp)'}
+                            HSK {level}{" "}
+                            {level <= 3
+                              ? "(Sơ cấp)"
+                              : level <= 6
+                                ? "(Trung cấp)"
+                                : "(Cao cấp)"}
                           </option>
                         ))}
                       </select>
@@ -543,7 +1029,10 @@ export default function AdminVideoUploader({
 
                   {/* Chủ đề bài học Dropdown */}
                   <div className="sm:col-span-5">
-                    <label htmlFor="video-topic-select" className="mb-1.5 block text-xs font-bold text-[#2B2826]">
+                    <label
+                      htmlFor="video-topic-select"
+                      className="mb-1.5 block text-xs font-bold text-[#2B2826]"
+                    >
                       Chủ đề bài học
                     </label>
                     <div className="relative">
@@ -568,59 +1057,69 @@ export default function AdminVideoUploader({
                   {/* Thời lượng video */}
                   <div className="sm:col-span-3">
                     <div className="mb-1.5 flex items-center justify-between">
-                      <label htmlFor="video-duration" className="text-xs font-bold text-[#2B2826]">
+                      <label
+                        htmlFor="video-duration"
+                        className="text-xs font-bold text-[#2B2826]"
+                      >
                         Thời lượng <span className="text-[#B91B1C]">*</span>
                       </label>
                     </div>
                     <input
                       id="video-duration"
                       type="text"
+                      disabled={!file || busy}
                       required
                       placeholder="ví dụ: 3:22"
                       value={durationText}
                       onChange={(e) => {
-                        const valText = e.target.value;
-                        setDurationText(valText);
-                        const val = parseDurationText(valText);
-                        setDuration(val);
-                        if (val > 0 && val < 60) {
-                          setDurationError(`Thời lượng video quá ngắn (${formatDurationMmSs(val)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`);
-                        } else if (contentMode !== 'podcast' && val > 600) {
-                          setDurationError(`Thời lượng video quá dài (${formatDurationMmSs(val)}). Video phải có độ dài tối đa 10 phút (10:00).`);
-                        } else {
-                          setDurationError(null);
-                        }
+                        // A manual value supersedes any pending metadata callback.
+                        ++fileSelectionRef.current
+                        const text = e.target.value
+                        const seconds = parseDurationText(text)
+                        setDurationText(text)
+                        setDuration(seconds)
+                        setDurationError(
+                          seconds < 60
+                            ? "Thời lượng tối thiểu là 1 phút (1:00)."
+                            : contentMode !== "podcast" && seconds > 600
+                              ? "Thời lượng tối đa là 10 phút (10:00)."
+                              : null,
+                        )
                       }}
                       onBlur={() => {
-                        if (duration > 0) {
-                          setDurationText(formatDurationMmSs(duration));
-                        }
+                        if (duration > 0)
+                          setDurationText(formatDurationMmSs(duration))
                       }}
-                      className={`w-full rounded-xl border bg-[#FFFDFB] px-3 py-2 text-xs font-bold text-[#2B2826] outline-none transition-colors ${duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600))
-                          ? 'border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/20'
-                          : 'border-[#F2E4D8] focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10'
-                        }`}
+                      className={`w-full rounded-xl border bg-[#F7F4F0] px-3 py-2 text-xs font-bold text-[#2B2826] ${
+                        durationError ? "border-[#B91B1C]" : "border-[#F2E4D8]"
+                      }`}
                     />
-                    {duration > 0 && duration < 60 && (
-                      <p className="mt-1 text-[10px] font-bold text-[#B91B1C]">
-                        Tối thiểu 1 phút (1:00)
-                      </p>
-                    )}
-                    {contentMode !== 'podcast' && duration > 600 && (
-                      <p className="mt-1 text-[10px] font-bold text-[#B91B1C]">
-                        Tối đa 10 phút (10:00)
+                    {durationError && (
+                      <p className="mt-1 text-[11px] text-[#B91B1C]">
+                        {durationError}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {contentMode === 'song' && (
+                {contentMode === "song" && (
                   <div className="space-y-2">
-                    <label htmlFor="song-lyrics" className="text-xs font-bold">Lời bài hát LRC (khuyên dùng)</label>
-                    <textarea id="song-lyrics" value={lyricsRaw} onChange={e => setLyricsRaw(e.target.value)} maxLength={20000} rows={5}
-                      placeholder={'[00:12.00]你好\n[00:15.00]世界'}
-                      className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm" />
-                    <p className="text-xs text-[#8C827A]">Để trống để nhận diện tự động. Nếu nhận diện thất bại, cần bổ sung LRC rồi thử lại.</p>
+                    <label htmlFor="song-lyrics" className="text-xs font-bold">
+                      Lời bài hát LRC (khuyên dùng)
+                    </label>
+                    <textarea
+                      id="song-lyrics"
+                      value={lyricsRaw}
+                      onChange={(e) => setLyricsRaw(e.target.value)}
+                      maxLength={20000}
+                      rows={5}
+                      placeholder={"[00:12.00]你好\n[00:15.00]世界"}
+                      className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm"
+                    />
+                    <p className="text-xs text-[#8C827A]">
+                      Để trống để nhận diện tự động. Nếu nhận diện thất bại, cần
+                      bổ sung LRC rồi thử lại.
+                    </p>
                   </div>
                 )}
 
@@ -631,9 +1130,12 @@ export default function AdminVideoUploader({
                       <Sparkles className="h-3 w-3" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-xs font-bold text-[#2B2826]">Số câu hỏi AI Quiz:</span>
+                      <span className="text-xs font-bold text-[#2B2826]">
+                        Số câu hỏi AI Quiz:
+                      </span>
                       <span className="ml-1.5 text-[11px] text-[#7A6F66] hidden sm:inline">
-                        để trống = tự động theo HSK (3 – 7 câu). Hoặc nhập 1 – 15
+                        để trống = tự động theo HSK (3 – 7 câu). Hoặc nhập 1 –
+                        15
                       </span>
                     </div>
                   </div>
@@ -645,15 +1147,17 @@ export default function AdminVideoUploader({
                       placeholder="Tự động"
                       value={autoGenerateQuizCount}
                       onChange={(e) => {
-                        const raw = e.target.value;
-                        if (raw === '') return setAutoGenerateQuizCount('');
-                        const n = parseInt(raw, 10);
-                        if (!Number.isFinite(n)) return;
-                        setAutoGenerateQuizCount(Math.min(15, Math.max(1, n)));
+                        const raw = e.target.value
+                        if (raw === "") return setAutoGenerateQuizCount("")
+                        const n = parseInt(raw, 10)
+                        if (!Number.isFinite(n)) return
+                        setAutoGenerateQuizCount(Math.min(15, Math.max(1, n)))
                       }}
                       className="w-24 rounded-lg border border-[#F2E4D8] bg-white px-2 py-1 text-center text-xs font-bold text-[#2B2826] outline-none transition-colors focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10"
                     />
-                    <span className="text-[11px] font-bold text-[#8C827A]">câu</span>
+                    <span className="text-[11px] font-bold text-[#8C827A]">
+                      câu
+                    </span>
                   </div>
                 </div>
 
@@ -670,11 +1174,20 @@ export default function AdminVideoUploader({
                   {/* Primary Action Button */}
                   <button
                     type="submit"
-                    disabled={busy || !file || Boolean(file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)))}
-                    className={`group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-6 text-xs font-black uppercase tracking-[0.08em] transition-all duration-200 select-none cursor-pointer ${busy || !file || Boolean(file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)))
-                      ? 'bg-[#EFE9E2] text-[#9E948B] border border-[#E2DAD0] cursor-not-allowed shadow-none'
-                      : 'bg-gradient-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415] text-white shadow-[0_8px_20px_-4px_rgba(185,27,28,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] hover:from-[#A3181A] hover:to-[#831112] hover:shadow-[0_12px_28px_-4px_rgba(185,27,28,0.52)] active:scale-[0.985] active:translate-y-px'
-                      }`}
+                    disabled={
+                      busy ||
+                      !file ||
+                      duration < 60 ||
+                      (contentMode !== "podcast" && duration > 600)
+                    }
+                    className={`group relative flex h-12 w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-6 text-xs font-black uppercase tracking-[0.08em] transition-all duration-200 select-none cursor-pointer ${
+                      busy ||
+                      !file ||
+                      duration < 60 ||
+                      (contentMode !== "podcast" && duration > 600)
+                        ? "bg-[#EFE9E2] text-[#9E948B] border border-[#E2DAD0] cursor-not-allowed shadow-none"
+                        : "bg-gradient-to-r from-[#B91B1C] via-[#B91B1C] to-[#991415] text-white shadow-[0_8px_20px_-4px_rgba(185,27,28,0.42),inset_0_1px_0_rgba(255,255,255,0.22)] hover:from-[#A3181A] hover:to-[#831112] hover:shadow-[0_12px_28px_-4px_rgba(185,27,28,0.52)] active:scale-[0.985] active:translate-y-px"
+                    }`}
                   >
                     {/* Shimmer sweep */}
                     {!busy && file && (
@@ -702,26 +1215,17 @@ export default function AdminVideoUploader({
                       </>
                     )}
                   </button>
-
-                  {file && duration > 0 && (duration < 60 || (contentMode !== 'podcast' && duration > 600)) && (
-                    <p className="mt-2 text-center text-xs font-bold text-[#B91B1C]">
-                      {duration < 60
-                        ? `Thời lượng video quá ngắn (${formatDurationMmSs(duration)}). Video phải có độ dài từ 1 phút đến 10 phút (1:00 – 10:00).`
-                        : `Thời lượng video quá dài (${formatDurationMmSs(duration)}). Video phải có độ dài tối đa 10 phút (10:00).`}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
           </div>
-
         </form>
       )}
 
       {/* ========================================================================= */}
       {/* TAB 2: AI PROCESSING PIPELINE TRACKER                                     */}
       {/* ========================================================================= */}
-      {activeTab === 'processing' && (
+      {activeTab === "processing" && (
         <div className="space-y-6">
           {/* Active Lesson Progress Card */}
           {selectedLesson ? (
@@ -732,40 +1236,52 @@ export default function AdminVideoUploader({
                     <span className="rounded bg-[#2B2826] px-2 py-0.5 text-[10px] font-black text-white">
                       HSK {selectedLesson.hsk}
                     </span>
-                    <span className="text-xs text-[#8C827A]">{formatTime(selectedLesson.durationSeconds)}</span>
+                    <span className="text-xs text-[#8C827A]">
+                      {formatTime(selectedLesson.durationSeconds)}
+                    </span>
                   </div>
-                  <h2 className="text-xl font-black text-[#2B2826]">{selectedLesson.titleVi}</h2>
+                  <h2 className="text-xl font-black text-[#2B2826]">
+                    {selectedLesson.titleVi}
+                  </h2>
                   {selectedLesson.titleZh && (
-                    <p className="mt-0.5 text-xs text-[#8C827A]">{selectedLesson.titleZh}</p>
+                    <p className="mt-0.5 text-xs text-[#8C827A]">
+                      {selectedLesson.titleZh}
+                    </p>
                   )}
                 </div>
 
                 {/* Status Action Buttons */}
                 <div className="flex shrink-0 items-center gap-2">
-                  {(selectedLesson.status === 'ready_for_review' ||
-                    selectedLesson.status === 'published' ||
-                    processingStatus?.status === 'completed') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onEditLesson) {
-                            onEditLesson(selectedLesson._id);
-                          } else {
-                            onTabChange('editor');
-                          }
-                        }}
-                        className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98] cursor-pointer"
-                      >
-                        <span>Kiểm Tra & Biên Tập Phụ Đề</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
-                    )}
+                  {(selectedLesson.status === "ready_for_review" ||
+                    selectedLesson.status === "published" ||
+                    processingStatus?.status === "completed") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onEditLesson) {
+                          onEditLesson(selectedLesson._id)
+                        } else {
+                          onTabChange("editor")
+                        }
+                      }}
+                      className="flex h-10 items-center gap-2 rounded-xl bg-[#188A5A] px-5 text-xs font-black text-white shadow-2xs transition-all hover:bg-[#137333] active:scale-[0.98] cursor-pointer"
+                    >
+                      <span>Kiểm Tra & Biên Tập Phụ Đề</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
 
-                  {selectedLesson.status === 'failed' && (
+                  {selectedLesson.status === "failed" && (
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => onRetryProcessing(selectedLesson._id, repairLyrics[selectedLesson._id], repairModes[selectedLesson._id])}
+                      onClick={() =>
+                        onRetryProcessing(
+                          selectedLesson._id,
+                          repairLyrics[selectedLesson._id],
+                          repairModes[selectedLesson._id],
+                        )
+                      }
                       className="flex h-10 items-center gap-2 rounded-xl bg-[#B91B1C] px-4 text-xs font-bold text-white shadow-2xs transition-all hover:bg-[#A3181A] active:scale-[0.98]"
                     >
                       <RotateCcw className="h-4 w-4" />
@@ -773,7 +1289,7 @@ export default function AdminVideoUploader({
                     </button>
                   )}
 
-                  {selectedLesson.status === 'uploading' && (
+                  {selectedLesson.status === "uploading" && (
                     <button
                       type="button"
                       disabled={busy}
@@ -791,7 +1307,9 @@ export default function AdminVideoUploader({
                 <div className="flex items-center justify-between text-xs font-bold text-[#2B2826]">
                   <span>Quy trình xử lý AI tự động:</span>
                   <span className="text-[#B91B1C]">
-                    Tiến độ: {uploadStage === 'uploading' && selectedLesson.status === 'uploading'
+                    Tiến độ:{" "}
+                    {uploadStage === "uploading" &&
+                    selectedLesson.status === "uploading"
                       ? `Đang lưu trữ R2 (${uploadProgress.percent}%)`
                       : `${processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0}%`}
                   </span>
@@ -799,29 +1317,59 @@ export default function AdminVideoUploader({
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
                   {PIPELINE_STAGES.map((st, i) => {
-                    const isUploadingR2 = uploadStage !== 'idle' && selectedLesson.status === 'uploading';
-                    const currentProgress = isUploadingR2 ? 0 : (processingStatus?.stageProgress ?? selectedLesson.processingProgress ?? 0);
-                    const completed = !isUploadingR2 && (processingStatus?.status === 'completed' || selectedLesson.status === 'ready_for_review' || selectedLesson.status === 'published');
-                    const failed = processingStatus?.status === 'failed' || selectedLesson.status === 'failed';
-                    const waiting = processingStatus?.status === 'idle'
-                      || processingStatus?.status === 'uploading'
-                      || processingStatus?.status === 'queued';
-                    const stageIndex = isUploadingR2 ? 0 : (currentProgress < 10 ? 0 : currentProgress < 35 ? 1 : currentProgress < 60 ? 2 : 3);
-                    const isPassed = !isUploadingR2 && (completed || i < stageIndex || (i === 0 && selectedLesson.status !== 'uploading'));
-                    const isCurrent = isUploadingR2 ? (i === 0) : (!completed && i === stageIndex);
+                    const isUploadingR2 =
+                      uploadStage !== "idle" &&
+                      selectedLesson.status === "uploading"
+                    const currentProgress = isUploadingR2
+                      ? 0
+                      : (processingStatus?.stageProgress ??
+                        selectedLesson.processingProgress ??
+                        0)
+                    const completed =
+                      !isUploadingR2 &&
+                      (processingStatus?.status === "completed" ||
+                        selectedLesson.status === "ready_for_review" ||
+                        selectedLesson.status === "published")
+                    const failed =
+                      processingStatus?.status === "failed" ||
+                      selectedLesson.status === "failed"
+                    const waiting =
+                      processingStatus?.status === "idle" ||
+                      processingStatus?.status === "uploading" ||
+                      processingStatus?.status === "queued"
+                    const stageIndex = isUploadingR2
+                      ? 0
+                      : currentProgress < 10
+                        ? 0
+                        : currentProgress < 35
+                          ? 1
+                          : currentProgress < 60
+                            ? 2
+                            : 3
+                    const isPassed =
+                      !isUploadingR2 &&
+                      (completed ||
+                        i < stageIndex ||
+                        (i === 0 && selectedLesson.status !== "uploading"))
+                    const isCurrent = isUploadingR2
+                      ? i === 0
+                      : !completed && i === stageIndex
 
                     return (
                       <div
                         key={st.key}
-                        className={`rounded-2xl border p-3.5 transition-all ${isPassed
-                          ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                          : isCurrent
-                            ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309] ring-2 ring-[#F59E0B]'
-                            : 'border-[#F2E4D8] bg-[#FFFDFB] text-[#8C827A]'
-                          }`}
+                        className={`rounded-2xl border p-3.5 transition-all ${
+                          isPassed
+                            ? "border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]"
+                            : isCurrent
+                              ? "border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309] ring-2 ring-[#F59E0B]"
+                              : "border-[#F2E4D8] bg-[#FFFDFB] text-[#8C827A]"
+                        }`}
                       >
                         <div className="mb-1 flex items-center justify-between">
-                          <span className="font-mono text-[10px] font-black">BƯỚC 0{i + 1}</span>
+                          <span className="font-mono text-[10px] font-black">
+                            BƯỚC 0{i + 1}
+                          </span>
                           {isPassed ? (
                             <CheckCircle2 className="h-4 w-4 text-[#188A5A]" />
                           ) : isCurrent && failed ? (
@@ -839,47 +1387,96 @@ export default function AdminVideoUploader({
                             : st.desc}
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </div>
 
               {/* Error Box if Failed */}
-              {selectedLesson.status === 'failed' && (
+              {selectedLesson.status === "failed" && (
                 <div className="px-4 pt-4 space-y-2">
-                  <label htmlFor="repair-content-mode" className="text-xs font-bold">Loại nội dung khi xử lý lại</label>
-                  <select id="repair-content-mode" className="block w-full rounded-xl border border-[#F2E4D8] p-3 text-sm"
-                    value={repairModes[selectedLesson._id] ?? selectedLesson.contentMode ?? 'lesson'}
-                    onChange={e => setRepairModes(previous => ({ ...previous, [selectedLesson._id]: e.target.value as NonNullable<AdminLesson['contentMode']> }))}>
-                    <option value="lesson">Bài học</option><option value="song">Bài hát</option><option value="podcast">Podcast</option><option value="drama">Drama</option>
+                  <label
+                    htmlFor="repair-content-mode"
+                    className="text-xs font-bold"
+                  >
+                    Loại nội dung khi xử lý lại
+                  </label>
+                  <select
+                    id="repair-content-mode"
+                    className="block w-full rounded-xl border border-[#F2E4D8] p-3 text-sm"
+                    value={
+                      repairModes[selectedLesson._id] ??
+                      selectedLesson.contentMode ??
+                      "lesson"
+                    }
+                    onChange={(e) =>
+                      setRepairModes((previous) => ({
+                        ...previous,
+                        [selectedLesson._id]: e.target
+                          .value as NonNullable<AdminLesson["contentMode"]>,
+                      }))
+                    }
+                  >
+                    <option value="lesson">Bài học</option>
+                    <option value="song">Bài hát</option>
+                    <option value="podcast">Podcast</option>
+                    <option value="drama">Drama</option>
                   </select>
                 </div>
               )}
-              {selectedLesson.status === 'failed' && (repairModes[selectedLesson._id] ?? selectedLesson.contentMode) === 'song' && (
-                <div className="p-4 space-y-2">
-                  <label htmlFor="repair-song-lyrics" className="text-xs font-bold">Bổ sung LRC trước khi thử lại</label>
-                  <textarea id="repair-song-lyrics" rows={5} maxLength={20000}
-                    value={repairLyrics[selectedLesson._id] ?? selectedLesson.lyricsRaw ?? ''}
-                    onChange={e => setRepairLyrics(previous => ({ ...previous, [selectedLesson._id]: e.target.value }))}
-                    className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm" />
-                </div>
-              )}
-              {selectedLesson.status === 'failed' && selectedLesson.processingError && (
-                <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-4 text-xs font-bold text-[#B91B1C]">
-                  <AlertCircle className="h-5 w-5 shrink-0" />
-                  <div>
-                    <p className="font-black">Lỗi trong quá trình xử lý AI:</p>
-                    <p className="mt-0.5 font-normal">{selectedLesson.processingError}</p>
+              {selectedLesson.status === "failed" &&
+                (repairModes[selectedLesson._id] ??
+                  selectedLesson.contentMode) === "song" && (
+                  <div className="p-4 space-y-2">
+                    <label
+                      htmlFor="repair-song-lyrics"
+                      className="text-xs font-bold"
+                    >
+                      Bổ sung LRC trước khi thử lại
+                    </label>
+                    <textarea
+                      id="repair-song-lyrics"
+                      rows={5}
+                      maxLength={20000}
+                      value={
+                        repairLyrics[selectedLesson._id] ??
+                        selectedLesson.lyricsRaw ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        setRepairLyrics((previous) => ({
+                          ...previous,
+                          [selectedLesson._id]: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-[#F2E4D8] p-3 text-sm"
+                    />
                   </div>
-                </div>
-              )}
+                )}
+              {selectedLesson.status === "failed" &&
+                selectedLesson.processingError && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-[#F9D2D2] bg-[#FDF1F1] p-4 text-xs font-bold text-[#B91B1C]">
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="font-black">
+                        Lỗi trong quá trình xử lý AI:
+                      </p>
+                      <p className="mt-0.5 font-normal">
+                        {selectedLesson.processingError}
+                      </p>
+                    </div>
+                  </div>
+                )}
             </div>
           ) : (
             <div className="rounded-3xl border border-[#F2E4D8] bg-white p-8 text-center text-[#8C827A] shadow-2xs">
               <Layers className="mx-auto mb-2 h-8 w-8 text-[#D8C7B8]" />
-              <p className="text-xs font-bold text-[#2B2826]">Chưa chọn video để xem chi tiết tiến trình</p>
+              <p className="text-xs font-bold text-[#2B2826]">
+                Chưa chọn video để xem chi tiết tiến trình
+              </p>
               <p className="mt-0.5 text-[11px] text-[#8C827A]">
-                Bấm vào một tác vụ bên dưới hoặc quay lại danh sách video để theo dõi.
+                Bấm vào một tác vụ bên dưới hoặc quay lại danh sách video để
+                theo dõi.
               </p>
             </div>
           )}
@@ -887,8 +1484,12 @@ export default function AdminVideoUploader({
           {/* Background Jobs List */}
           <div className="overflow-hidden rounded-3xl border border-[#F2E4D8] bg-white shadow-2xs">
             <div className="flex items-center justify-between border-b border-[#F2E4D8] px-5 py-4">
-              <h3 className="text-sm font-black text-[#2B2826]">Hàng đợi xử lý tác vụ nền ({jobs.length})</h3>
-              <span className="text-[11px] text-[#8C827A]">Tự động cập nhật mỗi 5 giây</span>
+              <h3 className="text-sm font-black text-[#2B2826]">
+                Hàng đợi xử lý tác vụ nền ({jobs.length})
+              </h3>
+              <span className="text-[11px] text-[#8C827A]">
+                Tự động cập nhật mỗi 5 giây
+              </span>
             </div>
 
             {jobs.length === 0 ? (
@@ -898,33 +1499,42 @@ export default function AdminVideoUploader({
             ) : (
               <div className="divide-y divide-[#F2E4D8]">
                 {jobs.map((job) => {
-                  const lesson = lessons.find((l) => l._id === job.lessonId);
-                  const isSelected = selectedLesson?._id === job.lessonId;
+                  const lesson = lessons.find((l) => l._id === job.lessonId)
+                  const isSelected = selectedLesson?._id === job.lessonId
                   return (
                     <div
                       key={job._id}
                       onClick={() => onSelectLesson(job.lessonId)}
-                      className={`flex cursor-pointer items-center justify-between gap-4 p-4 transition-all ${isSelected
-                          ? 'border-l-4 border-l-[#B91B1C] bg-[#FFF8EC]'
-                          : 'hover:bg-[#FFF9F5]'
-                        }`}
+                      className={`flex cursor-pointer items-center justify-between gap-4 p-4 transition-all ${
+                        isSelected
+                          ? "border-l-4 border-l-[#B91B1C] bg-[#FFF8EC]"
+                          : "hover:bg-[#FFF9F5]"
+                      }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors ${isSelected
-                              ? 'border-[#FDE6BA] bg-white text-[#B91B1C]'
-                              : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#5F5852]'
-                            }`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                            isSelected
+                              ? "border-[#FDE6BA] bg-white text-[#B91B1C]"
+                              : "border-[#F2E4D8] bg-[#FFF9F5] text-[#5F5852]"
+                          }`}
                         >
                           <Video className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-[#2B2826]">
-                            {lesson?.titleVi || `Bài học #${job.lessonId.slice(-6)}`}
+                            {lesson?.titleVi ||
+                              `Bài học #${job.lessonId.slice(-6)}`}
                           </p>
                           <p className="mt-0.5 text-[11px] text-[#8C827A]">
-                            Giai đoạn: <strong className="text-[#2B2826]">{job.stage}</strong> · Tiến độ:{' '}
-                            <strong className="text-[#B91B1C]">{job.stageProgress}%</strong>
+                            Giai đoạn:{" "}
+                            <strong className="text-[#2B2826]">
+                              {job.stage}
+                            </strong>{" "}
+                            · Tiến độ:{" "}
+                            <strong className="text-[#B91B1C]">
+                              {job.stageProgress}%
+                            </strong>
                           </p>
                         </div>
                       </div>
@@ -936,21 +1546,22 @@ export default function AdminVideoUploader({
                           </span>
                         )}
                         <span
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${job.status === 'completed'
-                            ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                            : job.status === 'running'
-                              ? 'border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]'
-                              : job.status === 'failed'
-                                ? 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
-                                : 'border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]'
-                            }`}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${
+                            job.status === "completed"
+                              ? "border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]"
+                              : job.status === "running"
+                                ? "border-[#FDE6BA] bg-[#FFF8EC] text-[#B45309]"
+                                : job.status === "failed"
+                                  ? "border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]"
+                                  : "border-[#F2E4D8] bg-[#FFF9F5] text-[#8C827A]"
+                          }`}
                         >
                           {job.status}
                         </span>
                         <ArrowRight className="h-4 w-4 text-[#D8C7B8]" />
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -958,5 +1569,5 @@ export default function AdminVideoUploader({
         </div>
       )}
     </div>
-  );
+  )
 }
