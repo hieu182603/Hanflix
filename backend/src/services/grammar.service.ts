@@ -58,7 +58,7 @@ export class GrammarService {
     if (params.hskLevel) {
       const asNumber = Number(params.hskLevel);
       if (!isNaN(asNumber)) {
-        filter.$or = [{ hskLevel: asNumber }, { hskLevel: params.hskLevel }];
+        filter.hskLevel = { $in: [asNumber, params.hskLevel] };
       } else {
         filter.hskLevel = params.hskLevel;
       }

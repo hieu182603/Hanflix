@@ -36,6 +36,7 @@ export function AdminSearchBar({
 
   const handleClear = () => {
     onChange('');
+    onChangeExtra?.();
     onClear?.();
     inputRef.current?.focus();
   };

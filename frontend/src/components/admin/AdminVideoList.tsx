@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
   Plus,
@@ -21,52 +21,60 @@ import {
   Sparkles,
   Upload,
   Cpu,
-} from 'lucide-react';
-import type { AdminLesson } from '../../api/admin';
-import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
-import { useNotification, StatusBadge } from '../notifications';
-import type { NotificationVariant } from '../notifications';
-import { AdminSearchBar } from './AdminSearchBar';
+} from "lucide-react"
+import type { AdminLesson } from "../../api/admin"
+import AdminPaginationBar, {
+  DEFAULT_ADMIN_PAGE_SIZE,
+} from "./AdminPaginationBar"
+import { useNotification, StatusBadge } from "../notifications"
+import type { NotificationVariant } from "../notifications"
+import { AdminSearchBar } from "./AdminSearchBar"
 
 interface AdminVideoListProps {
-  lessons: AdminLesson[];
-  loading: boolean;
-  busy: boolean;
-  onNavigateToUpload: () => void;
-  onEditLesson: (lessonId: string) => void;
-  onViewProcessing: (lessonId: string) => void;
-  onPublishLesson: (lessonId: string) => Promise<void>;
-  onHideLesson: (lessonId: string) => Promise<void>;
-  onRestoreLesson: (lessonId: string) => Promise<void>;
-  onDeleteLesson: (lessonId: string) => Promise<void>;
-  onRetryProcessing: (lessonId: string) => Promise<void>;
+  lessons: AdminLesson[]
+  loading: boolean
+  busy: boolean
+  onNavigateToUpload: () => void
+  onEditLesson: (lessonId: string) => void
+  onViewProcessing: (lessonId: string) => void
+  onPublishLesson: (lessonId: string) => Promise<void>
+  onHideLesson: (lessonId: string) => Promise<void>
+  onRestoreLesson: (lessonId: string) => Promise<void>
+  onDeleteLesson: (lessonId: string) => Promise<void>
+  onRetryProcessing: (lessonId: string) => Promise<void>
 }
 
 const TOPIC_LABELS: Record<string, string> = {
-  'daily-life': 'Đời sống',
-  'food': 'Ẩm thực',
-  'travel': 'Du lịch',
-  'shopping': 'Mua sắm',
-  'business': 'Kinh doanh',
-  'entertainment': 'Giải trí',
-};
+  "daily-life": "Đời sống",
+  food: "Ẩm thực",
+  travel: "Du lịch",
+  shopping: "Mua sắm",
+  business: "Kinh doanh",
+  entertainment: "Giải trí",
+}
 
-const STATUS_CONFIG: Record<string, { label: string; variant: NotificationVariant }> = {
-  published: { label: 'Đã xuất bản', variant: 'success' },
-  ready_for_review: { label: 'Chờ duyệt', variant: 'warning' },
-  draft: { label: 'Bản nháp', variant: 'neutral' },
-  processing: { label: 'Đang xử lý AI', variant: 'error' },
-  uploading: { label: 'Đang tải lên', variant: 'info' },
-  failed: { label: 'Lỗi xử lý', variant: 'error' },
-  hidden: { label: 'Đã ẩn', variant: 'neutral' },
-};
+const STATUS_CONFIG: Record<string, {
+  label: string
+  variant: NotificationVariant
+}> = {
+  published: { label: "Đã xuất bản", variant: "success" },
+  ready_for_review: { label: "Chờ duyệt", variant: "warning" },
+  draft: { label: "Bản nháp", variant: "neutral" },
+  processing: { label: "Đang xử lý AI", variant: "error" },
+  uploading: { label: "Đang tải lên", variant: "info" },
+  failed: { label: "Lỗi xử lý", variant: "error" },
+  hidden: { label: "Đã ẩn", variant: "neutral" },
+}
 
 // Fallback high-quality thumbnail placeholders by HSK tier
 const TIER_THUMBNAILS: Record<string, string> = {
-  elementary: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=250&fit=crop&auto=format',
-  intermediate: 'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?w=400&h=250&fit=crop&auto=format',
-  advanced: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=250&fit=crop&auto=format',
-};
+  elementary:
+    "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=250&fit=crop&auto=format",
+  intermediate:
+    "https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?w=400&h=250&fit=crop&auto=format",
+  advanced:
+    "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=250&fit=crop&auto=format",
+}
 
 export default function AdminVideoList({
   lessons,
@@ -81,181 +89,227 @@ export default function AdminVideoList({
   onDeleteLesson,
   onRetryProcessing,
 }: AdminVideoListProps) {
-  const notify = useNotification();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [hskFilter, setHskFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const notify = useNotification()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [hskFilter, setHskFilter] = useState<string>("all")
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_ADMIN_PAGE_SIZE);
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_ADMIN_PAGE_SIZE)
 
   // Stats calculation
-  const totalCount = lessons.length;
-  const publishedCount = useMemo(() => lessons.filter(l => l.status === 'published').length, [lessons]);
-  const readyCount = useMemo(() => lessons.filter(l => l.status === 'ready_for_review').length, [lessons]);
-  const draftCount = useMemo(() => lessons.filter(l => l.status === 'draft').length, [lessons]);
-  const processingCount = useMemo(() => lessons.filter(l => ['processing', 'uploading', 'failed'].includes(l.status)).length, [lessons]);
-  const hiddenCount = useMemo(() => lessons.filter(l => l.status === 'hidden').length, [lessons]);
+  const totalCount = lessons.length
+  const publishedCount = useMemo(
+    () => lessons.filter((l) => l.status === "published").length,
+    [lessons],
+  )
+  const readyCount = useMemo(
+    () => lessons.filter((l) => l.status === "ready_for_review").length,
+    [lessons],
+  )
+  const draftCount = useMemo(
+    () => lessons.filter((l) => l.status === "draft").length,
+    [lessons],
+  )
+  const processingCount = useMemo(
+    () =>
+      lessons.filter((l) =>
+        ["processing", "uploading", "failed"].includes(l.status),
+      ).length,
+    [lessons],
+  )
+  const hiddenCount = useMemo(
+    () => lessons.filter((l) => l.status === "hidden").length,
+    [lessons],
+  )
 
   // Reset to first page when search, status or HSK filter changes
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter, hskFilter, pageSize]);
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, hskFilter, pageSize])
 
   // Filtering logic: search + status + HSK 1..9
   const filteredLessons = useMemo(() => {
     return lessons.filter((lesson) => {
-      // Status filter
-      if (statusFilter !== 'all' && lesson.status !== statusFilter) {
-        return false;
+      // Status filter (processing groups uploading, processing, and failed)
+      if (statusFilter !== "all") {
+        if (statusFilter === "processing") {
+          if (!["processing", "uploading", "failed"].includes(lesson.status)) {
+            return false
+          }
+        } else if (lesson.status !== statusFilter) {
+          return false
+        }
       }
       // HSK filter (1 to 9)
-      if (hskFilter !== 'all') {
-        const targetHsk = Number(hskFilter);
-        if (lesson.hsk !== targetHsk) return false;
+      if (hskFilter !== "all") {
+        const targetHsk = Number(hskFilter)
+        if (Number(lesson.hsk) !== targetHsk) return false
       }
       // Search query (Vietnamese, Chinese, Pinyin, Description)
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const vi = (lesson.titleVi || '').toLowerCase();
-        const zh = (lesson.titleZh || '').toLowerCase();
-        const py = (lesson.pinyin || '').toLowerCase();
-        const desc = (lesson.descriptionVi || '').toLowerCase();
-        if (!vi.includes(query) && !zh.includes(query) && !py.includes(query) && !desc.includes(query)) {
-          return false;
+        const query = searchQuery.toLowerCase().trim()
+        const vi = (lesson.titleVi || "").toLowerCase()
+        const zh = (lesson.titleZh || "").toLowerCase()
+        const py = (lesson.pinyin || "").toLowerCase()
+        const desc = (lesson.descriptionVi || "").toLowerCase()
+        if (
+          !vi.includes(query) &&
+          !zh.includes(query) &&
+          !py.includes(query) &&
+          !desc.includes(query)
+        ) {
+          return false
         }
       }
-      return true;
-    });
-  }, [lessons, statusFilter, hskFilter, searchQuery]);
+      return true
+    })
+  }, [lessons, statusFilter, hskFilter, searchQuery])
 
   // Pagination Slicing
-  const totalFiltered = filteredLessons.length;
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safeCurrentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+  const totalFiltered = filteredLessons.length
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize))
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
+  const startIndex = (safeCurrentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, totalFiltered)
   const paginatedLessons = useMemo(() => {
-    return filteredLessons.slice(startIndex, endIndex);
-  }, [filteredLessons, startIndex, endIndex]);
+    return filteredLessons.slice(startIndex, endIndex)
+  }, [filteredLessons, startIndex, endIndex])
 
   // Format seconds to mm:ss
   // Format seconds to mm:ss or hh:mm:ss
   const formatDuration = (sec?: number) => {
-    if (sec === undefined || sec === null || isNaN(sec) || sec <= 0) return '0:00';
-    const total = Math.round(sec);
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
+    if (sec === undefined || sec === null || isNaN(sec) || sec <= 0)
+      return "0:00"
+    const total = Math.round(sec)
+    const h = Math.floor(total / 3600)
+    const m = Math.floor((total % 3600) / 60)
+    const s = total % 60
     if (h > 0) {
-      return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
     }
-    return `${m}:${String(s).padStart(2, '0')}`;
-  };
+    return `${m}:${String(s).padStart(2, "0")}`
+  }
 
   // Get HSK Badge styling and category name (HSK 1..9)
   const getHskMeta = (hsk: number) => {
     if (hsk <= 3) {
       return {
-        badge: 'bg-[#EAF5F1] text-[#188A5A] border-[#C6E7DA]',
-        tier: 'Sơ cấp',
-      };
+        badge: "bg-[#EAF5F1] text-[#188A5A] border-[#C6E7DA]",
+        tier: "Sơ cấp",
+      }
     }
     if (hsk <= 6) {
       return {
-        badge: 'bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]',
-        tier: 'Trung cấp',
-      };
+        badge: "bg-[#FFF8EC] text-[#B45309] border-[#FDE6BA]",
+        tier: "Trung cấp",
+      }
     }
     return {
-      badge: 'bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]',
-      tier: 'Cao cấp (HSK 3.0)',
-    };
-  };
+      badge: "bg-[#FDF1F1] text-[#B91B1C] border-[#F9D2D2]",
+      tier: "Cao cấp (HSK 3.0)",
+    }
+  }
 
   // Quick Action Handlers
   const handlePublish = async (id: string, titleVi: string) => {
-    if (!await notify.confirm({
-      title: 'Duyệt và xuất bản bài học',
-      message: `Bạn có chắc chắn muốn duyệt và xuất bản bài học "${titleVi}"?`,
-      confirmText: 'Xuất bản',
-      tone: 'default',
-    })) return;
+    if (
+      !(await notify.confirm({
+        title: "Duyệt và xuất bản bài học",
+        message: `Bạn có chắc chắn muốn duyệt và xuất bản bài học "${titleVi}"?`,
+        confirmText: "Xuất bản",
+        tone: "default",
+      }))
+    )
+      return
     try {
-      setActionLoadingId(id);
-      await onPublishLesson(id);
+      setActionLoadingId(id)
+      await onPublishLesson(id)
     } finally {
-      setActionLoadingId(null);
+      setActionLoadingId(null)
     }
-  };
+  }
 
   const handleHide = async (id: string, titleVi: string) => {
-    if (!await notify.confirm({
-      title: 'Ẩn bài học',
-      message: `Ẩn bài học "${titleVi}" khỏi ứng dụng học viên?`,
-      confirmText: 'Ẩn',
-      tone: 'default',
-    })) return;
+    if (
+      !(await notify.confirm({
+        title: "Ẩn bài học",
+        message: `Ẩn bài học "${titleVi}" khỏi ứng dụng học viên?`,
+        confirmText: "Ẩn",
+        tone: "default",
+      }))
+    )
+      return
     try {
-      setActionLoadingId(id);
-      await onHideLesson(id);
+      setActionLoadingId(id)
+      await onHideLesson(id)
     } finally {
-      setActionLoadingId(null);
+      setActionLoadingId(null)
     }
-  };
+  }
 
   const handleRestore = async (id: string) => {
     try {
-      setActionLoadingId(id);
-      await onRestoreLesson(id);
+      setActionLoadingId(id)
+      await onRestoreLesson(id)
     } finally {
-      setActionLoadingId(null);
+      setActionLoadingId(null)
     }
-  };
+  }
 
   const handleRetry = async (id: string) => {
     try {
-      setActionLoadingId(id);
-      await onRetryProcessing(id);
+      setActionLoadingId(id)
+      await onRetryProcessing(id)
     } finally {
-      setActionLoadingId(null);
+      setActionLoadingId(null)
     }
-  };
+  }
 
   const handleDelete = async (id: string, titleVi: string, status: string) => {
-    const isPublished = status === 'published';
+    const isPublished = status === "published"
     const message = isPublished
       ? `Xóa vĩnh viễn bài học đã xuất bản "${titleVi}"?\n\nHành động này không thể hoàn tác. Học viên sẽ mất quyền truy cập bài học này.`
-      : `Xóa vĩnh viễn bài học "${titleVi}"?\n\nVideo, phụ đề, quiz và tiến trình xử lý liên quan sẽ bị xóa.`;
-    if (!await notify.confirm({
-      title: 'Xóa bài học',
-      message: <span className="whitespace-pre-line">{message}</span>,
-      confirmText: 'Xóa vĩnh viễn',
-      cancelText: 'Hủy',
-      tone: 'danger',
-    })) return;
+      : `Xóa vĩnh viễn bài học "${titleVi}"?\n\nVideo, phụ đề, quiz và tiến trình xử lý liên quan sẽ bị xóa.`
+    if (
+      !(await notify.confirm({
+        title: "Xóa bài học",
+        message: <span className="whitespace-pre-line">{message}</span>,
+        confirmText: "Xóa vĩnh viễn",
+        cancelText: "Hủy",
+        tone: "danger",
+      }))
+    )
+      return
     try {
-      setActionLoadingId(id);
-      await onDeleteLesson(id);
+      setActionLoadingId(id)
+      await onDeleteLesson(id)
     } finally {
-      setActionLoadingId(null);
+      setActionLoadingId(null)
     }
-  };
+  }
 
-  const renderDeleteButton = (id: string, titleVi: string, status: string, compact = false) => (
+  const renderDeleteButton = (
+    id: string,
+    titleVi: string,
+    status: string,
+    compact = false,
+  ) => (
     <button
       type="button"
       disabled={actionLoadingId === id || busy}
       onClick={() => void handleDelete(id, titleVi, status)}
-      className={`${compact ? 'h-8 px-2.5' : 'h-9 px-3'} rounded-xl border border-[#FECACA] hover:border-red-400 hover:bg-red-50 text-red-600 bg-white transition-all flex items-center justify-center`}
+      className={`${
+        compact ? "h-8 px-2.5" : "h-9 px-3"
+      } rounded-xl border border-[#FECACA] hover:border-red-400 hover:bg-red-50 text-red-600 bg-white transition-all flex items-center justify-center`}
       title="Xóa vĩnh viễn"
     >
       <Trash2 size={compact ? 13 : 14} />
     </button>
-  );
+  )
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -269,13 +323,16 @@ export default function AdminVideoList({
             <span className="px-2.5 py-0.5 rounded-full bg-[#FDF1F1] text-[#B91B1C] text-[11px] font-extrabold uppercase tracking-wide border border-[#F9D2D2]">
               Quản trị Nội dung Video
             </span>
-            <span className="text-xs text-[#8B9097] font-semibold">Khung chuẩn HSK 1 đến HSK 9</span>
+            <span className="text-xs text-[#8B9097] font-semibold">
+              Khung chuẩn HSK 1 đến HSK 9
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
             Kho Bài Học Video
           </h1>
           <p className="text-xs sm:text-sm text-[#5F6368]">
-            Quản lý trạng thái đăng, bản nháp, chỉnh sửa phụ đề Whisper ASR và xuất bản bài học.
+            Quản lý trạng thái đăng, bản nháp, chỉnh sửa phụ đề Whisper ASR và
+            xuất bản bài học.
           </p>
         </div>
 
@@ -295,14 +352,50 @@ export default function AdminVideoList({
       {/* 2. Fast Stats Counter Chips */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { id: 'all', label: 'Tất cả bài học', count: totalCount, color: 'text-[#18181B]', bg: 'bg-white' },
-          { id: 'ready_for_review', label: 'Chờ kiểm duyệt', count: readyCount, color: 'text-[#B45309]', bg: 'bg-[#FFF8EC] border-[#FDE6BA]' },
-          { id: 'published', label: 'Đã xuất bản', count: publishedCount, color: 'text-[#188A5A]', bg: 'bg-white' },
-          { id: 'draft', label: 'Bản nháp', count: draftCount, color: 'text-[#5F6368]', bg: 'bg-white' },
-          { id: 'processing', label: 'Tiến trình AI', count: processingCount, color: 'text-[#B91B1C]', bg: 'bg-white' },
-          { id: 'hidden', label: 'Đã ẩn bài', count: hiddenCount, color: 'text-[#8B9097]', bg: 'bg-white' },
+          {
+            id: "all",
+            label: "Tất cả bài học",
+            count: totalCount,
+            color: "text-[#18181B]",
+            bg: "bg-white",
+          },
+          {
+            id: "ready_for_review",
+            label: "Chờ kiểm duyệt",
+            count: readyCount,
+            color: "text-[#B45309]",
+            bg: "bg-[#FFF8EC] border-[#FDE6BA]",
+          },
+          {
+            id: "published",
+            label: "Đã xuất bản",
+            count: publishedCount,
+            color: "text-[#188A5A]",
+            bg: "bg-white",
+          },
+          {
+            id: "draft",
+            label: "Bản nháp",
+            count: draftCount,
+            color: "text-[#5F6368]",
+            bg: "bg-white",
+          },
+          {
+            id: "processing",
+            label: "Tiến trình AI",
+            count: processingCount,
+            color: "text-[#B91B1C]",
+            bg: "bg-white",
+          },
+          {
+            id: "hidden",
+            label: "Đã ẩn bài",
+            count: hiddenCount,
+            color: "text-[#8B9097]",
+            bg: "bg-white",
+          },
         ].map((item) => {
-          const isActive = statusFilter === item.id;
+          const isActive = statusFilter === item.id
           return (
             <button
               key={item.id}
@@ -312,8 +405,8 @@ export default function AdminVideoList({
                 item.bg
               } ${
                 isActive
-                  ? 'border-[#B91B1C] ring-2 ring-[#B91B1C]/20 shadow-xs'
-                  : 'border-[#F2E4D8] hover:border-[#B91B1C]/40'
+                  ? "border-[#B91B1C] ring-2 ring-[#B91B1C]/20 shadow-xs"
+                  : "border-[#F2E4D8] hover:border-[#B91B1C]/40"
               }`}
             >
               <p className="text-[11px] font-extrabold text-[#8B9097] uppercase tracking-wider truncate">
@@ -323,7 +416,7 @@ export default function AdminVideoList({
                 {item.count}
               </p>
             </button>
-          );
+          )
         })}
       </div>
 
@@ -334,7 +427,7 @@ export default function AdminVideoList({
           <AdminSearchBar
             value={searchQuery}
             onChange={setSearchQuery}
-            onClear={() => setSearchQuery('')}
+            onClear={() => setSearchQuery("")}
             placeholder="Tìm theo tiêu đề Việt, Trung hoặc Pinyin..."
           />
         </div>
@@ -385,24 +478,24 @@ export default function AdminVideoList({
           <div className="flex h-9 items-center rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] p-0.5">
             <button
               type="button"
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               title="Dạng bảng danh sách"
               className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                  : 'text-[#8B9097] hover:text-[#18181B]'
+                viewMode === "list"
+                  ? "bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]"
+                  : "text-[#8B9097] hover:text-[#18181B]"
               }`}
             >
               <List size={15} />
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('grid')}
+              onClick={() => setViewMode("grid")}
               title="Dạng lưới thẻ video"
               className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'grid'
-                  ? 'bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]'
-                  : 'text-[#8B9097] hover:text-[#18181B]'
+                viewMode === "grid"
+                  ? "bg-white text-[#18181B] shadow-2xs border border-[#F2E4D8]"
+                  : "text-[#8B9097] hover:text-[#18181B]"
               }`}
             >
               <LayoutGrid size={15} />
@@ -410,13 +503,13 @@ export default function AdminVideoList({
           </div>
 
           {/* Reset button if filter active */}
-          {(searchQuery || statusFilter !== 'all' || hskFilter !== 'all') && (
+          {(searchQuery || statusFilter !== "all" || hskFilter !== "all") && (
             <button
               type="button"
               onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-                setHskFilter('all');
+                setSearchQuery("")
+                setStatusFilter("all")
+                setHskFilter("all")
               }}
               className="flex h-9 items-center gap-1 rounded-xl border border-[#F2E4D8] bg-[#FDF1F1] px-2.5 text-xs font-bold text-[#B91B1C] transition-colors hover:bg-[#FAD2CF]"
               title="Đặt lại bộ lọc"
@@ -435,18 +528,21 @@ export default function AdminVideoList({
             <Search size={24} />
           </div>
           <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-base font-bold text-[#18181B]">Không tìm thấy bài học phù hợp</h3>
+            <h3 className="text-base font-bold text-[#18181B]">
+              Không tìm thấy bài học phù hợp
+            </h3>
             <p className="text-xs text-[#5F6368]">
-              Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái và trình độ HSK.
+              Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái
+              và trình độ HSK.
             </p>
           </div>
           <div className="flex justify-center gap-2 pt-2">
             <button
               type="button"
               onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-                setHskFilter('all');
+                setSearchQuery("")
+                setStatusFilter("all")
+                setHskFilter("all")
               }}
               className="px-4 py-2 rounded-xl bg-[#FFF9F5] hover:bg-[#FFF0EB] text-xs font-bold text-[#18181B] border border-[#F2E4D8] transition-all cursor-pointer"
             >
@@ -462,7 +558,7 @@ export default function AdminVideoList({
             </button>
           </div>
         </div>
-      ) : viewMode === 'list' ? (
+      ) : viewMode === "list" ? (
         /* LIST / TABLE VIEW */
         <div className="bg-white rounded-3xl border border-[#F2E4D8] overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
@@ -481,26 +577,33 @@ export default function AdminVideoList({
                 {paginatedLessons.map((item) => {
                   const statusInfo = STATUS_CONFIG[item.status] || {
                     label: item.status,
-                    variant: 'neutral' as NotificationVariant,
-                  };
-                  const hskMeta = getHskMeta(item.hsk);
-                  const isActionBusy = actionLoadingId === item._id || busy;
-                  const isReady = item.status === 'ready_for_review';
-                  const isProcessing = ['processing', 'uploading', 'failed'].includes(item.status);
-                  const isPublished = item.status === 'published';
-                  const isHidden = item.status === 'hidden';
+                    variant: "neutral" as NotificationVariant,
+                  }
+                  const hskMeta = getHskMeta(item.hsk)
+                  const isActionBusy = actionLoadingId === item._id || busy
+                  const isReady = item.status === "ready_for_review"
+                  const isProcessing = [
+                    "processing",
+                    "uploading",
+                    "failed",
+                  ].includes(item.status)
+                  const isPublished = item.status === "published"
+                  const isHidden = item.status === "hidden"
 
                   // Default poster by HSK tier
                   const placeholderImg =
                     item.hsk <= 3
                       ? TIER_THUMBNAILS.elementary
                       : item.hsk <= 6
-                      ? TIER_THUMBNAILS.intermediate
-                      : TIER_THUMBNAILS.advanced;
-                  const thumbnailSrc = item.thumbnailUrl || placeholderImg;
+                        ? TIER_THUMBNAILS.intermediate
+                        : TIER_THUMBNAILS.advanced
+                  const thumbnailSrc = item.thumbnailUrl || placeholderImg
 
                   return (
-                    <tr key={item._id} className="hover:bg-[#FFFDFB] transition-colors group">
+                    <tr
+                      key={item._id}
+                      className="hover:bg-[#FFFDFB] transition-colors group"
+                    >
                       {/* Video Thumbnail & Titles */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3.5 min-w-[280px]">
@@ -510,13 +613,16 @@ export default function AdminVideoList({
                               alt={item.titleVi}
                               onError={(e) => {
                                 if (e.currentTarget.src !== placeholderImg) {
-                                  e.currentTarget.src = placeholderImg;
+                                  e.currentTarget.src = placeholderImg
                                 }
                               }}
                               className="w-full h-full object-cover opacity-85 group-hover:opacity-95 group-hover:scale-105 transition-all duration-300"
                             />
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Play size={16} className="text-white fill-white" />
+                              <Play
+                                size={16}
+                                className="text-white fill-white"
+                              />
                             </div>
                             <span className="absolute bottom-1 right-1 text-[9px] font-mono font-extrabold text-white bg-black/75 px-1 rounded">
                               {formatDuration(item.durationSeconds)}
@@ -551,14 +657,19 @@ export default function AdminVideoList({
                           >
                             HSK {item.hsk}
                           </span>
-                          <p className="text-[10px] text-[#8B9097]">{hskMeta.tier}</p>
+                          <p className="text-[10px] text-[#8B9097]">
+                            {hskMeta.tier}
+                          </p>
                         </div>
                       </td>
 
                       {/* Topic Tags */}
                       <td className="py-4 px-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1">
-                          {(item.topicIds && item.topicIds.length > 0 ? item.topicIds : ['daily-life']).map((t) => (
+                          {(item.topicIds && item.topicIds.length > 0
+                            ? item.topicIds
+                            : ["daily-life"]
+                          ).map((t) => (
                             <span
                               key={t}
                               className="px-2 py-0.5 rounded-md bg-[#FFF9F5] text-[#5F6368] border border-[#F2E4D8] text-[11px] font-semibold"
@@ -580,8 +691,11 @@ export default function AdminVideoList({
                           variant={statusInfo.variant}
                           label={statusInfo.label}
                           icon={
-                            item.status === 'processing' ? (
-                              <span className="h-1.5 w-1.5 rounded-full bg-current animate-ping" aria-hidden="true" />
+                            item.status === "processing" ? (
+                              <span
+                                className="h-1.5 w-1.5 rounded-full bg-current animate-ping"
+                                aria-hidden="true"
+                              />
                             ) : undefined
                           }
                         />
@@ -596,7 +710,9 @@ export default function AdminVideoList({
                               <button
                                 type="button"
                                 disabled={isActionBusy}
-                                onClick={() => void handlePublish(item._id, item.titleVi)}
+                                onClick={() =>
+                                  void handlePublish(item._id, item.titleVi)
+                                }
                                 className="h-8 px-3 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 shadow-2xs cursor-pointer"
                               >
                                 <CheckCircle size={13} />
@@ -614,7 +730,7 @@ export default function AdminVideoList({
                           )}
 
                           {/* Draft actions */}
-                          {item.status === 'draft' && (
+                          {item.status === "draft" && (
                             <button
                               type="button"
                               onClick={() => onEditLesson(item._id)}
@@ -636,7 +752,7 @@ export default function AdminVideoList({
                                 <Cpu size={13} />
                                 <span>Tiến trình</span>
                               </button>
-                              {item.status === 'failed' && (
+                              {item.status === "failed" && (
                                 <button
                                   type="button"
                                   disabled={isActionBusy}
@@ -664,7 +780,9 @@ export default function AdminVideoList({
                               <button
                                 type="button"
                                 disabled={isActionBusy}
-                                onClick={() => void handleHide(item._id, item.titleVi)}
+                                onClick={() =>
+                                  void handleHide(item._id, item.titleVi)
+                                }
                                 className="h-8 px-2.5 rounded-xl border border-[#F2E4D8] hover:border-red-300 text-xs text-[#5F6368] hover:text-red-700 bg-white transition-all cursor-pointer shadow-2xs"
                                 title="Ẩn bài học khỏi app"
                               >
@@ -688,11 +806,16 @@ export default function AdminVideoList({
                             </>
                           )}
 
-                          {renderDeleteButton(item._id, item.titleVi, item.status, true)}
+                          {renderDeleteButton(
+                            item._id,
+                            item.titleVi,
+                            item.status,
+                            true,
+                          )}
                         </div>
                       </td>
                     </tr>
-                  );
+                  )
                 })}
               </tbody>
             </table>
@@ -704,24 +827,26 @@ export default function AdminVideoList({
           {paginatedLessons.map((item) => {
             const statusInfo = STATUS_CONFIG[item.status] || {
               label: item.status,
-              bg: 'bg-slate-100',
-              text: 'text-slate-700',
-              border: 'border-slate-200',
-            };
-            const hskMeta = getHskMeta(item.hsk);
-            const isActionBusy = actionLoadingId === item._id || busy;
-            const isReady = item.status === 'ready_for_review';
-            const isProcessing = ['processing', 'uploading', 'failed'].includes(item.status);
-            const isPublished = item.status === 'published';
-            const isHidden = item.status === 'hidden';
+              bg: "bg-slate-100",
+              text: "text-slate-700",
+              border: "border-slate-200",
+            }
+            const hskMeta = getHskMeta(item.hsk)
+            const isActionBusy = actionLoadingId === item._id || busy
+            const isReady = item.status === "ready_for_review"
+            const isProcessing = ["processing", "uploading", "failed"].includes(
+              item.status,
+            )
+            const isPublished = item.status === "published"
+            const isHidden = item.status === "hidden"
 
             const placeholderImg =
               item.hsk <= 3
                 ? TIER_THUMBNAILS.elementary
                 : item.hsk <= 6
-                ? TIER_THUMBNAILS.intermediate
-                : TIER_THUMBNAILS.advanced;
-            const thumbnailSrc = item.thumbnailUrl || placeholderImg;
+                  ? TIER_THUMBNAILS.intermediate
+                  : TIER_THUMBNAILS.advanced
+            const thumbnailSrc = item.thumbnailUrl || placeholderImg
 
             return (
               <div
@@ -736,13 +861,15 @@ export default function AdminVideoList({
                       alt={item.titleVi}
                       onError={(e) => {
                         if (e.currentTarget.src !== placeholderImg) {
-                          e.currentTarget.src = placeholderImg;
+                          e.currentTarget.src = placeholderImg
                         }
                       }}
                       className="w-full h-full object-cover opacity-85 group-hover:opacity-95 group-hover:scale-105 transition-all duration-300"
                     />
                     <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-black font-mono border ${hskMeta.badge}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-black font-mono border ${hskMeta.badge}`}
+                      >
                         HSK {item.hsk}
                       </span>
                     </div>
@@ -754,9 +881,14 @@ export default function AdminVideoList({
                   {/* Card Body */}
                   <div className="p-4 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <StatusBadge variant={statusInfo.variant} label={statusInfo.label} size="sm" />
+                      <StatusBadge
+                        variant={statusInfo.variant}
+                        label={statusInfo.label}
+                        size="sm"
+                      />
                       <span className="text-[10px] text-[#8B9097] font-semibold">
-                        {TOPIC_LABELS[item.topicIds?.[0] || 'daily-life'] || 'Đời sống'}
+                        {TOPIC_LABELS[item.topicIds?.[0] || "daily-life"] ||
+                          "Đời sống"}
                       </span>
                     </div>
 
@@ -766,7 +898,12 @@ export default function AdminVideoList({
 
                     {item.titleZh && (
                       <p className="text-xs text-[#B91B1C] font-semibold truncate">
-                        {item.titleZh} {item.pinyin && <span className="text-[#8B9097] font-mono text-[10px]">({item.pinyin})</span>}
+                        {item.titleZh}{" "}
+                        {item.pinyin && (
+                          <span className="text-[#8B9097] font-mono text-[10px]">
+                            ({item.pinyin})
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
@@ -779,7 +916,9 @@ export default function AdminVideoList({
                       <button
                         type="button"
                         disabled={isActionBusy}
-                        onClick={() => void handlePublish(item._id, item.titleVi)}
+                        onClick={() =>
+                          void handlePublish(item._id, item.titleVi)
+                        }
                         className="flex-1 h-9 rounded-xl bg-[#188A5A] hover:bg-[#13734B] text-white text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                       >
                         <CheckCircle size={13} />
@@ -797,7 +936,7 @@ export default function AdminVideoList({
                     </>
                   )}
 
-                  {item.status === 'draft' && (
+                  {item.status === "draft" && (
                     <>
                       <button
                         type="button"
@@ -821,7 +960,7 @@ export default function AdminVideoList({
                         <Cpu size={13} />
                         <span>Kiểm tra tiến trình</span>
                       </button>
-                      {item.status === 'failed' && (
+                      {item.status === "failed" && (
                         <button
                           type="button"
                           disabled={isActionBusy}
@@ -875,7 +1014,7 @@ export default function AdminVideoList({
                   )}
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       )}
@@ -889,10 +1028,10 @@ export default function AdminVideoList({
         ariaLabel="Phân trang danh sách video"
         onPageChange={setCurrentPage}
         onPageSizeChange={(size) => {
-          setPageSize(size);
-          setCurrentPage(1);
+          setPageSize(size)
+          setCurrentPage(1)
         }}
       />
     </div>
-  );
+  )
 }

@@ -186,6 +186,17 @@ export async function listAdminLessons(
   return { items: data.items, pagination: data.pagination };
 }
 
+/** Complete collection for admin screens that filter and paginate locally. */
+export async function listAllAdminLessons(): Promise<AdminLessonListResponse> {
+  const first = await listAdminLessons({ page: 1, limit: 100 });
+  const items = [...first.items];
+  for (let page = 2; page <= first.pagination.totalPages; page++) {
+    const next = await listAdminLessons({ page, limit: 100 });
+    items.push(...next.items);
+  }
+  return { ...first, items };
+}
+
 export function createAdminLesson(input: Omit<AdminLesson, '_id' | 'status' | 'processingStatus' | 'processingStep' | 'processingProgress' | 'processingError' | 'media' | 'createdAt'>): Promise<AdminLesson> {
   return apiFetch('/admin/lessons', { method: 'POST', body: JSON.stringify(input) });
 }
@@ -465,9 +476,14 @@ export function restoreAdminLesson(id: string): Promise<AdminLesson> {
 }
 
 export async function listAdminUsers(query?: string): Promise<AdminUser[]> {
-  const q = query ? `?q=${encodeURIComponent(query.trim())}` : '';
-  const data = await apiFetch<{ items: AdminUser[] }>(`/admin/users${q}`);
-  return data.items;
+  const items: AdminUser[] = [];
+  for (let page = 1; ; page++) {
+    const params = new URLSearchParams({ page: String(page) });
+    if (query?.trim()) params.set('q', query.trim());
+    const data = await apiFetch<{ items: AdminUser[]; hasMore?: boolean }>(`/admin/users?${params}`);
+    items.push(...data.items);
+    if (!data.hasMore) return items;
+  }
 }
 
 export function setAdminUserStatus(id: string, status: 'active' | 'locked'): Promise<AdminUser> {

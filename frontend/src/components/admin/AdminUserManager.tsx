@@ -187,7 +187,7 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
       if (hskFilter && String(u.learningProfile?.currentHsk) !== hskFilter) return false;
       // Search query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.trim().toLowerCase();
         const matchesName = u.name?.toLowerCase().includes(q);
         const matchesEmail = u.email?.toLowerCase().includes(q);
         if (!matchesName && !matchesEmail) return false;
@@ -248,7 +248,7 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
 
           <div className="flex shrink-0 items-center gap-2.5">
             <button
-              onClick={() => fetchUsers(searchQuery)}
+              onClick={() => fetchUsers()}
               disabled={loading}
               className="flex h-10 items-center gap-2 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 text-xs font-bold text-[#2B2826] shadow-2xs transition-all hover:border-[#B91B1C]/30 hover:bg-white disabled:opacity-40 active:scale-[0.98]"
             >

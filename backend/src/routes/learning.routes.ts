@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import type { PipelineStage } from 'mongoose';
+import { Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
@@ -143,7 +143,7 @@ router.get('/history', asyncHandler(async (req, res) => {
   const status = req.query.status as string | undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase() : '';
   const hsk = req.query.hsk ? parseInt(req.query.hsk as string, 10) : undefined;
-  const userId = req.auth!.userId;
+  const userId = new Types.ObjectId(req.auth!.userId);
 
   // Build filter conditions
   const baseFilter: Record<string, unknown> = { userId };
@@ -202,10 +202,11 @@ router.get('/history', asyncHandler(async (req, res) => {
   if (q || hsk) {
     const lessonMatch: Record<string, unknown> = {};
     if (q) {
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       lessonMatch.$or = [
-        { 'lesson.titleVi': { $regex: q, $options: 'i' } },
-        { 'lesson.titleZh': { $regex: q, $options: 'i' } },
-        { 'lesson.pinyin': { $regex: q, $options: 'i' } },
+        { 'lesson.titleVi': { $regex: escaped, $options: 'i' } },
+        { 'lesson.titleZh': { $regex: escaped, $options: 'i' } },
+        { 'lesson.pinyin': { $regex: escaped, $options: 'i' } },
       ];
     }
     if (hsk) lessonMatch['lesson.hsk'] = hsk;

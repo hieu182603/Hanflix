@@ -131,8 +131,10 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
   const [aiStatus, setAiStatus] = useState<AdminQuizAiStatus | null>(null);
   const [regenerateBusy, setRegenerateBusy] = useState(false);
 
+  const listRequest = useRef(0);
   const loadLessons = useCallback(
     async (targetPage: number = page) => {
+      const request = ++listRequest.current;
       setLoading(true);
       try {
         const res = await listAdminLessons({
@@ -142,14 +144,17 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
           status: statusFilter === 'all' ? undefined : statusFilter,
           search: searchQuery.trim() || undefined,
         });
+        if (request !== listRequest.current) return;
         setLessons(res.items);
         setPagination(res.pagination);
         setPage(res.pagination.page);
       } catch (err) {
+        if (request !== listRequest.current) return;
+        setLessons([]);
         console.error(err);
         notify.toast('error', 'Không thể tải danh sách bài học');
       } finally {
-        setLoading(false);
+        if (request === listRequest.current) setLoading(false);
       }
     },
     [page, pageSize, hskFilter, statusFilter, searchQuery, notify],
@@ -157,7 +162,8 @@ export default function AdminQuizManager({ lessonId: propLessonId }: { lessonId?
 
   useEffect(() => {
     loadLessons(1);
-  }, [hskFilter, statusFilter, pageSize]);
+    return () => { ++listRequest.current; };
+  }, [hskFilter, statusFilter, pageSize, searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

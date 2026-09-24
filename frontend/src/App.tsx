@@ -107,11 +107,10 @@ function pathToAuthView(pathname: string): AuthView | null {
 }
 
 export default function App() {
-  // Initialize currentUser from local cache immediately to prevent flash of LandingPage on reload
-  const [currentUser, setCurrentUser] = useState<User | null>(authApi.getCachedUser);
-  const [isRestoringSession, setIsRestoringSession] = useState<boolean>(() => {
-    return authApi.getCachedUser() === null;
-  });
+  // Initialize from cache immediately to prevent flash
+  const [currentUser, setCurrentUser] = useState<User | null>(() => authApi.getCachedUser());
+  // Always start in restoring state on mount — show loading until session is confirmed
+  const [isRestoringSession, setIsRestoringSession] = useState<boolean>(true);
 
   // Modals & Drawers
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
