@@ -174,7 +174,7 @@ export default function AdminGrammarManager() {
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.structure.trim() || !formData.explanationVi.trim()) {
-      alert('Vui lòng điền đủ Cấu trúc ngữ pháp và Giải thích ý nghĩa.');
+      notify.warning('Vui lòng điền đủ Cấu trúc ngữ pháp và Giải thích ý nghĩa.');
       return;
     }
 
@@ -200,15 +200,17 @@ export default function AdminGrammarManager() {
 
       if (editingItem) {
         await updateAdminGrammar(editingItem._id, payload);
+        notify.success(`Đã cập nhật cấu trúc ngữ pháp "${payload.structure}" thành công.`);
       } else {
         await createAdminGrammar(payload);
+        notify.success(`Đã tạo mới cấu trúc ngữ pháp "${payload.structure}" thành công.`);
       }
 
       setIsModalOpen(false);
       fetchList(pagination.page);
       fetchStats();
     } catch (err: any) {
-      alert(err?.message || 'Có lỗi xảy ra khi lưu ngữ pháp');
+      notify.error(err?.message || 'Có lỗi xảy ra khi lưu ngữ pháp');
     }
   };
 
@@ -218,8 +220,13 @@ export default function AdminGrammarManager() {
       await updateAdminGrammar(item._id, { status: nextStatus });
       setItems((prev) => prev.map((it) => (it._id === item._id ? { ...it, status: nextStatus } : it)));
       fetchStats();
+      notify.success(
+        nextStatus === 'published'
+          ? `Đã kích hoạt ngữ pháp "${item.structure}".`
+          : `Đã chuyển ngữ pháp "${item.structure}" sang bản nháp.`
+      );
     } catch {
-      alert('Không thể cập nhật trạng thái');
+      notify.error('Không thể cập nhật trạng thái');
     }
   };
 
@@ -234,8 +241,9 @@ export default function AdminGrammarManager() {
       await deleteAdminGrammar(item._id);
       setItems((prev) => prev.filter((it) => it._id !== item._id));
       fetchStats();
+      notify.success(`Đã xóa điểm ngữ pháp "${item.structure}" thành công.`);
     } catch {
-      alert('Không thể xóa điểm ngữ pháp');
+      notify.error('Không thể xóa điểm ngữ pháp');
     }
   };
 
