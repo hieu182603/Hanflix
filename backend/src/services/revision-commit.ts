@@ -41,6 +41,13 @@ import { logger } from './logger.js';
  * (lessonId, revision) ensures retries converge to the same revision slot.
  */
 export interface SubtitleCueInput {
+  karaokeTokens?: Array<{ text: string; pinyin?: string | null; startMs: number; endMs: number; wordId?: Types.ObjectId | null; timingSource?: 'AZURE' | 'ALIGNED' | 'INTERPOLATED' | null; approximate?: boolean | null }>;
+  rawText?: string;
+  normalizedText?: string;
+  needsFineAlignment?: boolean;
+  quality?: 'GOOD' | 'QUESTIONABLE' | 'BAD';
+  speakerId?: string;
+  chapterId?: string;
   cueId: string;
   startMs: number;
   endMs: number;
@@ -63,6 +70,8 @@ export interface QuizQuestionInput {
 }
 
 export interface GenerationCommitInput {
+  chapters?: Array<{ chapterId: string; title: string; startMs: number; endMs: number; summary?: string }>;
+  characters?: Array<{ speakerId: string; displayName: string; color?: string; avatarUrl?: string; descriptionVi?: string }>;
   lessonId: string;
   jobId: string;
   durationSeconds: number;
@@ -185,33 +194,44 @@ export async function runGenerationCommit(input: GenerationCommitInput): Promise
   // Pre-flight validations (outside any session — fast to fail).
   const lesson = await LessonModel.findById(lessonId);
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > (lesson.contentMode === 'podcast' ? env.VIDEO_MAX_DURATION_PODCAST_SECONDS : 600)) throw new AppError(422, 'INVALID_MEDIA_DURATION', 'Thời lượng nội dung không hợp lệ');
   if (cues.length === 0) throw new AppError(422, 'CONTENT_INCOMPLETE', 'Phụ đề không có câu nào');
-  if (questions.length === 0) throw new AppError(422, 'CONTENT_INCOMPLETE', 'Bài tập không có câu hỏi nào');
-  const lastCue = cues[cues.length - 1]!;
-  if (lastCue.endMs > durationSeconds * 1000) {
-    throw new AppError(422, 'INVALID_CUE_TIME', 'Câu phụ đề cuối vượt thời lượng video');
+  if ((lesson.contentMode ?? 'lesson') === 'lesson' && questions.length === 0) throw new AppError(422, 'CONTENT_INCOMPLETE', 'Bài tập không có câu hỏi nào');
+  if (cues.some(c => !Number.isFinite(c.startMs) || !Number.isFinite(c.endMs) || c.startMs < 0 || c.endMs <= c.startMs || c.endMs > durationSeconds * 1000)) {
+    throw new AppError(422, 'INVALID_CUE_TIME', 'Mốc thời gian phụ đề không hợp lệ hoặc vượt thời lượng video');
   }
 
   return withOptionalSession(async (sess) => {
     // Step 1: read existing draft revisions inside the session.
-    const [existingSubtitle, existingQuiz] = await Promise.all([
-      SubtitleTrackModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 }).session(sess),
-      QuizModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 })
-        .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi')
-        .session(sess),
-    ]);
-    const nextSubtitleRevision = (existingSubtitle?.revision ?? 0) + 1;
-    const nextQuizRevision = (existingQuiz?.revision ?? 0) + 1;
+    // MongoDB does not support parallel operations within a transaction/session.
+    const existingSubtitle = await SubtitleTrackModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 }).session(sess);
+    const existingQuiz = await QuizModel.findOne({ lessonId, status: 'draft' }).sort({ revision: -1 })
+      .select('+questions.correctOptionId +questions.acceptedAnswers +questions.explanationVi').session(sess);
+    let nextSubtitleRevision = (existingSubtitle?.revision ?? 0) + 1;
+    let nextQuizRevision = (existingQuiz?.revision ?? 0) + 1;
 
     // Step 2: lease guard. Throw LEASE_REVOKED BEFORE writing anything.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const leaseCheck = await ProcessingJobModel.findOne(
-      { _id: jobId, leaseToken, status: 'running' } as any,
+      { _id: jobId, leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } } as any,
       null,
       { session: sess as any },
     );
     if (!leaseCheck) {
       throw new AppError(409, 'LEASE_REVOKED', 'Lease bị thu hồi trước khi commit hoàn tất');
+    }
+
+    const reserved = leaseCheck.checkpoint?.commitRevisions as { subtitle: number; quiz: number } | undefined;
+    if (reserved) {
+      nextSubtitleRevision = reserved.subtitle;
+      nextQuizRevision = reserved.quiz;
+    } else {
+      const reservation = await ProcessingJobModel.updateOne(
+        { _id: jobId, leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } },
+        { $set: { 'checkpoint.commitRevisions': { subtitle: nextSubtitleRevision, quiz: nextQuizRevision } } },
+        { session: sess ?? undefined },
+      );
+      if (reservation.matchedCount !== 1) throw new AppError(409, 'LEASE_REVOKED', 'Lease bị thu hồi khi giữ revision');
     }
 
     // Step 3: write subtitle (upsert by unique lessonId+revision index).
@@ -235,7 +255,9 @@ export async function runGenerationCommit(input: GenerationCommitInput): Promise
       { _id: lessonId },
       {
         $set: {
-          durationSeconds: Math.max(60, Math.min(300, Math.round(durationSeconds))),
+          durationSeconds,
+          ...(input.chapters ? { chapters: input.chapters } : {}),
+          ...(input.characters ? { characters: input.characters } : {}),
           ...(thumbnailKey ? { thumbnailKey } : {}),
           ...(playbackKey ? { playbackKey, playbackVersion, playbackGeneratedAt: new Date() } : {}),
           activeSubtitleRevision: subtitle.revision,
@@ -254,14 +276,24 @@ export async function runGenerationCommit(input: GenerationCommitInput): Promise
     // Step 6: mark the job completed.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const jobResult = await ProcessingJobModel.updateOne(
-      { _id: jobId, leaseToken, status: 'running' } as any,
+      { _id: jobId, leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } } as any,
       {
-        $set: { status: 'completed', stage: 'finalize', stageProgress: 100, completedAt: new Date(), heartbeatAt: new Date() },
+        $set: {
+          status: 'completed',
+          stage: 'finalize',
+          stageProgress: 100,
+          currentStep: 'READY_FOR_REVIEW',
+          'steps.READY_FOR_REVIEW.status': 'COMPLETED',
+          'steps.READY_FOR_REVIEW.completedAt': new Date(),
+          completedAt: new Date(),
+          heartbeatAt: new Date(),
+          'processingMetrics.completedAt': new Date(),
+        },
         $unset: { activeKey: 1, lockedAt: 1, lockedBy: 1, leaseToken: 1, leaseExpiresAt: 1, stageDeadlineAt: 1, stageStartedAt: 1, errorCode: 1, errorMessage: 1 },
       },
       { session: sess as any },
     );
-    if (jobResult.matchedCount === 0) {
+    if (jobResult.matchedCount !== 1) {
       throw new AppError(409, 'LEASE_REVOKED', 'Lease bị thu hồi trước khi commit hoàn tất');
     }
     return { lesson: updatedLesson, subtitle, quiz };

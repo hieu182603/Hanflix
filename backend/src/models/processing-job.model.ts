@@ -4,10 +4,13 @@ const processingJobSchema = new Schema({
   lessonId: { type: Schema.Types.ObjectId, ref: 'Lesson', required: true, index: true },
   objectKey: { type: String },
   activeKey: { type: String, unique: true, sparse: true },
+  pipelineVersion: { type: Number, default: 2, index: true },
+  mediaType: { type: String, enum: ['AUTO', 'MOVIE', 'PODCAST', 'MUSIC'], default: 'AUTO' },
   status: { type: String, enum: ['queued', 'running', 'failed', 'completed'], default: 'queued', index: true },
+  currentStep: { type: String, default: 'DOWNLOAD_SOURCE', index: true },
   stage: {
     type: String,
-    enum: ['inspect_media', 'transcribe_zh', 'generate_pinyin', 'translate_vi', 'extract_vocabulary', 'generate_quiz', 'finalize'],
+    enum: ['inspect_media', 'transcribe_zh', 'generate_pinyin', 'translate_vi', 'extract_vocabulary', 'generate_quiz', 'finalize', 'parse_lyrics', 'align_karaoke', 'detect_chapters', 'diarize_speakers'],
     default: 'inspect_media',
   },
   stageProgress: { type: Number, min: 0, max: 100 },
@@ -37,6 +40,16 @@ const processingJobSchema = new Schema({
   stageStartedAt: { type: Date },
   errorCode: { type: String },
   errorMessage: { type: String, maxlength: 1000 },
+  // Pipeline v2 checkpoint state. Mixed is intentional so older jobs and
+  // future step metadata remain backward-compatible without migrations.
+  steps: { type: Schema.Types.Mixed, default: {} },
+  checkpoint: { type: Schema.Types.Mixed, default: {} },
+  artifacts: { type: Schema.Types.Mixed, default: {} },
+  failure: { type: Schema.Types.Mixed },
+  processingMetrics: { type: Schema.Types.Mixed, default: {} },
+  azureTranscriptionId: { type: String },
+  azureTranscriptionUrl: { type: String },
+  artifactCleanupLockUntil: { type: Date },
   startedAt: { type: Date },
   completedAt: { type: Date },
 }, { timestamps: true, versionKey: false });

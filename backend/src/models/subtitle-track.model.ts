@@ -5,7 +5,21 @@ const tokenSchema = new Schema({
   wordId: { type: Schema.Types.ObjectId, ref: 'Word', default: null },
 }, { _id: false });
 
+const karaokeTokenSchema = new Schema({
+  pinyin: { type: String },
+  timingSource: { type: String, enum: ['AZURE', 'ALIGNED', 'INTERPOLATED'] },
+  approximate: { type: Boolean },
+  text: { type: String, required: true },
+  startMs: { type: Number, required: true, min: 0 },
+  endMs: { type: Number, required: true, min: 0 },
+  wordId: { type: Schema.Types.ObjectId, ref: 'Word', default: null },
+}, { _id: false });
+
 const cueSchema = new Schema({
+  rawText: { type: String },
+  normalizedText: { type: String },
+  needsFineAlignment: { type: Boolean },
+  quality: { type: String, enum: ['GOOD', 'QUESTIONABLE', 'BAD'] },
   cueId: { type: String, required: true },
   startMs: { type: Number, required: true, min: 0 },
   endMs: { type: Number, required: true, min: 1 },
@@ -13,6 +27,17 @@ const cueSchema = new Schema({
   pinyin: { type: String, required: true },
   vi: { type: String, required: true },
   tokens: { type: [tokenSchema], default: [] },
+  // CONTENT MODE (2026-09-22): các field mở rộng cho 3 dạng nội dung mới.
+  // Tất cả optional — lesson cũ vẫn dùng field cơ bản (zh/pinyin/vi/tokens).
+  // === SONG (karaoke) ===
+  // Word-level timing cho karaoke highlight. Khi có, KaraokePlayer dùng thay vì 'tokens'.
+  karaokeTokens: { type: [karaokeTokenSchema], default: undefined },
+  // === DRAMA ===
+  // ID speaker từ diarization (vd 'speaker-0'). Khớp với lesson.characters[].speakerId.
+  speakerId: { type: String, maxlength: 50 },
+  // === PODCAST ===
+  // ID chapter hiện tại. Khớp với lesson.chapters[].chapterId.
+  chapterId: { type: String, maxlength: 100 },
 }, { _id: false });
 
 const subtitleTrackSchema = new Schema({

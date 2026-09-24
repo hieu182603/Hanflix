@@ -24,11 +24,11 @@ describe('Azure Translator', () => {
   });
   it('reports plain-text gateway errors with HTTP status', async () => {
     fetchMock.mockResolvedValue(new Response('upstream protocol error', { status: 502 }));
-    await expect(translateChineseToVietnamese(['你好'])).rejects.toThrow('HTTP 502: upstream protocol error');
+    await expect(translateChineseToVietnamese(['你好'])).rejects.toMatchObject({ code: 'TRANSLATION_SUBMISSION_UNCERTAIN', message: 'Azure Translator HTTP 502' });
   });
   it('reports provider error codes', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: { code: 401000, message: 'Invalid subscription' } }), { status: 401 }));
-    await expect(translateChineseToVietnamese(['你好'])).rejects.toThrow('HTTP 401 (401000)');
+    await expect(translateChineseToVietnamese(['你好'])).rejects.toThrow('HTTP 401');
   });
   it.each([[], [{ translations: [] }], [{ translations: [{ to: 'en', text: 'hello' }] }], [{ translations: [{ to: 'vi', text: 123 }] }], { value: [] }])('rejects malformed result %j', async body => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify(body)));

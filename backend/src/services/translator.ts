@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import type { TranslationService } from './translation/translation.service.js';
+import { setTimeout as delay } from 'node:timers/promises';
 
 // SDK v2 defaults to 2026-06-06, which returned HTTP 502 for batch requests.
 // Use the stable v3 NMT contract explicitly.
@@ -44,7 +45,7 @@ export class AzureTranslationService implements TranslationService {
       let response: Response;
       let raw: string;
       try {
-        response = await fetch(translationUrl(), {
+        const init: RequestInit = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json; charset=UTF-8',
@@ -53,21 +54,26 @@ export class AzureTranslationService implements TranslationService {
           },
           body: JSON.stringify(items.map(Text => ({ Text }))),
           signal: requestSignal,
-        });
+        };
+        response = await fetch(translationUrl(), init);
+        for (let retry = 1; response.status === 429 && retry < env.AZURE_PROVIDER_MAX_RETRIES; retry++) {
+          await response.body?.cancel();
+          await delay(Math.min(30_000, (Number(response.headers.get('retry-after')) || 2 ** retry) * 1000), undefined, { signal: requestSignal });
+          response = await fetch(translationUrl(), init);
+        }
         raw = await response.text();
       } catch (error) {
         signal?.throwIfAborted();
-        throw new AppError(502, 'FAILED_TRANSLATION', timeout.aborted
+        throw new AppError(502, 'TRANSLATION_SUBMISSION_UNCERTAIN', timeout.aborted
           ? 'Azure Translator hết thời gian chờ phản hồi'
-          : `Không thể kết nối Azure Translator: ${error instanceof Error ? error.message : 'Lỗi mạng'}`);
+          : 'Không thể xác định kết quả Azure Translator do lỗi mạng');
       }
       let body: unknown;
       try { body = JSON.parse(raw); } catch { body = null; }
       if (!response.ok) {
         const providerError = (body as { error?: { code?: string | number; message?: string } } | null)?.error;
-        const detail = providerError?.message || raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || response.statusText;
-        throw new AppError(502, 'FAILED_TRANSLATION',
-          `Azure Translator HTTP ${response.status}${providerError?.code ? ` (${providerError.code})` : ''}: ${detail.slice(0, 500)}`);
+        throw new AppError(502, response.status >= 500 || response.status === 408 ? 'TRANSLATION_SUBMISSION_UNCERTAIN' : 'FAILED_TRANSLATION',
+          `Azure Translator HTTP ${response.status}`);
       }
       if (!Array.isArray(body) || body.length !== items.length) {
         throw new AppError(502, 'FAILED_TRANSLATION_RESPONSE', 'Số câu dịch Azure không khớp với phụ đề');

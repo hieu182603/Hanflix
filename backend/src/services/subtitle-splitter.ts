@@ -83,16 +83,21 @@ function splitByPunctuationOnly(
   let bufferStart = startMs;
   let charIndex = 0;
 
-  for (const char of text) {
+  const totalChars = Array.from(text).length;
+  const units = new Intl.Segmenter('zh', { granularity: 'word' }).segment(text);
+  for (const unit of units) {
+    const char = unit.segment;
     buffer += char;
-    charIndex += 1;
+    charIndex += Array.from(char).length;
 
     const isEndOfSentence = SENTENCE_ENDERS.test(char);
     const isEndOfClause = CLAUSE_SEPARATORS.test(char);
     const exceedsChars = buffer.length >= options.maxChars;
+    const estimatedEnd = startMs + duration * charIndex / Math.max(totalChars, 1);
+    const exceedsDuration = estimatedEnd - bufferStart >= options.maxDurationMs;
 
-    if (isEndOfSentence || (exceedsChars && (isEndOfClause || buffer.length >= options.maxChars * 1.5))) {
-      const ratio = charIndex / Math.max(text.length, 1);
+    if (isEndOfSentence || exceedsDuration || (exceedsChars && (isEndOfClause || buffer.length >= options.maxChars * 1.5))) {
+      const ratio = charIndex / Math.max(totalChars, 1);
       const segEnd = Math.min(endMs, startMs + Math.round(duration * ratio));
       segments.push({ startMs: bufferStart, endMs: segEnd, zh: buffer.trim(), confidence });
       buffer = '';

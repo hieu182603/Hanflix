@@ -34,7 +34,12 @@ export function segmentTokens(chineseText: string): PinyinToken[] {
   const pinyinList = pinyin(chineseText.trim(), {
     type: 'array',
     toneType: 'symbol',
+    nonZh: 'spaced',
   });
+
+  if (pinyinList.length !== chars.length) {
+    throw new Error('PINYIN_MAPPING_MISMATCH: contextual Pinyin output does not match text');
+  }
 
   return chars.map((char, index) => ({
     text: char,

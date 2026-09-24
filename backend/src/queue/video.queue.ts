@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sanitizeProviderMessage } from '../services/speech/azure-speech-batch.service.js';
 import { env } from '../config/env.js';
 import { ProcessingJobModel } from '../models/processing-job.model.js';
 import { LessonModel } from '../models/lesson.model.js';
@@ -7,6 +8,7 @@ import type { ClientSession } from 'mongoose';
 export interface VideoProcessingJobData {
   lessonId: string;
   objectKey: string;
+  mediaType?: 'AUTO' | 'MOVIE' | 'PODCAST' | 'MUSIC';
 }
 
 export interface AddVideoProcessingJobOptions {
@@ -54,6 +56,10 @@ export interface StageDeadlineMap {
   extract_vocabulary: number;
   generate_quiz: number;
   finalize: number;
+  parse_lyrics: number;
+  align_karaoke: number;
+  detect_chapters: number;
+  diarize_speakers: number;
 }
 
 export const STAGE_DEADLINES_MS: StageDeadlineMap = {
@@ -64,6 +70,10 @@ export const STAGE_DEADLINES_MS: StageDeadlineMap = {
   extract_vocabulary: env.VIDEO_STAGE_DEADLINE_VOCABULARY_MS,
   generate_quiz: env.VIDEO_STAGE_DEADLINE_QUIZ_MS,
   finalize: env.VIDEO_STAGE_DEADLINE_FINALIZE_MS,
+  parse_lyrics: env.VIDEO_STAGE_DEADLINE_PINYIN_MS,         // lyric parsing nhẹ, dùng pinyin deadline làm default
+  align_karaoke: env.VIDEO_STAGE_DEADLINE_TRANSCRIBE_MS,    // ASR + align tương đương transcribe
+  detect_chapters: env.VIDEO_STAGE_DEADLINE_TRANSLATE_MS,   // 1 Gemini call batch
+  diarize_speakers: env.VIDEO_STAGE_DEADLINE_TRANSCRIBE_MS, // Azure diarization
 };
 
 const activeKey = (lessonId: string) => `lesson:${lessonId}`;
@@ -81,6 +91,8 @@ export async function addVideoProcessingJob(
         {
           lessonId: data.lessonId,
           objectKey: data.objectKey,
+          pipelineVersion: env.PROCESSING_PIPELINE_VERSION,
+          mediaType: data.mediaType ?? 'AUTO',
           activeKey: activeKey(data.lessonId),
           status: 'queued',
           stage: 'inspect_media',
@@ -101,7 +113,7 @@ export async function addVideoProcessingJob(
 
 export async function retryVideoProcessingJob(lessonId: string, objectKey: string) {
   return ProcessingJobModel.findOneAndUpdate(
-    { lessonId, status: 'failed' },
+    { lessonId, status: 'failed', $or: [{ artifactCleanupLockUntil: { $exists: false } }, { artifactCleanupLockUntil: { $lt: new Date() } }] },
     {
       $set: {
         objectKey,
@@ -243,7 +255,7 @@ export async function heartbeatProcessingJob(
   };
   if (nextStageDeadlineAt) update.stageDeadlineAt = nextStageDeadlineAt;
   const result = await ProcessingJobModel.updateOne(
-    { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' },
+    { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } },
     { $set: update },
   );
   return result.matchedCount === 1;
@@ -256,7 +268,7 @@ export async function heartbeatProcessingJob(
  * be created cleanly.
  */
 export async function abortProcessingJob(lease: VideoProcessingJobLease, reason: string): Promise<void> {
-  await ProcessingJobModel.updateOne(
+  const result = await ProcessingJobModel.updateOne(
     { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' },
     {
       $set: {
@@ -268,6 +280,7 @@ export async function abortProcessingJob(lease: VideoProcessingJobLease, reason:
       $unset: { activeKey: 1, lockedAt: 1, lockedBy: 1, heartbeatAt: 1, leaseToken: 1, leaseExpiresAt: 1, stageDeadlineAt: 1, stageStartedAt: 1 },
     },
   );
+  if (result.matchedCount !== 1) return;
   // Sync lesson to failed so admin sees the cancel.
   await LessonModel.updateOne(
     { _id: lease.lessonId, status: 'processing' },
@@ -288,7 +301,7 @@ export async function abortProcessingJob(lease: VideoProcessingJobLease, reason:
  */
 export async function expireProcessingJob(lease: VideoProcessingJobLease, stage: string): Promise<void> {
   const message = `Stage "${stage}" vượt quá deadline cho phép`;
-  await ProcessingJobModel.updateOne(
+  const result = await ProcessingJobModel.updateOne(
     { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' },
     {
       $set: {
@@ -300,6 +313,7 @@ export async function expireProcessingJob(lease: VideoProcessingJobLease, stage:
       $unset: { activeKey: 1, lockedAt: 1, lockedBy: 1, heartbeatAt: 1, leaseToken: 1, leaseExpiresAt: 1, stageDeadlineAt: 1, stageStartedAt: 1 },
     },
   );
+  if (result.matchedCount !== 1) return;
   await LessonModel.updateOne(
     { _id: lease.lessonId, status: 'processing' },
     {
@@ -326,7 +340,7 @@ export async function transitionStage(
 ): Promise<boolean> {
   const deadlineAt = new Date(Date.now() + STAGE_DEADLINES_MS[stage]);
   const result = await ProcessingJobModel.updateOne(
-    { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' },
+    { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } },
     {
       $set: {
         stage,
@@ -356,23 +370,24 @@ export async function failOrRequeueVideoProcessingJob(
   const job = await ProcessingJobModel.findOne(filter);
   if (!job) return null;
   const exhausted = job.attempts >= env.VIDEO_PROCESSING_MAX_RETRIES;
-  job.status = exhausted ? 'failed' : 'queued';
-  job.errorCode = code;
-  job.errorMessage = message.slice(0, 1000);
-  job.lockedAt = undefined;
-  job.lockedBy = undefined;
-  job.heartbeatAt = undefined;
-  job.leaseToken = undefined;
-  job.leaseExpiresAt = undefined;
-  job.stageDeadlineAt = undefined;
-  job.stageStartedAt = undefined;
-  if (exhausted) {
-    job.activeKey = undefined;
-    job.completedAt = new Date();
-  } else {
-    job.nextAttemptAt = new Date(Date.now() + Math.min(5000 * 2 ** Math.max(0, job.attempts - 1), 60_000));
-  }
-  return job.save();
+  const safeMessage = sanitizeProviderMessage(message);
+  const currentStep = String(job.currentStep ?? 'DOWNLOAD_SOURCE');
+  const previous = job.steps?.[currentStep] ?? {};
+  return ProcessingJobModel.findOneAndUpdate(
+    { ...filter, status: 'running' },
+    {
+      $set: {
+        status: exhausted ? 'failed' : 'queued', errorCode: code, errorMessage: safeMessage,
+        failure: { step: currentStep, code, message: safeMessage },
+        ...(previous.status === 'COMPLETED' || previous.status === 'SKIPPED' ? {} : {
+          [`steps.${currentStep}`]: { ...previous, status: 'FAILED', errorCode: code, errorMessage: safeMessage, attempt: previous.attempt ?? 1 },
+        }),
+        ...(exhausted ? { completedAt: new Date() } : { nextAttemptAt: new Date(Date.now() + Math.min(5000 * 2 ** Math.max(0, job.attempts - 1), 60_000)) }),
+      },
+      $unset: { lockedAt: 1, lockedBy: 1, heartbeatAt: 1, leaseToken: 1, leaseExpiresAt: 1, stageDeadlineAt: 1, stageStartedAt: 1, ...(exhausted ? { activeKey: 1 } : {}) },
+    },
+    { returnDocument: 'after' },
+  );
 }
 
 export async function getVideoQueueMetrics() {

@@ -1,0 +1,5 @@
+demucs==4.0.1
+torch==2.4.1
+torchaudio==2.4.1
+boto3==1.35.99
+numpy<2

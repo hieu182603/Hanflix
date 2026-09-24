@@ -21,7 +21,7 @@ const recommendationSchema = z.object({
   })).min(1).max(8),
 });
 
-const answerSchema = z.object({ answerVi: z.string().min(1).max(8000) });
+export const answerSchema = z.object({ answerVi: z.string().min(1).max(8000) });
 
 let client: GoogleGenAI | undefined;
 
@@ -160,7 +160,59 @@ export async function rerankLessonCandidates(input: {
   }
 }
 
-// Sanitize user input before sending to AI: remove control chars and limit length
+// ——————————————————————————————————————————————————————————
+// TOPIC GUARD
+// ——————————————————————————————————————————————————————————
+/** Blocked patterns that indicate off-topic questions. Lowercase regex strings. */
+const OFFTOPIC_PATTERNS: RegExp[] = [
+  // Coding / programming
+  /^(how do I|write|code|program|coding|debug|compile|run)\s+\w+\s+(code|program|in |with |using )/i,
+  /function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=/,
+  /def\s+\w+\s*\(|class\s+\w+|import\s+\w+/,
+  /python|javascript|java|c\+\+|typescript|golang|rust\s+(code|program)/,
+  // Math / homework (non-Chinese-learning specific)
+  /giải\s+(bài\s+)?toán|phương\s+trình|tích\s+phân|đạo\s+hàm/i,
+  // Finance / investment
+  /(đầu\s+tư|cổ\s+phiếu|chứng\s+khoán|forex|bitcoin|tiền\s+điện\s+tử|crypto|nft)\b/i,
+  /thị\s+trường\s+(chứng|forex|coin)|mua\s+(cổ\s+phiếu|trái\s+phiếu)/i,
+  // Medical / health advice (beyond language)
+  /tôi\s+bị\s+(đau|ốm|bệnh|sốt|viêm|nhiễm)/i,
+  /thuốc\s+(chữa|uống|chích|tiêm)|bác\s+sĩ\b/i,
+  // Political / sensitive
+  /chính\s+phủ\s+|đảng\s+(cộng|sản)|bầu\s+cử|chính\s+trị/i,
+  // Legal / criminal
+  /luật\s+sư|tố\s+cáo|kiện\s+(tụng|法院)|phạt\s+(tù|giam)|tù\s+(nhân|giam)/i,
+  // Cooking / recipes
+  /công\s+thức\s+(nấu|làm)\s+(ă|n)?(ấm|ưm)|nấu\s+(cơm|canh|thịt|cá)/i,
+  // Pornographic / adult content
+  /\b(sexy|nude|porn|naked|xxx|erotic|18\+|giường|chiếc|địch)\b/i,
+  // Illegal activities
+  /\b(mua\s+(bán)\s+(thuốc|drug|cocaine|heroin)|ma\s+túy)\b/i,
+  // Generic off-topic indicators
+  /^(what is|tell me|explain)\s+(the\s+)?(weather|stock|news|sport|score|result)\b/i,
+];
+
+export function isOffTopicQuestion(question: string): { blocked: boolean; reason: string } {
+  const lower = question.trim();
+  if (!lower || lower.length < 3) return { blocked: false, reason: '' };
+
+  // Quick length guard — legitimate questions are usually short
+  if (lower.length > 600) {
+    return { blocked: true, reason: 'Câu hỏi quá dài. Hãy chia nhỏ ý.' };
+  }
+
+  for (const pattern of OFFTOPIC_PATTERNS) {
+    if (pattern.test(lower)) {
+      return { blocked: true, reason: 'Câu hỏi ngoài phạm vi hỗ trợ của Panda. Hãy hỏi về từ vựng, ngữ pháp hoặc bài học nhé.' };
+    }
+  }
+
+  return { blocked: false, reason: '' };
+}
+
+// ——————————————————————————————————————————————————————————
+// SANITIZE
+// ——————————————————————————————————————————————————————————
 function sanitizeForPrompt(text: string, maxLength: number = 500): string {
   return text
     .replace(/[\x00-\x1F\x7F]/g, '') // strip control characters
@@ -179,6 +231,33 @@ function buildSafePromptPayload(input: Record<string, unknown>, maxBytes: number
     }
   }
   return JSON.stringify(sanitized).slice(0, maxBytes);
+}
+
+// ——————————————————————————————————————————————————————————
+// ERROR NORMALIZER — strip technical/internal references before surfacing to client
+// ——————————————————————————————————————————————————————————
+/** Map internal/technical error codes or messages to user-safe messages.
+ *  Keeps the HTTP status/code intact for API consumers but hides internals. */
+export function normalizeAiError(error: unknown): AppError {
+  if (error instanceof AppError) {
+    // Already AppError — normalize message
+    const msg = error.message;
+    if (
+      /gemini|google genai|googleai|generativelanguage|api[_\s]?key|quota|rate[\s-]?limit/i.test(msg)
+    ) {
+      return new AppError(503, 'AI_UNAVAILABLE', 'Hệ thống đang quá tải, thử lại sau.');
+    }
+    if (/timeout|timed?\s*out/i.test(msg)) {
+      return new AppError(504, 'AI_TIMEOUT', 'Phản hồi mất quá lâu, thử lại sau.');
+    }
+    if (/not[_\s]?found|not configured|missing/i.test(msg)) {
+      return new AppError(503, 'AI_UNAVAILABLE', 'Hệ thống đang quá tải, thử lại sau.');
+    }
+    // Return unchanged for other AppErrors (e.g. VALIDATION_FAILED, INVALID_CONTEXT)
+    return error;
+  }
+  // Unknown error
+  return new AppError(503, 'AI_UNAVAILABLE', 'Hệ thống đang quá tải, thử lại sau.');
 }
 
 export async function answerLearningQuestion(input: {

@@ -51,6 +51,17 @@ const levelEmoji: Record<LogLevel, string> = {
 
 type LogData = Record<string, unknown>;
 
+export function redactLogValue(value: unknown, key = ''): unknown {
+  if (/password|secret|authorization|subscription.?key|api.?key|access.?key|leaseToken/i.test(key)) return '[REDACTED]';
+  if (typeof value === 'string') return value
+    .replace(/(https?:\/\/[^\s?'"<>]+)\?[^\s'"<>]*/gi, '$1?[REDACTED]')
+    .replace(/(api[-_]?key|token|secret)\s*[:=]\s*\S+/gi, '$1=[REDACTED]');
+  if (value instanceof Error) return { name: value.name, message: redactLogValue(value.message) };
+  if (Array.isArray(value)) return value.map(item => redactLogValue(item));
+  if (value && typeof value === 'object' && !(value instanceof Date)) return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, redactLogValue(item, name)]));
+  return value;
+}
+
 /**
  * Format timestamp to readable format
  */
@@ -116,6 +127,8 @@ function formatData(data: LogData): string {
  * Write log entry
  */
 function write(level: LogLevel, data: LogData, message: string) {
+  data = redactLogValue(data) as LogData;
+  message = redactLogValue(message) as string;
   const timestamp = formatTime(new Date());
   const color = levelColors[level];
   const label = levelLabels[level];

@@ -2,6 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { accessSync, constants } from 'node:fs';
+import { execFile } from 'node:child_process';
 import { AppError } from '../errors/app-error.js';
 
 function executableOrSystem(installerPath: string | undefined, systemCommand: string) {
@@ -27,6 +28,8 @@ export interface MediaMetadata {
   audioCodec?: string;
   bitrate?: number;
   sizeBytes?: number;
+  sampleRate?: number;
+  channels?: number;
 }
 
 /**
@@ -63,82 +66,33 @@ class MediaAbortedError extends Error {
   }
 }
 
-export async function probeMedia(filePath: string, signal?: AbortSignal): Promise<MediaMetadata> {
-  if (signal?.aborted) throw new MediaAbortedError(signal.reason);
-  // F04: ffprobe is callback-based and doesn't return a kill-able process handle.
-  // We handle abort by checking `signal.aborted` at start, after promise creation,
-  // and on a periodic timer (in case the probe is hung). Each check rejects the
-  // promise immediately.
-  if (signal?.aborted) throw new MediaAbortedError(signal.reason);
-  let probeAborted = false;
-  let probeAbortTimer: NodeJS.Timeout | undefined;
-  if (signal) {
-    const onAbort = () => { probeAborted = true; };
-    signal.addEventListener('abort', onAbort, { once: true });
-  }
-  try {
-    return await new Promise<MediaMetadata>((resolve, reject) => {
-      const tryReject = () => {
-        if (probeAborted && signal) reject(new MediaAbortedError(signal.reason));
-      };
-      ffmpeg.ffprobe(filePath, (err, metadata) => {
-        if (probeAbortTimer) clearInterval(probeAbortTimer);
-        if (signal?.aborted) return reject(new MediaAbortedError(signal.reason));
-        if (err) {
-          return reject(new AppError(422, 'MEDIA_PROBE_FAILED', `Không thể đọc thông tin video: ${err.message}`));
-        }
-
-        const videoStream = metadata.streams.find(s => s.codec_type === 'video');
-        const audioStream = metadata.streams.find(s => s.codec_type === 'audio');
-
-        const durationSeconds = metadata.format.duration ? Number(metadata.format.duration) : 0;
-        const sizeBytes = metadata.format.size ? Number(metadata.format.size) : undefined;
-        const bitrate = metadata.format.bit_rate ? Number(metadata.format.bit_rate) : undefined;
-
-        // SECURITY: Hard limits enforced regardless of upstream admin validation.
-        const MAX_DURATION_SECONDS = 600; // 10 minutes absolute ceiling
-        const MAX_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
-        if (durationSeconds > MAX_DURATION_SECONDS) {
-          return reject(new AppError(
-            413,
-            'VIDEO_DURATION_EXCEEDED',
-            `Video vượt quá thời lượng tối đa ${MAX_DURATION_SECONDS / 60} phút.`,
-          ));
-        }
-        if (sizeBytes !== undefined && sizeBytes > MAX_SIZE_BYTES) {
-          return reject(new AppError(
-            413,
-            'VIDEO_SIZE_EXCEEDED',
-            `Video vượt quá dung lượng tối đa ${MAX_SIZE_BYTES / 1024 / 1024}MB.`,
-          ));
-        }
-
-        resolve({
-          durationSeconds: Math.round(durationSeconds * 100) / 100,
-          width: videoStream?.width,
-          height: videoStream?.height,
-          videoCodec: videoStream?.codec_name,
-          audioCodec: audioStream?.codec_name,
-          bitrate,
-          sizeBytes,
-        });
+export async function probeMedia(filePath: string, signal?: AbortSignal, limits: { minDurationSeconds?: number; maxDurationSeconds?: number } = {}): Promise<MediaMetadata> {
+  signal?.throwIfAborted();
+  const timeout = AbortSignal.timeout(60_000);
+  const bounded = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const output = await new Promise<string>((resolve, reject) => {
+    execFile(executableOrSystem(ffprobeInstaller?.path, 'ffprobe'),
+      ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', filePath],
+      { windowsHide: true, signal: bounded, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+        if (bounded.aborted) return reject(new MediaAbortedError(bounded.reason));
+        if (error) return reject(new AppError(422, 'MEDIA_PROBE_FAILED', 'Không thể đọc thông tin media bằng FFprobe'));
+        resolve(stdout);
       });
-      // F04: poll signal every 500ms while ffprobe runs. If signal fires, we
-      // reject the outer promise. The underlying ffprobe process will eventually
-      // complete on its own; the worker has already moved on to cleanup.
-      if (signal) {
-        probeAbortTimer = setInterval(() => {
-          if (signal.aborted) {
-            clearInterval(probeAbortTimer!);
-            tryReject();
-          }
-        }, 500);
-        probeAbortTimer.unref();
-      }
-    });
-  } finally {
-    if (probeAbortTimer) clearInterval(probeAbortTimer);
+  });
+  const metadata = JSON.parse(output) as ffmpeg.FfprobeData;
+  const video = metadata.streams.find(s => s.codec_type === 'video');
+  const audio = metadata.streams.find(s => s.codec_type === 'audio');
+  const durationSeconds = Number(metadata.format.duration ?? 0);
+  const sizeBytes = Number(metadata.format.size ?? 0);
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) throw new AppError(422, 'INVALID_MEDIA_DURATION', 'Không đọc được thời lượng nội dung');
+  if (limits.minDurationSeconds && durationSeconds < limits.minDurationSeconds) {
+    throw new AppError(422, 'VIDEO_DURATION_TOO_SHORT', `Video quá ngắn (${Math.round(durationSeconds)}s). Thời lượng video phải từ 1 phút đến 10 phút (60s – 600s)`);
   }
+  if (durationSeconds > (limits.maxDurationSeconds ?? 600)) throw new AppError(413, 'VIDEO_DURATION_EXCEEDED', 'Video vượt quá thời lượng tối đa cho phép');
+  if (sizeBytes > 200 * 1024 * 1024) throw new AppError(413, 'VIDEO_SIZE_EXCEEDED', 'Media vượt quá dung lượng tối đa 200MB');
+  return { durationSeconds: Math.round(durationSeconds * 100) / 100, width: video?.width, height: video?.height,
+    videoCodec: video?.codec_name, audioCodec: audio?.codec_name, sampleRate: Number(audio?.sample_rate), channels: audio?.channels,
+    bitrate: Number(metadata.format.bit_rate) || undefined, sizeBytes };
 }
 
 export async function extractAudioForASR(videoInputPath: string, audioOutputPath: string, signal?: AbortSignal): Promise<string> {
@@ -148,6 +102,8 @@ export async function extractAudioForASR(videoInputPath: string, audioOutputPath
       .noVideo()
       .audioFrequency(16000)
       .audioChannels(1)
+      .audioCodec('pcm_s16le')
+      .format('wav')
       .output(audioOutputPath)
       .on('end', () => {
         if (signal?.aborted) return reject(new MediaAbortedError(signal.reason));
@@ -156,6 +112,38 @@ export async function extractAudioForASR(videoInputPath: string, audioOutputPath
       .on('error', (err) => {
         if (signal?.aborted) return reject(new MediaAbortedError(signal.reason));
         reject(new AppError(500, 'AUDIO_EXTRACTION_FAILED', `Không thể trích xuất âm thanh từ video: ${err.message}`));
+      });
+    bindAbort(signal, command);
+    command.run();
+  });
+}
+
+export async function validateAsrAudio(filePath: string, signal?: AbortSignal): Promise<MediaMetadata> {
+  const metadata = await probeMedia(filePath, signal);
+  if (!metadata.sizeBytes || metadata.sizeBytes <= 44 || metadata.sampleRate !== 16000 || metadata.channels !== 1 || metadata.audioCodec !== 'pcm_s16le') {
+    throw new AppError(422, 'INVALID_ASR_AUDIO', 'ASR yêu cầu PCM WAV 16kHz mono với dữ liệu audio hợp lệ');
+  }
+  return metadata;
+}
+
+/** Preserve music source quality for optional Demucs separation. */
+export async function extractAudioForSeparation(videoInputPath: string, audioOutputPath: string, signal?: AbortSignal): Promise<string> {
+  if (signal?.aborted) throw new MediaAbortedError(signal.reason);
+  return new Promise((resolve, reject) => {
+    const command = ffmpeg(videoInputPath)
+      .noVideo()
+      .audioFrequency(44100)
+      .audioChannels(2)
+      .audioCodec('pcm_s16le')
+      .format('wav')
+      .output(audioOutputPath)
+      .on('end', () => {
+        if (signal?.aborted) return reject(new MediaAbortedError(signal.reason));
+        resolve(audioOutputPath);
+      })
+      .on('error', (err) => {
+        if (signal?.aborted) return reject(new MediaAbortedError(signal.reason));
+        reject(new AppError(500, 'AUDIO_SEPARATION_SOURCE_FAILED', `Không thể chuẩn bị audio cho vocal separation: ${err.message}`));
       });
     bindAbort(signal, command);
     command.run();
