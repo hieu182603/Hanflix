@@ -10,10 +10,30 @@ import { WordModel } from '../models/word.model.js';
 import { VocabularyModel } from '../models/vocabulary.model.js';
 import { scheduleReview } from '../services/srs.js';
 import { vocabularyService } from '../services/vocabulary.service.js';
-import { recordStudyActivity } from '../services/study-activity.js';
+import { StudyActivityModel } from '../models/study-activity.model.js';
+import { recordStudyActivity, toTimezoneDateKey } from '../services/study-activity.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
+
+// A completed catalog flashcard session counts once per day, without client-awarded XP.
+router.post('/practice-session', requireAuth, validate(z.object({
+  words: z.array(z.string().trim().min(1).max(50)).min(1).max(100),
+})), asyncHandler(async (req, res) => {
+  const words = [...new Set<string>(req.body.words)];
+  const found = await VocabularyModel.distinct('simplified', { simplified: { $in: words }, status: 'published' });
+  if (found.length !== words.length) throw new AppError(422, 'INVALID_PRACTICE_WORDS', 'Bộ thẻ chứa từ chưa có trong kho đã xuất bản.');
+  const filter = { userId: req.auth!.userId, dateKey: toTimezoneDateKey() };
+  const update = { $set: { flashcardCompleted: true } };
+  try {
+    await StudyActivityModel.updateOne(filter, update, { upsert: true });
+  } catch (error) {
+    if ((error as { code?: number }).code !== 11000) throw error;
+    await StudyActivityModel.updateOne(filter, update);
+  }
+  res.json({ data: { recorded: true } });
+}));
+
 
 const saveSchema = z.object({
   wordId: z.string().optional(),

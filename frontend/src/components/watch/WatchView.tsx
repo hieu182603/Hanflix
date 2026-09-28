@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import { VideoLesson, RECOMMENDATION_LESSONS } from '../../data/hanflixData';
 import { useLanguage } from '../../i18n';
-import { recordLearningActivity } from '../../lib/streak';
 
 interface WatchViewProps {
   lesson: VideoLesson;
@@ -68,13 +67,13 @@ export default function WatchView({
   const [savedWordToast, setSavedWordToast] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
 
-  // Scroll to top when lesson changes & automatically trigger daily streak activity
+  // Scroll to top when lesson changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsPlaying(true);
     setProgressPercent(8);
     setActiveSubtitleIndex(0);
-    recordLearningActivity('video');
+
   }, [lesson.id]);
 
   // Audio pronunciation

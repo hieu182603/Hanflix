@@ -59,7 +59,7 @@ export default function Header({
   isSidebarCollapsed = false,
   currentUser,
   onLogout,
-  streakDays = 14,
+  streakDays = 0,
   onOpenPractice,
   onNavigateToLessons,
   onNotificationAction,
