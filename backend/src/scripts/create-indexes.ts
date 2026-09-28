@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import '../models/account-token.model.js';
+import '../models/ai-conversation.model.js';
+import '../models/ai-message.model.js';
 import '../models/lesson.model.js';
 import '../models/processing-job.model.js';
 import '../models/progress.model.js';
@@ -13,6 +15,7 @@ import '../models/subtitle-track.model.js';
 import '../models/user.model.js';
 import '../models/vocabulary.model.js';
 import '../models/word.model.js';
+import '../models/practice.model.js';
 
 async function main() {
   // Atlas Stable API strict mode rejects text-index DDL. Runtime connections remain strict;

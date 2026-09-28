@@ -24,7 +24,7 @@ interface StreakDropdownProps {
 }
 
 export default function StreakDropdown({
-  initialStreakDays = 14,
+  initialStreakDays = 0,
   dailyMinutes = 15,
   onOpenPractice,
   onNavigateToLessons,
@@ -60,20 +60,23 @@ export default function StreakDropdown({
         setIsOpen(false);
       }
     };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsOpen(false); };
+    document.addEventListener('keydown', escape);
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
     return () => {
+      document.removeEventListener('keydown', escape);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, []);
 
-  const streakCount = streakState.streakCount || initialStreakDays;
+  const streakCount = streakState.streakCount;
   const isCompletedToday = streakState.isCompletedToday;
 
   // 7-day strip data (Monday -> Sunday)
   // Day index: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
-  const currentDayOfWeek = (new Date().getDay() + 6) % 7;
+
   const dayConfigs = [
     { key: 'mon', label: t.streak.weekdays.mon },
     { key: 'tue', label: t.streak.weekdays.tue },
@@ -85,8 +88,8 @@ export default function StreakDropdown({
   ];
 
   const weekDays = dayConfigs.map((item, index) => {
-    const isToday = index === currentDayOfWeek;
-    const completed = isToday ? isCompletedToday : index < currentDayOfWeek;
+    const isToday = streakState.weekDays[index]?.isToday ?? false;
+    const completed = streakState.weekDays[index]?.completed ?? false;
     return {
       ...item,
       completed,
@@ -110,6 +113,7 @@ export default function StreakDropdown({
         }`}
         title={t.streak.title}
         aria-label={t.streak.title}
+        aria-expanded={isOpen}
       >
         <div className="relative flex items-center justify-center">
           {/* Realistic Animated Burning Flame with Embers */}
@@ -123,7 +127,7 @@ export default function StreakDropdown({
           )}
         </div>
 
-        <span className="font-mono text-[13px] font-black">{streakCount}</span>
+        <span className="font-mono text-[13px] font-black">{streakState.loaded ? streakCount : '—'}</span>
         <span className="hidden sm:inline font-semibold">{t.streak.daysCount}</span>
       </motion.button>
 
@@ -283,10 +287,10 @@ export default function StreakDropdown({
                   <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-amber-600" />
-                      <span>Mục tiêu hàng ngày</span>
+                      <span>Ghi nhận ngày học</span>
                     </span>
                     <span className="font-mono text-xs text-neutral-500">
-                      {isCompletedToday ? 'Hoàn thành (100%)' : 'Đang thực hiện (60%)'}
+                      {streakState.error ? 'Chưa đồng bộ được' : !streakState.loaded ? 'Đang tải…' : isCompletedToday ? 'Đã ghi nhận' : 'Chưa ghi nhận'}
                     </span>
                   </div>
 
@@ -294,7 +298,7 @@ export default function StreakDropdown({
                   <div className="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: isCompletedToday ? '100%' : '60%' }}
+                      animate={{ width: isCompletedToday ? '100%' : '0%' }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
                       className={`h-full rounded-full ${
                         isCompletedToday
@@ -306,8 +310,8 @@ export default function StreakDropdown({
 
                   <div className="text-[11px] text-neutral-500 leading-relaxed font-medium">
                     {isCompletedToday
-                      ? 'Bạn đã hoàn thành mục tiêu học hôm nay. Tuyệt vời!'
-                      : 'Chỉ cần xem video hoặc làm 1 bài luyện tập ngắn để kích hoạt.'}
+                      ? 'Hoạt động học hôm nay đã được lưu. Ngày học tính theo giờ Việt Nam (UTC+7).'
+                      : 'Xem video có tiến độ được lưu, trả lời bài luyện hoặc ôn từ đã lưu để ghi nhận ngày học.'}
                   </div>
                 </div>
 
@@ -320,10 +324,10 @@ export default function StreakDropdown({
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-amber-900">
-                          Tự động cộng chuỗi khi tương tác
+                          Duy trì một ngày học mỗi ngày
                         </h4>
                         <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">
-                          Không cần bấm thủ công! Khi bạn bắt đầu xem video bài học hoặc làm bài ôn tập, chuỗi streak sẽ tự động kích hoạt ngay.
+                          Chuỗi cập nhật khi hoạt động học được lưu thành công. Mỗi ngày tính một lần; bỏ lỡ một ngày sẽ bắt đầu lại chuỗi.
                         </p>
                       </div>
                     </div>

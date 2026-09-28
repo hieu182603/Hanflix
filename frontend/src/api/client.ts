@@ -1,4 +1,9 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
+// Production proxies /api/v1 through the website origin. Calling Azure directly
+// makes the HttpOnly refresh cookie third-party and breaks reload in browsers
+// that block third-party cookies, even though login returns an access token.
+const API_BASE = import.meta.env.PROD
+  ? '/api/v1'
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1');
 
 let accessToken: string | null = null;
 let isRefreshing = false;
@@ -25,8 +30,10 @@ async function refreshAccessToken(): Promise<string> {
       throw new ApiRequestError(429, 'RATE_LIMITED',
         json?.error?.message || 'Vui lòng đợi một chút trước khi thử lại.');
     }
-    accessToken = null;
-    throw new Error('SESSION_EXPIRED');
+    const json = await res.json().catch(() => null);
+    if (res.status === 401 || res.status === 403) accessToken = null;
+    throw new ApiRequestError(res.status, json?.error?.code || 'REFRESH_FAILED',
+      json?.error?.message || 'Chưa thể khôi phục phiên đăng nhập. Vui lòng thử lại.');
   }
 
   const json = await res.json();
@@ -171,9 +178,10 @@ export async function apiFetch<T = unknown>(
       // A refresh cancelled via abort is not a real error — propagate it
       // so React Query stops retrying, but don't clear the token.
       if (error instanceof ApiRequestError && error.code === 'ABORTED') throw error;
-      // Refresh failed (real reason: SESSION_EXPIRED, ACCOUNT_LOCKED, ...).
-      // Clear token to stop further refresh attempts.
-      accessToken = null;
+      if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
+        accessToken = null;
+      }
+      throw error;
     }
   }
 
@@ -202,6 +210,11 @@ export async function apiFetch<T = unknown>(
       errBody?.code || 'UNKNOWN',
       errBody?.message || 'Đã xảy ra lỗi không xác định',
     );
+  }
+
+  if (typeof window !== 'undefined' && options.method && options.method.toUpperCase() !== 'GET'
+    && /^\/(lessons|vocabulary|practice)\//.test(path)) {
+    window.dispatchEvent(new CustomEvent('hanflix:activity-updated', { detail: { source: path.startsWith('/vocabulary/') ? 'review' : path.endsWith('/progress') ? 'video' : 'practice' } }));
   }
 
   return (json as { data: T }).data;

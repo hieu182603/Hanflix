@@ -185,7 +185,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   vi: {
     nav: {
       feed: 'Bảng tin',
-      lessons: 'Bài học',
+      lessons: 'Reels',
       saved: 'Kho lưu trữ',
       vocabulary: 'Từ vựng',
       roadmap: 'Lộ trình',
@@ -364,7 +364,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   en: {
     nav: {
       feed: 'Feed',
-      lessons: 'Lessons',
+      lessons: 'Reels',
       saved: 'Saved',
       vocabulary: 'Vocabulary',
       roadmap: 'Roadmap',
@@ -543,7 +543,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   zh: {
     nav: {
       feed: '动态',
-      lessons: '课程',
+      lessons: 'Reels',
       saved: '收藏库',
       vocabulary: '生词本',
       roadmap: '学习路线',

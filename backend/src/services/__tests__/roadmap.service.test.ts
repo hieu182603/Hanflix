@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Types } from 'mongoose';
 
-const { userModelMock, lessonModelMock, progressModelMock } = vi.hoisted(() => {
+const { userModelMock, lessonModelMock, progressModelMock, practiceAttemptModelMock, studyActivityModelMock } = vi.hoisted(() => {
   return {
     userModelMock: {
       findById: vi.fn(),
@@ -11,6 +11,12 @@ const { userModelMock, lessonModelMock, progressModelMock } = vi.hoisted(() => {
     },
     progressModelMock: {
       find: vi.fn(),
+    },
+    practiceAttemptModelMock: {
+      aggregate: vi.fn(),
+    },
+    studyActivityModelMock: {
+      aggregate: vi.fn(),
     },
   };
 });
@@ -26,6 +32,12 @@ vi.mock('../../models/lesson.model.js', () => ({
 vi.mock('../../models/progress.model.js', () => ({
   ProgressModel: progressModelMock,
 }));
+vi.mock('../../models/practice.model.js', () => ({
+  PracticeAttemptModel: practiceAttemptModelMock,
+}));
+vi.mock('../../models/study-activity.model.js', () => ({
+  StudyActivityModel: studyActivityModelMock,
+}));
 
 import { RoadmapService } from '../roadmap.service.js';
 
@@ -38,6 +50,10 @@ describe('RoadmapService.getRoadmap', () => {
     userModelMock.findById.mockReset();
     lessonModelMock.find.mockReset();
     progressModelMock.find.mockReset();
+    practiceAttemptModelMock.aggregate.mockReset();
+    practiceAttemptModelMock.aggregate.mockResolvedValue([]);
+    studyActivityModelMock.aggregate.mockReset();
+    studyActivityModelMock.aggregate.mockResolvedValue([]);
   });
 
   it('calculates HSK stage progress correctly', async () => {
@@ -71,7 +87,7 @@ describe('RoadmapService.getRoadmap', () => {
 
     expect(result.currentHsk).toBe(2);
     expect(result.targetHsk).toBe(5);
-    expect(result.stages.length).toBe(6);
+    expect(result.stages.length).toBe(9);
 
     // HSK 1: 1 out of 1 completed -> 100%, completed
     const hsk1 = result.stages[0];
@@ -92,6 +108,24 @@ describe('RoadmapService.getRoadmap', () => {
     // HSK 3: level > currentHsk -> locked
     const hsk3 = result.stages[2];
     expect(hsk3.level).toBe('HSK 3');
-    expect(hsk3.status).toBe('locked');
+    expect(hsk3.status).toBe('unavailable');
+    expect(hsk1.topics).toEqual([{
+      id: 'food', nameVi: 'Ẩm thực', progress: 100, status: 'completed',
+      totalLessons: 1, completedLessons: 1,
+    }]);
+    expect(hsk2.topics[0].progress).toBe(0);
+    expect(hsk2.topics[0].status).toBe('not_started');
+    expect(hsk3.topics).toEqual([]);
+  });
+
+  it('does not manufacture progress when the catalog is empty', async () => {
+    userModelMock.findById.mockReturnValue({ select: () => ({ lean: async () => ({
+      learningProfile: { currentHsk: 4, targetHsk: 6 },
+    }) }) });
+    lessonModelMock.find.mockReturnValue({ select: () => ({ lean: async () => [] }) });
+    progressModelMock.find.mockReturnValue({ select: () => ({ lean: async () => [] }) });
+    const result = await RoadmapService.getRoadmap(userId);
+    expect(result.overallProgress).toBe(0);
+    expect(result.stages.every(stage => stage.progress === 0 && stage.status === 'unavailable' && stage.topics.length === 0)).toBe(true);
   });
 });

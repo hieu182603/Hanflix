@@ -18,7 +18,6 @@ import {
   Calendar,
   Star,
 } from 'lucide-react';
-import { recordLearningActivity } from '../lib/streak';
 import LeaderboardView, { LeaderboardViewProps } from './leaderboard/LeaderboardView';
 
 interface ExamPrepPageProps {
@@ -145,7 +144,7 @@ export function ExamPrepPage({ onStartPractice }: ExamPrepPageProps) {
 
   const handleStart = (section: ExamSection) => {
     if (section !== 'vocabulary') return;
-    recordLearningActivity('practice');
+
     onStartPractice?.();
   };
 

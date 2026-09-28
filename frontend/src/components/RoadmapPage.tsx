@@ -17,14 +17,13 @@ import {
   RotateCcw,
   ShieldAlert,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { getRoadmap, type RoadmapStage, type ModuleTopic } from '../api/learning';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getRoadmap, saveRoadmapPreferences, type RoadmapStage, type ModuleTopic } from '../api/learning';
 import { learningQueryKeys } from '../api/queryKeys';
-import { getStreakState } from '../lib/streak';
 
 export interface RoadmapPageProps {
   onSelectLesson?: (lessonId: string) => void;
-  onStartPractice?: () => void;
+  onStartPractice?: (hsk?: number, skill?: string) => void;
   onNavigateToLessons?: (hsk?: number) => void;
 }
 
@@ -34,6 +33,12 @@ export default function RoadmapPage({
   onNavigateToLessons,
 }: RoadmapPageProps) {
   const [selectedStageId, setSelectedStageId] = useState<string>('');
+  const queryClient = useQueryClient();
+  const [preferences, setPreferences] = useState({ currentHsk: 1, targetHsk: 6, dailyMinutes: 15 });
+  const preferenceMutation = useMutation({
+    mutationFn: saveRoadmapPreferences,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: learningQueryKeys.roadmap() }),
+  });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: learningQueryKeys.roadmap(),
@@ -46,6 +51,10 @@ export default function RoadmapPage({
   const targetHsk = data?.targetHsk || 6;
   const overallProgress = data?.overallProgress ?? 0;
 
+  useEffect(() => {
+    if (data) setPreferences({ currentHsk: data.currentHsk, targetHsk: data.targetHsk, dailyMinutes: data.dailyMinutes });
+  }, [data?.currentHsk, data?.targetHsk, data?.dailyMinutes]);
+
   // Auto-select current in-progress stage when data loads
   useEffect(() => {
     if (stages.length > 0 && !selectedStageId) {
@@ -56,26 +65,16 @@ export default function RoadmapPage({
 
   const selectedStage = stages.find((s) => s.id === selectedStageId) || stages[0];
   const completedStagesCount = stages.filter((s) => s.status === 'completed').length;
-  const [streakState, setStreakState] = useState(() => getStreakState());
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      setStreakState(getStreakState());
-    };
-    window.addEventListener('hanflix:streak-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('hanflix:streak-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
+  const streakDays = data?.streakDays ?? 0;
 
   const handleStartLearning = (stage?: RoadmapStage) => {
+    if (stage?.nextLessonId && onSelectLesson) {
+      onSelectLesson(stage.nextLessonId);
+      return;
+    }
     const hskLevelNumber = stage ? parseInt(stage.level.replace(/\D/g, ''), 10) : currentHsk;
     if (onNavigateToLessons) {
       onNavigateToLessons(hskLevelNumber);
-    } else if (onSelectLesson) {
-      onSelectLesson('17');
     } else if (onStartPractice) {
       onStartPractice();
     }
@@ -123,7 +122,7 @@ export default function RoadmapPage({
               <div className="flex items-center gap-1.5 font-bold text-[#18181B]">
                 <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                 <span>Chuỗi:</span>
-                <span className="text-orange-600">{streakState.streakCount} ngày</span>
+                <span className="text-orange-600">{streakDays} ngày</span>
               </div>
             </div>
 
@@ -137,6 +136,53 @@ export default function RoadmapPage({
           </div>
         </div>
       </div>
+
+      <section className="grid gap-4 rounded-3xl border border-[#E7E7EA] bg-white p-5 lg:grid-cols-[1fr_auto]">
+        <div>
+          <h2 className="font-black">Cấu hình lộ trình</h2>
+          <p className="mt-1 text-xs text-[#5F6368]">Thay đổi mục tiêu không xóa lịch sử đã học.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <label className="text-xs font-bold">Hiện tại
+              <select className="ml-2 rounded-lg border p-2" value={preferences.currentHsk} onChange={e => setPreferences(p => ({ ...p, currentHsk: Number(e.target.value), targetHsk: Math.max(Number(e.target.value), p.targetHsk) }))}>
+                {Array.from({ length: 9 }, (_, i) => <option key={i} value={i + 1}>HSK {i + 1}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-bold">Mục tiêu
+              <select className="ml-2 rounded-lg border p-2" value={preferences.targetHsk} onChange={e => setPreferences(p => ({ ...p, targetHsk: Number(e.target.value) }))}>
+                {Array.from({ length: 9 }, (_, i) => <option key={i} value={i + 1} disabled={i + 1 < preferences.currentHsk}>HSK {i + 1}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-bold">Phút/ngày
+              <input className="ml-2 w-20 rounded-lg border p-2" type="number" min={5} max={120} value={preferences.dailyMinutes} onChange={e => setPreferences(p => ({ ...p, dailyMinutes: Number(e.target.value) }))} />
+            </label>
+          </div>
+        </div>
+        <button disabled={preferenceMutation.isPending || preferences.targetHsk < preferences.currentHsk} onClick={() => preferenceMutation.mutate(preferences)} className="min-h-11 self-end rounded-xl bg-[#B91B1C] px-5 text-xs font-bold text-white disabled:opacity-50">
+          {preferenceMutation.isPending ? 'Đang lưu…' : 'Lưu lộ trình'}
+        </button>
+        {preferenceMutation.isError && <p role="alert" className="text-xs text-red-700">{preferenceMutation.error.message}</p>}
+      </section>
+
+      {data ? (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-3xl border border-[#E7E7EA] bg-white p-5">
+            <h2 className="font-black">Kế hoạch hôm nay · {data.dailyMinutes} phút</h2>
+            {data.dailyLessons.length ? data.dailyLessons.map(lesson => (
+              <button key={lesson.id} onClick={() => onSelectLesson?.(lesson.id)} className="mt-3 flex w-full justify-between rounded-xl border p-3 text-left text-sm">
+                <span>{lesson.title}</span><span>{Math.ceil(lesson.durationSeconds / 60)} phút</span>
+              </button>
+            )) : <p className="mt-3 text-sm text-[#5F6368]">Chưa có bài phù hợp trong chặng đang mở.</p>}
+          </div>
+          <div className="rounded-3xl border border-[#E7E7EA] bg-white p-5">
+            <h2 className="font-black">Kỹ năng cần ôn</h2>
+            {data.weakSkills.length ? data.weakSkills.map(item => (
+              <button key={`${item.hsk}-${item.skill}`} onClick={() => onStartPractice?.(item.hsk, item.skill)} className="mt-3 flex w-full justify-between rounded-xl border p-3 text-left text-sm">
+                <span>HSK {item.hsk} · {item.skill}</span><span>{item.score}%</span>
+              </button>
+            )) : <p className="mt-3 text-sm text-[#5F6368]">Chưa có kết quả bài luyện để phân tích.</p>}
+          </div>
+        </section>
+      ) : null}
 
       {/* ERROR STATE */}
       {isError && (
@@ -195,6 +241,7 @@ export default function RoadmapPage({
                 const isCompleted = stage.status === 'completed';
                 const isInProgress = stage.status === 'in_progress';
                 const isLocked = stage.status === 'locked';
+                const isUnavailable = stage.status === 'unavailable';
                 const isSelected = stage.id === selectedStageId;
 
                 return (
@@ -211,7 +258,7 @@ export default function RoadmapPage({
                     >
                       {isCompleted && <CheckCircle2 className="w-3.5 h-3.5" />}
                       {isInProgress && <div className="w-2 h-2 rounded-full bg-[#B91B1C]" />}
-                      {isLocked && <Lock className="w-2.5 h-2.5 text-[#8B9097]" />}
+                      {(isLocked || isUnavailable) && <Lock className="w-2.5 h-2.5 text-[#8B9097]" />}
                     </div>
 
                     {/* Stage Card */}
@@ -267,10 +314,10 @@ export default function RoadmapPage({
                               <span>{stage.progress}% Đang học</span>
                             </span>
                           )}
-                          {isLocked && (
+                          {(isLocked || isUnavailable) && (
                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#F7F7F9] border border-[#E7E7EA] text-[#8B9097]">
                               <Lock className="w-3 h-3" />
-                              <span>Chưa mở</span>
+                              <span>{isUnavailable ? 'Chưa có nội dung' : 'Chưa mở'}</span>
                             </span>
                           )}
                         </div>
@@ -286,7 +333,7 @@ export default function RoadmapPage({
                           <div className="w-full h-2 rounded-full bg-[#F7F7F9] border border-[#E7E7EA] overflow-hidden">
                             <div
                               className="h-full bg-[#B91B1C] rounded-full transition-all duration-500"
-                              style={{ width: `${Math.max(5, stage.progress)}%` }}
+                              style={{ width: `${stage.progress}%` }}
                             />
                           </div>
                         </div>
@@ -295,8 +342,8 @@ export default function RoadmapPage({
                       {/* Topics / Modules Breakdown */}
                       <div className="mt-4 pt-4 border-t border-[#E7E7EA] space-y-2.5">
                         <div className="text-[11px] font-bold text-[#8B9097] uppercase tracking-wider flex items-center justify-between">
-                          <span>Chủ đề trọng tâm ({stage.wordCount} · {stage.grammarCount})</span>
-                          <span>{stage.totalLessons > 0 ? `${stage.totalLessons} bài học kho` : ''}</span>
+                          <span>Chủ đề trong kho bài học</span>
+                          <span>{stage.totalLessons > 0 ? `${stage.totalLessons} bài học kho` : 'Chưa có bài học'}</span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -384,7 +431,7 @@ export default function RoadmapPage({
                   <div className="w-full h-2 rounded-full bg-white border border-[#E7E7EA] overflow-hidden">
                     <div
                       className="h-full bg-[#B91B1C] rounded-full transition-all duration-500"
-                      style={{ width: `${Math.max(5, selectedStage.progress)}%` }}
+                      style={{ width: `${selectedStage.progress}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[#8B9097] pt-1">
@@ -412,7 +459,7 @@ export default function RoadmapPage({
                 </span>
                 <span className="text-xs font-bold text-orange-600 flex items-center gap-1">
                   <Flame className="w-3.5 h-3.5 fill-orange-500" />
-                  <span>{streakState.streakCount} ngày</span>
+                  <span>{streakDays} ngày</span>
                 </span>
               </div>
 
@@ -421,14 +468,14 @@ export default function RoadmapPage({
                   <div key={day} className="flex flex-col items-center gap-1.5 flex-1">
                     <div
                       className={`w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-bold border transition-colors ${
-                        idx < Math.min(5, streakState.streakCount)
+                        data?.weekDays?.[idx]?.completed
                           ? 'bg-[#188A5A] border-[#188A5A] text-white'
-                          : idx === 5
+                          : data?.weekDays?.[idx]?.isToday
                           ? 'bg-[#FDF1F1] border-[#B91B1C] text-[#B91B1C]'
                           : 'bg-[#F7F7F9] border-[#E7E7EA] text-[#8B9097]'
                       }`}
                     >
-                      {idx < Math.min(5, streakState.streakCount) ? (
+                      {data?.weekDays?.[idx]?.completed ? (
                         <CheckCircle2 className="w-3.5 h-3.5" />
                       ) : (
                         day

@@ -25,7 +25,6 @@ import { useQuery } from '@tanstack/react-query';
 import BurningFlame from '../streak/BurningFlame';
 import { getLeaderboard, type LeaderUser, type LeaderboardPeriod } from '../../api/learning';
 import { learningQueryKeys } from '../../api/queryKeys';
-import { getStreakState } from '../../lib/streak';
 
 export interface LeaderboardViewProps {
   onStartPractice?: () => void;
@@ -39,41 +38,28 @@ function getAvatarSrc(avatar?: string, name?: string): string {
 
 export default function LeaderboardView({ onStartPractice, onSelectLesson }: LeaderboardViewProps) {
   const [period, setPeriod] = useState<LeaderboardPeriod>('week');
+  const [hsk, setHsk] = useState('');
+  const [page, setPage] = useState(1);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState<boolean>(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: learningQueryKeys.leaderboard(period),
-    queryFn: ({ signal }) => getLeaderboard({ period, signal }),
+    queryKey: [...learningQueryKeys.leaderboard(period), { hsk, page }],
+    queryFn: ({ signal }) => getLeaderboard({ period, hsk: hsk ? Number(hsk) : undefined, page, signal }),
     staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   });
 
   const leaders = data?.items || [];
-  const [localStreakCount, setLocalStreakCount] = useState(() => getStreakState().streakCount);
-
-  useEffect(() => {
-    const handleUpdate = () => setLocalStreakCount(getStreakState().streakCount);
-    window.addEventListener('hanflix:streak-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('hanflix:streak-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
-
-  const maxXP = leaders[0]?.xp || 1;
+  const podium = data?.topUsers ?? leaders.slice(0, 3);
+  const maxXP = podium[0]?.xp || 1;
 
   // Podium arrangement: [Rank 2 (Silver), Rank 1 (Gold), Rank 3 (Bronze)]
-  const top1 = leaders.find((u) => u.rank === 1) || leaders[0];
-  const top2 = leaders.find((u) => u.rank === 2) || leaders[1];
-  const top3 = leaders.find((u) => u.rank === 3) || leaders[2];
+  const top1 = podium.find((u) => u.rank === 1);
+  const top2 = podium.find((u) => u.rank === 2);
+  const top3 = podium.find((u) => u.rank === 3);
 
   const rawMyUser = data?.currentUserRank || leaders.find((u) => u.isMe) || null;
-  const myUser = rawMyUser
-    ? {
-        ...rawMyUser,
-        streakDays: Math.max(rawMyUser.streakDays || 0, localStreakCount),
-      }
-    : null;
+  const myUser = rawMyUser;
   const gapToFirst = top1 && myUser && top1.id !== myUser.id ? Math.max(0, top1.xp - myUser.xp) : 0;
 
   return (
@@ -88,7 +74,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
               <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Đấu Trường Kim Cương · Mùa 4</span>
+              <span>Cộng đồng học tập HanFlix</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>
@@ -117,7 +103,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="inline-flex p-1 rounded-2xl bg-neutral-100/90 border border-neutral-200/70 shadow-inner">
             <button
               type="button"
-              onClick={() => setPeriod('week')}
+              onClick={() => { setPeriod('week'); setPage(1); } }
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 period === 'week'
                   ? 'bg-white text-neutral-900 shadow-sm'
@@ -128,7 +114,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
             </button>
             <button
               type="button"
-              onClick={() => setPeriod('month')}
+              onClick={() => { setPeriod('month'); setPage(1); } }
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 period === 'month'
                   ? 'bg-white text-neutral-900 shadow-sm'
@@ -139,7 +125,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
             </button>
             <button
               type="button"
-              onClick={() => setPeriod('all')}
+              onClick={() => { setPeriod('all'); setPage(1); } }
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 period === 'all'
                   ? 'bg-white text-neutral-900 shadow-sm'
@@ -533,7 +519,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                       <span>•</span>
                       <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
                         <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        {user.isMe ? Math.max(user.streakDays || 0, localStreakCount) : user.streakDays} ngày liên tiếp
+                        {user.streakDays} ngày liên tiếp
                       </span>
                     </div>
                   </div>
@@ -573,7 +559,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                       </span>
                     )}
                     {user.trend === 'same' && (
-                      <span className="text-neutral-300" title="Giữ nguyên vị trí">
+                      <span className="text-neutral-300" title="Chưa có dữ liệu so sánh thứ hạng">
                         <Minus className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -584,6 +570,20 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           </div>
         </div>
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E7E7EA] bg-white p-4">
+        <label className="text-sm font-bold">Cấp HSK
+          <select aria-label="Lọc bảng xếp hạng theo HSK" value={hsk} onChange={e => { setHsk(e.target.value); setPage(1); }} className="ml-3 rounded-lg border p-2">
+            <option value="">Tất cả cấp</option>
+            {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>HSK {i + 1}</option>)}
+          </select>
+        </label>
+        <div className="flex items-center gap-3 text-sm">
+          <button disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)}>Trước</button>
+          <span>Trang {data?.page ?? page}/{data?.totalPages ?? 1}</span>
+          <button disabled={page >= (data?.totalPages ?? 1) || isLoading} onClick={() => setPage(p => p + 1)}>Sau</button>
+        </div>
+      </div>
 
       {/* 5. XP RULES & LEAGUE REWARDS MODAL */}
       <AnimatePresence>
@@ -604,7 +604,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                     <h3 className="font-extrabold text-base text-neutral-900">
                       Quy Tắc Đấu Trường & Điểm XP
                     </h3>
-                    <p className="text-xs text-neutral-500">Cách thăng hạng và tích lũy XP hàng ngày</p>
+                    <p className="text-xs text-neutral-500">Điểm giảm dần; đồng điểm xét chuỗi học, tên và mã tài khoản</p>
                   </div>
                 </div>
                 <button
@@ -616,6 +616,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 </button>
               </div>
 
+              <p className="text-xs text-neutral-600">Luyện kỹ năng: đạt 50–79% nhận 10 XP, từ 80% nhận 25 XP. Mỗi bộ luyện chỉ thưởng một lần/ngày theo giờ Việt Nam. Điểm cũ được giữ nguyên.</p>
               {/* XP Earning Mechanics */}
               <div className="space-y-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
@@ -664,7 +665,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   <span>Quy chế thăng & rớt hạng</span>
                 </div>
                 <p className="leading-relaxed text-neutral-700">
-                  Mỗi tuần sẽ tổng kết vào lúc 23:59 Chủ Nhật. <strong>Top 3 học viên</strong> đứng đầu bảng đấu Kim Cương sẽ được vinh danh tại sảnh danh dự và nhận huy hiệu danh giá.
+                  Bảng tuần tính từ thứ Hai theo giờ Việt Nam. Top 3 hiển thị theo điểm của kỳ đang chọn; chưa có chức năng trao thưởng theo mùa.
                 </p>
               </div>
 

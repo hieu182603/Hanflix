@@ -1,3 +1,5 @@
+import { summarizeStreak, qualifyingStudyActivity, qualifyingPracticeActivity } from './streak.js';
+import { PracticeAttemptModel } from '../models/practice.model.js';
 import { Types } from 'mongoose';
 import { UserModel } from '../models/user.model.js';
 import { StudyActivityModel } from '../models/study-activity.model.js';
@@ -25,6 +27,10 @@ export interface LeaderboardResult {
   items: LeaderboardUserItem[];
   currentUserRank: LeaderboardUserItem | null;
   totalParticipants: number;
+  page: number;
+  totalPages: number;
+  topUsers: LeaderboardUserItem[];
+  timezone: string;
 }
 
 /**
@@ -55,39 +61,28 @@ function getDateKeyThreshold(period: LeaderboardPeriod, timezone = DEFAULT_TIMEZ
 /**
  * Calculates current streak in days from an array of active dateKeys.
  */
-function calculateStreakFromDateKeys(dateKeys: string[], timezone = DEFAULT_TIMEZONE): number {
-  if (!dateKeys || dateKeys.length === 0) return 0;
+export function calculateStreakFromDateKeys(dateKeys: string[], timezone = DEFAULT_TIMEZONE): number {
+  return summarizeStreak(dateKeys, new Date(), timezone).streakCount;
+}
 
-  const keySet = new Set(dateKeys);
-  const now = new Date();
-  const todayKey = toTimezoneDateKey(now, timezone);
+type ActivityTotals = {
+  totalActiveSeconds?: number; totalCompletedLessons?: number; totalQuizAttempts?: number;
+  totalVocabReviews?: number; totalXpEarned?: number;
+};
+type ProgressTotals = { completedCount?: number; studySeconds?: number };
 
-  const [y, m, d] = todayKey.split('-').map(Number);
-  const cursor = new Date(Date.UTC(y!, m! - 1, d!));
-
-  let streak = 0;
-
-  // If user hasn't studied today yet, check if they studied yesterday
-  if (!keySet.has(todayKey)) {
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-    const yesterdayKey = cursor.toISOString().slice(0, 10);
-    if (!keySet.has(yesterdayKey)) {
-      return 0; // Streak broken
-    }
-  }
-
-  // Count backwards day by day
-  while (true) {
-    const key = cursor.toISOString().slice(0, 10);
-    if (keySet.has(key)) {
-      streak += 1;
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
-    } else {
-      break;
-    }
-  }
-
-  return streak;
+// The same policy serves the dashboard and all leaderboard periods. Legacy XP
+// is a floor, not an additive award; practice rewards are added exactly once.
+function summarizeXP(activity: ActivityTotals | undefined, progress: ProgressTotals | undefined,
+  activeDays: number, legacyXP = 0, practiceXP = 0) {
+  const minutesStudied = Math.floor((activity?.totalActiveSeconds ?? progress?.studySeconds ?? 0) / 60);
+  const completedLessons = Math.max(activity?.totalCompletedLessons ?? 0, progress?.completedCount ?? 0);
+  const quizAttempts = activity?.totalQuizAttempts ?? 0;
+  const vocabReviews = activity?.totalVocabReviews ?? 0;
+  const bonus = activeDays * 10;
+  const calculated = completedLessons * 50 + quizAttempts * 25 + vocabReviews * 5 + minutesStudied * 2 + bonus;
+  const totalXP = Math.max(calculated, (activity?.totalXpEarned ?? 0) + bonus, legacyXP) + practiceXP;
+  return { totalXP, completedLessons, quizAttempts, vocabReviews, minutesStudied };
 }
 
 export class LeaderboardService {
@@ -98,13 +93,16 @@ export class LeaderboardService {
     period: LeaderboardPeriod;
     currentUserId: string;
     limit?: number;
+    page?: number;
+    hsk?: number;
     timezone?: string;
   }): Promise<LeaderboardResult> {
-    const { period, currentUserId, limit = 20, timezone = DEFAULT_TIMEZONE } = options;
+    const { period, currentUserId, limit = 20, page = 1, hsk } = options;
+    const timezone = DEFAULT_TIMEZONE;
     const thresholdDateKey = getDateKeyThreshold(period, timezone);
 
     // 1. Match filter for StudyActivity
-    const activityMatch: Record<string, unknown> = {};
+    const activityMatch: Record<string, unknown> = { ...qualifyingStudyActivity };
     if (thresholdDateKey) {
       activityMatch.dateKey = { $gte: thresholdDateKey };
     }
@@ -134,6 +132,24 @@ export class LeaderboardService {
     ]);
 
     const activityMap = new Map(activityAgg.map((a) => [a._id.toString(), a]));
+    const [allActivityDates, practicePoints, practiceDates] = await Promise.all([
+      StudyActivityModel.aggregate<{ _id: Types.ObjectId; dateKeys: string[] }>([
+        { $match: qualifyingStudyActivity },
+        { $group: { _id: '$userId', dateKeys: { $addToSet: '$dateKey' } } },
+      ]),
+      PracticeAttemptModel.aggregate<{ _id: Types.ObjectId; xp: number }>([
+        { $match: { status: 'submitted', ...(thresholdDateKey ? { dateKey: { $gte: thresholdDateKey } } : {}) } },
+        { $group: { _id: '$userId', xp: { $sum: '$rewardXp' } } },
+      ]),
+      PracticeAttemptModel.aggregate<{ _id: Types.ObjectId; dateKeys: string[] }>([
+        { $match: qualifyingPracticeActivity },
+        { $group: { _id: '$userId', dateKeys: { $addToSet: '$dateKey' } } },
+      ]),
+    ]);
+    const streakMap = new Map(allActivityDates.map(a => [String(a._id), a.dateKeys]));
+    const practiceXpMap = new Map(practicePoints.map(a => [String(a._id), a.xp]));
+    for (const row of practiceDates) streakMap.set(String(row._id), [...(streakMap.get(String(row._id)) ?? []), ...row.dateKeys]);
+
 
     // 3. For all-time or fallback, also get ProgressModel completions
     const progressAgg = await ProgressModel.aggregate<{
@@ -153,7 +169,7 @@ export class LeaderboardService {
     const progressMap = new Map(progressAgg.map((p) => [p._id.toString(), p]));
 
     // 4. Fetch all active users (limited to reasonable pool, e.g. 500)
-    const users = await UserModel.find({ status: 'active' })
+    const users = await UserModel.find({ status: 'active', role: 'user', ...(hsk ? { 'learningProfile.currentHsk': hsk } : {}) })
       .select('name avatarUrl googleAvatarUrl learningProfile totalXP')
       .lean();
 
@@ -173,26 +189,12 @@ export class LeaderboardService {
       const act = activityMap.get(uId);
       const prg = progressMap.get(uId);
 
-      const activeSeconds = act?.totalActiveSeconds ?? (period === 'all' ? (prg?.studySeconds ?? 0) : 0);
-      const completedLessons = Math.max(act?.totalCompletedLessons ?? 0, period === 'all' ? (prg?.completedCount ?? 0) : 0);
-      const quizAttempts = act?.totalQuizAttempts ?? 0;
-      const vocabReviews = act?.totalVocabReviews ?? 0;
-      const explicitXp = act?.totalXpEarned ?? 0;
-      const streakDays = calculateStreakFromDateKeys(act?.dateKeys ?? [], timezone);
+      const streakDays = calculateStreakFromDateKeys(streakMap.get(uId) ?? [], timezone);
 
-      // Formula: completedLessons * 50 + quizAttempts * 25 + vocabReviews * 5 + (studySeconds / 60) * 2 + streakDays * 10
-      const minutesStudied = Math.floor(activeSeconds / 60);
-      const calculatedXP = (completedLessons * 50) + (quizAttempts * 25) + (vocabReviews * 5) + (minutesStudied * 2) + (streakDays * 10);
-      let xp = Math.max(calculatedXP, explicitXp + (streakDays * 10));
-
-      if (period === 'all' && typeof user.totalXP === 'number' && user.totalXP > xp) {
-        xp = user.totalXP;
-      }
-
-      // Add baseline XP for newly created users so they aren't completely blank
-      if (completedLessons > 0 && xp < 50) {
-        xp = completedLessons * 50;
-      }
+      const bonusDates = (streakMap.get(uId) ?? []).filter(key => !thresholdDateKey || key >= thresholdDateKey);
+      const periodStreak = summarizeStreak(bonusDates, new Date(), timezone).activeDays;
+      const { totalXP: xp } = summarizeXP(act, period === 'all' ? prg : undefined, periodStreak,
+        period === 'all' ? (user.totalXP ?? 0) : 0, practiceXpMap.get(uId) ?? 0);
 
       const hskNum = user.learningProfile?.currentHsk || user.learningProfile?.targetHsk || 3;
       const avatar = user.avatarUrl || user.googleAvatarUrl || '';
@@ -212,7 +214,7 @@ export class LeaderboardService {
     userScores.sort((a, b) => {
       if (b.xp !== a.xp) return b.xp - a.xp;
       if (b.streakDays !== a.streakDays) return b.streakDays - a.streakDays;
-      return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
 
     // 7. Assign ranks and trends
@@ -225,19 +227,9 @@ export class LeaderboardService {
       else if (u.streakDays >= 7) badge = `${u.streakDays} ngày liên tiếp`;
       else if (u.xp >= 1000) badge = 'Cao thủ';
 
-      // Realistic trend indicators based on rank
-      let trend: 'up' | 'down' | 'same' = 'same';
-      let trendValue: number | undefined;
-      if (rank <= 3) {
-        trend = 'up';
-        trendValue = rank === 1 ? 1 : 2;
-      } else if (rank % 3 === 0) {
-        trend = 'up';
-        trendValue = 1;
-      } else if (rank % 4 === 0) {
-        trend = 'down';
-        trendValue = 1;
-      }
+      // No historical snapshot yet: do not invent rank movement.
+      const trend = 'same' as const;
+      const trendValue = undefined;
 
       return {
         ...u,
@@ -248,7 +240,9 @@ export class LeaderboardService {
       };
     });
 
-    const items = rankedUsers.slice(0, limit);
+    const totalPages = Math.max(1, Math.ceil(rankedUsers.length / limit));
+    const safePage = Math.min(page, totalPages);
+    const items = rankedUsers.slice((safePage - 1) * limit, safePage * limit);
     const currentUserRank = rankedUsers.find((u) => u.isMe) || null;
 
     return {
@@ -256,6 +250,7 @@ export class LeaderboardService {
       items,
       currentUserRank,
       totalParticipants: rankedUsers.length,
+      page: safePage, totalPages, topUsers: rankedUsers.slice(0, 3), timezone,
     };
   }
 
@@ -271,7 +266,7 @@ export class LeaderboardService {
       totalXpEarned: number;
       dateKeys: string[];
     }>([
-      { $match: { userId: new Types.ObjectId(userId) } },
+      { $match: { userId: new Types.ObjectId(userId), ...qualifyingStudyActivity } },
       {
         $group: {
           _id: '$userId',
@@ -285,22 +280,26 @@ export class LeaderboardService {
       },
     ]);
     const summary = act[0];
-    const streakDays = calculateStreakFromDateKeys(summary?.dateKeys ?? [], timezone);
-    const minutesStudied = Math.floor((summary?.totalActiveSeconds ?? 0) / 60);
-    const calculatedXP = ((summary?.totalCompletedLessons ?? 0) * 50) +
-      ((summary?.totalQuizAttempts ?? 0) * 25) +
-      ((summary?.totalVocabReviews ?? 0) * 5) +
-      (minutesStudied * 2) +
-      (streakDays * 10);
-    const totalXP = Math.max(calculatedXP, (summary?.totalXpEarned ?? 0) + (streakDays * 10));
+    const [practice] = await PracticeAttemptModel.aggregate<{ xp: number; dateKeys: string[] }>([
+      { $match: { userId: new Types.ObjectId(userId), status: 'submitted' } },
+      { $group: { _id: null, xp: { $sum: '$rewardXp' }, dateKeys: { $addToSet: '$dateKey' } } },
+    ]);
+    const [practiceActivity] = await PracticeAttemptModel.aggregate<{ dateKeys: string[] }>([
+      { $match: { userId: new Types.ObjectId(userId), ...qualifyingPracticeActivity } },
+      { $group: { _id: null, dateKeys: { $addToSet: '$dateKey' } } },
+    ]);
+    const streak = summarizeStreak([...(summary?.dateKeys ?? []), ...(practiceActivity?.dateKeys ?? [])], new Date(), timezone);
+    const [user, progress] = await Promise.all([
+      UserModel.findById(userId).select('totalXP').lean(),
+      ProgressModel.aggregate<ProgressTotals>([
+        { $match: { userId: new Types.ObjectId(userId), completed: true } },
+        { $group: { _id: '$userId', completedCount: { $sum: 1 }, studySeconds: { $sum: '$activeStudySeconds' } } },
+      ]),
+    ]);
 
     return {
-      totalXP,
-      streakDays,
-      completedLessons: summary?.totalCompletedLessons ?? 0,
-      quizAttempts: summary?.totalQuizAttempts ?? 0,
-      vocabReviews: summary?.totalVocabReviews ?? 0,
-      minutesStudied,
+      ...summarizeXP(summary, progress[0], streak.activeDays, user?.totalXP ?? 0, practice?.xp ?? 0),
+      streakDays: streak.streakCount,
     };
   }
 }

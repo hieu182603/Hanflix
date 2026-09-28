@@ -13,7 +13,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { DisplayWordItem, TopicConfig } from './VocabularyPage';
-import { awardXP } from '../../lib/xp';
+import { apiFetch } from '../../api/client';
 import { recordLearningActivity } from '../../lib/streak';
 
 export interface TopicFlashcardModalProps {
@@ -38,6 +38,7 @@ export default function TopicFlashcardModal({
   const [isFlipped, setIsFlipped] = useState(false);
   const [speakingHanzi, setSpeakingHanzi] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Initialize deck when modal opens or words change
   useEffect(() => {
@@ -69,16 +70,24 @@ export default function TopicFlashcardModal({
     }
   }, []);
 
+  const saveSession = useCallback(async () => {
+    setSyncStatus('saving');
+    try {
+      await apiFetch('/vocabulary/practice-session', { method: 'POST', body: JSON.stringify({ words: [...new Set(deck.map(word => word.simplified))].slice(0, 100) }) });
+      setSyncStatus('saved');
+      recordLearningActivity('review');
+    } catch { setSyncStatus('error'); }
+  }, [deck]);
+
   const handleNext = useCallback(() => {
     setIsFlipped(false);
     if (currentIndex + 1 < deck.length) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       setIsCompleted(true);
-      awardXP(20, 'Hoàn thành bộ thẻ từ vựng (+20 XP)', 'vocab');
-      recordLearningActivity('review');
+      void saveSession();
     }
-  }, [currentIndex, deck.length]);
+  }, [currentIndex, deck.length, saveSession]);
 
   const handlePrev = useCallback(() => {
     setIsFlipped(false);
@@ -189,6 +198,10 @@ export default function TopicFlashcardModal({
               <p className="text-xs sm:text-sm text-[#5F6368] max-w-sm mx-auto">
                 Bạn đã luyện tập toàn bộ {deck.length} từ vựng trong chủ đề này. Các từ bạn đã lưu sẽ tiếp tục được nhắc lại trong mục Kho lưu trữ.
               </p>
+              <p role="status" className="text-xs text-neutral-600">
+                {syncStatus === 'saving' ? 'Đang lưu ngày học…' : syncStatus === 'saved' ? 'Đã lưu hoạt động ôn tập.' : syncStatus === 'error' ? 'Chưa lưu được ngày học. Kiểm tra kết nối và bộ thẻ trong kho đã xuất bản.' : ''}
+              </p>
+              {syncStatus === 'error' && <button onClick={() => void saveSession()} className="text-sm underline">Thử lưu lại</button>}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
                 <button
                   onClick={() => {

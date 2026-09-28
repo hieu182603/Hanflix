@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test"
 test("opens the redesigned Panda drawer and follows the AI request state", async ({
   page,
 }) => {
+  let releaseAnswer!: () => void
+  const answerReady = new Promise<void>(resolve => { releaseAnswer = resolve })
   await page.route("**/api/v1/**", async (route) => {
     const path = new URL(route.request().url()).pathname
     let data: unknown = {}
@@ -53,7 +55,7 @@ test("opens the redesigned Panda drawer and follows the AI request state", async
     } else if (path === "/api/v1/learning/recommendations/ai") {
       data = { items: [] }
     } else if (path === "/api/v1/ai/ask") {
-      await new Promise((resolve) => setTimeout(resolve, 1400))
+      await answerReady
       data = {
         answerVi:
           "了 (le) thường được dùng để đánh dấu một hành động đã hoàn thành.",
@@ -86,16 +88,17 @@ test("opens the redesigned Panda drawer and follows the AI request state", async
   await drawer.getByRole("button", { name: "Luyện ngữ pháp" }).click()
   await expect(
     drawer.getByText(
-      "Giải thích ngữ pháp trong bài học này và cho ví dụ dễ hiểu",
+      "Giải thích ngữ pháp tiếng Trung và cho ví dụ dễ hiểu",
     ),
   ).toBeVisible()
   await expect(page.getByTestId("panda-pet")).toHaveAttribute(
     "data-state",
     "working",
     {
-      timeout: 2500,
+      timeout: 5000,
     },
   )
+  releaseAnswer()
   await expect(
     drawer.getByText(
       "了 (le) thường được dùng để đánh dấu một hành động đã hoàn thành.",

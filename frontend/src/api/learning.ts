@@ -149,6 +149,7 @@ export interface LearningTip {
 }
 
 export interface SubtitleTrackMeta {
+  revision?: number;
   cues: SubtitleCue[];
   /** True when Vietnamese was polished by Gemini after Azure. */
   translationImproved?: boolean;
@@ -215,12 +216,44 @@ function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
 }
 
 
-export async function askPanda(question: string, context?: string): Promise<string> {
-  const data = await apiFetch<{ answerVi: string }>('/ai/ask', {
+export interface LessonAiContext {
+  lessonId: string;
+  subtitleRevision?: number;
+  playbackMs: number;
+  cueId?: string;
+  scope: 'current_cue' | 'current_segment' | 'whole_lesson';
+}
+export type AiCitation = Pick<SubtitleCue, 'cueId' | 'startMs' | 'endMs' | 'zh' | 'pinyin' | 'vi'>;
+export interface PandaReply {
+  answerVi: string;
+  citations: AiCitation[];
+  contextStatus: 'ready' | 'general' | 'missing_transcript' | 'no_nearby_cue' | 'context_too_large';
+  grounding: 'transcript' | 'general' | 'none';
+  context?: LessonAiContext & { title: string; coverage: 'window' | 'full' | 'none' };
+  conversationId?: string;
+  requestId: string;
+}
+export interface PandaTurn { id: string; question: string; response: PandaReply; createdAt: string }
+
+export async function askPanda(input: {
+  question: string; lessonContext?: LessonAiContext; clientMessageId: string;
+}, signal?: AbortSignal): Promise<PandaReply> {
+  return apiFetch<PandaReply>('/ai/ask', {
     method: 'POST',
-    body: JSON.stringify({ question, context }),
+    body: JSON.stringify(input), signal,
   });
-  return data.answerVi;
+}
+
+export function getPandaHistory(lessonContext?: LessonAiContext, signal?: AbortSignal) {
+  return apiFetch<{ conversationId?: string; messages: PandaTurn[] }>('/ai/history', {
+    method: 'POST', body: JSON.stringify({ lessonContext }), signal,
+  });
+}
+
+export function clearPandaHistory(lessonContext?: LessonAiContext, signal?: AbortSignal) {
+  return apiFetch<{ cleared: boolean }>('/ai/history', {
+    method: 'DELETE', body: JSON.stringify({ lessonContext }), signal,
+  });
 }
 
 export async function getPublishedLesson(id: string, options: { signal?: AbortSignal } = {}): Promise<PublishedLesson> {
@@ -322,14 +355,22 @@ export interface LeaderboardResponse {
   items: LeaderUser[];
   currentUserRank: LeaderUser | null;
   totalParticipants: number;
+  page: number;
+  totalPages: number;
+  topUsers: LeaderUser[];
+  timezone: string;
 }
 
 export function getLeaderboard(params: {
   period?: LeaderboardPeriod;
   limit?: number;
+  page?: number;
+  hsk?: number;
   signal?: AbortSignal;
 } = {}): Promise<LeaderboardResponse> {
   const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.hsk) query.set('hsk', String(params.hsk));
   if (params.period) query.set('period', params.period);
   if (params.limit) query.set('limit', String(params.limit));
   return apiFetch(`/learning/leaderboard?${query}`, { signal: params.signal });
@@ -349,23 +390,34 @@ export interface RoadmapStage {
   level: string;
   title: string;
   description: string;
-  status: 'completed' | 'in_progress' | 'locked';
+  status: 'completed' | 'in_progress' | 'locked' | 'unavailable';
   progress: number;
   wordCount: string;
   grammarCount: string;
   totalLessons: number;
   completedLessons: number;
   topics: ModuleTopic[];
+  nextLessonId: string | null;
+  lessons: Array<{ id: string; title: string; completed: boolean; durationSeconds: number }>;
 }
 
 export interface RoadmapResponse {
+  weekDays: Array<{ date: string; completed: boolean; isToday: boolean }>;
   currentHsk: number;
   targetHsk: number;
   overallProgress: number;
+  dailyMinutes: number;
+  streakDays: number;
+  dailyLessons: RoadmapStage['lessons'];
+  weakSkills: Array<{ hsk: number; skill: string; score: number; attempts: number }>;
   stages: RoadmapStage[];
 }
 
 export function getRoadmap(options: { signal?: AbortSignal } = {}): Promise<RoadmapResponse> {
   return apiFetch('/learning/roadmap', { signal: options.signal });
+}
+
+export function saveRoadmapPreferences(input: { currentHsk: number; targetHsk: number; dailyMinutes: number }): Promise<{ saved: true }> {
+  return apiFetch('/learning/roadmap/preferences', { method: 'PATCH', body: JSON.stringify(input) });
 }
 
