@@ -440,3 +440,89 @@
 - [ ] Smooth transitions between breakpoints
 - [ ] Performance optimization
 - [ ] Advanced accessibility features
+
+
+---
+
+## Thi HSK, Bảng xếp hạng và Lộ trình — 2026-09-25
+
+Trạng thái: bản luyện kỹ năng đã hoàn thành ở mức mã nguồn; còn migration/snapshot và QA trên môi trường có DB. Giữ lại các task giao diện phía trên.
+Thứ tự: dữ liệu dùng chung → bảng xếp hạng → lộ trình → thi HSK → tích hợp.
+
+### 1. Dữ liệu dùng chung
+- [x] Chuẩn hóa XP/streak/tiến độ từ backend; loại phụ thuộc localStorage khi hiển thị thứ hạng và lộ trình.
+- [ ] Sổ sự kiện thưởng có khóa chống trùng; hoàn thành/nộp lại không thưởng lặp.
+- [ ] Thống nhất tuần/tháng theo Asia/Ho_Chi_Minh; chuyển dữ liệu XP cũ có đối soát.
+- [x] Đồng bộ cache sau bài luyện và lưu phiên trên backend để khôi phục giữa thiết bị.
+
+### 2. Bảng xếp hạng
+- [x] Loại tài khoản admin/khóa; bỏ biến động hạng giả và nhãn mùa giải cố định.
+- [x] Bộ lọc tuần/tháng/tổng + HSK; phân trang và hạng của tôi ngoài top.
+- [ ] Chốt quy tắc đồng điểm; snapshot theo kỳ để tính biến động thật.
+- [x] Cộng XP bài luyện từ bản ghi phiên đã nộp và hiển thị quy tắc thưởng trên giao diện.
+- [ ] Kiểm thử đổi kỳ, đồng điểm, không hoạt động, cộng điểm trùng và ngoài top.
+
+### 3. Lộ trình
+- [x] Bỏ tiến độ giả; tính chặng/chủ đề từ bài đã xuất bản và hoàn thành thật.
+- [x] Hỗ trợ HSK 1–9; chặng thiếu nội dung có trạng thái rõ ràng.
+- [x] Cá nhân hóa theo trình độ, mục tiêu, phút/ngày và sở thích.
+- [ ] Nhiệm vụ video/từ vựng/ngữ pháp/kiểm tra gắn ID thật; tiếp tục đúng nhiệm vụ.
+- [x] Mở chặng theo điều kiện; đổi mục tiêu vẫn giữ lịch sử.
+- [ ] Kiểm thử không có bài, hoàn thành một phần/toàn bộ, nhiều chủ đề và HSK cao.
+
+### 4. Thi HSK
+- [ ] Xác minh cấu trúc theo cấp và phiên bản trước khi cấu hình đề thi thử.
+- [x] Ngân hàng câu hỏi có phiên bản, audio, đáp án, giải thích; admin tạo/import/duyệt.
+- [x] Luyện kỹ năng: chọn cấp → làm bài → nộp → kết quả → ôn câu sai.
+- [x] Phiên luyện lưu tự động, phục hồi, đánh dấu câu, deadline do server quản lý.
+- [x] Chấm điểm backend; không trả đáp án trước khi nộp; đề được chụp cố định khi bắt đầu.
+- [x] Lịch sử, điểm từng kỹ năng, ôn lỗi; tự luận triển khai sau với tiêu chí riêng.
+- [x] Chỉ mở cấp/kỹ năng có bộ luyện đã duyệt.
+
+### 5. Tích hợp và nghiệm thu
+- [x] Kết quả bài luyện cập nhật XP/lịch sử đúng một lần.
+- [x] Kỹ năng yếu bổ sung nhiệm vụ ôn trong lộ trình.
+- [ ] Test API/component/E2E: mất mạng, reload, hết giờ, nhiều tab, đổi bộ lọc, chuyển kỳ.
+- [ ] Đối soát dữ liệu cũ và mới trước khi phát hành; ghi rõ giới hạn chưa hoàn thành.
+
+### Nhật ký triển khai
+- 2026-09-25: Bắt đầu đợt 1: loại dữ liệu giả ở bảng xếp hạng và tiến độ lộ trình; giữ việc thay công thức XP/migration thành task riêng để không đổi điểm người học khi chưa đối soát.
+
+- Đợt 1: đã bỏ streak ghi đè từ localStorage trên bảng xếp hạng; thanh tiến độ 0% hiển thị đúng; chủ đề lấy từ topicIds thật. 4 test service và typecheck backend đã qua. Chưa triển khai sổ XP, snapshot, HSK 7–9 hay engine thi.
+
+
+## Kế hoạch chi tiết và phạm vi triển khai bản luyện kỹ năng (2026-09-25)
+
+Người dùng đã chọn: luyện kỹ năng trước, thi thử đúng cấu trúc sau.
+Không mở đề thi thử hoặc chấm tự luận AI trong bản này. Giữ lịch sử và XP cũ;
+XP mới của bài luyện được lưu trong phiên đã chấm, không ghi tăng lặp vào các tổng cũ.
+
+| ID | Chức năng / công việc | Dữ liệu & API | Tiêu chí nghiệm thu | Trạng thái |
+|---|---|---|---|---|
+| BXH-01 | Lọc kỳ + HSK, phân trang, top 3 độc lập trang | GET learning/leaderboard: period,hsk,page,limit | Đổi lọc về trang 1; hạng tôi tính toàn nhóm; đồng điểm ổn định | Hoàn thành |
+| BXH-02 | Streak không bị cắt ở đầu tuần/tháng | Tổng ngày hoạt động độc lập bộ lọc kỳ | Đổi kỳ không thay streak; tuần theo giờ VN | Hoàn thành |
+| BXH-03 | XP luyện kỹ năng cộng vào BXH/dashboard | Tổng rewardXp của phiên submitted; key thưởng theo bộ đề/ngày | Nộp lại/concurrent không thưởng hai lần; giữ điểm lịch sử | Hoàn thành |
+| LT-01 | Chặng HSK 1–9, khóa/mở và thiếu nội dung | GET roadmap: available,nextLessonId,topics,progress | Không bịa tiến độ; cấp rỗng không completed; mở cấp sau khi xong cấp trước | Hoàn thành |
+| LT-02 | Nhiệm vụ thật và tiếp tục học | lessonIds, nextLessonId, dailyLessonIds, dailyMinutes | Click mở đúng bài; ưu tiên sở thích; tôn trọng phút/ngày | Hoàn thành |
+| LT-03 | Đổi mục tiêu và thời gian học | PATCH learning/roadmap/preferences chỉ cập nhật field liên quan | Không xóa lịch sử hoặc thông tin khảo sát khác | Hoàn thành |
+| LT-04 | Gợi ý ôn kỹ năng yếu | Tổng kết các phiên thi đã nộp theo kỹ năng | Link mở đúng HSK/kỹ năng; không có kết quả thì không bịa gợi ý | Hoàn thành |
+| HSK-01 | Ngân hàng bộ luyện theo HSK/kỹ năng | PracticeSet: draft/published, revision, questions, duration | Chỉ đề published mở cho học viên; nghe cần audio; câu hỏi hợp lệ | Hoàn thành |
+| HSK-02 | Admin soạn/import/duyệt/ẩn | GET/POST/PUT admin/practice-sets + giao diện /admin/practice | Xem trước, kiểm tra nội dung, có xác nhận duyệt; thay đề không ảnh hưởng phiên cũ | Hoàn thành |
+| HSK-03 | Danh sách đề và bộ lọc | GET practice/sets: hsk,skill | Có loading/error/empty; lọc và lịch sử đúng người dùng | Hoàn thành |
+| HSK-04 | Bắt đầu, lưu đáp án, đánh dấu, khôi phục | POST attempts (requestKey), GET/PATCH attempts/:id (version) | Snapshot đề; deadline server; optimistic concurrency nhiều tab | Hoàn thành |
+| HSK-05 | Nộp bài, hết giờ, kết quả và ôn sai | POST attempts/:id/submit; GET attempts history | CAS nộp 1 lần; hết giờ dùng đáp án đã lưu; ẩn key trước nộp | Hoàn thành |
+| HSK-06 | Chấm trắc nghiệm/đáp án ngắn xác định | Normalize Unicode/whitespace, acceptedAnswers | Không chấm tự luận tùy ý; score và lời giải chỉ xuất hiện sau nộp | Hoàn thành |
+| QA-01 | Backend unit/API regression | Mocks model + service/router tests | Quyền sở hữu, đáp án ẩn, stale version, deadline, retry, lọc/paging | Hoàn thành một phần: service + full regression |
+| QA-02 | Frontend component/build | Component tests + typecheck + production build | Lưu thất bại không giả thành công; reload khôi phục từ URL; filter/cache đúng | Hoàn thành một phần: typecheck + full test/build |
+| QA-03 | Kiểm thử DB/trình duyệt đầy đủ và xuất bản nội dung thật | Chạy trên môi trường local/staging có DB, tài khoản và nội dung đã duyệt | Không tự phát hành đề mẫu chưa duyệt; ghi rõ kiểm tra chưa chạy | Chờ môi trường |
+
+### Sau bản luyện kỹ năng
+- Thi thử: xác minh chuẩn/phiên bản theo cấp, cấu hình phần thi/timing/thang điểm, đủ nội dung đã duyệt mới mở.
+- Sổ XP thống nhất cho toàn bộ video/quiz/SRS, migration đối soát số dư và snapshot BXH định kỳ.
+- Tự luận với rubric và bước rà soát; lịch học dài hạn/nhiệm vụ từ vựng-ngữ pháp riêng.
+
+### Kết quả kiểm tra 2026-09-25
+- Điều tra lỗi F5 trên Vercel: đăng nhập thành công nhưng bật chặn cookie bên thứ ba khiến refresh trả `401 REFRESH_REQUIRED`; khi thử API qua proxy cùng domain, cookie lưu đúng nhưng refresh trả `401 DEVICE_MISMATCH`. Đã sửa API production dùng `/api/v1`, bổ sung rewrite cấu hình Vercel gốc, bỏ IP khỏi fingerprint (migrate phiên cũ khi refresh), và tách lỗi mạng/429/5xx khỏi hết phiên. Đã thêm regression test; chưa chạy được test mới do hệ thống duyệt lệnh hết hạn mức. Chưa deploy bản sửa auth.
+- Backend: typecheck và build thành công; 55 file test qua, 283 test qua, 2 file/9 test được cấu hình bỏ qua. Vitest có cảnh báo Windows `kill EPERM` khi dọn worker `pinyin.test.ts` nhưng trả exit code 0.
+- Frontend: typecheck, 10 file/41 test và production build thành công. Build còn cảnh báo chunk chính lớn hơn 500 kB.
+- Chưa chạy kiểm thử tích hợp với MongoDB/trình duyệt thật và chưa xuất bản nội dung HSK; giữ QA-03 ở trạng thái chờ môi trường.
