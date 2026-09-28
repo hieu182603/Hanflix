@@ -1,10 +1,12 @@
+import { PracticeAttemptModel } from '../models/practice.model.js';
+import { summarizeStreak, qualifyingStudyActivity, qualifyingPracticeActivity } from '../services/streak.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
-import { validateQuery } from '../middleware/validate.js';
+import { validate, validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProgressModel } from '../models/progress.model.js';
 import { QuizAttemptModel } from '../models/quiz-attempt.model.js';
@@ -35,6 +37,15 @@ async function safeDownloadUrl(key?: string | null): Promise<string | null> {
 
 const router = Router();
 router.use(requireAuth);
+
+router.get('/streak', asyncHandler(async (req, res) => {
+  const userId = req.auth!.userId;
+  const [studyDates, practiceDates] = await Promise.all([
+    StudyActivityModel.aggregate<{ dateKey: string }>([{ $match: { userId, ...qualifyingStudyActivity } }, { $project: { dateKey: 1 } }]),
+    PracticeAttemptModel.aggregate<{ dateKey: string }>([{ $match: { userId, ...qualifyingPracticeActivity } }, { $project: { dateKey: 1 } }]),
+  ]);
+  res.json({ data: summarizeStreak([...studyDates, ...practiceDates].map(row => row.dateKey)) });
+}));
 
 const activityQuerySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'from phải có dạng YYYY-MM-DD').optional(),
@@ -402,7 +413,9 @@ router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
 
 const leaderboardQuerySchema = z.object({
   period: z.enum(['week', 'month', 'all']).default('week'),
-  limit: z.coerce.number().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  hsk: z.coerce.number().int().min(1).max(9).optional(),
   timezone: z.string().trim().min(1).max(50).optional(),
 });
 
@@ -412,6 +425,8 @@ router.get('/leaderboard', validateQuery(leaderboardQuerySchema), asyncHandler(a
     period: query.period,
     currentUserId: req.auth!.userId.toString(),
     limit: query.limit,
+    page: query.page,
+    hsk: query.hsk,
     timezone: query.timezone,
   });
   res.json({ data: result });
@@ -420,6 +435,21 @@ router.get('/leaderboard', validateQuery(leaderboardQuerySchema), asyncHandler(a
 router.get('/roadmap', asyncHandler(async (req, res) => {
   const result = await RoadmapService.getRoadmap(req.auth!.userId.toString());
   res.json({ data: result });
+}));
+
+router.patch('/roadmap/preferences', validate(z.object({
+  currentHsk: z.number().int().min(1).max(9),
+  targetHsk: z.number().int().min(1).max(9),
+  dailyMinutes: z.number().int().min(5).max(120),
+}).refine(v => v.targetHsk >= v.currentHsk, 'Mục tiêu phải bằng hoặc cao hơn trình độ hiện tại')), asyncHandler(async (req, res) => {
+  const user = await UserModel.findByIdAndUpdate(req.auth!.userId, { $set: {
+    'learningProfile.currentHsk': req.body.currentHsk,
+    'learningProfile.currentHskSource': 'self_reported',
+    'learningProfile.targetHsk': req.body.targetHsk,
+    'learningProfile.dailyMinutes': req.body.dailyMinutes,
+  } }, { returnDocument: 'after', runValidators: true });
+  if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy tài khoản');
+  res.json({ data: { saved: true } });
 }));
 
 export default router;
