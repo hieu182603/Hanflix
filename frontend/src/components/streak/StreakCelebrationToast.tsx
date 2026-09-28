@@ -92,7 +92,7 @@ export default function StreakCelebrationToast() {
                     Tự động cộng Streak!
                   </span>
                   <span className="text-xs text-neutral-400 font-mono">
-                    +{eventData.streakCount} ngày
+                    +1 ngày
                   </span>
                 </div>
 
