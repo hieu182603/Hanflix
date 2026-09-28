@@ -1,4 +1,4 @@
-import { apiFetch, setAccessToken, ApiRequestError } from './client';
+import { apiFetch, getAccessToken, setAccessToken, ApiRequestError } from './client';
 import type { User } from '../data/hanflixData';
 import { queryClient } from '../lib/queryClient';
 import { createLocalStoragePersister } from '../lib/persistedQueryClient';
@@ -271,19 +271,27 @@ export async function restoreSession(): Promise<User | null> {
   }
   restoreSessionPromise = (async () => {
     try {
-      const data = await apiFetch<{ accessToken: string }>('/auth/refresh', {
-        method: 'POST',
-      });
-      setAccessToken(data.accessToken);
+      // If /me temporarily failed after rotation, reuse the new access token
+      // on retry instead of rotating the refresh cookie a second time.
+      if (!getAccessToken()) {
+        const data = await apiFetch<{ accessToken: string }>('/auth/refresh', {
+          method: 'POST',
+        });
+        setAccessToken(data.accessToken);
+      }
 
       const me = await apiFetch<MeResponse>('/auth/me');
       const user = toFrontendUser(me.user);
       saveUserCache(user);
       return user;
-    } catch {
-      setAccessToken(null);
-      saveUserCache(null);
-      return null;
+    } catch (error) {
+      if (error instanceof ApiRequestError && (error.status === 401 || error.status === 403)) {
+        setAccessToken(null);
+        saveUserCache(null);
+        return null;
+      }
+      // Network errors, rate limits and server failures do not prove logout.
+      throw error;
     } finally {
       restoreSessionPromise = null;
     }
@@ -330,4 +338,3 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export { ApiRequestError };
-

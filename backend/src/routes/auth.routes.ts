@@ -73,16 +73,13 @@ function cookieOptions(): CookieOptions {
 
 /**
  * SECURITY (C-3): Device fingerprint binding for refresh tokens.
- * The fingerprint is a SHA-256 hash of (user-agent + IP prefix). It is NOT a secret —
- * its only purpose is to detect when a stolen refresh token is replayed from a
- * different device/IP than the one that originally received it. A mismatch does
- * NOT silently revoke (mobile users on flaky networks would be locked out);
- * instead it triggers the OWASP session-reuse response and revokes ALL sessions.
+ * A user-agent change is an additional replay signal, not proof of identity.
+ * Do not bind to req.ip: Vercel/Azure proxy hops and mobile IPs can change
+ * between login and refresh. Token signature, hash and rotation remain required.
  */
 function deviceFingerprint(req: Request): string {
   const userAgent = req.get('user-agent') ?? 'unknown';
-  const ip = req.ip ?? 'unknown';
-  return createHash('sha256').update(`${userAgent}|${ip}`).digest('hex');
+  return createHash('sha256').update(userAgent).digest('hex');
 }
 
 async function issueSession(user: { _id: Types.ObjectId; role: 'user' | 'admin' }, req: Request, res: Response) {
@@ -355,10 +352,13 @@ router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
     throw new AppError(401, 'REFRESH_REUSED', 'Phát hiện tái sử dụng phiên bảo mật. Vui lòng đăng nhập lại.');
   }
 
-  // SECURITY (C-3): Fingerprint mismatch on a valid session is a strong theft signal.
-  // We revoke all sessions to be safe (mobile users on changing IPs would otherwise be locked out
-  // on the very next request, so this is a deliberate trade-off for security).
-  if (session.fingerprint && session.fingerprint !== incomingFingerprint) {
+  // Accept existing IP-bound sessions only if the stored fingerprint can be
+  // reproduced using their original IP and the current user-agent. The next
+  // rotation migrates them to the stable fingerprint without forcing logout.
+  const legacyFingerprint = session.ip
+    ? createHash('sha256').update(`${req.get('user-agent') ?? 'unknown'}|${session.ip}`).digest('hex')
+    : null;
+  if (session.fingerprint && session.fingerprint !== incomingFingerprint && session.fingerprint !== legacyFingerprint) {
     await RefreshSessionModel.updateMany(
       { userId: session.userId, revokedAt: { $exists: false } },
       { $set: { revokedAt: new Date() } },
