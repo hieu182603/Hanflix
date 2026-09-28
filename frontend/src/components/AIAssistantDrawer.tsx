@@ -11,46 +11,16 @@ import {
   Send,
   X,
 } from "lucide-react"
-import { askPanda } from "../api/learning"
+import { askPanda, getPandaHistory, clearPandaHistory, type LessonAiContext, type PandaReply, type AiCitation } from "../api/learning"
+import { ApiRequestError } from "../api/client"
+import { useLearningAI, formatAiTime, type LearningAISource } from "./ai/LearningAIContext"
 import { usePandaPet } from "./panda-pet"
-
-// ——————————————————————————————————————————————————————————
-// TOPIC GUARD — mirrors backend blocklist for instant client-side feedback
-// ——————————————————————————————————————————————————————————
-const OFFTOPIC_PATTERNS: RegExp[] = [
-  /^(how do I|write|code|program|coding|debug|compile|run)\s+\w+\s+(code|program|in |with |using )/i,
-  /function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=/,
-  /def\s+\w+\s*\(|class\s+\w+|import\s+\w+/,
-  /python|javascript|java|c\+\+|typescript|golang|rust\s+(code|program)/i,
-  /giải\s+(bài\s+)?toán|phương\s+trình|tích\s+phân|đạo\s+hàm/i,
-  /(đầu\s+tư|cổ\s+phiếu|chứng\s+khoán|forex|bitcoin|tiền\s+điện\s+tử|crypto|nft)\b/i,
-  /thị\s+trường\s+(chứng|forex|coin)|mua\s+(cổ\s+phiếu|trái\s+phiếu)/i,
-  /tôi\s+bị\s+(đau|ốm|bệnh|sốt|viêm|nhiễm)/i,
-  /thuốc\s+(chữa|uống|chích|tiêm)|bác\s+sĩ\b/i,
-  /chính\s+phủ\s+|đảng\s+(cộng|sản)|bầu\s+cử|chính\s+trị/i,
-  /luật\s+sư|tố\s+cáo|kiện\s+(tụng|法院)|phạt\s+(tù|giam)|tù\s+(nhân|giam)/i,
-  /công\s+thức\s+(nấu|làm)\s+(ă|n)?(ấm|ưm)|nấu\s+(cơm|canh|thịt|cá)/i,
-  /\b(sexy|nude|porn|naked|xxx|erotic|18\+|giường)\b/i,
-  /\b(mua\s+(bán)\s+(thuốc|drug|cocaine|heroin)|ma\s+túy)\b/i,
-  /^(what is|tell me|explain)\s+(the\s+)?(weather|stock|news|sport|score|result)\b/i,
-]
-
-const OFFTOPIC_HINT = 'Câu hỏi ngoài phạm vi hỗ trợ của Panda. Hãy hỏi về từ vựng, ngữ pháp hoặc bài học nhé.'
-
-function validateQuestion(question: string): { valid: boolean; hint: string } {
-  const trimmed = question.trim()
-  if (trimmed.length < 3) return { valid: true, hint: '' }
-  if (trimmed.length > 600) return { valid: false, hint: 'Câu hỏi quá dài. Hãy chia nhỏ ý.' }
-  for (const pattern of OFFTOPIC_PATTERNS) {
-    if (pattern.test(trimmed)) return { valid: false, hint: OFFTOPIC_HINT }
-  }
-  return { valid: true, hint: '' }
-}
 
 interface AIAssistantDrawerProps {
   isOpen: boolean
   onClose: () => void
   initialPrompt?: string
+  onPromptConsumed?: () => void
   currentUser?: {
     name: string
     learningProfile?: {
@@ -59,10 +29,7 @@ interface AIAssistantDrawerProps {
       topics?: string[]
     } | null
   } | null
-  learningContext?: {
-    title?: string
-    hskLevel?: string | number
-  }
+
 }
 
 interface ChatMessage {
@@ -71,6 +38,9 @@ interface ChatMessage {
   text: string
   time: string
   isError?: boolean
+  reply?: PandaReply
+  snapshot?: LessonAiContext
+  retryQuestion?: string
 }
 
 const QUICK_ACTIONS = [
@@ -142,20 +112,39 @@ function TypingIndicator({ label }: { label: string }) {
   )
 }
 
-export default function AIAssistantDrawer({
-  isOpen,
-  onClose,
-  initialPrompt,
-  currentUser,
-  learningContext,
-}: AIAssistantDrawerProps) {
-  const panda = usePandaPet()
-  const learnerName = currentUser?.name?.split(" ").pop() || "bạn"
-  const greeting = `Chào ${learnerName}! Mình là Panda AI. Hỏi mình về từ vựng, ngữ pháp hoặc cách dùng trong bài học nhé.`
-  const contextTitle = learningContext?.title || "Bài học hiện tại"
-  const hskLevel =
-    learningContext?.hskLevel ?? currentUser?.learningProfile?.hskLevel
+export default function AIAssistantDrawer(props: AIAssistantDrawerProps) {
+  const { source } = useLearningAI()
+  const [general, setGeneral] = useState(false)
+  const useGeneral = general && !props.initialPrompt
+  useEffect(() => {
+    if (props.initialPrompt && source) setGeneral(false)
+  }, [props.initialPrompt, source?.lessonId])
+  return <PandaChat key={useGeneral ? 'general' : `${source?.lessonId ?? 'general'}:${source?.revision ?? 0}`}
+    {...props} source={useGeneral ? null : source} availableSource={source}
+    onToggleGeneral={() => setGeneral(value => !value)} />
+}
 
+function PandaChat({
+  isOpen, onClose, initialPrompt, onPromptConsumed, currentUser, source, availableSource, onToggleGeneral,
+}: AIAssistantDrawerProps & {
+  source: LearningAISource | null; availableSource: LearningAISource | null; onToggleGeneral: () => void;
+}) {
+  const panda = usePandaPet()
+  const { selected } = useLearningAI()
+  const sourceRef = useRef(source)
+  sourceRef.current = source
+  const learnerName = currentUser?.name?.split(" ").pop() || "bạn"
+  const greeting = `Chào ${learnerName}! Mình là Panda AI. ${source ? 'Mình sẽ dựa trên phụ đề của bài này để giải thích.' : 'Hỏi mình về từ vựng, ngữ pháp hoặc cách dùng tiếng Trung nhé.'}`
+  const contextTitle = source?.title || "Hỏi tiếng Trung chung"
+  const hskLevel = source?.hskLevel ?? currentUser?.learningProfile?.hskLevel
+  const [scope, setScope] = useState<LessonAiContext['scope']>('current_segment')
+  const [pinned, setPinned] = useState<{ context: LessonAiContext; cue?: AiCitation } | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [historyVersion, setHistoryVersion] = useState(0)
+  const requestRef = useRef<AbortController | null>(null)
+  const clearRef = useRef<AbortController | null>(null)
+  const workTimer = useRef<number | undefined>(undefined)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -170,13 +159,10 @@ export default function AIAssistantDrawer({
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const sentInitial = useRef(false)
+
 
   useEffect(() => {
-    if (!isOpen) {
-      sentInitial.current = false
-      return
-    }
+    if (!isOpen) return
 
     const previousOverflow = document.body.style.overflow
     const handleEscape = (event: KeyboardEvent) => {
@@ -209,93 +195,106 @@ export default function AIAssistantDrawer({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const handleSend = async (textToSend?: string) => {
-    const query = (textToSend ?? inputText).trim()
-    if (!query || isTyping) return
+  useEffect(() => {
+    if (!isOpen || !initialPrompt) return
+    setInputText(initialPrompt.slice(0, 500))
+    onPromptConsumed?.()
+  }, [isOpen, initialPrompt, onPromptConsumed])
 
-    // Client-side topic guard — instant feedback without API call
-    const validation = validateQuestion(query)
-    if (!validation.valid) {
-      const hintMessage: ChatMessage = {
-        id: `${Date.now()}-ai`,
-        sender: 'ai',
-        text: validation.hint,
-        time: new Date().toLocaleTimeString('vi-VN', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      }
-      setMessages((previous) => [...previous, hintMessage])
-      if (!textToSend) setInputText('')
-      return
+  useEffect(() => {
+    if (selected && selected.lessonId === source?.lessonId) {
+      if (!selected.cue) { setPinned(null); setScope('current_segment'); return }
+      setPinned({ context: { ...source.snapshot(), playbackMs: selected.cue.startMs,
+        cueId: selected.cue.cueId, scope: 'current_cue' }, cue: selected.cue })
+      setScope('current_cue')
     }
+  }, [selected, source?.lessonId])
 
-    const userMessage: ChatMessage = {
-      id: `${Date.now()}-user`,
-      sender: "user",
-      text: query,
-      time: new Date().toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    }
+  useEffect(() => {
+    if (!isOpen) return
+    const controller = new AbortController()
+    setHistoryLoading(true)
+    setHistoryError('')
+    getPandaHistory(sourceRef.current?.snapshot(), controller.signal).then(data => {
+      if (controller.signal.aborted) return
+      setMessages([{ id: 'welcome', sender: 'ai', text: greeting, time: 'Vừa xong' },
+        ...(data.messages ?? []).flatMap(turn => {
+          const time = new Date(turn.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          return [
+            { id: `${turn.id}-user`, sender: 'user' as const, text: turn.question, time, snapshot: turn.response.context },
+            { id: `${turn.id}-ai`, sender: 'ai' as const, text: turn.response.answerVi, time, reply: turn.response },
+          ]
+        })])
+    }).catch(error => {
+      if (!controller.signal.aborted) setHistoryError(error instanceof ApiRequestError ? error.message : 'Chưa tải được lịch sử hội thoại.')
+    }).finally(() => { if (!controller.signal.aborted) setHistoryLoading(false) })
+    return () => controller.abort()
+  }, [isOpen, historyVersion])
 
-    setMessages((previous) => [...previous, userMessage])
-    if (!textToSend) setInputText("")
-    setIsTyping(true)
-    panda.handlePandaAIEvent({ type: "thinking" })
-
-    const workTimer = window.setTimeout(() => {
-      panda.setPandaState("working")
-    }, 1200)
-
-    try {
-      const contextStr = learningContext?.title
-        ? `Bài học: "${learningContext.title}" (HSK ${learningContext.hskLevel || 1})`
-        : undefined
-      const aiResponseText = await askPanda(query, contextStr)
-      window.clearTimeout(workTimer)
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: `${Date.now()}-ai`,
-          sender: "ai",
-          text: aiResponseText,
-          time: new Date().toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ])
-      panda.handlePandaAIEvent({ type: "completed" })
-    } catch (error) {
-      window.clearTimeout(workTimer)
-      // Show generic message — never surface Gemini/technical internals to user
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: `${Date.now()}-error`,
-          sender: "ai",
-          text: "Hệ thống đang quá tải, thử lại sau.",
-          time: "Vừa xong",
-          isError: true,
-        },
-      ])
-      panda.handlePandaAIEvent({ type: "error" })
-    } finally {
-      window.clearTimeout(workTimer)
+  useEffect(() => {
+    if (!isOpen) {
+      requestRef.current?.abort()
+      requestRef.current = null
+      window.clearTimeout(workTimer.current)
       setIsTyping(false)
+    }
+    return () => {
+      requestRef.current?.abort()
+      clearRef.current?.abort()
+      requestRef.current = null
+      window.clearTimeout(workTimer.current)
+    }
+  }, [isOpen])
+
+  const clearHistory = async () => {
+    if (requestRef.current || historyLoading) return
+    const controller = new AbortController()
+    clearRef.current = controller
+    setHistoryLoading(true)
+    try {
+      await clearPandaHistory(sourceRef.current?.snapshot(), controller.signal)
+      if (!controller.signal.aborted) setHistoryVersion(value => value + 1)
+    } catch (error) {
+      if (!controller.signal.aborted) setHistoryError(error instanceof ApiRequestError ? error.message : 'Chưa xóa được hội thoại.')
+    } finally {
+      if (!controller.signal.aborted) setHistoryLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (!isOpen || !initialPrompt || sentInitial.current) return
-    sentInitial.current = true
-    const initialTimer = window.setTimeout(() => {
-      void handleSend(initialPrompt)
-    }, 120)
-    return () => window.clearTimeout(initialTimer)
-  }, [isOpen, initialPrompt])
+  const handleSend = async (textToSend?: string, retrySnapshot?: LessonAiContext) => {
+    const query = (textToSend ?? inputText).trim()
+    if (!query || query.length > 500 || requestRef.current || historyLoading) return
+    const live = sourceRef.current
+    const snapshot = retrySnapshot ?? (live ? { ...(pinned?.context ?? live.snapshot()), scope } : undefined)
+    const id = crypto.randomUUID()
+    const controller = new AbortController()
+    requestRef.current = controller
+    setMessages(previous => [...previous, { id: `${id}-user`, sender: 'user', text: query,
+      time: 'Vừa xong', snapshot }])
+    setInputText('')
+    setIsTyping(true)
+    panda.handlePandaAIEvent({ type: 'thinking' })
+    workTimer.current = window.setTimeout(() => panda.setPandaState('working'), 1200)
+    try {
+      const reply = await askPanda({ question: query, lessonContext: snapshot, clientMessageId: id }, controller.signal)
+      if (controller.signal.aborted || requestRef.current !== controller) return
+      setMessages(previous => [...previous, { id: `${id}-ai`, sender: 'ai', text: reply.answerVi,
+        time: 'Vừa xong', reply }])
+      panda.handlePandaAIEvent({ type: 'completed' })
+    } catch (error) {
+      if (controller.signal.aborted || requestRef.current !== controller) return
+      setMessages(previous => [...previous, { id: `${id}-error`, sender: 'ai', isError: true,
+        text: error instanceof ApiRequestError ? error.message : 'Chưa thể kết nối với Panda. Hãy thử lại.',
+        time: 'Vừa xong', retryQuestion: query, snapshot }])
+      panda.handlePandaAIEvent({ type: 'error' })
+    } finally {
+      if (requestRef.current === controller) {
+        window.clearTimeout(workTimer.current)
+        requestRef.current = null
+        setIsTyping(false)
+      }
+    }
+  }
 
   const pandaStatus =
     panda.state === "thinking"
@@ -367,6 +366,10 @@ export default function AIAssistantDrawer({
               </span>
             </div>
           </div>
+          <button type="button" onClick={() => void clearHistory()} disabled={isTyping || historyLoading}
+            className="text-[11px] text-[#706764] underline disabled:opacity-40" title="Xóa lịch sử hỏi đáp trong bài hoặc chế độ hiện tại">
+            Xóa hội thoại
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -395,6 +398,32 @@ export default function AIAssistantDrawer({
               </span>
             )}
           </div>
+          {availableSource && <div className="mt-2 flex items-center gap-2 text-xs">
+            {source && <select aria-label="Phạm vi câu hỏi" value={scope}
+              onChange={event => { setScope(event.target.value as LessonAiContext['scope']); setPinned(null) }}
+              className="rounded-lg border border-[#E9DEDA] bg-white px-2 py-1.5">
+              <option value="current_segment">Đoạn đang xem</option>
+              <option value="current_cue">Câu đang xem</option>
+              <option value="whole_lesson">Toàn bài</option>
+            </select>}
+            <button type="button" onClick={onToggleGeneral} className="text-[#8F1719] underline">
+              {source ? 'Hỏi tiếng Trung chung' : 'Quay lại bài đang xem'}
+            </button>
+          </div>}
+          {source && <div className="mt-2 text-xs text-[#6B5E5A]">
+            {source.status === 'loading' ? 'Đang tải phụ đề…' : source.status === 'missing'
+              ? 'Chưa có phụ đề khả dụng. Panda sẽ kiểm tra lại khi bạn gửi câu hỏi.'
+              : <>
+                <p>Dựa trên phụ đề · {scope === 'whole_lesson' ? 'Toàn bộ bài học' : `${pinned ? 'Đã ghim' : 'Đang xem'} ${formatAiTime(pinned?.context.playbackMs ?? source.activeCue?.startMs ?? 0)}`}</p>
+                {scope !== 'whole_lesson' && <>
+                  <p className="mt-1 line-clamp-2 text-[#262120]">{(pinned?.cue ?? source.activeCue)?.zh ?? 'Chọn câu trong bản chép lời để hỏi cụ thể.'}</p>
+                  <button type="button" className="mt-1 underline text-[#8F1719]" onClick={() => {
+                    if (pinned) setPinned(null)
+                    else setPinned({ context: { ...source.snapshot(), scope }, cue: source.activeCue })
+                  }}>{pinned ? 'Theo dõi video tiếp' : 'Ghim đoạn này để hỏi tiếp'}</button>
+                </>}
+              </>}
+          </div>}
         </section>
 
         <section
@@ -412,8 +441,8 @@ export default function AIAssistantDrawer({
               <button
                 key={label}
                 type="button"
-                onClick={() => void handleSend(prompt)}
-                disabled={isTyping}
+                onClick={() => void handleSend(source ? prompt.replace('bài học này', scope === 'whole_lesson' ? 'bài học này' : 'đoạn phụ đề đang chọn') : prompt.replace('trong bài học này', 'tiếng Trung').replace('dựa trên nội dung bài học này', 'bằng tiếng Trung').replace('theo chủ đề bài học này', 'về sinh hoạt hằng ngày'))}
+                disabled={isTyping || historyLoading || source?.status === 'loading'}
                 className="group flex min-h-11 items-center gap-2.5 rounded-xl border border-[#E9DEDA] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#433B39] shadow-[0_4px_14px_rgba(89,48,42,0.04)] transition-[border-color,background-color,color,transform] hover:border-[#DDA7A4] hover:bg-[#FFF7F5] hover:text-[#A3181A] active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
               >
                 <Icon
@@ -434,6 +463,10 @@ export default function AIAssistantDrawer({
             aria-live="polite"
           >
             <div className="space-y-5">
+              {historyLoading && <p className="text-xs text-[#6F6663]" role="status">Đang tải hội thoại…</p>}
+              {historyError && <p className="text-xs text-[#7E2728]" role="alert">{historyError}{' '}
+                <button type="button" disabled={isTyping} onClick={() => setHistoryVersion(value => value + 1)} className="underline">Tải lại hội thoại</button>
+              </p>}
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -461,7 +494,26 @@ export default function AIAssistantDrawer({
                             : "rounded-2xl rounded-bl-md border border-[#E7DEDA] bg-white text-[#262120]"
                       }`}
                     >
-                      {message.text}
+                      <span>{message.text}</span>
+                      {message.snapshot && message.sender === 'user' && <p className="mt-2 text-[10px] opacity-80">
+                        {message.snapshot.scope === 'whole_lesson' ? 'Toàn bài' : `Đoạn hỏi: ${formatAiTime(message.snapshot.playbackMs)}`}
+                      </p>}
+                      {!!message.reply?.citations?.length && <div className="mt-3 space-y-2 border-t border-[#E9DEDA] pt-2">
+                        <p className="text-[11px] font-semibold text-[#6B5E5A]">Nguồn phụ đề</p>
+                        {message.reply.citations.map(citation => <button type="button" key={citation.cueId}
+                          className="block w-full rounded-lg bg-[#FFF4F2] p-2 text-left hover:bg-[#FBE3DF]"
+                          disabled={!source || message.reply?.context?.lessonId !== source.lessonId || message.reply?.context?.subtitleRevision !== source.revision}
+                          onClick={() => { source?.seek(citation.startMs); onClose() }}>
+                          <span className="text-[11px] font-bold text-[#8F1719]">Xem lại {formatAiTime(citation.startMs)}–{formatAiTime(citation.endMs)}</span>
+                          <span className="mt-1 block">{citation.zh}</span>
+                          <span className="block text-[11px] text-[#6B5E5A]">{citation.pinyin}</span>
+                          <span className="block text-[11px]">{citation.vi}</span>
+                        </button>)}
+                      </div>}
+                      {message.retryQuestion && <button type="button" disabled={isTyping || historyLoading}
+                        onClick={() => void handleSend(message.retryQuestion, message.snapshot)} className="mt-2 block text-xs underline">
+                        Thử lại câu hỏi
+                      </button>}
                     </div>
                     <span className="mt-1 px-1 text-[10px] font-medium text-[#6F6663]">
                       {message.time}
@@ -512,6 +564,7 @@ export default function AIAssistantDrawer({
               ref={inputRef}
               type="text"
               placeholder="Hỏi Panda về bài học này..."
+              maxLength={500}
               value={inputText}
               onChange={(event) => setInputText(event.target.value)}
               className="min-w-0 flex-1 bg-transparent px-1.5 py-2 text-[13px] text-[#211D1C] outline-none placeholder:text-[#756B68]"
@@ -527,7 +580,7 @@ export default function AIAssistantDrawer({
             </button>
             <button
               type="submit"
-              disabled={!inputText.trim() || isTyping}
+              disabled={!inputText.trim() || isTyping || historyLoading || source?.status === 'loading'}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B91B1C] text-white shadow-[0_7px_16px_rgba(185,27,28,0.24)] transition-[background-color,transform,opacity] hover:bg-[#A3181A] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none"
               aria-label="Gửi câu hỏi"
             >
