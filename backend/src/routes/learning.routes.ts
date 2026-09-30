@@ -1,10 +1,14 @@
+import { lessonHskFilter } from '../services/lesson-access.js';
 import { PracticeAttemptModel } from '../models/practice.model.js';
+import { ExamAttemptModel } from '../models/exam-attempt.model.js';
+import { getExamActivity, examActivityPipeline } from '../services/exam-activity.js';
 import { summarizeStreak, qualifyingStudyActivity, qualifyingPracticeActivity } from '../services/streak.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { Types, type PipelineStage } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
 import { requireAuth } from '../middleware/auth.js';
+import { requirePremium } from '../middleware/premium.js';
 import { aiLimiter } from '../middleware/rate-limits.js';
 import { validate, validateQuery } from '../middleware/validate.js';
 import { LessonModel } from '../models/lesson.model.js';
@@ -40,11 +44,12 @@ router.use(requireAuth);
 
 router.get('/streak', asyncHandler(async (req, res) => {
   const userId = req.auth!.userId;
-  const [studyDates, practiceDates] = await Promise.all([
+  const [studyDates, practiceDates, examDates] = await Promise.all([
     StudyActivityModel.aggregate<{ dateKey: string }>([{ $match: { userId, ...qualifyingStudyActivity } }, { $project: { dateKey: 1 } }]),
     PracticeAttemptModel.aggregate<{ dateKey: string }>([{ $match: { userId, ...qualifyingPracticeActivity } }, { $project: { dateKey: 1 } }]),
+    getExamActivity(userId),
   ]);
-  res.json({ data: summarizeStreak([...studyDates, ...practiceDates].map(row => row.dateKey)) });
+  res.json({ data: summarizeStreak([...studyDates, ...practiceDates, ...examDates].map(row => row.dateKey)) });
 }));
 
 const activityQuerySchema = z.object({
@@ -53,7 +58,7 @@ const activityQuerySchema = z.object({
   timezone: z.string().trim().min(1).max(50).optional(),
 });
 
-router.get('/activity', validateQuery(activityQuerySchema), asyncHandler(async (req, res) => {
+router.get('/activity', requirePremium, validateQuery(activityQuerySchema), asyncHandler(async (req, res) => {
   const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof activityQuerySchema>;
   const timezone = query.timezone || DEFAULT_TIMEZONE;
   const to = query.to ?? toTimezoneDateKey(new Date(), timezone);
@@ -69,16 +74,20 @@ router.get('/activity', validateQuery(activityQuerySchema), asyncHandler(async (
   }
   if (dateKeys.length > 366) throw new AppError(422, 'ACTIVITY_RANGE_TOO_LARGE', 'Chỉ được xem tối đa 366 ngày');
 
-  const records = await StudyActivityModel.find({
+  const [records, examDays] = await Promise.all([StudyActivityModel.find({
     userId: req.auth!.userId,
     dateKey: { $gte: from, $lte: to },
-  }).sort({ dateKey: 1 }).lean();
+  }).sort({ dateKey: 1 }).lean(), getExamActivity(req.auth!.userId, { from, to })]);
   const recordMap = new Map(records.map(record => [record.dateKey, record]));
+  const examMap = new Map(examDays.map(record => [record.dateKey, record]));
   const days = dateKeys.map(dateKey => {
     const record = recordMap.get(dateKey);
+    const exam = examMap.get(dateKey);
     return {
       date: dateKey,
-      activeStudySeconds: record?.activeStudySeconds ?? 0,
+      activeStudySeconds: (record?.activeStudySeconds ?? 0) + (exam?.examStudySeconds ?? 0),
+      examAttempts: exam?.examAttempts ?? 0,
+      examStudySeconds: exam?.examStudySeconds ?? 0,
       progressUpdates: record?.progressUpdates ?? 0,
       quizAttempts: record?.quizAttempts ?? 0,
       completedLessons: record?.completedLessons ?? 0,
@@ -89,12 +98,14 @@ router.get('/activity', validateQuery(activityQuerySchema), asyncHandler(async (
     progressUpdates: sum.progressUpdates + day.progressUpdates,
     quizAttempts: sum.quizAttempts + day.quizAttempts,
     completedLessons: sum.completedLessons + day.completedLessons,
-  }), { activeStudySeconds: 0, progressUpdates: 0, quizAttempts: 0, completedLessons: 0 });
+    examAttempts: sum.examAttempts + day.examAttempts,
+    examStudySeconds: sum.examStudySeconds + day.examStudySeconds,
+  }), { activeStudySeconds: 0, progressUpdates: 0, quizAttempts: 0, completedLessons: 0, examAttempts: 0, examStudySeconds: 0 });
 
   res.json({ data: { from, to, timezone, days, totals } });
 }));
 
-router.get('/dashboard', asyncHandler(async (req, res) => {
+router.get('/dashboard', requirePremium, asyncHandler(async (req, res) => {
   const now = new Date();
   // PERFORMANCE (PERF-01): Limit dashboard progress query to 50 items.
   // For power users with thousands of progress records, use the dedicated
@@ -102,7 +113,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   const PROGRESS_DASHBOARD_LIMIT = 50;
   const [progress, savedCount, dueCount, attempts, userXP] = await Promise.all([
     ProgressModel.find({ userId: req.auth!.userId })
-      .populate('lessonId', 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey')
+      .populate({ path: 'lessonId', select: 'slug titleVi titleZh pinyin hsk topicIds durationSeconds thumbnailKey', match: lessonHskFilter(req.auth) })
       .sort({ updatedAt: -1 })
       .limit(PROGRESS_DASHBOARD_LIMIT)
       .lean(),
@@ -116,7 +127,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
     ? Math.round(attempts.reduce((sum, item) => sum + item.score, 0) / attempts.length)
     : null;
 
-  const continueItem = progress.find(item => !item.completed) ?? null;
+  const continueItem = progress.find(item => item.lessonId && !item.completed) ?? null;
   let continueLearning: unknown = continueItem;
   if (continueItem && continueItem.lessonId && typeof continueItem.lessonId === 'object') {
     const lessonObj = continueItem.lessonId as unknown as Record<string, unknown>;
@@ -148,7 +159,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   });
 }));
 
-router.get('/history', asyncHandler(async (req, res) => {
+router.get('/history', requirePremium, asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
   const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 8));
   const status = req.query.status as string | undefined;
@@ -162,28 +173,45 @@ router.get('/history', asyncHandler(async (req, res) => {
   else if (status === 'in_progress') baseFilter.completed = false;
 
   // M-3: Use aggregation for stats to avoid fetching all documents
-  const [statsResult] = await ProgressModel.aggregate([
-    { $match: { userId } },
-    {
-      $lookup: {
-        from: 'lessons',
-        localField: 'lessonId',
-        foreignField: '_id',
-        as: 'lesson',
+  const [[statsResult], [examStats]] = await Promise.all([
+    ProgressModel.aggregate([
+      { $match: { userId } },
+      {
+        $lookup: {
+          from: 'lessons',
+          localField: 'lessonId',
+          foreignField: '_id',
+          as: 'lesson',
+        },
       },
-    },
-    { $unwind: { path: '$lesson', preserveNullAndEmptyArrays: false } },
-    {
-      $group: {
-        _id: null,
-        totalLessonsLearned: { $sum: 1 },
-        completedCount: { $sum: { $cond: ['$completed', 1, 0] } },
-        totalStudySeconds: { $sum: { $add: ['$activeStudySeconds', '$lastPositionSeconds'] } },
+      { $unwind: { path: '$lesson', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: null,
+          totalLessonsLearned: { $sum: 1 },
+          completedCount: { $sum: { $cond: ['$completed', 1, 0] } },
+          totalStudySeconds: { $sum: { $add: ['$activeStudySeconds', '$lastPositionSeconds'] } },
+        },
       },
-    },
-  ]).limit(1);
+    ]).limit(1),
+    ExamAttemptModel.aggregate([
+      examActivityPipeline(userId)[0]!,
+      {
+        $group: {
+          _id: null,
+          examAttempts: { $sum: 1 },
+          examStudySeconds: { $sum: { $max: [0, { $ifNull: ['$timeSpentSeconds', 0] }] } },
+          avgExamScore: { $avg: '$score' },
+        },
+      },
+    ]).limit(1),
+  ]);
 
   const validProgress = statsResult ?? { totalLessonsLearned: 0, completedCount: 0, totalStudySeconds: 0 };
+  const examAttempts = examStats?.examAttempts ?? 0;
+  const examStudySeconds = examStats?.examStudySeconds ?? 0;
+  const totalStudySeconds = validProgress.totalStudySeconds + examStudySeconds;
+  const averageExamScore = examStats?.avgExamScore != null ? Math.round(examStats.avgExamScore) : null;
 
   // M-3: Fetch quiz attempts separately (lightweight count query)
   const attempts = await QuizAttemptModel.find({ userId }).select('score').lean();
@@ -267,14 +295,17 @@ router.get('/history', asyncHandler(async (req, res) => {
         totalLessonsLearned: validProgress.totalLessonsLearned,
         completedCount: validProgress.completedCount,
         inProgressCount: validProgress.totalLessonsLearned - validProgress.completedCount,
-        totalStudySeconds: validProgress.totalStudySeconds,
+        totalStudySeconds,
         averageQuizScore,
+        examAttempts,
+        examStudySeconds,
+        averageExamScore,
       },
     },
   });
 }));
 
-router.get('/recommendations', asyncHandler(async (req, res) => {
+router.get('/recommendations', requirePremium, asyncHandler(async (req, res) => {
   const [user, lessons, progress] = await Promise.all([
     UserModel.findById(req.auth!.userId).select('learningProfile').lean(),
     // PERFORMANCE (PERF-03): We fetch up to 100 lessons and score/sort in JS
@@ -282,7 +313,7 @@ router.get('/recommendations', asyncHandler(async (req, res) => {
     // topic overlap, completion history) — it's complex enough that translating
     // into a Mongo aggregation would hurt readability without clear win.
     // For scale: cap the candidate pool (100) and add DB index on { status, hsk, topicIds }.
-    LessonModel.find({ status: 'published' }).select('-media.objectKey').limit(100).lean(),
+    LessonModel.find({ status: 'published', ...lessonHskFilter(req.auth) }).select('-media.objectKey -playbackKey -lyricsRaw -chapters').limit(100).lean(),
     ProgressModel.find({ userId: req.auth!.userId }).select('lessonId completed bestQuizScore').lean(),
   ]);
   const profile = user?.learningProfile;
@@ -329,10 +360,10 @@ router.get('/recommendations', asyncHandler(async (req, res) => {
   res.json({ data: { items: itemsWithThumbnails, source: 'deterministic_profile_rules' } });
 }));
 
-router.post('/recommendations/ai', aiLimiter, asyncHandler(async (req, res) => {
+router.post('/recommendations/ai', requirePremium, aiLimiter, asyncHandler(async (req, res) => {
   const [user, lessons] = await Promise.all([
     UserModel.findById(req.auth!.userId).select('learningProfile').lean(),
-    LessonModel.find({ status: 'published' }).select('titleVi titleZh pinyin descriptionVi hsk topicIds goalTags durationSeconds thumbnailKey').limit(30).lean(),
+    LessonModel.find({ status: 'published', ...lessonHskFilter(req.auth) }).select('titleVi titleZh pinyin descriptionVi hsk topicIds goalTags durationSeconds thumbnailKey').limit(30).lean(),
   ]);
   if (lessons.length === 0) {
     res.json({ data: { items: [], source: 'no_published_lessons' } });
@@ -432,12 +463,12 @@ router.get('/leaderboard', validateQuery(leaderboardQuerySchema), asyncHandler(a
   res.json({ data: result });
 }));
 
-router.get('/roadmap', asyncHandler(async (req, res) => {
+router.get('/roadmap', requirePremium, asyncHandler(async (req, res) => {
   const result = await RoadmapService.getRoadmap(req.auth!.userId.toString());
   res.json({ data: result });
 }));
 
-router.patch('/roadmap/preferences', validate(z.object({
+router.patch('/roadmap/preferences', requirePremium, validate(z.object({
   currentHsk: z.number().int().min(1).max(9),
   targetHsk: z.number().int().min(1).max(9),
   dailyMinutes: z.number().int().min(5).max(120),

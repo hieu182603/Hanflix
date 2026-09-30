@@ -1,11 +1,13 @@
 import { grammarService } from '../services/grammar.service.js';
 import { Router } from 'express';
+import { optionalAuth, requirePremium } from '../middleware/premium.js';
 import { z } from 'zod';
 import { validateQuery } from '../middleware/validate.js';
 import { GrammarModel } from '../models/grammar.model.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
+router.use(optionalAuth, requirePremium);
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -14,7 +16,7 @@ const listQuerySchema = z.object({
   search: z.string().optional(),
 });
 
-// GET /api/v1/grammar - Public grammar list for learners
+// GET /api/v1/grammar - Premium grammar library
 router.get('/', validateQuery(listQuerySchema), asyncHandler(async (req, res) => {
   const query = (req as unknown as { parsedQuery: z.infer<typeof listQuerySchema> }).parsedQuery;
   const result = await grammarService.searchGrammar({ ...query, status: 'published' });

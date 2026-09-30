@@ -9,6 +9,7 @@ const studyActivitySchema = new Schema({
   completedLessons: { type: Number, min: 0, default: 0 },
   flashcardCompleted: { type: Boolean, default: false },
   vocabReviews: { type: Number, min: 0, default: 0 },
+  examAttempts: { type: Number, min: 0, default: 0 },
   xpEarned: { type: Number, min: 0, default: 0 },
 }, { timestamps: true, versionKey: false });
 

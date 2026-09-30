@@ -32,7 +32,7 @@ describe('POST /api/v1/vocabulary', () => {
 
   function auth() {
     vi.spyOn(UserModel, 'findById').mockReturnValue({
-      select: () => ({ lean: () => Promise.resolve({ _id: userId, role: 'user', status: 'active' }) }),
+      select: () => ({ lean: () => Promise.resolve({ _id: userId, role: 'user', status: 'active', premiumExpiresAt: new Date(Date.now() + 86400000) }) }),
     } as never);
     return `Bearer ${signAccessToken(userId.toString(), 'user')}`;
   }

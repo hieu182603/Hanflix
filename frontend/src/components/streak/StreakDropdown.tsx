@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { useLanguage } from '../../i18n';
-import { getStreakState } from '../../lib/streak';
+import { getStreakState, refreshStreak } from '../../lib/streak';
 import BurningFlame from './BurningFlame';
 
 interface StreakDropdownProps {
@@ -29,8 +30,10 @@ export default function StreakDropdown({
   onOpenPractice,
   onNavigateToLessons,
 }: StreakDropdownProps) {
+  const { tr, ui } = useI18n();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync state with central streak manager
@@ -73,6 +76,7 @@ export default function StreakDropdown({
 
   const streakCount = streakState.streakCount;
   const isCompletedToday = streakState.isCompletedToday;
+  const displayCount = streakState.loaded ? streakCount : '—';
 
   // 7-day strip data (Monday -> Sunday)
   // Day index: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
@@ -160,7 +164,7 @@ export default function StreakDropdown({
 
                 {/* Watermark Streak Number */}
                 <div className="absolute right-3 top-1 text-amber-300/25 font-mono font-black text-6xl select-none pointer-events-none">
-                  {streakCount}
+                  {displayCount}
                 </div>
 
                 <div className="flex items-start justify-between relative z-10">
@@ -178,11 +182,10 @@ export default function StreakDropdown({
                     <div>
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-neutral-900">
-                          {streakCount}
+                          {displayCount}
                         </span>
                         <span className="text-xs font-black uppercase tracking-wider text-amber-800 font-display">
-                          {t.streak.daysCount} Liên Tiếp
-                        </span>
+                          {t.streak.daysCount} {tr("Liên Tiếp")}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5 mt-1">
@@ -193,7 +196,9 @@ export default function StreakDropdown({
                               : 'bg-[#FEF3C7] text-[#92400E] border border-amber-200/60'
                           }`}
                         >
-                          {isCompletedToday ? (
+                          {!streakState.loaded ? (
+                            <span>{streakState.error ? tr("Chưa đồng bộ được") : tr("Đang tải…")}</span>
+                          ) : isCompletedToday ? (
                             <>
                               <CheckCircle2 className="w-3.5 h-3.5 text-[#15803D]" />
                               <span>{t.streak.statusCompletedToday}</span>
@@ -214,16 +219,18 @@ export default function StreakDropdown({
                     type="button"
                     onClick={() => setIsOpen(false)}
                     className="sm:hidden p-1.5 -mr-1 -mt-1 rounded-full text-amber-900/60 hover:text-amber-950 hover:bg-amber-100/60 active:scale-95 transition-all cursor-pointer"
-                    aria-label="Đóng"
+                    aria-label={tr("Đóng")}
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <p className="mt-3 text-xs text-amber-900/80 leading-relaxed relative z-10 font-medium">
-                  {isCompletedToday
-                    ? 'Tuyệt vời! Bạn đã duy trì thói quen học tập hôm nay và ngọn lửa streak đang bùng cháy rực rỡ.'
-                    : 'Học tập mỗi ngày để giữ vững ngọn lửa. Xem video hoặc làm bài ôn tập sẽ tự động cộng chuỗi!'}
+                  {!streakState.loaded
+                    ? tr("Đang kiểm tra ngày học đã lưu của bạn.")
+                    : isCompletedToday
+                    ? tr("Tuyệt vời! Bạn đã duy trì thói quen học tập hôm nay và ngọn lửa streak đang bùng cháy rực rỡ.")
+                    : tr("Học tập mỗi ngày để giữ vững ngọn lửa. Xem video hoặc làm bài ôn tập sẽ tự động cộng chuỗi!")}
                 </p>
               </div>
 
@@ -234,11 +241,10 @@ export default function StreakDropdown({
                   <div className="flex items-center justify-between text-xs font-semibold text-neutral-600 mb-2.5 px-1">
                     <span className="flex items-center gap-1.5 font-bold text-neutral-800">
                       <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Tuần này</span>
+                      <span>{tr("Tuần này")}</span>
                     </span>
                     <span className="text-[11px] text-neutral-500 font-mono font-medium">
-                      {completedDaysThisWeek}/7 ngày
-                    </span>
+                      {streakState.loaded ? completedDaysThisWeek : '—'}{tr("/7 ngày")}</span>
                   </div>
 
                   <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
@@ -251,7 +257,7 @@ export default function StreakDropdown({
                               : 'text-neutral-400 font-semibold'
                           }`}
                         >
-                          {day.label}
+                          {ui(day.label)}
                         </span>
 
                         <motion.div
@@ -287,10 +293,10 @@ export default function StreakDropdown({
                   <div className="flex items-center justify-between text-xs font-bold text-neutral-900">
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-amber-600" />
-                      <span>Ghi nhận ngày học</span>
+                      <span>{tr("Ghi nhận ngày học")}</span>
                     </span>
                     <span className="font-mono text-xs text-neutral-500">
-                      {streakState.error ? 'Chưa đồng bộ được' : !streakState.loaded ? 'Đang tải…' : isCompletedToday ? 'Đã ghi nhận' : 'Chưa ghi nhận'}
+                      {streakState.error ? tr("Chưa đồng bộ được") : !streakState.loaded ? tr("Đang tải…") : isCompletedToday ? tr("Đã ghi nhận") : tr("Chưa ghi nhận")}
                     </span>
                   </div>
 
@@ -309,26 +315,36 @@ export default function StreakDropdown({
                   </div>
 
                   <div className="text-[11px] text-neutral-500 leading-relaxed font-medium">
-                    {isCompletedToday
-                      ? 'Hoạt động học hôm nay đã được lưu. Ngày học tính theo giờ Việt Nam (UTC+7).'
-                      : 'Xem video có tiến độ được lưu, trả lời bài luyện hoặc ôn từ đã lưu để ghi nhận ngày học.'}
+                    {streakState.error
+                      ? tr("Chưa kiểm tra được dữ liệu mới nhất. Bạn không cần học lại chỉ vì lỗi đồng bộ.")
+                      : !streakState.loaded
+                      ? tr("Đang tải ngày học đã lưu…")
+                      : isCompletedToday
+                      ? tr("Hoạt động học hôm nay đã được lưu. Ngày học tính theo giờ Việt Nam (UTC+7).")
+                      : tr("Xem video có tiến độ được lưu, nộp bài luyện có câu trả lời hoặc ôn từ để ghi nhận ngày học. Không cần trả lời đúng hay đạt đủ số phút. Ngày học tính theo giờ Việt Nam (UTC+7).")}
                   </div>
+                  {streakState.error && (
+                    <button type="button" disabled={isRetrying}
+                      className="text-xs font-bold text-amber-800 underline disabled:opacity-50"
+                      onClick={async () => {
+                        setIsRetrying(true);
+                        try { await refreshStreak(); } finally { setIsRetrying(false); }
+                      }}>
+                      {isRetrying ? tr("Đang đồng bộ…") : tr("Thử đồng bộ lại")}
+                    </button>
+                  )}
                 </div>
 
                 {/* 3. Automatic Streak Interaction Card (Only displayed if NOT completed today) */}
-                {!isCompletedToday && (
+                {streakState.loaded && !streakState.error && !isCompletedToday && (
                   <div className="rounded-2xl p-4 border bg-gradient-to-br from-amber-50/90 to-orange-50/60 border-amber-200/80 text-amber-950 transition-all space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                         <Flame className="w-4.5 h-4.5 fill-amber-500 text-amber-600" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-amber-900">
-                          Duy trì một ngày học mỗi ngày
-                        </h4>
-                        <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">
-                          Chuỗi cập nhật khi hoạt động học được lưu thành công. Mỗi ngày tính một lần; bỏ lỡ một ngày sẽ bắt đầu lại chuỗi.
-                        </p>
+                        <h4 className="text-xs font-black text-amber-900">{tr("Duy trì một ngày học mỗi ngày")}</h4>
+                        <p className="text-[11px] text-amber-700/90 mt-0.5 leading-relaxed">{tr("Chuỗi cập nhật khi hoạt động học được lưu thành công. Mỗi ngày tính một lần; bỏ lỡ một ngày sẽ bắt đầu lại chuỗi.")}</p>
                       </div>
                     </div>
 
@@ -355,7 +371,7 @@ export default function StreakDropdown({
                           }}
                           className="flex-1 h-8.5 px-3 rounded-xl bg-white border border-amber-200 hover:bg-amber-100/60 text-amber-900 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                         >
-                          <span>Luyện tập nhanh</span>
+                          <span>{tr("Luyện tập nhanh")}</span>
                           <ArrowRight className="w-3 h-3 text-amber-600" />
                         </button>
                       )}

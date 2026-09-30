@@ -89,15 +89,17 @@ describe('RoadmapService.getRoadmap', () => {
     expect(result.targetHsk).toBe(5);
     expect(result.stages.length).toBe(9);
 
-    // HSK 1: 1 out of 1 completed -> 100%, completed
+    // Previous progress remains, but a lower level is no longer accessible.
     const hsk1 = result.stages[0];
     expect(hsk1.level).toBe('HSK 1');
     expect(hsk1.progress).toBe(100);
-    expect(hsk1.status).toBe('completed');
+    expect(hsk1.status).toBe('locked');
+    expect(hsk1.lessons).toEqual([]);
+    expect(hsk1.nextLessonId).toBeNull();
     expect(hsk1.totalLessons).toBe(1);
     expect(hsk1.completedLessons).toBe(1);
 
-    // HSK 2: 0 out of 1 completed, but level <= currentHsk (2) -> in_progress
+    // Only the exact current level is accessible.
     const hsk2 = result.stages[1];
     expect(hsk2.level).toBe('HSK 2');
     expect(hsk2.progress).toBe(0);
@@ -116,6 +118,21 @@ describe('RoadmapService.getRoadmap', () => {
     expect(hsk2.topics[0].progress).toBe(0);
     expect(hsk2.topics[0].status).toBe('not_started');
     expect(hsk3.topics).toEqual([]);
+  });
+
+  it('does not unlock another HSK when all current-level lessons are completed', async () => {
+    userModelMock.findById.mockReturnValue({ select: () => ({ lean: async () => ({
+      role: 'user', learningProfile: { currentHsk: 2, targetHsk: 3 },
+    }) }) });
+    lessonModelMock.find.mockReturnValue({ select: () => ({ lean: async () => [
+      { _id: lesson1, hsk: 2, titleVi: 'HSK 2', topicIds: [] },
+      { _id: lesson2, hsk: 3, titleVi: 'HSK 3', topicIds: [] },
+    ] }) });
+    progressModelMock.find.mockReturnValue({ select: () => ({ lean: async () => [{ lessonId: lesson1 }] }) });
+    const result = await RoadmapService.getRoadmap(userId);
+    expect(result.stages[1].status).toBe('completed');
+    expect(result.stages[2]).toMatchObject({ status: 'locked', lessons: [], nextLessonId: null });
+    expect(result.dailyLessons).toEqual([]);
   });
 
   it('does not manufacture progress when the catalog is empty', async () => {

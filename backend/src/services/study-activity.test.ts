@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Types } from 'mongoose';
+import { StudyActivityModel } from '../models/study-activity.model.js';
+import { UserModel } from '../models/user.model.js';
 import {
   DEFAULT_TIMEZONE,
   enumerateDateKeys,
@@ -7,6 +10,7 @@ import {
   parseUtcDateKey,
   toTimezoneDateKey,
   toUtcDateKey,
+  recordStudyActivity,
 } from './study-activity.js';
 
 describe('study activity date helpers', () => {
@@ -29,5 +33,35 @@ describe('study activity date helpers', () => {
     expect(() => parseDateKey('2026-02-30')).toThrow();
     expect(() => enumerateUtcDateKeys('2026-09-18', '2026-09-17')).toThrow();
     expect(() => enumerateDateKeys('2026-09-18', '2026-09-17')).toThrow();
+  });
+});
+
+describe('recording a study day', () => {
+  afterEach(() => vi.restoreAllMocks());
+  it('recovers a first-write race without dropping the activity or doubling XP', async () => {
+    const saved = { activeStudySeconds: 15 };
+    const write = vi.spyOn(StudyActivityModel, 'findOneAndUpdate')
+      .mockRejectedValueOnce({ code: 11000 }).mockResolvedValueOnce(saved as never);
+    const xp = vi.spyOn(UserModel, 'updateOne').mockResolvedValue({} as never);
+    const userId = new Types.ObjectId();
+    expect(await recordStudyActivity(userId, { vocabReviews: 1, xpEarned: 5 }, new Date('2026-09-26T17:00:00Z'))).toBe(saved);
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(write.mock.calls[1]).toEqual([
+      { userId, dateKey: '2026-09-27' },
+      { $inc: { vocabReviews: 1, xpEarned: 5 }, $setOnInsert: { userId, dateKey: '2026-09-27' } },
+      { returnDocument: 'after' },
+    ]);
+    expect(xp).toHaveBeenCalledTimes(1);
+  });
+  it('surfaces storage failures and does not grant XP for a failed activity write', async () => {
+    vi.spyOn(StudyActivityModel, 'findOneAndUpdate').mockRejectedValue(new Error('unavailable'));
+    const xp = vi.spyOn(UserModel, 'updateOne').mockResolvedValue({} as never);
+    await expect(recordStudyActivity(new Types.ObjectId(), { vocabReviews: 1, xpEarned: 5 })).rejects.toThrow('unavailable');
+    expect(xp).not.toHaveBeenCalled();
+  });
+  it('does not create records for empty or non-finite increments', async () => {
+    const write = vi.spyOn(StudyActivityModel, 'findOneAndUpdate');
+    expect(await recordStudyActivity(new Types.ObjectId(), { activeStudySeconds: Infinity, xpEarned: NaN, vocabReviews: 0 })).toBeNull();
+    expect(write).not.toHaveBeenCalled();
   });
 });

@@ -28,10 +28,13 @@ describe('GET /api/v1/lessons/:lessonId/progress', () => {
     const userId = new Types.ObjectId();
     const lessonId = new Types.ObjectId();
     vi.spyOn(UserModel, 'findById').mockReturnValue({
-      select: () => ({ lean: () => Promise.resolve({ _id: userId, role: 'user', status: 'active' }) }),
+      select: () => ({ lean: () => Promise.resolve({ _id: userId, role: 'admin', status: 'active' }) }),
     } as never);
     vi.spyOn(LessonModel, 'findOne').mockReturnValue({
       select: () => ({ lean: () => Promise.resolve({ _id: lessonId, durationSeconds: 100 }) }),
+    } as never);
+    vi.spyOn(LessonModel, 'find').mockReturnValue({
+      sort: () => ({ limit: () => ({ select: () => ({ lean: () => Promise.resolve([{ _id: lessonId }]) }) }) }),
     } as never);
     vi.spyOn(ProgressModel, 'findOne').mockReturnValue({
       select: () => ({ lean: () => Promise.resolve(null) }),

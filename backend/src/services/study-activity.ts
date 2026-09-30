@@ -56,6 +56,7 @@ export interface StudyActivityIncrement {
   quizAttempts?: number;
   completedLessons?: number;
   vocabReviews?: number;
+  examAttempts?: number;
   xpEarned?: number;
 }
 
@@ -67,17 +68,26 @@ export async function recordStudyActivity(
 ) {
   const dateKey = toTimezoneDateKey(now, timeZone);
   const safeIncrement = Object.fromEntries(
-    Object.entries(increment).filter(([, value]) => typeof value === 'number' && value > 0),
+    Object.entries(increment).filter(([, value]) => typeof value === 'number' && Number.isFinite(value) && value > 0),
   );
   if (Object.keys(safeIncrement).length === 0) return null;
 
-  if (typeof increment.xpEarned === 'number' && increment.xpEarned > 0) {
-    UserModel.updateOne({ _id: userId }, { $inc: { totalXP: increment.xpEarned } }).catch(() => {});
+  const filter = { userId, dateKey };
+  const update = { $inc: safeIncrement, $setOnInsert: { userId, dateKey } };
+  let activity;
+  try {
+    activity = await StudyActivityModel.findOneAndUpdate(filter, update,
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
+  } catch (error) {
+    // A concurrent activity may have inserted today's record first.
+    // The failed insert applied no increments, so retry against that record.
+    if ((error as { code?: number })?.code !== 11000) throw error;
+    activity = await StudyActivityModel.findOneAndUpdate(filter, update,
+      { returnDocument: 'after' });
   }
 
-  return StudyActivityModel.findOneAndUpdate(
-    { userId, dateKey },
-    { $inc: safeIncrement, $setOnInsert: { userId, dateKey } },
-    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
-  );
+  if (activity && safeIncrement.xpEarned) {
+    await UserModel.updateOne({ _id: userId }, { $inc: { totalXP: safeIncrement.xpEarned } }).catch(() => {});
+  }
+  return activity;
 }

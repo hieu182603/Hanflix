@@ -10,6 +10,7 @@ export interface PublishedLesson {
   topicIds: string[];
   goalTags: string[];
   durationSeconds: number;
+  isFreeSample?: boolean;
   media?: { url?: string | null } | null;
   thumbnailUrl?: string | null;
   // CONTENT MODE (2026-09-22): thêm các field mở rộng cho 3 dạng nội dung.
@@ -39,7 +40,7 @@ export interface LessonList {
   pages: number;
 }
 
-export function listPublishedLessons(params: { q?: string; hsk?: number; topic?: string; page?: number; limit?: number; signal?: AbortSignal } = {}): Promise<LessonList> {
+export function listPublishedLessons(params: { sample?: boolean; q?: string; hsk?: number; topic?: string; page?: number; limit?: number; signal?: AbortSignal } = {}): Promise<LessonList> {
   const { signal, ...rest } = params;
   const query = new URLSearchParams();
   Object.entries(rest).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)); });
@@ -115,8 +116,8 @@ export interface LearnerDashboard {
 export function getLearnerDashboard(options: { signal?: AbortSignal } = {}): Promise<LearnerDashboard> { return apiFetch('/learning/dashboard', options); }
 
 export interface LearningActivity {
-  days: Array<{ date: string; activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number }>;
-  totals: { activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number };
+  days: Array<{ date: string; activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number; examAttempts?: number; examStudySeconds?: number }>;
+  totals: { activeStudySeconds: number; progressUpdates: number; quizAttempts: number; completedLessons: number; examAttempts?: number; examStudySeconds?: number };
   timezone?: string;
 }
 
@@ -160,6 +161,7 @@ export interface SubtitleTrackMeta {
 }
 
 export interface WordExplanation {
+  pinyin?: string;
   meaningVi: string;
   usageVi: string;
   exampleZh: string;
@@ -309,6 +311,9 @@ export interface HistoryStats {
   inProgressCount: number;
   totalStudySeconds: number;
   averageQuizScore: number | null;
+  examAttempts?: number;
+  examStudySeconds?: number;
+  averageExamScore?: number | null;
 }
 
 export interface LearningHistoryResponse {
@@ -420,4 +425,3 @@ export function getRoadmap(options: { signal?: AbortSignal } = {}): Promise<Road
 export function saveRoadmapPreferences(input: { currentHsk: number; targetHsk: number; dailyMinutes: number }): Promise<{ saved: true }> {
   return apiFetch('/learning/roadmap/preferences', { method: 'PATCH', body: JSON.stringify(input) });
 }
-

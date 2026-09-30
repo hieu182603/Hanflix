@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Trophy, Star, BookOpen, CheckCircle2, Play, X } from 'lucide-react';
@@ -6,6 +7,7 @@ import { learningQueryKeys, dashboardQueryKeys } from '../../api/queryKeys';
 import type { XpEventDetail } from '../../lib/xp';
 
 export default function XpCelebrationToast() {
+  const { tr } = useI18n();
   const [eventData, setEventData] = useState<XpEventDetail | null>(null);
   const queryClient = useQueryClient();
 
@@ -84,16 +86,12 @@ export default function XpCelebrationToast() {
                   +{eventData.amount} XP
                 </span>
                 <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  Đấu Trường
-                </span>
+                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" />{tr("Đấu Trường")}</span>
               </div>
               <h4 className="font-black text-sm text-neutral-900 mt-1 truncate">
                 {eventData.title}
               </h4>
-              <p className="text-[11px] text-neutral-500 font-medium">
-                Điểm kinh nghiệm đã được cộng vào bảng xếp hạng!
-              </p>
+              <p className="text-[11px] text-neutral-500 font-medium">{tr("Điểm kinh nghiệm đã được cộng vào bảng xếp hạng!")}</p>
             </div>
 
             {/* Dismiss button */}

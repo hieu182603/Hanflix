@@ -174,7 +174,8 @@ export async function submitPractice(userId: string, id: string, input?: z.infer
     if (input.version !== attempt.version) throw new AppError(409, 'ATTEMPT_CHANGED', 'Bài đã thay đổi ở tab khác. Hãy tải lại bản đã lưu.');
     validateAnswers(asAttempt(attempt), input);
   }
-  const answers = input && !expired ? input.answers : answersOf(asAttempt(attempt));
+  const answers = Object.fromEntries(Object.entries(input && !expired ? input.answers : answersOf(asAttempt(attempt)))
+    .filter(([, answer]) => answer.trim().length > 0));
   const grade = gradePractice(asAttempt(attempt).questions, answers);
   const dateKey = toTimezoneDateKey(expired ? new Date(attempt.expiresAt) : now);
   // The submitted attempt IS the immutable reward record. A unique key caps rewards

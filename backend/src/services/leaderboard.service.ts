@@ -1,5 +1,6 @@
 import { summarizeStreak, qualifyingStudyActivity, qualifyingPracticeActivity } from './streak.js';
 import { PracticeAttemptModel } from '../models/practice.model.js';
+import { getExamActivity } from './exam-activity.js';
 import { Types } from 'mongoose';
 import { UserModel } from '../models/user.model.js';
 import { StudyActivityModel } from '../models/study-activity.model.js';
@@ -132,7 +133,7 @@ export class LeaderboardService {
     ]);
 
     const activityMap = new Map(activityAgg.map((a) => [a._id.toString(), a]));
-    const [allActivityDates, practicePoints, practiceDates] = await Promise.all([
+    const [allActivityDates, practicePoints, practiceDates, examDays] = await Promise.all([
       StudyActivityModel.aggregate<{ _id: Types.ObjectId; dateKeys: string[] }>([
         { $match: qualifyingStudyActivity },
         { $group: { _id: '$userId', dateKeys: { $addToSet: '$dateKey' } } },
@@ -145,10 +146,15 @@ export class LeaderboardService {
         { $match: qualifyingPracticeActivity },
         { $group: { _id: '$userId', dateKeys: { $addToSet: '$dateKey' } } },
       ]),
+      getExamActivity(),
     ]);
     const streakMap = new Map(allActivityDates.map(a => [String(a._id), a.dateKeys]));
     const practiceXpMap = new Map(practicePoints.map(a => [String(a._id), a.xp]));
     for (const row of practiceDates) streakMap.set(String(row._id), [...(streakMap.get(String(row._id)) ?? []), ...row.dateKeys]);
+    for (const row of examDays) {
+      const id = String(row.userId);
+      streakMap.set(id, [...(streakMap.get(id) ?? []), row.dateKey]);
+    }
 
 
     // 3. For all-time or fallback, also get ProgressModel completions
@@ -288,7 +294,8 @@ export class LeaderboardService {
       { $match: { userId: new Types.ObjectId(userId), ...qualifyingPracticeActivity } },
       { $group: { _id: null, dateKeys: { $addToSet: '$dateKey' } } },
     ]);
-    const streak = summarizeStreak([...(summary?.dateKeys ?? []), ...(practiceActivity?.dateKeys ?? [])], new Date(), timezone);
+    const examDays = await getExamActivity(new Types.ObjectId(userId));
+    const streak = summarizeStreak([...(summary?.dateKeys ?? []), ...(practiceActivity?.dateKeys ?? []), ...examDays.map(day => day.dateKey)], new Date(), timezone);
     const [user, progress] = await Promise.all([
       UserModel.findById(userId).select('totalXP').lean(),
       ProgressModel.aggregate<ProgressTotals>([

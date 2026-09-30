@@ -89,4 +89,18 @@ describe('practice attempt lifecycle', () => {
     expect(result).toMatchObject({ status: 'submitted', score: 100, rewardXp: 25 });
     expect(attemptModelMock.findOneAndUpdate).not.toHaveBeenCalled();
   });
+  it.each(['', '   ', '\n\t'])('does not persist a blank answer (%j) as streak activity', async (blank) => {
+    const original = attempt({ questions: [{ ...questions[0], type: 'short_answer', acceptedAnswers: ['test'] }] });
+    attemptModelMock.findOne.mockReturnValueOnce(leanResult(original));
+    attemptModelMock.findOneAndUpdate.mockImplementation((_filter, update) => leanResult({ ...original, ...update.$set }));
+    const result = await submitPractice(userId, attemptId, { version: 2, answers: { q1: blank }, flagged: [] });
+    expect(result).toMatchObject({ status: 'submitted', answers: {}, rewardXp: 0 });
+  });
+  it('keeps a wrong answer as learning activity even when no XP is earned', async () => {
+    const original = attempt();
+    attemptModelMock.findOne.mockReturnValueOnce(leanResult(original));
+    attemptModelMock.findOneAndUpdate.mockImplementation((_filter, update) => leanResult({ ...original, ...update.$set }));
+    const result = await submitPractice(userId, attemptId, { version: 2, answers: { q1: 'b' }, flagged: [] });
+    expect(result).toMatchObject({ status: 'submitted', answers: { q1: 'b' }, score: 0, rewardXp: 0 });
+  });
 });
