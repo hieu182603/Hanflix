@@ -14,6 +14,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev \
+    && npm install --no-save --no-audit @ffmpeg-installer/linux-x64@4.1.0 @ffprobe-installer/linux-x64@5.2.0 \
     && node -e "for (const name of ['@ffmpeg-installer/ffmpeg','@ffprobe-installer/ffprobe']) require('node:fs').chmodSync(require(name).path,0o755)" \
     && npm cache clean --force
 COPY --from=build /app/dist ./dist
