@@ -14,14 +14,14 @@ export const requireAuth: RequestHandler = asyncHandler(async (req, _res, next) 
   if (!Types.ObjectId.isValid(claims.sub)) {
     throw new AppError(401, 'INVALID_TOKEN', 'Phiên đăng nhập không hợp lệ');
   }
-  const user = await UserModel.findById(claims.sub).select('_id role status emailVerifiedAt +emailVerificationRequired').lean();
+  const user = await UserModel.findById(claims.sub).select('_id role status premiumExpiresAt learningProfile.currentHsk emailVerifiedAt +emailVerificationRequired').lean();
   if (!user || user.status !== 'active') {
     throw new AppError(401, 'ACCOUNT_UNAVAILABLE', 'Tài khoản không khả dụng');
   }
   if (user.emailVerificationRequired && !user.emailVerifiedAt) {
     throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Hãy xác minh email trước khi tiếp tục');
   }
-  req.auth = { userId: user._id, role: user.role };
+  req.auth = { userId: user._id, role: user.role, premiumExpiresAt: user.premiumExpiresAt, currentHsk: user.learningProfile?.currentHsk };
   next();
 });
 
