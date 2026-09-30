@@ -290,7 +290,7 @@ export default function App() {
   };
 
   return (
-    <LearnerLanguageScope enabled={!!currentUser && currentUser.role !== 'admin' && !/^\/(?:auth|admin|landing|welcome|about|testimonials|reviews|faq|help)(?:\/|$)/.test(location.pathname)}>
+    <LearnerLanguageScope enabled={!!currentUser && currentUser.role !== 'admin' && !/^\/(?:auth|admin|landing|welcome|about|testimonials|reviews|faq|help|students|community|student-stories)(?:\/|$)/.test(location.pathname)}>
     <NotificationProvider>
     <PremiumAccessProvider user={currentUser}>
     <Routes>
@@ -487,14 +487,17 @@ export default function App() {
       } />
 
       {/* Dedicated standalone Testimonials route (Cảm nhận học viên) */}
-      <Route path="/testimonials" element={
+      <Route path="/testimonials" element={<Navigate to="/#students" replace />} />
+      <Route path="/students" element={<Navigate to="/#students" replace />} />
+      <Route path="/community" element={<Navigate to="/#students" replace />} />
+      <Route path="/reviews" element={<Navigate to="/#students" replace />} />
+      <Route path="/student-stories" element={
         <TestimonialsPage
           onSignIn={() => navigate('/auth/login')}
           onSignUp={() => navigate('/auth/signup')}
           onStartSurvey={() => navigate('/auth/signup')}
         />
       } />
-      <Route path="/reviews" element={<Navigate to="/testimonials" replace />} />
 
       {/* Dedicated standalone FAQ route (Hỏi đáp thường gặp) */}
       <Route path="/faq" element={

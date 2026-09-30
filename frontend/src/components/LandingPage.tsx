@@ -183,10 +183,21 @@ export default function LandingPage({
     else navigate('/premium');
   };
 
-  const handleGoToTestimonials = () => {
-    if (onNavigateToTestimonials) onNavigateToTestimonials();
-    else navigate('/testimonials');
+  const handleGoToStudents = () => {
+    if (onNavigateToTestimonials) {
+      onNavigateToTestimonials();
+      return;
+    }
+    const el = document.getElementById('students') || document.getElementById('testimonials');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      window.history.pushState(null, '', '/#students');
+    } else {
+      navigate('/#students');
+    }
   };
+
+  const handleGoToTestimonials = handleGoToStudents;
 
   const handleGoToFaq = () => {
     if (onNavigateToFaq) onNavigateToFaq();
@@ -204,7 +215,36 @@ export default function LandingPage({
     if (window.location.hash === '#method' || window.location.hash === '#') {
       window.history.replaceState(null, '', window.location.pathname);
       window.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (
+      window.location.hash === '#students' ||
+      window.location.hash === '#community' ||
+      window.location.hash === '#testimonials'
+    ) {
+      const scrollTimer = setTimeout(() => {
+        const el = document.getElementById('students') || document.getElementById('testimonials');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+      return () => clearTimeout(scrollTimer);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (
+        window.location.hash === '#students' ||
+        window.location.hash === '#community' ||
+        window.location.hash === '#testimonials'
+      ) {
+        const el = document.getElementById('students') || document.getElementById('testimonials');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const activeCue = CUES[activeCueIndex];
@@ -251,7 +291,7 @@ export default function LandingPage({
             Giới thiệu
           </button>
           <button
-            onClick={handleGoToTestimonials}
+            onClick={handleGoToStudents}
             className="hover:text-[#B91B1C] transition-colors cursor-pointer text-sm font-semibold text-[#18181B]/80"
           >
             Học viên
@@ -328,7 +368,7 @@ export default function LandingPage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              handleGoToTestimonials();
+              handleGoToStudents();
             }}
             className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
@@ -866,7 +906,9 @@ export default function LandingPage({
       </section>
 
       {/* ── 5. LEARNER TESTIMONIALS ──────────────────────────────────── */}
-      <section id="testimonials" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
+      <section id="students" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
+        <span id="community" className="sr-only" />
+        <span id="testimonials" className="sr-only" />
         <div className="max-w-7xl mx-auto">
           
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
@@ -917,6 +959,16 @@ export default function LandingPage({
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mt-10 sm:mt-12 text-center">
+            <button
+              onClick={() => navigate('/student-stories')}
+              className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 rounded-full bg-white border border-[#E7A92F] text-[#B7791F] hover:bg-[#FFF3DE] font-bold text-sm transition-all shadow-xs cursor-pointer"
+            >
+              <span>Xem thêm câu chuyện học viên chi tiết</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
 
         </div>
@@ -1120,7 +1172,7 @@ export default function LandingPage({
                 </li>
                 <li>
                   <button
-                    onClick={handleGoToTestimonials}
+                    onClick={handleGoToStudents}
                     className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left"
                   >
                     Cảm nhận học viên

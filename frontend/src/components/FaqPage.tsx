@@ -266,7 +266,7 @@ export default function FaqPage({
             Giới thiệu
           </button>
           <button
-            onClick={() => navigate('/testimonials')}
+            onClick={() => navigate('/#students')}
             className="hover:text-[#B91B1C] transition-colors cursor-pointer"
           >
             Học viên
@@ -347,11 +347,11 @@ export default function FaqPage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              navigate('/testimonials');
+              navigate('/#students');
             }}
             className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
-            Cảm nhận học viên
+            Học viên
           </button>
           <button
             onClick={() => {
@@ -644,7 +644,7 @@ export default function FaqPage({
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/testimonials')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
+                  <button onClick={() => navigate('/#students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
                     Cảm nhận học viên
                   </button>
                 </li>

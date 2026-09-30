@@ -297,10 +297,9 @@ export default function TestimonialsPage({
             Giới thiệu
           </button>
           <button
-            onClick={() => navigate('/testimonials')}
-            className="text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
+            onClick={() => navigate('/#students')}
+            className="hover:text-[#B91B1C] transition-colors cursor-pointer text-sm font-semibold text-[#18181B]/80"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B91B1C]" />
             Học viên
           </button>
           <button
@@ -378,12 +377,11 @@ export default function TestimonialsPage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              navigate('/testimonials');
+              navigate('/#students');
             }}
-            className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#B91B1C] bg-white p-2 rounded-xl border border-[#B91B1C]/20 transition-colors cursor-pointer"
+            className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
-            <span className="w-2 h-2 rounded-full bg-[#B91B1C]" />
-            Cảm nhận học viên
+            Học viên
           </button>
           <button
             onClick={() => {
@@ -719,7 +717,7 @@ export default function TestimonialsPage({
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/testimonials')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
+                  <button onClick={() => navigate('/#students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
                     Cảm nhận học viên
                   </button>
                 </li>
