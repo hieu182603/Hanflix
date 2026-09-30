@@ -6,7 +6,6 @@ import {
   UserCheck,
   Copy,
   Check,
-  ExternalLink,
   Sparkles,
   HeartHandshake,
 } from 'lucide-react';
@@ -158,6 +157,8 @@ export default function ContactShowcase({
   // VARIANT 2: FOOTER (Dành cho chân trang Landing Page)
   // =========================================================================
   if (variant === 'footer') {
+    const footerContacts = contactData.filter((item) => item.id !== 'fanpage');
+
     return (
       <div className={`space-y-3.5 ${className}`}>
         <div className="space-y-1">
@@ -171,7 +172,7 @@ export default function ContactShowcase({
         </div>
 
         <div className="space-y-2 text-xs">
-          {contactData.map((item) => {
+          {footerContacts.map((item) => {
             const Icon = item.icon;
             return (
               <div
@@ -195,9 +196,6 @@ export default function ContactShowcase({
                           className="hover:text-[#B91B1C] transition-colors inline-flex items-center gap-1 break-all"
                         >
                           <span>{item.value}</span>
-                          {item.id === 'fanpage' && (
-                            <ExternalLink className="w-3 h-3 text-[#8B9097] group-hover:text-[#B91B1C] transition-colors shrink-0" />
-                          )}
                         </a>
                       ) : (
                         <span className="break-all">{item.value}</span>
