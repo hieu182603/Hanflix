@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { isLanguage, LANGUAGE_STORAGE_KEY, LOCALES, translateMessage, translateUiMessage, type MessageValues } from './messages';
 
 export type Language = 'vi' | 'en' | 'zh';
 
@@ -34,6 +35,7 @@ export interface Translations {
     language: string;
     accountSettings: string;
     learningSurvey: string;
+    paymentHistory: string;
     logout: string;
     learner: string;
     activeStatus: string;
@@ -190,7 +192,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       vocabulary: 'Từ vựng',
       roadmap: 'Lộ trình',
       history: 'Lịch sử học',
-      exam: 'Thi HSK',
+      exam: 'Luyện thi HSK',
       leaderboard: 'Bảng xếp hạng',
       community: 'Cộng đồng',
       grammar: 'Ngữ pháp',
@@ -214,6 +216,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       language: 'Ngôn ngữ giao diện',
       accountSettings: 'Cài đặt tài khoản',
       learningSurvey: 'Khảo sát sở thích học',
+      paymentHistory: 'Lịch sử thanh toán',
       logout: 'Đăng xuất',
       learner: 'Học viên',
       activeStatus: 'Tài khoản hoạt động',
@@ -393,6 +396,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       language: 'Display Language',
       accountSettings: 'Account Settings',
       learningSurvey: 'Learning Survey',
+      paymentHistory: 'Payment History',
       logout: 'Log Out',
       learner: 'Learner',
       activeStatus: 'Active Account',
@@ -572,6 +576,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
       language: '界面语言',
       accountSettings: '账户设置',
       learningSurvey: '学习意向调研',
+      paymentHistory: '支付历史',
       logout: '退出登录',
       learner: '学员',
       activeStatus: '账户正常',
@@ -724,12 +729,18 @@ interface LanguageContextType {
   lang: Language;
   setLang: (lang: Language) => void;
   t: Translations;
+  locale: string;
+  tr: (source: string, values?: MessageValues) => string;
+  ui: <T>(value: T) => T;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
   lang: 'vi',
   setLang: () => {},
   t: TRANSLATIONS.vi,
+  locale: LOCALES.vi,
+  tr: (source, values) => translateMessage('vi', source, values),
+  ui: value => value,
 });
 
 export function LanguageProvider({
@@ -742,33 +753,38 @@ export function LanguageProvider({
   onLangChange?: (lang: Language) => void;
 }) {
   const [lang, setLangState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hanflix_language');
-      if (saved === 'vi' || saved === 'en' || saved === 'zh') {
-        return saved;
-      }
-    }
+    try {
+      const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (isLanguage(saved)) return saved;
+    } catch { /* Private browsing may disable storage. */ }
     return initialLang;
   });
 
-  const setLang = (newLang: Language) => {
+  const setLang = useCallback((newLang: Language) => {
+    if (!isLanguage(newLang)) return;
     setLangState(newLang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hanflix_language', newLang);
-    }
+    try { window.localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang); } catch { /* Keep the in-memory preference. */ }
     if (onLangChange) {
       onLangChange(newLang);
     }
-  };
+  }, [onLangChange]);
 
   useEffect(() => {
-    if (initialLang && initialLang !== lang) {
-      setLangState(initialLang);
-    }
-  }, [initialLang]);
+    const syncLanguage = (event: StorageEvent) => {
+      if (event.key === LANGUAGE_STORAGE_KEY && isLanguage(event.newValue)) setLangState(event.newValue);
+    };
+    window.addEventListener('storage', syncLanguage);
+    return () => window.removeEventListener('storage', syncLanguage);
+  }, []);
+
+  const value = useMemo(() => ({
+    lang, setLang, t: TRANSLATIONS[lang], locale: LOCALES[lang],
+    tr: (source: string, values?: MessageValues) => translateMessage(lang, source, values),
+    ui: <T,>(source: T): T => typeof source === 'string' ? translateUiMessage(lang, source) as T : source,
+  }), [lang, setLang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t: TRANSLATIONS[lang] }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
@@ -776,4 +792,18 @@ export function LanguageProvider({
 
 export function useLanguage() {
   return useContext(LanguageContext);
+}
+
+export const useI18n = useLanguage;
+
+/** Public and admin screens retain Vietnamese; the stored learner preference is untouched. */
+export function LearnerLanguageScope({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+  const language = useLanguage();
+  const value = useMemo(() => enabled ? language : {
+    ...language, lang: 'vi' as const, locale: LOCALES.vi, t: TRANSLATIONS.vi,
+    tr: (source: string, values?: MessageValues) => translateMessage('vi', source, values),
+    ui: <T,>(source: T): T => source,
+  }, [enabled, language]);
+  useEffect(() => { document.documentElement.lang = value.lang === 'zh' ? 'zh-CN' : value.lang; }, [value.lang]);
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

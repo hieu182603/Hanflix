@@ -1,0 +1,6118 @@
+{
+  "đ": [
+    "VND",
+    "越南盾"
+  ],
+  "Tải lại": [
+    "Reload",
+    "重新加载"
+  ],
+  "Mã đơn": [
+    "Order ID",
+    "订单号"
+  ],
+  "Gói đăng ký": [
+    "Subscription plan",
+    "订阅套餐"
+  ],
+  "Số tiền": [
+    "Amount",
+    "金额"
+  ],
+  "Ngày tạo": [
+    "Created on",
+    "创建日期"
+  ],
+  "Trạng thái": [
+    "Status",
+    "状态"
+  ],
+  "Thử lại": [
+    "Try again",
+    "重试"
+  ],
+  "Đang hoạt động": [
+    "Active",
+    "使用中"
+  ],
+  "Trang trước": [
+    "Previous page",
+    "上一页"
+  ],
+  "Trang sau": [
+    "Next page",
+    "下一页"
+  ],
+  "Đang tải…": [
+    "Loading…",
+    "加载中…"
+  ],
+  "Vui lòng nhập lý do kích hoạt (ít nhất 3 ký tự).": [
+    "Enter a reason for activation (at least 3 characters).",
+    "请输入激活原因（至少3个字符）。"
+  ],
+  "Đã kích hoạt Premium đến {0}.": [
+    "Premium activated until {0}.",
+    "Premium已激活，有效期至{0}。"
+  ],
+  "Chưa kích hoạt được gói.": [
+    "Could not activate the plan.",
+    "套餐激活失败。"
+  ],
+  "Kích hoạt gói Premium": [
+    "Activate Premium",
+    "激活Premium套餐"
+  ],
+  "Premium hiện tại đến {0}": [
+    "Current Premium expires on {0}",
+    "当前Premium有效期至{0}"
+  ],
+  "Chưa có gói Premium còn hạn.": [
+    "No active Premium subscription.",
+    "暂无有效的Premium套餐。"
+  ],
+  "Thời hạn mới được cộng tiếp phần còn lại; nếu đã hết hạn thì tính từ lúc kích hoạt. Không tạo giao dịch thu tiền.": [
+    "The new term extends the remaining subscription, or starts now if expired. No payment is collected.",
+    "新时长将追加到剩余有效期；若已过期，则从激活时起算。此操作不收取费用。"
+  ],
+  "Gói kích hoạt": [
+    "Plan to activate",
+    "要激活的套餐"
+  ],
+  "tháng —": [
+    "months —",
+    "个月 —"
+  ],
+  "Lý do kích hoạt": [
+    "Reason for activation",
+    "激活原因"
+  ],
+  "Ví dụ: Tặng gói học theo chương trình hỗ trợ": [
+    "Example: Complimentary plan through a support program",
+    "例如：通过助学计划赠送套餐"
+  ],
+  "Chưa tải được gói.": [
+    "Could not load plans.",
+    "无法加载套餐。"
+  ],
+  "Đang kích hoạt…": [
+    "Activating…",
+    "激活中…"
+  ],
+  "Kích hoạt gói cho người dùng": [
+    "Activate plan for user",
+    "为用户激活套餐"
+  ],
+  "Chỉ kích hoạt cho học viên đang hoạt động.": [
+    "Only active learner accounts are eligible.",
+    "仅支持正常使用中的学员账号。"
+  ],
+  "Hãy thử lại cùng thông tin để tránh cấp trùng.": [
+    "Retry with the same details to avoid duplicate activation.",
+    "请使用相同信息重试，以免重复激活。"
+  ],
+  "Lịch sử kích hoạt thủ công": [
+    "Manual activation history",
+    "手动激活记录"
+  ],
+  "Tải lại lịch sử": [
+    "Reload history",
+    "重新加载记录"
+  ],
+  "Chưa có lần kích hoạt thủ công.": [
+    "No manual activations yet.",
+    "暂无手动激活记录。"
+  ],
+  "tháng ·": [
+    "months ·",
+    "个月 ·"
+  ],
+  "Đóng": [
+    "Close",
+    "关闭"
+  ],
+  "Đang xử lý": [
+    "Processing",
+    "处理中"
+  ],
+  "Học ngay": [
+    "Start learning",
+    "开始学习"
+  ],
+  "Miễn phí": [
+    "Free",
+    "免费"
+  ],
+  "Không tìm thấy mã đơn thanh toán": [
+    "Payment order ID not found",
+    "未找到支付订单号"
+  ],
+  "Bạn có thể mở lại đơn từ lịch sử thanh toán để kiểm tra.": [
+    "Open the order from your payment history to check it.",
+    "请从支付记录中打开订单进行查看。"
+  ],
+  "Về trang Premium": [
+    "Back to Premium",
+    "返回Premium页面"
+  ],
+  "Thanh toán HanFlix Premium": [
+    "HanFlix Premium checkout",
+    "HanFlix Premium支付"
+  ],
+  "Tự động kích hoạt sau khi payOS xác nhận thanh toán": [
+    "Activates automatically after payOS confirms payment",
+    "payOS确认付款后自动激活"
+  ],
+  "Đang kiểm tra thanh toán…": [
+    "Checking payment…",
+    "正在确认付款…"
+  ],
+  "Đang tạo thanh toán payOS…": [
+    "Creating payOS checkout…",
+    "正在创建payOS支付…"
+  ],
+  "Vui lòng đợi trong giây lát": [
+    "Please wait a moment",
+    "请稍候"
+  ],
+  "Chưa đồng bộ được trạng thái": [
+    "Could not sync status",
+    "无法同步状态"
+  ],
+  "Chưa tải được thanh toán": [
+    "Could not load payment",
+    "无法加载支付信息"
+  ],
+  "Thanh toán thành công!": [
+    "Payment successful!",
+    "支付成功！"
+  ],
+  "Bạn đã kích hoạt thành công": [
+    "Successfully activated",
+    "已成功激活"
+  ],
+  "Thời hạn Premium đến:": [
+    "Premium expires on:",
+    "Premium有效期至："
+  ],
+  "Bắt đầu trải nghiệm ngay": [
+    "Start exploring",
+    "立即体验"
+  ],
+  "Đơn hàng #": [
+    "Order #",
+    "订单号："
+  ],
+  "tháng)": [
+    "months)",
+    "个月）"
+  ],
+  "Tổng thanh toán": [
+    "Total payment",
+    "支付总额"
+  ],
+  "Mở trang payOS bên dưới để lấy mã VietQR chuyển khoản đúng số tiền và nội dung của đơn hàng.": [
+    "Open payOS below to get the VietQR code with the correct amount and payment reference.",
+    "打开下方payOS页面，获取包含正确金额和转账备注的VietQR码。"
+  ],
+  "Mở cổng thanh toán VietQR (PayOS)": [
+    "Open VietQR checkout (PayOS)",
+    "打开VietQR支付页面（PayOS）"
+  ],
+  "Đang đồng bộ cổng thanh toán...": [
+    "Syncing with payment gateway…",
+    "正在同步支付网关…"
+  ],
+  "Đã nhận một phần tiền. Kiểm tra số tiền còn thiếu trên payOS.": [
+    "Partial payment received. Check the remaining amount on payOS.",
+    "已收到部分付款。请在payOS查看待付金额。"
+  ],
+  "Đang xử lý thanh toán…": [
+    "Processing payment…",
+    "正在处理付款…"
+  ],
+  "Đang chờ chuyển khoản…": [
+    "Waiting for payment…",
+    "等待转账…"
+  ],
+  "Hết hạn sau {0}": [
+    "Expires in {0}",
+    "将于{0}后失效"
+  ],
+  "Đang kiểm tra hết hạn…": [
+    "Checking expiration…",
+    "正在检查是否过期…"
+  ],
+  "Đang hủy...": [
+    "Cancelling…",
+    "正在取消…"
+  ],
+  "Hủy đơn hàng này": [
+    "Cancel this order",
+    "取消此订单"
+  ],
+  "Xác nhận thanh toán qua payOS": [
+    "Payment confirmed through payOS",
+    "通过payOS确认付款"
+  ],
+  "Đơn hàng đã được hủy": [
+    "Order cancelled",
+    "订单已取消"
+  ],
+  "Không tạo được thanh toán": [
+    "Could not create checkout",
+    "无法创建支付"
+  ],
+  "Đơn hàng đã hết hạn": [
+    "Order expired",
+    "订单已过期"
+  ],
+  "Bạn có thể tạo một đơn hàng mới bất cứ lúc nào để tiếp tục nâng cấp.": [
+    "You can create a new order at any time to upgrade.",
+    "您可以随时创建新订单继续升级。"
+  ],
+  "Gói hoặc giá vừa thay đổi. Hãy kiểm tra bảng giá mới và chọn lại gói phù hợp.": [
+    "Plans or prices have changed. Review the current prices and choose a plan again.",
+    "套餐或价格已变更。请查看最新价格并重新选择套餐。"
+  ],
+  "Gói Miễn phí (Free) khác gì so với các gói HanFlix Premium?": [
+    "How does the Free plan differ from HanFlix Premium?",
+    "免费版与HanFlix Premium有什么区别？"
+  ],
+  "Với tài khoản Miễn phí, bạn được xem 5 video mẫu thực tế, sử dụng phụ đề song ngữ Hán – Pinyin – Tiếng Việt và tra cứu từ vựng cơ bản. Khi nâng cấp Premium, bạn sẽ mở khóa 100% toàn bộ kho video bài học, làm bài tập Quiz tương tác, luyện tập theo kho nội dung đã xuất bản và sử dụng trợ lý AI Panda.": [
+    "Free accounts include 5 sample videos, Chinese–Pinyin–Vietnamese subtitles and basic vocabulary lookup. Premium unlocks all lesson videos, interactive quizzes, published practice materials and the AI Panda assistant.",
+    "免费账号可观看5个示例视频，使用汉字、拼音和越南语字幕及基础查词功能。升级Premium可解锁全部教学视频、互动测验、已发布练习和AI熊猫助手。"
+  ],
+  "Tôi có thể thanh toán bằng phương thức nào?": [
+    "Which payment methods can I use?",
+    "支持哪些支付方式？"
+  ],
+  "Mở trang payOS từ đơn hàng và quét mã VietQR bằng ứng dụng ngân hàng hỗ trợ. Gói sẽ được kích hoạt sau khi hệ thống xác nhận đã nhận đủ tiền.": [
+    "Open payOS from your order and scan the VietQR code with a supported banking app. Your plan activates once the full payment is confirmed.",
+    "从订单打开payOS，使用支持的银行应用扫描VietQR码。确认足额付款后，套餐将自动激活。"
+  ],
+  "Nếu tài khoản của tôi đang có hạn Premium, mua thêm có bị mất ngày cũ không?": [
+    "Will buying another plan remove my remaining Premium days?",
+    "续费会损失剩余的Premium天数吗？"
+  ],
+  "Không hề! Hệ thống tự động cộng dồn thời hạn mới tiếp nối ngay sau ngày hết hạn hiện tại của bạn.": [
+    "No. The new term is added after your current subscription expires.",
+    "不会。新时长会自动追加到当前有效期之后。"
+  ],
+  "Gói có tự động gia hạn và trừ tiền tài khoản ngân hàng không?": [
+    "Does the plan renew and charge my bank account automatically?",
+    "套餐会自动续费并从银行账户扣款吗？"
+  ],
+  "Không! HanFlix thanh toán theo từng lần quét mã QR PayOS và cam kết KHÔNG tự động trừ tiền trong tài khoản của bạn khi hết hạn.": [
+    "No. Each purchase is a separate PayOS QR payment. HanFlix does not automatically charge you when your plan expires.",
+    "不会。每次购买均通过PayOS二维码单独支付，套餐到期后HanFlix不会自动扣款。"
+  ],
+  "Đang tải bảng giá…": [
+    "Loading pricing…",
+    "正在加载价格…"
+  ],
+  "Chưa tải được bảng giá hiện tại.": [
+    "Could not load current pricing.",
+    "无法加载当前价格。"
+  ],
+  "Tài khoản HanFlix Premium đang hoạt động": [
+    "Your HanFlix Premium is active",
+    "您的HanFlix Premium已激活"
+  ],
+  "Thời hạn gói của bạn:": [
+    "Your plan expires on:",
+    "您的套餐有效期至："
+  ],
+  "Ẩn lịch sử đơn": [
+    "Hide order history",
+    "隐藏订单记录"
+  ],
+  "Lịch sử thanh toán": [
+    "Payment history",
+    "支付记录"
+  ],
+  "Lịch sử đơn hàng PayOS của bạn": [
+    "Your PayOS order history",
+    "您的PayOS订单记录"
+  ],
+  "Đang tải lịch sử đơn...": [
+    "Loading order history…",
+    "正在加载订单记录…"
+  ],
+  "Chưa tải được lịch sử.": [
+    "Could not load history.",
+    "无法加载记录。"
+  ],
+  "Bạn chưa có đơn hàng nào.": [
+    "You have no orders yet.",
+    "您还没有订单。"
+  ],
+  "Đã thanh toán": [
+    "Paid",
+    "已付款"
+  ],
+  "Chờ thanh toán": [
+    "Awaiting payment",
+    "待付款"
+  ],
+  "Đang tạo": [
+    "Creating",
+    "创建中"
+  ],
+  "Chưa đủ tiền": [
+    "Partially paid",
+    "未付足额"
+  ],
+  "Đã hủy": [
+    "Cancelled",
+    "已取消"
+  ],
+  "Hết hạn": [
+    "Expired",
+    "已过期"
+  ],
+  "Thất bại": [
+    "Failed",
+    "失败"
+  ],
+  "Phân trang lịch sử thanh toán": [
+    "Payment history pagination",
+    "支付记录分页"
+  ],
+  "Bảng giá & Quyền lợi học tập HanFlix": [
+    "HanFlix plans & learning benefits",
+    "HanFlix价格与学习权益"
+  ],
+  "Chọn gói phù hợp với mục tiêu": [
+    "Choose a plan to help you",
+    "选择适合您的套餐"
+  ],
+  "bứt phá tiếng Trung": [
+    "make progress in Chinese",
+    "提升中文水平"
+  ],
+  "Trải nghiệm miễn phí các bài học mẫu hoặc nâng cấp gói Premium để mở khóa toàn bộ kho video thực tế, phụ đề song ngữ và trợ lý AI thông minh.": [
+    "Try sample lessons for free or upgrade to Premium for the full video library, bilingual subtitles and AI assistance.",
+    "免费体验示例课程，或升级Premium解锁完整视频库、双语字幕和智能AI助手。"
+  ],
+  "Thanh toán đang tạm ngưng. Vui lòng quay lại sau.": [
+    "Payments are temporarily unavailable. Please try again later.",
+    "支付暂时不可用，请稍后再试。"
+  ],
+  "Các gói Premium có cùng quyền lợi; chỉ khác giá và thời hạn. Thời gian còn lại được cộng tiếp khi gia hạn.": [
+    "All Premium plans have the same benefits, with different prices and durations. Renewals extend your remaining time.",
+    "所有Premium套餐权益相同，仅价格和时长不同。续费会保留剩余时长。"
+  ],
+  "Mặc định": [
+    "Default",
+    "默认"
+  ],
+  "Gói hiện tại": [
+    "Current plan",
+    "当前套餐"
+  ],
+  "Trải nghiệm phương pháp học tiếng Trung qua video thực tế.": [
+    "Discover learning Chinese through real-life videos.",
+    "体验通过真实场景视频学习中文。"
+  ],
+  "0 đ": [
+    "0 VND",
+    "0越南盾"
+  ],
+  "Mãi mãi không mất phí": [
+    "Free forever",
+    "永久免费"
+  ],
+  "Xem 5 video bài học mẫu": [
+    "Watch 5 sample lesson videos",
+    "观看5个示例教学视频"
+  ],
+  "Phụ đề Hán tự – Pinyin – Tiếng Việt": [
+    "Chinese–Pinyin–Vietnamese subtitles",
+    "汉字、拼音和越南语字幕"
+  ],
+  "Tra cứu từ vựng cơ bản khi xem": [
+    "Basic vocabulary lookup while watching",
+    "观看时基础查词"
+  ],
+  "Mở khóa toàn bộ kho video bài học": [
+    "Unlock all lesson videos",
+    "解锁全部教学视频"
+  ],
+  "Làm bài tập Quiz & Đề thi thử HSK": [
+    "Quizzes & HSK mock exams",
+    "测验与HSK模拟考试"
+  ],
+  "Trợ lý AI Panda tương tác chuyên sâu": [
+    "In-depth AI Panda assistance",
+    "深度互动AI熊猫助手"
+  ],
+  "Học bài mẫu": [
+    "Try a sample lesson",
+    "学习示例课程"
+  ],
+  "Đang sử dụng": [
+    "Currently using",
+    "正在使用"
+  ],
+  "Trải nghiệm": [
+    "Explore",
+    "体验"
+  ],
+  "1 Tháng": [
+    "1 month",
+    "1个月"
+  ],
+  "Linh hoạt từng tháng, mở khóa toàn bộ nội dung học.": [
+    "Monthly flexibility with access to all learning content.",
+    "灵活月付，解锁全部学习内容。"
+  ],
+  "đ/ngày · Thời hạn 1 tháng": [
+    "VND/day · 1-month term",
+    "越南盾/天 · 有效期1个月"
+  ],
+  "Nâng cấp ngay": [
+    "Upgrade now",
+    "立即升级"
+  ],
+  "Phổ biến": [
+    "Popular",
+    "热门"
+  ],
+  "Tiết kiệm": [
+    "Save",
+    "节省"
+  ],
+  "3 Tháng": [
+    "3 months",
+    "3个月"
+  ],
+  "Đủ thời gian để bứt tốc hoàn thành một cấp độ HSK.": [
+    "Give yourself time to work towards the next HSK level.",
+    "给自己充足时间，迈向下一个HSK等级。"
+  ],
+  "đ/tháng · Tiết kiệm": [
+    "VND/month · Save",
+    "越南盾/月 · 节省"
+  ],
+  "Tiêu chuẩn VIP": [
+    "VIP plan",
+    "VIP套餐"
+  ],
+  "12 Tháng": [
+    "12 months",
+    "12个月"
+  ],
+  "1 Năm trọn gói": [
+    "1 full year",
+    "全年套餐"
+  ],
+  "Tự tin làm chủ tiếng Trung, bứt phá mọi kỳ thi HSK.": [
+    "Build confidence in Chinese and prepare for your HSK exams.",
+    "自信掌握中文，备战HSK考试。"
+  ],
+  "đ/ngày · Tiết kiệm": [
+    "VND/day · Save",
+    "越南盾/天 · 节省"
+  ],
+  "So sánh chi tiết tính năng từng gói": [
+    "Compare plan features",
+    "套餐功能对比"
+  ],
+  "Đối chiếu rõ ràng quyền lợi giữa tài khoản Miễn phí và các gói HanFlix Premium": [
+    "Compare benefits across Free and HanFlix Premium plans",
+    "清楚对比免费版与HanFlix Premium的权益"
+  ],
+  "Tính năng & Quyền lợi": [
+    "Features & benefits",
+    "功能与权益"
+  ],
+  "1 Năm (VIP)": [
+    "1 year (VIP)",
+    "1年（VIP）"
+  ],
+  "5 video mẫu": [
+    "5 sample videos",
+    "5个示例视频"
+  ],
+  "Video mẫu": [
+    "Sample videos",
+    "示例视频"
+  ],
+  "Tra cứu cơ bản": [
+    "Basic lookup",
+    "基础查词"
+  ],
+  "Cần Premium": [
+    "Premium required",
+    "需要Premium"
+  ],
+  "Có": [
+    "Yes",
+    "有"
+  ],
+  "Thanh toán qua cổng VietQR payOS": [
+    "Pay with VietQR through payOS",
+    "通过payOS使用VietQR支付"
+  ],
+  "Kích hoạt sau khi xác nhận đủ tiền": [
+    "Activates after full payment is confirmed",
+    "确认足额付款后激活"
+  ],
+  "Không phát sinh chi phí ẩn hay tự động trừ tiền": [
+    "No hidden fees or automatic charges",
+    "无隐藏费用或自动扣款"
+  ],
+  "Câu hỏi thường gặp về gói cước": [
+    "Plan FAQs",
+    "套餐常见问题"
+  ],
+  "Mọi thắc mắc của bạn về tài khoản HanFlix Free & Premium": [
+    "Your questions about HanFlix Free & Premium",
+    "关于HanFlix免费版与Premium的常见疑问"
+  ],
+  "Chưa kiểm tra được thanh toán. Hệ thống sẽ tự thử lại; bạn không cần chuyển khoản lần nữa.": [
+    "Could not check payment. We will retry automatically; you do not need to pay again.",
+    "暂时无法确认付款。系统会自动重试，无需再次转账。"
+  ],
+  "Chưa hủy được đơn hàng.": [
+    "Could not cancel the order.",
+    "无法取消订单。"
+  ],
+  "Không tìm thấy đơn thanh toán.": [
+    "Payment order not found.",
+    "未找到支付订单。"
+  ],
+  "Chưa thể tạo yêu cầu thanh toán.": [
+    "Could not create a payment request.",
+    "无法创建付款请求。"
+  ],
+  "Hủy": [
+    "Cancel",
+    "取消"
+  ],
+  "Cấp độ HSK": [
+    "HSK level",
+    "HSK等级"
+  ],
+  "Tất cả": [
+    "All",
+    "全部"
+  ],
+  "Đặt lại bộ lọc": [
+    "Reset filters",
+    "重置筛选"
+  ],
+  "Đặt lại": [
+    "Reset",
+    "重置"
+  ],
+  "bài học": [
+    "lessons",
+    "节课"
+  ],
+  "Đóng menu": [
+    "Close menu",
+    "关闭菜单"
+  ],
+  "Quản Trị Viên": [
+    "Administrator",
+    "管理员"
+  ],
+  "Học viên": [
+    "Learner",
+    "学员"
+  ],
+  "Quản trị viên (Admin)": [
+    "Administrator (Admin)",
+    "管理员（Admin）"
+  ],
+  "Đời sống": [
+    "Daily life",
+    "日常生活"
+  ],
+  "Ẩm thực": [
+    "Food",
+    "美食"
+  ],
+  "Du lịch": [
+    "Travel",
+    "旅游"
+  ],
+  "Mua sắm": [
+    "Shopping",
+    "购物"
+  ],
+  "Giải trí": [
+    "Entertainment",
+    "娱乐"
+  ],
+  "Không tìm thấy bài học phù hợp": [
+    "No matching lessons found",
+    "未找到匹配的课程"
+  ],
+  "Đóng thông báo": [
+    "Dismiss notification",
+    "关闭通知"
+  ],
+  "Không thể tải gợi ý AI lúc này.": [
+    "Could not load AI recommendations right now.",
+    "暂时无法加载AI推荐。"
+  ],
+  "Không thể tải gợi ý lúc này.": [
+    "Could not load recommendations right now.",
+    "暂时无法加载推荐。"
+  ],
+  "AI đang tải…": [
+    "AI is loading…",
+    "AI加载中…"
+  ],
+  "Cá nhân hoá bởi AI": [
+    "Personalized by AI",
+    "AI个性化推荐"
+  ],
+  "Bài học đã xuất bản, được xếp theo trình độ, sở thích và mục tiêu học tập của bạn.": [
+    "Published lessons matched to your level, interests and learning goals.",
+    "根据您的水平、兴趣和学习目标推荐已发布的课程。"
+  ],
+  "Làm mới gợi ý": [
+    "Refresh recommendations",
+    "刷新推荐"
+  ],
+  "Chưa có bài học đã xuất bản để gợi ý.": [
+    "No published lessons to recommend yet.",
+    "暂无已发布的课程可供推荐。"
+  ],
+  "Đang tìm bài học phù hợp…": [
+    "Finding suitable lessons…",
+    "正在寻找适合您的课程…"
+  ],
+  "Không có bài học phù hợp với bộ lọc này.": [
+    "No lessons match these filters.",
+    "没有符合筛选条件的课程。"
+  ],
+  "Quay lại": [
+    "Back",
+    "返回"
+  ],
+  "Luyện thi HSK": [
+    "HSK preparation",
+    "HSK备考"
+  ],
+  "Không thể lưu hồ sơ.": [
+    "Could not save profile.",
+    "无法保存个人资料。"
+  ],
+  "Mật khẩu mới phải có ít nhất 8 ký tự.": [
+    "New password must have at least 8 characters.",
+    "新密码至少需要8个字符。"
+  ],
+  "Mật khẩu xác nhận không trùng khớp.": [
+    "Passwords do not match.",
+    "两次输入的密码不一致。"
+  ],
+  "Xác nhận mật khẩu mới": [
+    "Confirm new password",
+    "确认新密码"
+  ],
+  "Nhập lại mật khẩu mới": [
+    "Re-enter new password",
+    "再次输入新密码"
+  ],
+  "Công sở": [
+    "Workplace",
+    "职场"
+  ],
+  "Mọi cấp HSK": [
+    "All HSK levels",
+    "所有HSK等级"
+  ],
+  "Tất cả chủ đề": [
+    "All topics",
+    "所有主题"
+  ],
+  "Đời sống thường nhật": [
+    "Everyday life",
+    "日常生活"
+  ],
+  "Phim ảnh & Giải trí": [
+    "Film & entertainment",
+    "影视与娱乐"
+  ],
+  "Ẩm thực & Nấu ăn": [
+    "Food & cooking",
+    "美食与烹饪"
+  ],
+  "Công sở & Kinh doanh": [
+    "Work & business",
+    "职场与商务"
+  ],
+  "Du lịch & Khám phá": [
+    "Travel & discovery",
+    "旅游与探索"
+  ],
+  "Mua sắm & Tiêu dùng": [
+    "Shopping & lifestyle",
+    "购物与消费"
+  ],
+  "Ôn tập từ vựng Flashcard (+{0} XP)": [
+    "Flashcard vocabulary review (+{0} XP)",
+    "词卡复习（+{0} XP）"
+  ],
+  "Lọc chủ đề video": [
+    "Filter video topics",
+    "筛选视频主题"
+  ],
+  "Lọc HSK": [
+    "Filter HSK level",
+    "筛选HSK等级"
+  ],
+  "Tiếp tục hành trình tiếng Trung": [
+    "Continue your Chinese journey",
+    "继续您的中文学习之旅"
+  ],
+  "Bài học của bạn": [
+    "Your lessons",
+    "您的课程"
+  ],
+  "Tiếp tục:": [
+    "Continue:",
+    "继续："
+  ],
+  "Chọn một bài học đã xuất bản để bắt đầu.": [
+    "Choose a published lesson to get started.",
+    "选择一节已发布的课程开始学习。"
+  ],
+  "bài hoàn thành": [
+    "lessons completed",
+    "节课已完成"
+  ],
+  "từ đã lưu": [
+    "saved words",
+    "个已保存词汇"
+  ],
+  "từ cần ôn": [
+    "words to review",
+    "个待复习词汇"
+  ],
+  "Kho bài học đã xuất bản": [
+    "Published lesson library",
+    "已发布课程库"
+  ],
+  "Xóa từ khóa tìm kiếm": [
+    "Clear search",
+    "清除搜索"
+  ],
+  "Đang tải bài học…": [
+    "Loading lessons…",
+    "正在加载课程…"
+  ],
+  "Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy thử chọn chủ đề khác nhé!": [
+    "No lessons for this topic or HSK level yet. Try another topic.",
+    "暂无所选主题或HSK等级的课程，请尝试其他主题。"
+  ],
+  "Xem tất cả bài học": [
+    "View all lessons",
+    "查看所有课程"
+  ],
+  "Cài Đặt Tài Khoản": [
+    "Account settings",
+    "账号设置"
+  ],
+  "Mở rộng thanh điều hướng": [
+    "Expand navigation",
+    "展开导航"
+  ],
+  "Thu gọn thanh điều hướng": [
+    "Collapse navigation",
+    "收起导航"
+  ],
+  "Nâng cấp": [
+    "Upgrade",
+    "升级"
+  ],
+  "Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng": [
+    "Experience points (XP) · View leaderboard",
+    "经验值（XP）· 查看排行榜"
+  ],
+  "Trang Quản Trị": [
+    "Admin dashboard",
+    "管理后台"
+  ],
+  "Bảo mật": [
+    "Security",
+    "安全"
+  ],
+  "Tuần này": [
+    "This week",
+    "本周"
+  ],
+  "Luyện thi chứng chỉ HSK": [
+    "HSK exam preparation",
+    "HSK考试准备"
+  ],
+  "Giao tiếp hằng ngày": [
+    "Everyday conversation",
+    "日常交流"
+  ],
+  "Văn hóa & Giải trí": [
+    "Culture & entertainment",
+    "文化与娱乐"
+  ],
+  "Phim ảnh": [
+    "Film",
+    "影视"
+  ],
+  "Kinh tế": [
+    "Economics",
+    "经济"
+  ],
+  "Kinh doanh": [
+    "Business",
+    "商务"
+  ],
+  "Công nghệ": [
+    "Technology",
+    "科技"
+  ],
+  "Giao tiếp hàng ngày": [
+    "Everyday conversation",
+    "日常交流"
+  ],
+  "Âm nhạc": [
+    "Music",
+    "音乐"
+  ],
+  "Tùy chỉnh Sở thích AI": [
+    "AI learning preferences",
+    "AI学习偏好"
+  ],
+  "Tối ưu bài học hiển thị trên Bảng tin": [
+    "Personalize lessons in your feed",
+    "个性化推荐首页课程"
+  ],
+  "1. Trình độ HSK mục tiêu": [
+    "1. Target HSK level",
+    "1. 目标HSK等级"
+  ],
+  "2. Mục tiêu chính": [
+    "2. Main goal",
+    "2. 主要目标"
+  ],
+  "Mục tiêu:": [
+    "Goal:",
+    "目标："
+  ],
+  "3. Chủ đề quan tâm (": [
+    "3. Topics of interest (",
+    "3. 感兴趣的主题（"
+  ],
+  "Áp dụng gợi ý mới": [
+    "Apply preferences",
+    "应用偏好"
+  ],
+  "Chỉ hỗ trợ tệp hình ảnh định dạng JPG, PNG hoặc WEBP.": [
+    "Only JPG, PNG and WEBP images are supported.",
+    "仅支持JPG、PNG或WEBP图片。"
+  ],
+  "Kích thước ảnh không được vượt quá 5 MB.": [
+    "Image size must not exceed 5 MB.",
+    "图片大小不能超过5 MB。"
+  ],
+  "Cập nhật ảnh đại diện thành công!": [
+    "Profile photo updated!",
+    "头像已更新！"
+  ],
+  "Không thể tải ảnh đại diện. Vui lòng kiểm tra lại mạng hoặc thử ảnh khác.": [
+    "Could not upload your photo. Check your connection or try another image.",
+    "无法上传头像，请检查网络或尝试其他图片。"
+  ],
+  "Đã khôi phục avatar mặc định của bạn!": [
+    "Default avatar restored!",
+    "已恢复默认头像！"
+  ],
+  "Không thể khôi phục avatar mặc định. Vui lòng thử lại sau.": [
+    "Could not restore the default avatar. Please try again later.",
+    "无法恢复默认头像，请稍后重试。"
+  ],
+  "Họ và tên phải có tối thiểu 2 ký tự.": [
+    "Name must have at least 2 characters.",
+    "姓名至少需要2个字符。"
+  ],
+  "Đã cập nhật thông tin hồ sơ thành công!": [
+    "Profile updated successfully!",
+    "个人资料已更新！"
+  ],
+  "Đã đổi mật khẩu thành công! Các phiên đăng nhập khác đã được thu hồi an toàn.": [
+    "Password changed! Other sessions have been securely signed out.",
+    "密码已修改！其他登录会话已安全注销。"
+  ],
+  "Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.": [
+    "Could not change password. Check your current password.",
+    "无法修改密码，请检查当前密码。"
+  ],
+  "Đã hủy liên kết Google thành công.": [
+    "Google account unlinked.",
+    "已解除Google账号关联。"
+  ],
+  "Không thể hủy liên kết Google.": [
+    "Could not unlink Google account.",
+    "无法解除Google账号关联。"
+  ],
+  "Công việc & Thương mại": [
+    "Work & commerce",
+    "工作与贸易"
+  ],
+  "Phim ảnh & Văn hóa": [
+    "Film & culture",
+    "影视与文化"
+  ],
+  "Sở thích cá nhân": [
+    "Personal interests",
+    "个人兴趣"
+  ],
+  "Học Viên HanFlix": [
+    "HanFlix learner",
+    "HanFlix学员"
+  ],
+  "Quản lý nhận diện cá nhân, lộ trình học và bảo mật tài khoản": [
+    "Manage your profile, learning path and account security",
+    "管理个人资料、学习路线和账号安全"
+  ],
+  "Đóng cài đặt": [
+    "Close settings",
+    "关闭设置"
+  ],
+  "Hồ sơ cá nhân": [
+    "Profile",
+    "个人资料"
+  ],
+  "Cài đặt danh mục": [
+    "Settings categories",
+    "设置类别"
+  ],
+  "Ảnh đại diện & danh tính": [
+    "Photo & identity",
+    "头像与身份"
+  ],
+  "Bảo mật & Đăng nhập": [
+    "Security & sign-in",
+    "安全与登录"
+  ],
+  "Mật khẩu & tài khoản Google": [
+    "Password & Google account",
+    "密码与Google账号"
+  ],
+  "Ảnh đại diện & Danh tính học tập": [
+    "Profile photo & learner identity",
+    "头像与学习身份"
+  ],
+  "Hình ảnh đại diện và tiến độ học tập trên HanFlix": [
+    "Your photo and learning progress on HanFlix",
+    "您在HanFlix的头像和学习进度"
+  ],
+  "Bấm để chọn ảnh từ máy tính": [
+    "Click to choose an image",
+    "点击选择图片"
+  ],
+  "Đang trực tuyến": [
+    "Online",
+    "在线"
+  ],
+  "Đang tải ảnh...": [
+    "Uploading image…",
+    "正在上传图片…"
+  ],
+  "Tải ảnh cá nhân": [
+    "Upload photo",
+    "上传个人照片"
+  ],
+  "Đang đặt lại...": [
+    "Resetting…",
+    "正在重置…"
+  ],
+  "Dùng avatar mặc định": [
+    "Use default avatar",
+    "使用默认头像"
+  ],
+  "/ Mục tiêu HSK": [
+    "/ HSK target",
+    "/ HSK目标"
+  ],
+  "Chuỗi học tập": [
+    "Learning streak",
+    "连续学习"
+  ],
+  "ngày liên tục": [
+    "consecutive days",
+    "天连续学习"
+  ],
+  "Mục tiêu chính": [
+    "Main goal",
+    "主要目标"
+  ],
+  "Thông tin hiển thị học viên": [
+    "Learner profile details",
+    "学员展示信息"
+  ],
+  "Họ và tên hiển thị": [
+    "Display name",
+    "显示名称"
+  ],
+  "/80 ký tự": [
+    "/80 characters",
+    "/80个字符"
+  ],
+  "Nhập tên hiển thị của bạn": [
+    "Enter your display name",
+    "输入您的显示名称"
+  ],
+  "Địa chỉ Email": [
+    "Email address",
+    "邮箱地址"
+  ],
+  "Đã xác minh": [
+    "Verified",
+    "已验证"
+  ],
+  "Vai trò hệ thống": [
+    "Account role",
+    "账号角色"
+  ],
+  "Quyền cao": [
+    "Elevated access",
+    "高级权限"
+  ],
+  "Tiêu chuẩn": [
+    "Standard",
+    "标准"
+  ],
+  "Học viên HanFlix": [
+    "HanFlix learner",
+    "HanFlix学员"
+  ],
+  "Lộ trình & Mục tiêu cá nhân hóa": [
+    "Personalized path & goals",
+    "个性化路线与目标"
+  ],
+  "Cập nhật trình độ HSK và sở thích để thuật toán HanFlix đề xuất video chuẩn xác nhất cho bạn.": [
+    "Update your HSK level and interests for more relevant video recommendations.",
+    "更新HSK水平和兴趣，让HanFlix为您推荐更合适的视频。"
+  ],
+  "Khảo sát lại": [
+    "Retake survey",
+    "重新填写问卷"
+  ],
+  "Đang lưu thay đổi...": [
+    "Saving changes…",
+    "正在保存修改…"
+  ],
+  "Lưu thông tin hồ sơ": [
+    "Save profile",
+    "保存个人资料"
+  ],
+  "Đổi mật khẩu tài khoản": [
+    "Change account password",
+    "修改账号密码"
+  ],
+  "Đặt mật khẩu mạnh để bảo vệ thông tin học tập và lịch sử tra từ": [
+    "Set a strong password to protect your learning data and vocabulary history",
+    "设置高强度密码以保护学习数据和查词记录"
+  ],
+  "Mật khẩu hiện tại": [
+    "Current password",
+    "当前密码"
+  ],
+  "Nhập mật khẩu đang sử dụng": [
+    "Enter current password",
+    "输入当前密码"
+  ],
+  "Mật khẩu mới (ít nhất 8 ký tự)": [
+    "New password (at least 8 characters)",
+    "新密码（至少8个字符）"
+  ],
+  "Nhập mật khẩu mới": [
+    "Enter new password",
+    "输入新密码"
+  ],
+  "Đang đổi mật khẩu...": [
+    "Changing password…",
+    "正在修改密码…"
+  ],
+  "Cập nhật mật khẩu mới": [
+    "Update password",
+    "更新密码"
+  ],
+  "Liên kết tài khoản Google": [
+    "Link Google account",
+    "关联Google账号"
+  ],
+  "Đăng nhập nhanh 1 chạm bằng Google mà không cần nhập mật khẩu": [
+    "Sign in with one click using Google, without a password",
+    "使用Google一键登录，无需输入密码"
+  ],
+  "Đã liên kết tài khoản Google thành công.": [
+    "Google account linked successfully.",
+    "已成功关联Google账号。"
+  ],
+  "Hủy liên kết tài khoản Google khỏi HanFlix": [
+    "Unlink Google account from HanFlix",
+    "解除Google账号与HanFlix的关联"
+  ],
+  "Xác nhận hủy liên kết Google": [
+    "Confirm unlinking Google",
+    "确认解除Google关联"
+  ],
+  "Vui lòng nhập mật khẩu tài khoản HanFlix của bạn để xác thực gỡ bỏ tài khoản Google này.": [
+    "Enter your HanFlix password to confirm unlinking this Google account.",
+    "请输入HanFlix密码，以确认解除此Google账号关联。"
+  ],
+  "Nhập mật khẩu tài khoản": [
+    "Enter account password",
+    "输入账号密码"
+  ],
+  "Đang gỡ...": [
+    "Unlinking…",
+    "正在解除关联…"
+  ],
+  "Xác nhận gỡ liên kết": [
+    "Confirm unlinking",
+    "确认解除关联"
+  ],
+  "Xem & Chỉnh sửa hồ sơ cá nhân": [
+    "View & edit profile",
+    "查看和编辑个人资料"
+  ],
+  "Điều hướng chính": [
+    "Main navigation",
+    "主导航"
+  ],
+  "Đang xem video bài học": [
+    "Watching a lesson video",
+    "正在观看教学视频"
+  ],
+  "Hệ thống tự động ghi nhận tương tác xem video hôm nay!": [
+    "Today's video activity was saved automatically!",
+    "今天的视频学习活动已自动记录！"
+  ],
+  "Đang làm bài luyện tập": [
+    "Practising",
+    "正在练习"
+  ],
+  "Hệ thống tự động ghi nhận bài tập ôn luyện vừa hoàn thành!": [
+    "Your completed practice was saved automatically!",
+    "已完成的练习已自动记录！"
+  ],
+  "Đang ôn tập từ vựng SRS": [
+    "Reviewing SRS vocabulary",
+    "正在复习SRS词汇"
+  ],
+  "Hệ thống tự động ghi nhận phiên ôn tập Flashcard hôm nay!": [
+    "Today's flashcard review was saved automatically!",
+    "今天的词卡复习已自动记录！"
+  ],
+  "Tự động cộng Streak!": [
+    "Streak updated automatically!",
+    "连续学习天数已自动更新！"
+  ],
+  "+1 ngày": [
+    "+1 day",
+    "+1天"
+  ],
+  "Đã đạt": [
+    "Reached",
+    "已达成"
+  ],
+  "Ngày Chuỗi Liên Tiếp!": [
+    "Consecutive Learning Days!",
+    "天连续学习！"
+  ],
+  "Liên Tiếp": [
+    "In a row",
+    "连续"
+  ],
+  "Chưa đồng bộ được": [
+    "Could not sync",
+    "暂时无法同步"
+  ],
+  "Đang kiểm tra ngày học đã lưu của bạn.": [
+    "Checking your saved learning days.",
+    "正在查看已保存的学习天数。"
+  ],
+  "Tuyệt vời! Bạn đã duy trì thói quen học tập hôm nay và ngọn lửa streak đang bùng cháy rực rỡ.": [
+    "Great! You kept your learning habit today and your streak is going strong.",
+    "太棒了！您今天坚持了学习，连续学习的火焰正在燃烧。"
+  ],
+  "Học tập mỗi ngày để giữ vững ngọn lửa. Xem video hoặc làm bài ôn tập sẽ tự động cộng chuỗi!": [
+    "Learn every day to keep your streak. Watching videos or practising records a learning day automatically.",
+    "每天学习保持连续记录。观看视频或完成练习会自动记录学习日。"
+  ],
+  "/7 ngày": [
+    "/7 days",
+    "/7天"
+  ],
+  "Ghi nhận ngày học": [
+    "Record a learning day",
+    "记录学习日"
+  ],
+  "Đã ghi nhận": [
+    "Recorded",
+    "已记录"
+  ],
+  "Chưa ghi nhận": [
+    "Not recorded yet",
+    "尚未记录"
+  ],
+  "Chưa kiểm tra được dữ liệu mới nhất. Bạn không cần học lại chỉ vì lỗi đồng bộ.": [
+    "Could not check the latest data. You do not need to repeat learning because of a sync error.",
+    "暂时无法查看最新数据。同步错误不需要您重新学习。"
+  ],
+  "Đang tải ngày học đã lưu…": [
+    "Loading saved learning days…",
+    "正在加载已保存的学习日…"
+  ],
+  "Hoạt động học hôm nay đã được lưu. Ngày học tính theo giờ Việt Nam (UTC+7).": [
+    "Today's learning is saved. Days follow Vietnam time (UTC+7).",
+    "今天的学习活动已保存。学习日按越南时间（UTC+7）计算。"
+  ],
+  "Xem video có tiến độ được lưu, nộp bài luyện có câu trả lời hoặc ôn từ để ghi nhận ngày học. Không cần trả lời đúng hay đạt đủ số phút. Ngày học tính theo giờ Việt Nam (UTC+7).": [
+    "Save video progress, submit practice with an answer, or review vocabulary to record a learning day. Correct answers or a minimum duration are not required. Days follow Vietnam time (UTC+7).",
+    "保存视频进度、提交包含回答的练习或复习词汇，即可记录学习日。无需答对或达到规定分钟数。日期按越南时间（UTC+7）计算。"
+  ],
+  "Đang đồng bộ…": [
+    "Syncing…",
+    "正在同步…"
+  ],
+  "Thử đồng bộ lại": [
+    "Retry sync",
+    "重新同步"
+  ],
+  "Duy trì một ngày học mỗi ngày": [
+    "Keep learning every day",
+    "坚持每天学习"
+  ],
+  "Chuỗi cập nhật khi hoạt động học được lưu thành công. Mỗi ngày tính một lần; bỏ lỡ một ngày sẽ bắt đầu lại chuỗi.": [
+    "Your streak updates when learning is saved. Each day counts once; missing a day starts a new streak.",
+    "学习活动保存成功后更新连续天数。每天只计一次；中断一天后将重新开始。"
+  ],
+  "Luyện tập nhanh": [
+    "Quick practice",
+    "快速练习"
+  ],
+  "Bảng tin": [
+    "Feed",
+    "动态"
+  ],
+  "Reels": [
+    "Reels",
+    "Reels"
+  ],
+  "Kho lưu trữ": [
+    "Saved",
+    "收藏库"
+  ],
+  "Từ vựng": [
+    "Vocabulary",
+    "词汇"
+  ],
+  "Lộ trình": [
+    "Roadmap",
+    "学习路线"
+  ],
+  "Lịch sử học": [
+    "History",
+    "学习记录"
+  ],
+  "Bảng xếp hạng": [
+    "Leaderboard",
+    "排行榜"
+  ],
+  "Cộng đồng": [
+    "Community",
+    "学习社区"
+  ],
+  "Ngữ pháp": [
+    "Grammar",
+    "语法"
+  ],
+  "Bắt đầu ôn tập": [
+    "Start Review",
+    "开始复习"
+  ],
+  "Cài đặt": [
+    "Settings",
+    "设置"
+  ],
+  "Đăng xuất": [
+    "Log Out",
+    "退出登录"
+  ],
+  "Tìm kiếm video, từ vựng, ngữ pháp...": [
+    "Search videos, vocabulary, grammar...",
+    "搜索视频、生词、语法..."
+  ],
+  "Gợi ý tìm kiếm": [
+    "Search Suggestions",
+    "搜索建议"
+  ],
+  "ngày streak": [
+    "day streak",
+    "天连续打卡"
+  ],
+  "Thông báo": [
+    "Notifications",
+    "通知中心"
+  ],
+  "Đánh dấu tất cả đã đọc": [
+    "Mark all as read",
+    "全部标记为已读"
+  ],
+  "Chưa đọc": [
+    "Unread",
+    "未读"
+  ],
+  "Học tập": [
+    "Learning",
+    "学习提醒"
+  ],
+  "Hệ thống": [
+    "System",
+    "系统通知"
+  ],
+  "Không có thông báo mới": [
+    "No new notifications",
+    "暂无新通知"
+  ],
+  "Bạn đã xem hết các thông báo gần đây.": [
+    "You are all caught up on recent updates.",
+    "您已查看所有最新动态。"
+  ],
+  "Ngôn ngữ giao diện": [
+    "Display Language",
+    "界面语言"
+  ],
+  "Cài đặt tài khoản": [
+    "Account Settings",
+    "账户设置"
+  ],
+  "Khảo sát sở thích học": [
+    "Learning Survey",
+    "学习意向调研"
+  ],
+  "Tài khoản hoạt động": [
+    "Active Account",
+    "账户正常"
+  ],
+  "Quay lại Bảng tin": [
+    "Back to Feed",
+    "返回动态"
+  ],
+  "Chủ đề": [
+    "Topic",
+    "主题"
+  ],
+  "lượt xem": [
+    "views",
+    "次观看"
+  ],
+  "Bài giảng tương tác AI": [
+    "AI Interactive Lesson",
+    "AI 互动课程"
+  ],
+  "Lưu bài": [
+    "Save",
+    "收藏课程"
+  ],
+  "Đã lưu": [
+    "Saved",
+    "已收藏"
+  ],
+  "Hỏi AI về bài này": [
+    "Ask AI",
+    "向AI提问"
+  ],
+  "Luyện trắc nghiệm": [
+    "Practice Quiz",
+    "随堂测验"
+  ],
+  "Chia sẻ": [
+    "Share",
+    "分享"
+  ],
+  "Đã chép": [
+    "Copied",
+    "已复制"
+  ],
+  "Đã sao chép liên kết bài học!": [
+    "Lesson link copied to clipboard!",
+    "课程链接已复制到剪贴板！"
+  ],
+  "Theo dõi": [
+    "Follow",
+    "关注"
+  ],
+  "Đang theo dõi": [
+    "Following",
+    "已关注"
+  ],
+  "HanFlix Chinese Academy": [
+    "HanFlix Chinese Academy",
+    "HanFlix 中文学院"
+  ],
+  "Giáo trình tương tác HSK chuẩn mới · 14.8K học viên": [
+    "New HSK Standard Interactive Curriculum · 14.8K learners",
+    "新 HSK 标准沉浸式互动教程 · 1.48 万学员"
+  ],
+  "Thông tin bài giảng & Ngữ cảnh văn hóa": [
+    "Lesson Details & Cultural Context",
+    "课程详情与文化背景"
+  ],
+  "Hiện thêm": [
+    "Show more",
+    "展开更多"
+  ],
+  "Thu gọn": [
+    "Show less",
+    "收起"
+  ],
+  "Điểm nhấn học thuật trong video:": [
+    "Key Academic Points in Video:",
+    "本课核心学习要点："
+  ],
+  "Lời thoại": [
+    "Transcript",
+    "剧本对白"
+  ],
+  "Bấm vào câu để phát âm và nhảy tới đoạn video:": [
+    "Click any sentence to pronounce and jump to that video timestamp:",
+    "点击句子即可发音并跳转至该时间节点："
+  ],
+  "Nghe phát âm chuẩn": [
+    "Listen to standard pronunciation",
+    "听标准发音"
+  ],
+  "Lưu từ vựng này": [
+    "Save this vocabulary",
+    "收藏该生词"
+  ],
+  "Đã lưu vào sổ tay từ vựng!": [
+    "Saved to vocabulary notebook!",
+    "已添加到生词本！"
+  ],
+  "Bài học tiếp theo": [
+    "Up Next",
+    "接下来播放"
+  ],
+  "bài gợi ý": [
+    "recommended",
+    "个推荐视频"
+  ],
+  "Phụ đề: Song ngữ": [
+    "Subtitles: Bilingual",
+    "字幕：双语对照"
+  ],
+  "Phụ đề: Hán & Pinyin": [
+    "Subtitles: Han & Pinyin",
+    "字幕：汉字 + 拼音"
+  ],
+  "Phụ đề: Chỉ chữ Hán": [
+    "Subtitles: Hanzi Only",
+    "字幕：仅汉字"
+  ],
+  "Tắt phụ đề": [
+    "Subtitles: Off",
+    "关闭字幕"
+  ],
+  "Chế độ xem mẫu": [
+    "Sample Preview Mode",
+    "样片试看模式"
+  ],
+  "Đăng nhập để lưu tiến độ xem, tra từ điển AI và làm bài tập trắc nghiệm.": [
+    "Sign in to save your learning progress, use AI lookup, and practice quizzes.",
+    "登录账户即可保存学习进度、使用 AI 释义并参加随堂练习。"
+  ],
+  "AI gợi ý cho bạn": [
+    "Recommended for You",
+    "为您个性化推荐"
+  ],
+  "Theo hồ sơ học": [
+    "Based on Profile",
+    "根据学习档案"
+  ],
+  "Sở thích": [
+    "Preferences",
+    "学习偏好"
+  ],
+  "HSK 3": [
+    "HSK 3",
+    "HSK 3级"
+  ],
+  "Mục tiêu: Kinh doanh": [
+    "Goal: Business",
+    "目标：商务中文"
+  ],
+  "Đang học": [
+    "In Progress",
+    "正在学习"
+  ],
+  "Quản lý hồ sơ, bảo mật mật khẩu và tùy chọn học tập": [
+    "Manage profile, security, and study preferences",
+    "管理个人资料、安全密码及学习偏好"
+  ],
+  "Tùy chọn học tập": [
+    "Learning Preferences",
+    "学习偏好"
+  ],
+  "Đổi mật khẩu": [
+    "Change Password",
+    "修改密码"
+  ],
+  "Họ và tên": [
+    "Full Name",
+    "学员姓名"
+  ],
+  "Mục tiêu & Lộ trình học tập": [
+    "Goals & Learning Roadmap",
+    "学习目标与定制路线"
+  ],
+  "Cập nhật lại trình độ HSK và các chủ đề bạn quan tâm để trang chủ đề xuất đúng nội dung cần học.": [
+    "Update your HSK level and favorite topics to personalize your dashboard recommendations.",
+    "重新设定您的 HSK 水平及偏好主题，主页将据此更新专属推荐内容。"
+  ],
+  "Lưu tùy chọn học tập": [
+    "Save Preferences",
+    "保存学习偏好"
+  ],
+  "Đã lưu tùy chọn học tập thành công!": [
+    "Learning preferences saved successfully!",
+    "学习偏好设置已成功保存！"
+  ],
+  "Chế độ phụ đề mặc định trong video": [
+    "Default Subtitle Display Mode",
+    "视频默认字幕显示模式"
+  ],
+  "Song ngữ đầy đủ": [
+    "Full Bilingual",
+    "双语对照"
+  ],
+  "Hán tự + Pinyin + Tiếng Việt": [
+    "Chinese + Pinyin + Translation",
+    "汉字 + 拼音 + 翻译"
+  ],
+  "Trung & Pinyin": [
+    "Chinese & Pinyin",
+    "汉字与拼音"
+  ],
+  "Luyện phản xạ nghĩa": [
+    "Train natural comprehension",
+    "锻炼语感与直接反应"
+  ],
+  "Chỉ chữ Hán": [
+    "Characters Only",
+    "纯汉字显示"
+  ],
+  "Thử thách nâng cao": [
+    "Advanced reading challenge",
+    "进阶深度阅读挑战"
+  ],
+  "Âm thanh & Tương tác": [
+    "Audio & Interaction",
+    "声音与交互"
+  ],
+  "Tự động phát âm chuẩn khi bấm vào từ vựng": [
+    "Auto-pronounce standard Chinese on click",
+    "点击生词时自动播放标准发音"
+  ],
+  "Đọc phát âm tiếng Trung phổ thông (zh-CN) ngay khi tra cứu": [
+    "Play Mandarin audio (zh-CN) immediately upon word lookup",
+    "查词时立即朗读标准普通话 (zh-CN) 发音"
+  ],
+  "Tốc độ phát mặc định": [
+    "Default Playback Speed",
+    "默认播放倍速"
+  ],
+  "Tốc độ phù hợp khi bắt đầu xem bài học mới": [
+    "Recommended starting speed for new lessons",
+    "新课视频建议起始播放速率"
+  ],
+  "Mật khẩu mới (tối thiểu 8 ký tự)": [
+    "New Password (min 8 characters)",
+    "新密码（至少8位字符）"
+  ],
+  "Thiết Lập Lộ Trình Học Tập": [
+    "Set Up Learning Roadmap",
+    "设定学习路线与目标"
+  ],
+  "Bước": [
+    "Step",
+    "第"
+  ],
+  "Tùy chỉnh nội dung video và lộ trình tiếng Trung phù hợp với bạn": [
+    "Tailor video content and curriculum to your proficiency and interests",
+    "定制专属于您的中文视频课程与学习进度"
+  ],
+  "Chào mừng bạn đến với HanFlix!": [
+    "Welcome to HanFlix!",
+    "欢迎来到 HanFlix！"
+  ],
+  "Chỉ mất khoảng 30 giây để chọn trình độ và mục tiêu của bạn, giúp hệ thống gợi ý các bài học video sát với nhu cầu thực tế nhất.": [
+    "Take 30 seconds to choose your proficiency level and goals so we can recommend the most practical video lessons.",
+    "仅需 30 秒选择您的中文水平与兴趣目标，系统将为您精选最契合实际应用场景的视频教程。"
+  ],
+  "Trình độ tiếng Trung hiện tại của bạn là gì?": [
+    "What is your current Chinese proficiency level?",
+    "您目前的中文水平大约是？"
+  ],
+  "Hệ thống sẽ sắp xếp các bài học có độ khó từ vựng và ngữ pháp vừa vặn nhất.": [
+    "We will curate videos with vocabulary and grammar matched to your current stage.",
+    "我们将精选词汇难度与语法结构最贴合您现阶段水平的视频。"
+  ],
+  "Mục tiêu chính khi bạn học tiếng Trung là gì?": [
+    "What is your primary goal for learning Chinese?",
+    "您学习中文的主要目标是？"
+  ],
+  "Chọn mục tiêu ưu tiên để hệ thống phân loại bài giảng trên trang chủ của bạn.": [
+    "Pick your top priority so we can categorize lessons on your home dashboard.",
+    "选择首要目标，便于系统为您在首页呈现分类课程。"
+  ],
+  "Những chủ đề bạn quan tâm nhất khi xem video?": [
+    "Which topics interest you most when watching videos?",
+    "您看视频时最感兴趣的主题有哪些？"
+  ],
+  "Chọn các chủ đề bạn muốn học (có thể chọn nhiều).": [
+    "Select topics you want to learn (you can choose multiple).",
+    "选择您渴望学习的主题（可多选）。"
+  ],
+  "Thói quen học tập & Chế độ phụ đề": [
+    "Study Habits & Subtitle Preferences",
+    "学习习惯与字幕显示"
+  ],
+  "Thiết lập thời lượng xem video và chế độ hiển thị phù hợp với bạn.": [
+    "Set your daily target time and preferred subtitle display.",
+    "设置每日建议学习时长与最适合您的字幕模式。"
+  ],
+  "Thời lượng dự kiến học mỗi ngày": [
+    "Target study time per day",
+    "每日计划学习时长"
+  ],
+  "Chế độ hiển thị phụ đề mặc định": [
+    "Default subtitle mode",
+    "默认字幕显示模式"
+  ],
+  "Tiếp tục": [
+    "Continue",
+    "下一步"
+  ],
+  "Bỏ qua lần này": [
+    "Skip for now",
+    "暂跳过"
+  ],
+  "Lưu & Bắt đầu học": [
+    "Save & Start Learning",
+    "保存并开始学习"
+  ],
+  "Chuỗi học tập rực lửa": [
+    "Learning Streak on Fire!",
+    "连续打卡火热进行中！"
+  ],
+  "Bạn đã duy trì ngọn lửa học tập 14 ngày liên tiếp. Hãy học một bài ngắn hôm nay để giữ vững thói quen!": [
+    "You have maintained your study streak for 14 consecutive days. Complete a quick lesson today to keep the fire burning!",
+    "您已连续打卡学习 14 天。今天完成一个简短课程，继续保持火热势头！"
+  ],
+  "Đang duy trì chuỗi": [
+    "Streak Active",
+    "打卡进行中"
+  ],
+  "Đã hoàn thành hôm nay": [
+    "Completed for Today",
+    "今日已完成打卡"
+  ],
+  "Chưa học hôm nay": [
+    "Pending Today",
+    "今日待完成"
+  ],
+  "Mục tiêu hôm nay": [
+    "Today's Target",
+    "今日目标"
+  ],
+  "15 phút học hoặc 1 bài học ngắn": [
+    "15 mins of study or 1 video lesson",
+    "学习 15 分钟或完成 1 堂视频课"
+  ],
+  "10/15 phút": [
+    "10/15 mins",
+    "10/15 分钟"
+  ],
+  "Học ngay để giữ chuỗi": [
+    "Study Now to Keep Streak",
+    "立即学习保持打卡"
+  ],
+  "Đánh dấu hoàn thành hôm nay": [
+    "Mark Completed for Today",
+    "打卡标记今日完成"
+  ],
+  "Tuyệt vời! Chuỗi đã được bảo toàn": [
+    "Awesome! Streak secured for today",
+    "太棒了！今日打卡已成功锁定"
+  ],
+  "Khiên bảo vệ chuỗi (Streak Freeze)": [
+    "Streak Freeze Shield",
+    "打卡保护盾 (Streak Freeze)"
+  ],
+  "Tự động bảo vệ ngọn lửa nếu bạn bận rộn 1 ngày.": [
+    "Automatically protects your flame if you miss a busy day.",
+    "若某天繁忙遗漏，系统将自动使用护盾保护连续天数。"
+  ],
+  "1/2 khiên sẵn sàng": [
+    "1/2 shields available",
+    "1/2 个护盾可用"
+  ],
+  "Trang bị bảo vệ": [
+    "Equip Shield",
+    "装备护盾"
+  ],
+  "Đã kích hoạt khiên bảo vệ chuỗi!": [
+    "Streak freeze shield activated!",
+    "打卡保护盾已成功生效！"
+  ],
+  "Cột mốc thói quen": [
+    "Habit Milestones",
+    "习惯里程碑"
+  ],
+  "Chuỗi dài nhất": [
+    "Longest Streak",
+    "最长连续"
+  ],
+  "Tổng ngày học": [
+    "Total Days",
+    "累计学习"
+  ],
+  "Tỷ lệ duy trì": [
+    "Retention Rate",
+    "坚持率"
+  ],
+  "T2": [
+    "Mon",
+    "周一"
+  ],
+  "T3": [
+    "Tue",
+    "周二"
+  ],
+  "T4": [
+    "Wed",
+    "周三"
+  ],
+  "T5": [
+    "Thu",
+    "周四"
+  ],
+  "T6": [
+    "Fri",
+    "周五"
+  ],
+  "T7": [
+    "Sat",
+    "周六"
+  ],
+  "CN": [
+    "Sun",
+    "周日"
+  ],
+  "7 ngày · Mầm non": [
+    "7 Days · Starter",
+    "7 天 · 初露锋芒"
+  ],
+  "14 ngày · Kiên định": [
+    "14 Days · Persistent",
+    "14 天 · 坚持不懈"
+  ],
+  "30 ngày · Thói quen vàng": [
+    "30 Days · Golden Habit",
+    "30 天 · 黄金习惯"
+  ],
+  "60 ngày · Bậc thầy HSK": [
+    "60 Days · HSK Master",
+    "60 天 · HSK 达人"
+  ],
+  "Hiện tại": [
+    "Current",
+    "当前"
+  ],
+  "Sắp tới": [
+    "Upcoming",
+    "即将解锁"
+  ],
+  "Trước": [
+    "Previous",
+    "上一个"
+  ],
+  "Sau": [
+    "Next",
+    "下一个"
+  ],
+  "Ví dụ:": [
+    "Example:",
+    "例子："
+  ],
+  "Câu": [
+    "Question",
+    "题"
+  ],
+  "Xóa tìm kiếm": [
+    "Clear search",
+    "清除搜索"
+  ],
+  "Nghe phát âm": [
+    "Listen to pronunciation",
+    "听发音"
+  ],
+  "Tất cả (": [
+    "All (",
+    "全部（"
+  ],
+  "Đúng": [
+    "Correct",
+    "正确"
+  ],
+  "Toàn màn hình": [
+    "Full screen",
+    "全屏"
+  ],
+  "Câu trước": [
+    "Previous question",
+    "上一题"
+  ],
+  "Tiếng Việt": [
+    "Vietnamese",
+    "越南语"
+  ],
+  "Nghĩa:": [
+    "Meaning:",
+    "释义："
+  ],
+  "Điểm:": [
+    "Score:",
+    "分数："
+  ],
+  "Chưa đúng": [
+    "Incorrect",
+    "不正确"
+  ],
+  "lần": [
+    "times",
+    "次"
+  ],
+  "Chưa thuộc": [
+    "Still learning",
+    "尚未掌握"
+  ],
+  "Đóng (Esc)": [
+    "Close (Esc)",
+    "关闭（Esc）"
+  ],
+  "Bản dịch được cải thiện bằng AI": [
+    "Translation enhanced by AI",
+    "AI优化的翻译"
+  ],
+  "Không thể phát nội dung. Vui lòng thử lại.": [
+    "Could not play this content. Please retry.",
+    "无法播放内容，请重试。"
+  ],
+  "Không thể tải nội dung. Vui lòng thử lại.": [
+    "Could not load this content. Please retry.",
+    "无法加载内容，请重试。"
+  ],
+  "Tra từ: {0}": [
+    "Look up: {0}",
+    "查词：{0}"
+  ],
+  "Tạm dừng": [
+    "Pause",
+    "暂停"
+  ],
+  "Phát": [
+    "Play",
+    "播放"
+  ],
+  "Không thể tải bài hát. Vui lòng thử lại.": [
+    "Could not load the song. Please retry.",
+    "无法加载歌曲，请重试。"
+  ],
+  "Bật tiếng": [
+    "Unmute",
+    "开启声音"
+  ],
+  "Tắt tiếng": [
+    "Mute",
+    "静音"
+  ],
+  "Thu nhỏ": [
+    "Minimize",
+    "缩小"
+  ],
+  "Mẹo học tập cho video này": [
+    "Learning tips for this video",
+    "本视频学习技巧"
+  ],
+  "AI đã sinh mẹo dựa trên phụ đề. Bạn có thể sửa hoặc xóa.": [
+    "AI generated tips from the subtitles. You can edit or delete them.",
+    "AI根据字幕生成了学习建议，您可以编辑或删除。"
+  ],
+  "AI gợi ý cách học hiệu quả nhất với nội dung này.": [
+    "AI tips for learning effectively with this content.",
+    "AI推荐适合此内容的高效学习方法。"
+  ],
+  "Từ vựng nên ôn lại sau khi xem": [
+    "Vocabulary to review after watching",
+    "看完后建议复习的词汇"
+  ],
+  "Vui lòng chọn hoặc nhập đáp án trước khi chuyển câu.": [
+    "Select or enter an answer before moving on.",
+    "请先选择或输入答案再进入下一题。"
+  ],
+  "Bạn chưa trả lời Câu {0}. Hãy hoàn thành để nộp bài.": [
+    "Question {0} is unanswered. Complete it before submitting.",
+    "第{0}题尚未作答，请完成后提交。"
+  ],
+  "Bài luyện tập sau video": [
+    "Post-video practice",
+    "视频课后练习"
+  ],
+  "Kỷ lục:": [
+    "Best score:",
+    "最佳成绩："
+  ],
+  "Câu hỏi": [
+    "Questions",
+    "题目"
+  ],
+  "đã trả lời": [
+    "answered",
+    "已作答"
+  ],
+  "Đến câu {0}": [
+    "Go to question {0}",
+    "跳至第{0}题"
+  ],
+  "🎉 Xuất sắc! 100% Tuyệt đối!": [
+    "🎉 Excellent! A perfect 100%!",
+    "🎉 太棒了！100%满分！"
+  ],
+  "👏 Rất tốt! Bạn nắm rất vững bài học!": [
+    "👏 Well done! You know this lesson well!",
+    "👏 很棒！您已经牢牢掌握了这节课！"
+  ],
+  "👍 Hoàn thành! Khá tốt!": [
+    "👍 Completed! Nice work!",
+    "👍 已完成！做得不错！"
+  ],
+  "💪 Hãy ôn tập lại một chút nhé!": [
+    "💪 Let's review a little more!",
+    "💪 再复习一下吧！"
+  ],
+  "câu hỏi": [
+    "questions",
+    "道题"
+  ],
+  "XP Đấu Trường": [
+    "Arena XP",
+    "竞技场经验值"
+  ],
+  "Kỷ lục mới!": [
+    "New best score!",
+    "新纪录！"
+  ],
+  "Chi tiết đáp án & giải thích": [
+    "Answers & explanations",
+    "答案与解析"
+  ],
+  "Đúng (": [
+    "Correct (",
+    "正确（"
+  ],
+  "Chính xác": [
+    "Correct",
+    "正确"
+  ],
+  "Bạn chọn:": [
+    "Your answer:",
+    "您的答案："
+  ],
+  "(Chưa chọn)": [
+    "(No answer)",
+    "（未选择）"
+  ],
+  "💡 Giải thích chi tiết:": [
+    "💡 Explanation:",
+    "💡 详细解析："
+  ],
+  "Chọn đáp án đúng": [
+    "Choose the correct answer",
+    "选择正确答案"
+  ],
+  "Điền vào chỗ trống": [
+    "Fill in the blank",
+    "填空"
+  ],
+  "Nghe phát âm câu hỏi": [
+    "Listen to the question",
+    "听题目发音"
+  ],
+  "Phát âm": [
+    "Pronunciation",
+    "发音"
+  ],
+  "Nhập câu trả lời bằng chữ Hán hoặc Pinyin…": [
+    "Enter your answer in Chinese or Pinyin…",
+    "输入汉字或拼音答案…"
+  ],
+  "Không có câu hỏi nào trong bài luyện tập này.": [
+    "This practice has no questions.",
+    "此练习暂无题目。"
+  ],
+  "Làm lại bài": [
+    "Try again",
+    "重新练习"
+  ],
+  "Đóng & Tiếp tục học": [
+    "Close & continue learning",
+    "关闭并继续学习"
+  ],
+  "Đang chấm điểm…": [
+    "Grading…",
+    "正在评分…"
+  ],
+  "Nộp bài & Xem kết quả": [
+    "Submit & view results",
+    "提交并查看结果"
+  ],
+  "Câu tiếp theo": [
+    "Next question",
+    "下一题"
+  ],
+  "Mục lục (": [
+    "Chapters (",
+    "目录（"
+  ],
+  "Đang phát": [
+    "Now playing",
+    "正在播放"
+  ],
+  "Ẩn mục lục": [
+    "Hide chapters",
+    "隐藏目录"
+  ],
+  "Hiện mục lục": [
+    "Show chapters",
+    "显示目录"
+  ],
+  "Hoàn thành bài học video (+50 XP)": [
+    "Video lesson completed (+50 XP)",
+    "完成视频课程（+50 XP）"
+  ],
+  "Chưa lưu được tiến độ. Hãy thử phát lại video.": [
+    "Progress could not be saved. Try playing the video again.",
+    "无法保存进度，请尝试重新播放视频。"
+  ],
+  "Hãy trả lời tất cả câu hỏi trước khi nộp.": [
+    "Answer all questions before submitting.",
+    "请回答所有题目后再提交。"
+  ],
+  "Hoàn thành bài tập Quiz (+{0} XP)": [
+    "Quiz completed (+{0} XP)",
+    "完成测验（+{0} XP）"
+  ],
+  "Không thể nộp bài.": [
+    "Could not submit answers.",
+    "无法提交答案。"
+  ],
+  "Đã lưu từ vào sổ ôn tập.": [
+    "Word saved for review.",
+    "已将词汇保存至复习本。"
+  ],
+  "Không thể lưu từ.": [
+    "Could not save word.",
+    "无法保存词汇。"
+  ],
+  "Không thể giải thích từ này lúc này.": [
+    "Could not explain this word right now.",
+    "暂时无法解释此词。"
+  ],
+  "Quay lại gợi ý": [
+    "Back to recommendations",
+    "返回推荐"
+  ],
+  "Bài học đã xuất bản": [
+    "Published lesson",
+    "已发布课程"
+  ],
+  "Đang tải video bài học…": [
+    "Loading lesson video…",
+    "正在加载教学视频…"
+  ],
+  "Nội dung HanFlix Premium": [
+    "HanFlix Premium content",
+    "HanFlix Premium内容"
+  ],
+  "Bài học này dành riêng cho thành viên Premium": [
+    "This lesson is for Premium members",
+    "此课程仅对Premium会员开放"
+  ],
+  "Tài khoản Miễn phí (Free) của bạn được xem 3–5 video mẫu. Hãy nâng cấp tài khoản HanFlix Premium để mở khóa toàn bộ bài học này, xem kho video không giới hạn, phụ đề song ngữ và nhận sự trợ giúp của AI Panda!": [
+    "Free accounts can watch 3–5 sample videos. Upgrade to HanFlix Premium to unlock this lesson, the full video library, bilingual subtitles and AI Panda assistance.",
+    "免费账号可观看3至5个示例视频。升级HanFlix Premium即可解锁此课程、完整视频库、双语字幕及AI熊猫助手。"
+  ],
+  "Xem video bài học không giới hạn": [
+    "Unlimited lesson videos",
+    "无限观看教学视频"
+  ],
+  "Phụ đề tương tác & Lưu từ tức thì": [
+    "Interactive subtitles & instant word saving",
+    "互动字幕与即时保存词汇"
+  ],
+  "Trợ lý AI Panda giải thích 24/7": [
+    "AI Panda explanations around the clock",
+    "AI熊猫全天候讲解"
+  ],
+  "Mở khóa toàn bộ bài tập & Quiz HSK": [
+    "Unlock all practice & HSK quizzes",
+    "解锁全部练习与HSK测验"
+  ],
+  "Nâng cấp Premium ngay": [
+    "Upgrade to Premium",
+    "立即升级Premium"
+  ],
+  "Xem các bài học mẫu miễn phí": [
+    "View free sample lessons",
+    "查看免费示例课程"
+  ],
+  "Không thể tải bài học.": [
+    "Could not load lesson.",
+    "无法加载课程。"
+  ],
+  "Không thể tải phụ đề. Vẫn có thể xem video.": [
+    "Subtitles could not load. You can still watch the video.",
+    "无法加载字幕，仍可观看视频。"
+  ],
+  "Không thể tải bài tập. Có thể thử lại sau.": [
+    "Could not load practice. Try again later.",
+    "无法加载练习，请稍后重试。"
+  ],
+  "Không thể đồng bộ tiến độ.": [
+    "Could not sync progress.",
+    "无法同步进度。"
+  ],
+  "Nội dung chưa sẵn sàng để phát.": [
+    "This content is not ready to play yet.",
+    "内容尚未准备好播放。"
+  ],
+  "· Bài học tương tác": [
+    "· Interactive lesson",
+    "· 互动课程"
+  ],
+  "· Đã xem": [
+    "· Watched",
+    "· 已观看"
+  ],
+  "Xem kết quả bài tập": [
+    "View practice results",
+    "查看练习结果"
+  ],
+  "Làm bài luyện tập": [
+    "Start practice",
+    "开始练习"
+  ],
+  "Hỏi trợ lý AI Panda": [
+    "Ask AI Panda",
+    "询问AI熊猫助手"
+  ],
+  "Hỏi AI": [
+    "Ask AI",
+    "询问AI"
+  ],
+  "Đã bỏ lưu bài học.": [
+    "Lesson removed from saved items.",
+    "已取消保存课程。"
+  ],
+  "Đã lưu bài học vào sổ tay.": [
+    "Lesson saved to your notebook.",
+    "已将课程保存至笔记本。"
+  ],
+  "Đã lưu bài học": [
+    "Lesson saved",
+    "已保存课程"
+  ],
+  "Lưu bài học": [
+    "Save lesson",
+    "保存课程"
+  ],
+  "Chia sẻ liên kết": [
+    "Share link",
+    "分享链接"
+  ],
+  "Đã sao chép": [
+    "Copied",
+    "已复制"
+  ],
+  "Đã học {0}%": [
+    "{0}% completed",
+    "已学习{0}%"
+  ],
+  "Chưa có tiến độ": [
+    "Not started",
+    "尚未开始"
+  ],
+  "Rút gọn": [
+    "Show less",
+    "收起"
+  ],
+  "Video học tiếng Trung tương tác cùng HanFlix: luyện nghe phát âm chuẩn, ghi nhớ từ vựng qua phụ đề song ngữ và củng cố phản xạ tự nhiên.": [
+    "Learn Chinese with interactive HanFlix videos: practise listening, learn vocabulary with bilingual subtitles and build natural responses.",
+    "通过HanFlix互动视频学习中文：练习听力、借助双语字幕记忆词汇并培养自然的语言反应。"
+  ],
+  "💡 Hướng dẫn học tập:": [
+    "💡 Learning guide:",
+    "💡 学习指南："
+  ],
+  "Bấm vào các từ Hán tự trên phụ đề để tra cứu và xem giải thích ngữ nghĩa.": [
+    "Click Chinese words in the subtitles to look them up and view explanations.",
+    "点击字幕中的汉字即可查词和查看释义。"
+  ],
+  "Xem chi tiết tại tab": [
+    "Find details in the",
+    "查看详细信息，请打开"
+  ],
+  "Mẹo học (": [
+    "Learning tips (",
+    "学习技巧（"
+  ],
+  "ở bảng phụ đề bên phải.": [
+    "tab in the subtitle panel on the right.",
+    "右侧字幕面板中的标签页。"
+  ],
+  "Hoàn thành bài tập trắc nghiệm sau video để củng cố kiến thức và ghi nhận tiến độ.": [
+    "Complete the quiz after the video to reinforce learning and record progress.",
+    "完成视频后的测验以巩固知识并记录进度。"
+  ],
+  "Phụ đề (": [
+    "Subtitles (",
+    "字幕（"
+  ],
+  "Từ vựng (": [
+    "Vocabulary (",
+    "词汇（"
+  ],
+  "Tìm từ vựng, Hán tự, nghĩa…": [
+    "Search words, characters or meanings…",
+    "搜索词汇、汉字或释义…"
+  ],
+  "Bật tự động cuộn": [
+    "Enable auto-scroll",
+    "开启自动滚动"
+  ],
+  "Tắt tự động cuộn": [
+    "Disable auto-scroll",
+    "关闭自动滚动"
+  ],
+  "Cuộn tự động": [
+    "Auto-scroll",
+    "自动滚动"
+  ],
+  "Không tìm thấy câu phù hợp.": [
+    "No matching sentences found.",
+    "未找到匹配的句子。"
+  ],
+  "Bài học chưa có phụ đề khả dụng.": [
+    "Subtitles are not available for this lesson yet.",
+    "此课程暂无可用字幕。"
+  ],
+  "Bấm để xem giải thích: {0}": [
+    "Click for an explanation: {0}",
+    "点击查看解释：{0}"
+  ],
+  "Tìm chữ Hán, pinyin, Hán-Việt hoặc nghĩa…": [
+    "Search characters, Pinyin, Sino-Vietnamese or meanings…",
+    "搜索汉字、拼音、汉越音或释义…"
+  ],
+  "Xem danh sách chi tiết": [
+    "View detailed list",
+    "查看详细列表"
+  ],
+  "Chi tiết": [
+    "Details",
+    "详情"
+  ],
+  "Luyện tập với Flashcard": [
+    "Practise with flashcards",
+    "使用词卡练习"
+  ],
+  "Trọng tâm (": [
+    "Key words (",
+    "重点（"
+  ],
+  "từ khả dụng": [
+    "words available",
+    "个可用词汇"
+  ],
+  "Không tìm thấy từ vựng phù hợp với tìm kiếm.": [
+    "No vocabulary matches your search.",
+    "未找到匹配的词汇。"
+  ],
+  "Chưa có dữ liệu từ vựng cho bài học này.": [
+    "No vocabulary data for this lesson yet.",
+    "此课程暂无词汇数据。"
+  ],
+  "Âm Hán-Việt": [
+    "Sino-Vietnamese reading",
+    "汉越音"
+  ],
+  "Trọng tâm": [
+    "Key word",
+    "重点"
+  ],
+  "Xuất hiện trong bài:": [
+    "Appears in this lesson:",
+    "课程中出现位置："
+  ],
+  "Đã thuộc": [
+    "Mastered",
+    "已掌握"
+  ],
+  "Nghe phát âm chuẩn: {0}": [
+    "Listen to pronunciation: {0}",
+    "听标准发音：{0}"
+  ],
+  "Lưu từ \"{0}\" vào sổ ôn tập": [
+    "Save \"{0}\" for review",
+    "将“{0}”保存至复习本"
+  ],
+  "Xem phân tích ngữ nghĩa, bộ thủ và cách nhớ từ AI": [
+    "View AI analysis of meanings, radicals and memory tips",
+    "查看AI语义、部首分析和记忆技巧"
+  ],
+  "Tra từ AI": [
+    "AI word lookup",
+    "AI查词"
+  ],
+  "Đang cập nhật nghĩa chi tiết": [
+    "Detailed meanings are being updated",
+    "正在更新详细释义"
+  ],
+  "Cụm từ hay gặp:": [
+    "Common phrases:",
+    "常用短语："
+  ],
+  "Bấm để phát lại đoạn này trong video": [
+    "Click to replay this part of the video",
+    "点击重播此视频片段"
+  ],
+  "Ngữ cảnh xuất hiện trong video:": [
+    "Context in the video:",
+    "视频中的语境："
+  ],
+  "Không có thẻ từ vựng nào để ôn tập.": [
+    "No vocabulary cards to review.",
+    "暂无可复习的词卡。"
+  ],
+  "Thẻ": [
+    "Card",
+    "卡片"
+  ],
+  "Chạm để lật thẻ xem Pinyin & nghĩa": [
+    "Tap to reveal Pinyin & meaning",
+    "点击翻卡查看拼音与释义"
+  ],
+  "Hán-Việt: [": [
+    "Sino-Vietnamese: [",
+    "汉越音：["
+  ],
+  "Chưa cập nhật nghĩa": [
+    "Meaning not available yet",
+    "暂无释义"
+  ],
+  "Từ loại:": [
+    "Part of speech:",
+    "词性："
+  ],
+  "Bấm để phát lại trong video": [
+    "Click to replay in the video",
+    "点击在视频中重播"
+  ],
+  "Chạm để lật lại": [
+    "Tap to flip back",
+    "点击翻回"
+  ],
+  "Nhấn để lật thẻ": [
+    "Click to flip card",
+    "点击翻卡"
+  ],
+  "Lật thẻ": [
+    "Flip card",
+    "翻卡"
+  ],
+  "Tiếp theo": [
+    "Next",
+    "下一个"
+  ],
+  "Chưa có mẹo học tập cho bài học này.": [
+    "No learning tips for this lesson yet.",
+    "此课程暂无学习技巧。"
+  ],
+  "Tự động phát": [
+    "Autoplay",
+    "自动播放"
+  ],
+  "Hiện đại · nền đen mờ": [
+    "Modern · translucent black background",
+    "现代 · 半透明黑底"
+  ],
+  "Phim cổ điển · chữ vàng nổi bật": [
+    "Classic film · bright yellow text",
+    "经典电影 · 醒目黄字"
+  ],
+  "Netflix · box mờ chuyên nghiệp": [
+    "Netflix · translucent text box",
+    "Netflix · 半透明文本框"
+  ],
+  "Anime · chữ to, viền rõ": [
+    "Anime · large outlined text",
+    "动漫 · 大字清晰描边"
+  ],
+  "Giải thích \"{0}\"": [
+    "Explain \"{0}\"",
+    "解释“{0}”"
+  ],
+  "Bật phụ đề": [
+    "Show subtitles",
+    "开启字幕"
+  ],
+  "Tắt phụ đề (CC)": [
+    "Hide subtitles (CC)",
+    "关闭字幕（CC）"
+  ],
+  "Bật phụ đề (CC)": [
+    "Show subtitles (CC)",
+    "开启字幕（CC）"
+  ],
+  "Tuỳ chỉnh phụ đề": [
+    "Customize subtitles",
+    "自定义字幕"
+  ],
+  "Chọn dòng phụ đề": [
+    "Choose subtitle track",
+    "选择字幕轨道"
+  ],
+  "Dòng trên": [
+    "Top line",
+    "上行"
+  ],
+  "Dòng dưới": [
+    "Bottom line",
+    "下行"
+  ],
+  "Tiếng Trung": [
+    "Chinese",
+    "中文"
+  ],
+  "Tắt": [
+    "Off",
+    "关闭"
+  ],
+  "Tạm dừng video": [
+    "Pause video",
+    "暂停视频"
+  ],
+  "Tiếp tục phát": [
+    "Resume playback",
+    "继续播放"
+  ],
+  "Lùi 5 giây": [
+    "Back 5 seconds",
+    "后退5秒"
+  ],
+  "Tiến 5 giây": [
+    "Forward 5 seconds",
+    "前进5秒"
+  ],
+  "Bài học giúp bạn tự tin ứng dụng tiếng Trung vào các tình huống thực tế: từ phát âm chuẩn, cách dùng từ vựng đúng ngữ cảnh, đến phản xạ giao tiếp tự nhiên.": [
+    "Build confidence using Chinese in real situations, from pronunciation and vocabulary to natural conversation.",
+    "帮助您自信地在真实场景中使用中文，掌握发音、语境用词和自然交流。"
+  ],
+  "Từ vựng trọng tâm:": [
+    "Key vocabulary:",
+    "重点词汇："
+  ],
+  "Đang cập nhật": [
+    "Updating",
+    "更新中"
+  ],
+  "Chưa có phụ đề lời thoại cho bài học này.": [
+    "No dialogue subtitles for this lesson yet.",
+    "此课程暂无对话字幕。"
+  ],
+  "Chưa có danh sách từ vựng chi tiết.": [
+    "Detailed vocabulary is not available yet.",
+    "暂无详细词汇列表。"
+  ],
+  "Hỏi AI giải thích thêm ngữ pháp": [
+    "Ask AI for more grammar explanations",
+    "请AI进一步讲解语法"
+  ],
+  "Giải thích từ {0}": [
+    "Explain the word {0}",
+    "解释词汇{0}"
+  ],
+  "Đóng (ESC)": [
+    "Close (ESC)",
+    "关闭（ESC）"
+  ],
+  "Panda AI đang phân tích từ…": [
+    "Panda AI is analysing the word…",
+    "AI熊猫正在分析词汇…"
+  ],
+  "Cách dùng:": [
+    "Usage:",
+    "用法："
+  ],
+  "Lưu ý:": [
+    "Note:",
+    "注意："
+  ],
+  "Lưu vào sổ ôn tập": [
+    "Save for review",
+    "保存至复习本"
+  ],
+  "Không thể tải tệp video từ máy chủ lưu trữ (Cloudflare R2).": [
+    "Could not load the video from storage (Cloudflare R2).",
+    "无法从存储服务器（Cloudflare R2）加载视频。"
+  ],
+  "Tệp video không tồn tại trên Cloudflare R2 hoặc bị chặn bởi cấu hình CORS.": [
+    "The video is missing from Cloudflare R2 or blocked by CORS.",
+    "Cloudflare R2中不存在此视频，或被CORS配置阻止。"
+  ],
+  "Lỗi kết nối mạng khi tải video.": [
+    "Network error while loading the video.",
+    "加载视频时网络连接出错。"
+  ],
+  "Chưa thể phát video này": [
+    "This video cannot be played yet",
+    "暂时无法播放此视频"
+  ],
+  "Thử tải lại": [
+    "Try reloading",
+    "尝试重新加载"
+  ],
+  "Tải video mới (Admin)": [
+    "Upload a new video (Admin)",
+    "上传新视频（管理员）"
+  ],
+  "Kéo hoặc bấm để tua video": [
+    "Drag or click to seek",
+    "拖动或点击调整进度"
+  ],
+  "Tạm dừng (k)": [
+    "Pause (k)",
+    "暂停（k）"
+  ],
+  "Phát (k)": [
+    "Play (k)",
+    "播放（k）"
+  ],
+  "Bật âm thanh (m)": [
+    "Unmute (m)",
+    "开启声音（m）"
+  ],
+  "Tắt âm thanh (m)": [
+    "Mute (m)",
+    "静音（m）"
+  ],
+  "Âm lượng: {0}% (kéo để chỉnh)": [
+    "Volume: {0}% (drag to adjust)",
+    "音量：{0}%（拖动调整）"
+  ],
+  "Tự động chuyển bài tiếp: {0}": [
+    "Play next automatically: {0}",
+    "自动播放下一课：{0}"
+  ],
+  "Đang bật": [
+    "On",
+    "已开启"
+  ],
+  "Đang tắt": [
+    "Off",
+    "已关闭"
+  ],
+  "Tắt phụ đề (c)": [
+    "Hide subtitles (c)",
+    "关闭字幕（c）"
+  ],
+  "Bật phụ đề (c)": [
+    "Show subtitles (c)",
+    "开启字幕（c）"
+  ],
+  "Cài đặt phụ đề & tốc độ phát": [
+    "Subtitle & playback speed settings",
+    "字幕与播放速度设置"
+  ],
+  "Cài đặt phát video": [
+    "Playback settings",
+    "播放设置"
+  ],
+  "Phụ đề dòng trên": [
+    "Top subtitle line",
+    "上行字幕"
+  ],
+  "Phụ đề dòng dưới": [
+    "Bottom subtitle line",
+    "下行字幕"
+  ],
+  "Cỡ chữ phụ đề": [
+    "Subtitle font size",
+    "字幕字号"
+  ],
+  "Tốc độ phát": [
+    "Playback speed",
+    "播放速度"
+  ],
+  "Chuẩn": [
+    "Normal",
+    "标准"
+  ],
+  "← Chọn dòng phụ đề trên": [
+    "← Choose top subtitle line",
+    "← 选择上行字幕"
+  ],
+  "← Chọn dòng phụ đề dưới": [
+    "← Choose bottom subtitle line",
+    "← 选择下行字幕"
+  ],
+  "← Cỡ chữ phụ đề": [
+    "← Subtitle font size",
+    "← 字幕字号"
+  ],
+  "Tùy chỉnh": [
+    "Custom",
+    "自定义"
+  ],
+  "Giảm 5%": [
+    "Decrease 5%",
+    "减小5%"
+  ],
+  "Tăng 5%": [
+    "Increase 5%",
+    "增大5%"
+  ],
+  "Về cỡ chuẩn 100%": [
+    "Reset to 100%",
+    "恢复至100%"
+  ],
+  "← Tốc độ phát video": [
+    "← Playback speed",
+    "← 播放速度"
+  ],
+  "Tùy chỉnh tốc độ": [
+    "Custom speed",
+    "自定义速度"
+  ],
+  "Chậm hơn 0.05x": [
+    "Slower by 0.05x",
+    "减慢0.05倍"
+  ],
+  "Nhanh hơn 0.05x": [
+    "Faster by 0.05x",
+    "加快0.05倍"
+  ],
+  "Về tốc độ chuẩn 1.0x": [
+    "Reset to 1.0x",
+    "恢复1.0倍速"
+  ],
+  "0.75x (Luyện nghe)": [
+    "0.75x (Listening practice)",
+    "0.75倍（听力练习）"
+  ],
+  "1.0x (Chuẩn)": [
+    "1.0x (Normal)",
+    "1.0倍（标准）"
+  ],
+  "Thoát toàn màn hình (f)": [
+    "Exit full screen (f)",
+    "退出全屏（f）"
+  ],
+  "Toàn màn hình (f)": [
+    "Full screen (f)",
+    "全屏（f）"
+  ],
+  "Cấp độ": [
+    "Level",
+    "等级"
+  ],
+  "Không tìm thấy điểm ngữ pháp nào phù hợp với bộ lọc hiện tại.": [
+    "No grammar points match the current filters.",
+    "未找到符合当前筛选条件的语法点。"
+  ],
+  "điểm ngữ pháp": [
+    "grammar points",
+    "个语法点"
+  ],
+  "Phân trang ngữ pháp": [
+    "Grammar pagination",
+    "语法分页"
+  ],
+  "Tất cả HSK": [
+    "All HSK levels",
+    "所有HSK等级"
+  ],
+  "Cấp HSK": [
+    "HSK level",
+    "HSK等级"
+  ],
+  "từ vựng": [
+    "words",
+    "个词汇"
+  ],
+  "Phân trang kho từ vựng": [
+    "Vocabulary pagination",
+    "词库分页"
+  ],
+  "Đang lưu…": [
+    "Saving…",
+    "正在保存…"
+  ],
+  "phút": [
+    "min",
+    "分钟"
+  ],
+  "ngày": [
+    "days",
+    "天"
+  ],
+  "Mục tiêu": [
+    "Goal",
+    "目标"
+  ],
+  "Thời gian học": [
+    "Study time",
+    "学习时间"
+  ],
+  "Ngữ Pháp HSK 3.0": [
+    "HSK 3.0 Grammar",
+    "HSK 3.0语法"
+  ],
+  "Hệ thống cấu trúc câu và công thức ngữ pháp chuẩn từ HSK 1 đến HSK 9.": [
+    "Sentence patterns and grammar from HSK 1 to HSK 9.",
+    "HSK 1至9级的句型与语法体系。"
+  ],
+  "Tìm kiếm cấu trúc, công thức hoặc giải thích nghĩa...": [
+    "Search patterns, formulas or explanations…",
+    "搜索句型、结构或释义…"
+  ],
+  "Cấu trúc": [
+    "Pattern",
+    "句型"
+  ],
+  "Công thức": [
+    "Formula",
+    "结构公式"
+  ],
+  "Giải thích": [
+    "Explanation",
+    "解释"
+  ],
+  "Đang tải danh sách ngữ pháp...": [
+    "Loading grammar…",
+    "正在加载语法列表…"
+  ],
+  "Ví dụ": [
+    "Examples",
+    "例子"
+  ],
+  "Không thể tải lịch sử học tập. Vui lòng thử lại.": [
+    "Could not load learning history. Please retry.",
+    "无法加载学习记录，请重试。"
+  ],
+  "Không thể tải lịch sử học tập.": [
+    "Could not load learning history.",
+    "无法加载学习记录。"
+  ],
+  "{0} giờ": [
+    "{0} hr",
+    "{0}小时"
+  ],
+  "{0} phút": [
+    "{0} min",
+    "{0}分钟"
+  ],
+  "Hành Trình & Tiến Độ Học Tập": [
+    "Learning journey & progress",
+    "学习历程与进度"
+  ],
+  "Lịch Sử Học Tập": [
+    "Learning history",
+    "学习记录"
+  ],
+  "Theo dõi quá trình chinh phục tiếng Trung qua video, lưu giữ từng cột mốc hoàn thành bài học và kết quả bài tập theo chuẩn HSK.": [
+    "Track your Chinese learning through videos, completed lessons and HSK practice results.",
+    "记录您的中文视频学习历程、课程完成进度和HSK练习成绩。"
+  ],
+  "Kho bài học": [
+    "Lesson library",
+    "课程库"
+  ],
+  "Tích lũy theo video": [
+    "Accumulated through videos",
+    "视频学习累计"
+  ],
+  "Đã hoàn thành": [
+    "Completed",
+    "已完成"
+  ],
+  "bài": [
+    "lessons",
+    "课"
+  ],
+  "% hoàn thành": [
+    "% completed",
+    "%已完成"
+  ],
+  "Đang học dở": [
+    "In progress",
+    "学习中"
+  ],
+  "Sẵn sàng tiếp tục": [
+    "Ready to continue",
+    "随时继续"
+  ],
+  "Điểm Quiz TB": [
+    "Average quiz score",
+    "测验平均分"
+  ],
+  "Độ hiểu bài kiểm tra": [
+    "Quiz understanding",
+    "测验掌握度"
+  ],
+  "Tiếp tục bài học": [
+    "Continue lesson",
+    "继续课程"
+  ],
+  "Gần đây nhất": [
+    "Most recent",
+    "最近"
+  ],
+  "Đã xem:": [
+    "Watched:",
+    "已观看："
+  ],
+  "Tiếp tục xem bài học": [
+    "Continue watching",
+    "继续观看课程"
+  ],
+  "Tìm bài học theo tên tiếng Việt hoặc chữ Hán...": [
+    "Search lessons by Vietnamese or Chinese title…",
+    "按越南语或中文标题搜索课程…"
+  ],
+  "Đang học (": [
+    "In progress (",
+    "学习中（"
+  ],
+  "Đã xong (": [
+    "Completed (",
+    "已完成（"
+  ],
+  "Đang tải lịch sử học tập...": [
+    "Loading learning history…",
+    "正在加载学习记录…"
+  ],
+  "Không tìm thấy bài học nào phù hợp": [
+    "No matching lessons",
+    "未找到匹配的课程"
+  ],
+  "Chưa có bài học nào trong lịch sử": [
+    "No lessons in your history yet",
+    "暂无学习记录"
+  ],
+  "Thử thay đổi từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc trạng thái / HSK.": [
+    "Try another search term or clear the status and HSK filters.",
+    "请尝试其他关键词或清除状态和HSK筛选条件。"
+  ],
+  "Khám phá ngay các video bài học phong phú trên HanFlix để bắt đầu tích lũy kiến thức và xây dựng chuỗi ngày học tập.": [
+    "Explore HanFlix lesson videos to build your knowledge and learning streak.",
+    "探索HanFlix丰富的视频课程，积累知识并建立连续学习记录。"
+  ],
+  "Khám phá Kho Bài Học ngay": [
+    "Explore the lesson library",
+    "探索课程库"
+  ],
+  "Học lúc:": [
+    "Studied on:",
+    "学习时间："
+  ],
+  "Ôn lại": [
+    "Review",
+    "复习"
+  ],
+  "Học tiếp": [
+    "Continue learning",
+    "继续学习"
+  ],
+  "Phân trang lịch sử học tập": [
+    "Learning history pagination",
+    "学习记录分页"
+  ],
+  "Cộng đồng học tập HanFlix": [
+    "HanFlix learning community",
+    "HanFlix学习社区"
+  ],
+  "Bảng Xếp Hạng Học Tập": [
+    "Learning leaderboard",
+    "学习排行榜"
+  ],
+  "Thi đua cùng hàng nghìn học viên HanFlix. Tích lũy điểm kinh nghiệm (XP) qua từng video bài học, làm bài tập và duy trì chuỗi Streak mỗi ngày.": [
+    "Learn alongside other HanFlix learners. Earn XP through lessons, practice and daily streaks.",
+    "与其他HanFlix学员一起学习，通过课程、练习和每日连续学习积累经验值。"
+  ],
+  "Quy tắc tính XP": [
+    "XP rules",
+    "经验值规则"
+  ],
+  "Tháng này": [
+    "This month",
+    "本月"
+  ],
+  "Mọi lúc": [
+    "All time",
+    "全部时间"
+  ],
+  "Cập nhật theo thời gian thực": [
+    "Updated in real time",
+    "实时更新"
+  ],
+  "Tổng kết trong tháng": [
+    "Monthly summary",
+    "本月汇总"
+  ],
+  "Toàn thời gian": [
+    "All time",
+    "全部时间"
+  ],
+  "học viên tham gia": [
+    "participating learners",
+    "位参与学员"
+  ],
+  "Không thể tải bảng xếp hạng": [
+    "Could not load leaderboard",
+    "无法加载排行榜"
+  ],
+  "Vui lòng kiểm tra kết nối mạng.": [
+    "Please check your connection.",
+    "请检查网络连接。"
+  ],
+  "BỤC VINH DANH TOP 3": [
+    "TOP 3 PODIUM",
+    "前三名荣誉榜"
+  ],
+  "Quán Quân": [
+    "Champion",
+    "冠军"
+  ],
+  "Bạn": [
+    "You",
+    "您"
+  ],
+  "Chuỗi": [
+    "Streak",
+    "连续天数"
+  ],
+  "Cách vị trí #1 (": [
+    "Behind #1 (",
+    "距离第1名（"
+  ],
+  "Luyện tập tích XP": [
+    "Practise to earn XP",
+    "练习赚取经验值"
+  ],
+  "DANH SÁCH XẾP HẠNG CHI TIẾT": [
+    "FULL RANKINGS",
+    "完整排名"
+  ],
+  "Top 3 Thăng hạng Tinh Anh": [
+    "Top 3 elite learners",
+    "前三名优秀学员"
+  ],
+  "Chưa có dữ liệu học tập trong kỳ này. Hãy xem một bài học để ghi danh đầu tiên!": [
+    "No learning activity this period yet. Watch a lesson to be first!",
+    "本期暂无学习数据，观看一节课程抢先上榜吧！"
+  ],
+  "ngày liên tiếp": [
+    "consecutive days",
+    "天连续学习"
+  ],
+  "Tăng {0} bậc": [
+    "Up {0} places",
+    "上升{0}名"
+  ],
+  "Tụt {0} bậc": [
+    "Down {0} places",
+    "下降{0}名"
+  ],
+  "Chưa có dữ liệu so sánh thứ hạng": [
+    "No rank comparison data yet",
+    "暂无排名对比数据"
+  ],
+  "Lọc bảng xếp hạng theo HSK": [
+    "Filter leaderboard by HSK",
+    "按HSK等级筛选排行榜"
+  ],
+  "Tất cả cấp": [
+    "All levels",
+    "所有等级"
+  ],
+  "Quy Tắc Đấu Trường & Điểm XP": [
+    "Leaderboard & XP rules",
+    "排行榜与经验值规则"
+  ],
+  "Điểm giảm dần; đồng điểm xét chuỗi học, tên và mã tài khoản": [
+    "Highest XP first; ties use streak, name and account ID",
+    "按经验值降序排列；同分时依次比较连续天数、姓名和账号ID"
+  ],
+  "Luyện kỹ năng: đạt 50–79% nhận 10 XP, từ 80% nhận 25 XP. Mỗi bộ luyện chỉ thưởng một lần/ngày theo giờ Việt Nam. Điểm cũ được giữ nguyên.": [
+    "Skill practice: score 50–79% for 10 XP, or 80%+ for 25 XP. Each set earns rewards once per day in Vietnam time. Existing XP is retained.",
+    "技能练习：得分50–79%获得10 XP，80%以上获得25 XP。按越南时间，每套练习每天仅奖励一次。已有经验值不变。"
+  ],
+  "Cách kiếm điểm kinh nghiệm (XP)": [
+    "How to earn XP",
+    "如何获得经验值"
+  ],
+  "Xem video bài học": [
+    "Watch lesson videos",
+    "观看教学视频"
+  ],
+  "+50 XP / bài hoàn thành": [
+    "+50 XP / completed lesson",
+    "+50 XP / 完成一节课"
+  ],
+  "Làm bài tập Quiz": [
+    "Complete quizzes",
+    "完成测验"
+  ],
+  "+25 XP / lần luyện tập": [
+    "+25 XP / practice session",
+    "+25 XP / 次练习"
+  ],
+  "Thời gian chủ động học": [
+    "Active study time",
+    "主动学习时间"
+  ],
+  "+2 XP / phút học": [
+    "+2 XP / study minute",
+    "+2 XP / 学习分钟"
+  ],
+  "Duy trì Streak mỗi ngày": [
+    "Keep a daily streak",
+    "保持每日连续学习"
+  ],
+  "+10 XP / ngày streak": [
+    "+10 XP / streak day",
+    "+10 XP / 连续学习日"
+  ],
+  "Quy chế thăng & rớt hạng": [
+    "Ranking rules",
+    "排名规则"
+  ],
+  "Bảng tuần tính từ thứ Hai theo giờ Việt Nam. Top 3 hiển thị theo điểm của kỳ đang chọn; chưa có chức năng trao thưởng theo mùa.": [
+    "Weeks start on Monday in Vietnam time. The top 3 use XP for the selected period; seasonal rewards are not available yet.",
+    "每周按越南时间从周一开始。前三名按所选期间的经验值排名，暂未提供赛季奖励。"
+  ],
+  "Đã hiểu": [
+    "Got it",
+    "明白了"
+  ],
+  "Thử lưu lại": [
+    "Retry saving",
+    "重新保存"
+  ],
+  "Lộ Trình Học Cá Nhân Hóa": [
+    "Personalized learning path",
+    "个性化学习路线"
+  ],
+  "Hiện tại: HSK": [
+    "Current: HSK",
+    "当前：HSK"
+  ],
+  "· Mục tiêu: HSK": [
+    "· Target: HSK",
+    "· 目标：HSK"
+  ],
+  "Kế hoạch học tập từng chặng bài bản theo mục tiêu tiếng Trung Thương mại & Giao tiếp đời sống thực tế của bạn.": [
+    "A structured learning plan for your business Chinese and everyday communication goals.",
+    "根据您的商务中文和日常交流目标制定分阶段学习计划。"
+  ],
+  "Tổng tiến độ:": [
+    "Overall progress:",
+    "总进度："
+  ],
+  "Chuỗi:": [
+    "Streak:",
+    "连续天数："
+  ],
+  "Tiếp tục học": [
+    "Continue learning",
+    "继续学习"
+  ],
+  "Cấu hình lộ trình": [
+    "Configure learning path",
+    "设置学习路线"
+  ],
+  "Thay đổi mục tiêu không xóa lịch sử đã học.": [
+    "Changing goals does not erase your learning history.",
+    "修改目标不会删除学习记录。"
+  ],
+  "Phút/ngày": [
+    "Minutes/day",
+    "分钟/天"
+  ],
+  "Lưu lộ trình": [
+    "Save learning path",
+    "保存学习路线"
+  ],
+  "Kế hoạch hôm nay ·": [
+    "Today's plan ·",
+    "今日计划 ·"
+  ],
+  "Chưa có bài phù hợp trong chặng đang mở.": [
+    "No matching lessons in the current stage yet.",
+    "当前阶段暂无合适的课程。"
+  ],
+  "Kỹ năng cần ôn": [
+    "Skills to review",
+    "待复习技能"
+  ],
+  "Chưa có kết quả bài luyện để phân tích.": [
+    "No practice results to analyse yet.",
+    "暂无练习结果可供分析。"
+  ],
+  "Không thể tải lộ trình học": [
+    "Could not load learning path",
+    "无法加载学习路线"
+  ],
+  "Vui lòng kiểm tra lại kết nối mạng.": [
+    "Please check your connection.",
+    "请检查网络连接。"
+  ],
+  "Các Chặng Chinh Phục": [
+    "Learning stages",
+    "学习阶段"
+  ],
+  "chặng hoàn thành)": [
+    "stages completed)",
+    "个阶段已完成）"
+  ],
+  "100% Hoàn thành": [
+    "100% completed",
+    "100%已完成"
+  ],
+  "% Đang học": [
+    "% in progress",
+    "%学习中"
+  ],
+  "Chưa có nội dung": [
+    "No content yet",
+    "暂无内容"
+  ],
+  "Chưa mở": [
+    "Locked",
+    "未解锁"
+  ],
+  "Tiến độ bài học chặng này:": [
+    "Stage progress:",
+    "本阶段课程进度："
+  ],
+  "bài)": [
+    "lessons)",
+    "节课）"
+  ],
+  "Chủ đề trong kho bài học": [
+    "Topics in the lesson library",
+    "课程库中的主题"
+  ],
+  "{0} bài học kho": [
+    "{0} library lessons",
+    "{0}节课程"
+  ],
+  "Chưa có bài học": [
+    "No lessons yet",
+    "暂无课程"
+  ],
+  "Đã hoàn thành {0} bài học": [
+    "Completed {0} lessons",
+    "已完成{0}节课"
+  ],
+  "Bắt đầu học chặng này": [
+    "Start this stage",
+    "开始此阶段"
+  ],
+  "Xem bài học": [
+    "View lessons",
+    "查看课程"
+  ],
+  "Chặng Đang Xem Chi Tiết": [
+    "Stage details",
+    "阶段详情"
+  ],
+  "Tiến độ bài học:": [
+    "Lesson progress:",
+    "课程进度："
+  ],
+  "Học bài học chặng này": [
+    "Study this stage",
+    "学习此阶段课程"
+  ],
+  "Mục tiêu tuần này": [
+    "This week's goal",
+    "本周目标"
+  ],
+  "Kho bài học theo HSK": [
+    "Lessons by HSK level",
+    "按HSK等级查看课程"
+  ],
+  "Khám phá kho video đã xuất bản": [
+    "Explore published videos",
+    "探索已发布视频"
+  ],
+  "Xem các tình huống thực tế: gọi món nhà hàng, sân bay, công sở, đàm phán hợp đồng.": [
+    "Explore real situations: ordering food, airports, workplaces and contract negotiations.",
+    "学习真实场景：餐厅点餐、机场、职场和合同谈判。"
+  ],
+  "Mở kho bài học": [
+    "Open lesson library",
+    "打开课程库"
+  ],
+  "Sổ Từ & Luyện Tập SRS": [
+    "Word notebook & SRS practice",
+    "生词本与SRS练习"
+  ],
+  "Kho Lưu Trữ Từ Vựng": [
+    "Saved vocabulary",
+    "已保存词汇"
+  ],
+  "Hệ thống ôn tập ngắt quãng (SRS) tự động tính toán thời điểm vàng để đưa từ vựng trở lại bộ nhớ, giúp bạn nhớ từ sâu và lâu bền nhất.": [
+    "Spaced repetition (SRS) schedules vocabulary reviews to help you remember words for longer.",
+    "间隔重复系统（SRS）自动安排词汇复习，帮助您长期牢牢记住单词。"
+  ],
+  "Mặt trước · Thuật ngữ": [
+    "Front · Word",
+    "正面 · 词汇"
+  ],
+  "Lặp": [
+    "Repetitions",
+    "重复次数"
+  ],
+  "Nghe phát âm chuẩn (Giọng Bắc Kinh)": [
+    "Listen to pronunciation (Beijing accent)",
+    "听标准发音（北京口音）"
+  ],
+  "Chạm để lật xem định nghĩa & phát âm": [
+    "Tap to reveal meaning & pronunciation",
+    "点击翻卡查看释义和发音"
+  ],
+  "Từ vựng lưu từ bài học": [
+    "Words saved from lessons",
+    "从课程保存的词汇"
+  ],
+  "Space để lật thẻ": [
+    "Space to flip card",
+    "按空格翻卡"
+  ],
+  "Mặt sau · Định nghĩa & Phát âm": [
+    "Back · Meaning & pronunciation",
+    "背面 · 释义与发音"
+  ],
+  "Nghe lại phát âm": [
+    "Listen again",
+    "再听一次"
+  ],
+  "Mặt sau định nghĩa & phát âm": [
+    "Back: meaning & pronunciation",
+    "背面：释义与发音"
+  ],
+  "Lật lại mặt trước": [
+    "Flip to front",
+    "翻到正面"
+  ],
+  "Thẻ trước": [
+    "Previous card",
+    "上一张"
+  ],
+  "Đánh dấu từ này là Chưa thuộc": [
+    "Mark this word as still learning",
+    "标记此词为尚未掌握"
+  ],
+  "Đánh dấu từ này là Đã thuộc": [
+    "Mark this word as mastered",
+    "标记此词为已掌握"
+  ],
+  "Thuộc": [
+    "Mastered",
+    "已掌握"
+  ],
+  "Bắt đầu lại": [
+    "Start over",
+    "重新开始"
+  ],
+  "Thẻ tiếp theo": [
+    "Next card",
+    "下一张"
+  ],
+  "Tìm từ theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt...": [
+    "Search by Chinese, Pinyin or Vietnamese meaning…",
+    "按汉字、拼音或越南语释义搜索…"
+  ],
+  "Thuộc (": [
+    "Mastered (",
+    "已掌握（"
+  ],
+  "Chưa thuộc (": [
+    "Learning (",
+    "尚未掌握（"
+  ],
+  "Chưa có từ vựng nào trong kho lưu trữ": [
+    "No saved vocabulary yet",
+    "暂无已保存词汇"
+  ],
+  "Khi xem video bài học hoặc khám phá danh mục từ vựng theo chủ đề, hãy bấm biểu tượng lưu từ để thêm vào sổ tay luyện tập SRS.": [
+    "Save words from lessons or topic lists to add them to your SRS notebook.",
+    "观看课程或浏览主题词汇时，点击保存图标将词汇加入SRS复习本。"
+  ],
+  "Khám phá Kho Từ Vựng ngay": [
+    "Explore vocabulary",
+    "探索词库"
+  ],
+  "Không tìm thấy từ vựng nào": [
+    "No words found",
+    "未找到词汇"
+  ],
+  "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.": [
+    "Try changing filters or search terms.",
+    "请尝试更改筛选条件或关键词。"
+  ],
+  "Từ vựng chủ đề": [
+    "Topic vocabulary",
+    "主题词汇"
+  ],
+  "Bỏ tích chưa thuộc": [
+    "Clear still-learning mark",
+    "取消尚未掌握标记"
+  ],
+  "Tích chưa thuộc (đổi màu đỏ nhạt)": [
+    "Mark as learning (light red)",
+    "标记尚未掌握（浅红色）"
+  ],
+  "Bỏ tích đã thuộc": [
+    "Clear mastered mark",
+    "取消已掌握标记"
+  ],
+  "Tích đã thuộc (đổi màu xanh nhạt)": [
+    "Mark as mastered (light green)",
+    "标记已掌握（浅绿色）"
+  ],
+  "Bỏ lưu khỏi sổ tay": [
+    "Remove from notebook",
+    "从笔记本移除"
+  ],
+  "Luyện tập thẻ từ vựng Flashcard": [
+    "Vocabulary flashcard practice",
+    "词卡练习"
+  ],
+  "Xáo trộn thứ tự từ": [
+    "Shuffle words",
+    "打乱词汇顺序"
+  ],
+  "Hoàn thành chủ đề": [
+    "Topic completed",
+    "主题已完成"
+  ],
+  "Bạn đã luyện tập toàn bộ": [
+    "You have practised all",
+    "您已练习全部"
+  ],
+  "từ vựng trong chủ đề này. Các từ bạn đã lưu sẽ tiếp tục được nhắc lại trong mục Kho lưu trữ.": [
+    "words in this topic. Saved words will appear again in your review notebook.",
+    "个主题词汇。已保存的词汇将继续出现在复习本中。"
+  ],
+  "Đang lưu ngày học…": [
+    "Saving learning day…",
+    "正在保存学习日…"
+  ],
+  "Đã lưu hoạt động ôn tập.": [
+    "Review activity saved.",
+    "复习活动已保存。"
+  ],
+  "Chưa lưu được ngày học. Kiểm tra kết nối và bộ thẻ trong kho đã xuất bản.": [
+    "Could not save learning day. Check your connection and the published card set.",
+    "无法保存学习日，请检查网络和已发布的卡片集。"
+  ],
+  "Ôn lại chủ đề này": [
+    "Review this topic",
+    "复习此主题"
+  ],
+  "Chạm để lật thẻ (Space)": [
+    "Tap to flip card (Space)",
+    "点击翻卡（空格）"
+  ],
+  "Lưu SRS": [
+    "Save to SRS",
+    "保存至SRS"
+  ],
+  "Space để lật": [
+    "Space to flip",
+    "按空格翻卡"
+  ],
+  "Mặt sau · Định nghĩa": [
+    "Back · Meaning",
+    "背面 · 释义"
+  ],
+  "Lật lại": [
+    "Flip back",
+    "翻回"
+  ],
+  "Hoàn thành": [
+    "Complete",
+    "完成"
+  ],
+  "Ẩm thực Trung Hoa": [
+    "Chinese cuisine",
+    "中华美食"
+  ],
+  "Món ăn Dim sum, đồ uống, đặt bàn tiệc và phong vị ẩm thực các vùng miền": [
+    "Dim sum, drinks, reservations and regional cuisines",
+    "点心、饮品、订餐与各地风味"
+  ],
+  "Vạn Lý Trường Thành, sân bay, ga tàu cao tốc, khách sạn và hỏi đường": [
+    "The Great Wall, airports, rail stations, hotels and directions",
+    "长城、机场、高铁站、酒店与问路"
+  ],
+  "Cuộc sống Hàng ngày": [
+    "Everyday life",
+    "日常生活"
+  ],
+  "Chào hỏi, bạn bè, gia đình, thời tiết và thói quen sinh hoạt thường nhật": [
+    "Greetings, friends, family, weather and daily routines",
+    "问候、朋友、家庭、天气与日常习惯"
+  ],
+  "Kinh doanh & Đàm phán": [
+    "Business & negotiation",
+    "商务与谈判"
+  ],
+  "Họp đối tác, ký kết hợp đồng thương mại, phỏng vấn và gửi email công sở": [
+    "Business meetings, contracts, interviews and workplace email",
+    "商务会谈、合同、面试与职场邮件"
+  ],
+  "Hỏi giá, mặc cả, quét mã WeChat Pay/Alipay và sắm sửa trung tâm thương mại": [
+    "Prices, bargaining, WeChat Pay/Alipay and mall shopping",
+    "询价、议价、微信和支付宝付款及商场购物"
+  ],
+  "Văn hóa & Điện ảnh": [
+    "Culture & cinema",
+    "文化与电影"
+  ],
+  "Xem phim HanFlix, âm nhạc C-Pop, lễ hội truyền thống và giải trí điện ảnh": [
+    "HanFlix movies, C-Pop, traditional festivals and cinema",
+    "HanFlix电影、华语流行音乐、传统节日与影视娱乐"
+  ],
+  "Đang cập nhật nghĩa": [
+    "Meaning is being updated",
+    "释义更新中"
+  ],
+  "Kho Từ Vựng": [
+    "Vocabulary library",
+    "词汇库"
+  ],
+  "HSK 3.0 Chuẩn": [
+    "HSK 3.0 Standard",
+    "HSK 3.0标准"
+  ],
+  "Học từ vựng trực quan theo các nhóm bối cảnh đời sống thực tế, kết hợp nghe phát âm chuẩn giọng Bắc Kinh và ôn luyện ngắt quãng (SRS).": [
+    "Learn vocabulary in real-life contexts with Beijing pronunciation and spaced repetition (SRS).",
+    "结合真实生活场景、北京口音和间隔重复（SRS）学习词汇。"
+  ],
+  "Tổng kho": [
+    "Total words",
+    "词库总量"
+  ],
+  "Làm chủ": [
+    "Mastered",
+    "已掌握"
+  ],
+  "Bấm để mở Sổ từ đã lưu": [
+    "Open saved words",
+    "打开已保存词汇"
+  ],
+  "Bấm để ôn tập các từ đến hạn": [
+    "Review due words",
+    "复习到期词汇"
+  ],
+  "Cần ôn": [
+    "Due for review",
+    "待复习"
+  ],
+  "Các Hộp Chủ Đề (Topic Hub)": [
+    "Topic hub",
+    "主题中心"
+  ],
+  "Kho Lưu Trữ (Sổ Từ Của Bạn)": [
+    "Saved words (your notebook)",
+    "已保存（您的生词本）"
+  ],
+  "Kho Chủ Đề Phong Phú": [
+    "Explore topics",
+    "丰富的主题库"
+  ],
+  "Chọn Chủ Đề Để Mở Danh Sách Từ Vựng": [
+    "Choose a topic to view vocabulary",
+    "选择主题查看词汇列表"
+  ],
+  "Bấm vào từng hộp chủ đề để xem chi tiết danh sách từ, câu ví dụ thực tế và nghe phát âm.": [
+    "Select a topic to see words, practical examples and pronunciation.",
+    "点击主题查看词汇、实用例句和发音。"
+  ],
+  "{0}% Hoàn tất": [
+    "{0}% complete",
+    "已完成{0}%"
+  ],
+  "Chưa học": [
+    "Not started",
+    "尚未学习"
+  ],
+  "Luyện flashcard chủ đề này": [
+    "Practise this topic with flashcards",
+    "使用词卡练习此主题"
+  ],
+  "Luyện thẻ": [
+    "Practise cards",
+    "练习词卡"
+  ],
+  "Quay lại tất cả chủ đề": [
+    "Back to all topics",
+    "返回所有主题"
+  ],
+  "Danh sách từ vựng trọng tâm theo bối cảnh thực tế. Bấm vào biểu tượng loa để nghe AI phát âm chuẩn hoặc lưu vào sổ tay SRS để tự động lên lịch ôn tập.": [
+    "Key words in real-life contexts. Listen with the speaker button or save to your SRS notebook for scheduled reviews.",
+    "真实场景中的重点词汇。点击喇叭听发音，或保存至SRS复习本以自动安排复习。"
+  ],
+  "Luyện Flashcard (": [
+    "Flashcard practice (",
+    "词卡练习（"
+  ],
+  "từ)": [
+    "words)",
+    "个词）"
+  ],
+  "Tìm từ trong chủ đề (chữ Hán, pinyin, nghĩa)...": [
+    "Search this topic (Chinese, Pinyin, meaning)…",
+    "搜索此主题（汉字、拼音、释义）…"
+  ],
+  "Cấp độ:": [
+    "Level:",
+    "等级："
+  ],
+  "Đang tải danh sách từ vựng...": [
+    "Loading vocabulary…",
+    "正在加载词汇列表…"
+  ],
+  "Thử tìm với từ khóa khác hoặc chọn mức độ HSK khác.": [
+    "Try another search term or HSK level.",
+    "尝试其他关键词或HSK等级。"
+  ],
+  "Nghe phát âm chuẩn AI": [
+    "Listen to AI pronunciation",
+    "听AI标准发音"
+  ],
+  "Đang xử lý...": [
+    "Processing…",
+    "正在处理…"
+  ],
+  "Đã lưu sổ tay": [
+    "Saved to notebook",
+    "已保存至笔记本"
+  ],
+  "Lưu vào sổ tay SRS": [
+    "Save to SRS notebook",
+    "保存至SRS复习本"
+  ],
+  "từ vựng)": [
+    "words)",
+    "个词汇）"
+  ],
+  "Kỹ năng": [
+    "Skill",
+    "技能"
+  ],
+  "Danh sách câu hỏi": [
+    "Question list",
+    "题目列表"
+  ],
+  "Đáp án:": [
+    "Answer:",
+    "答案："
+  ],
+  "câu": [
+    "questions",
+    "题"
+  ],
+  "(Bỏ trống)": [
+    "(Unanswered)",
+    "（未作答）"
+  ],
+  "{0} phút {1} giây": [
+    "{0} min {1} sec",
+    "{0}分{1}秒"
+  ],
+  "Danh sách đề thi HSK": [
+    "HSK exam list",
+    "HSK试卷列表"
+  ],
+  "ĐẠT HỢP CÁCH (PASS)": [
+    "PASSED",
+    "合格（通过）"
+  ],
+  "CHƯA ĐẠT (CẦN ÔN TẬP)": [
+    "NOT PASSED (KEEP PRACTISING)",
+    "未通过（需要复习）"
+  ],
+  "Mã đề:": [
+    "Exam code:",
+    "试卷编号："
+  ],
+  "Thời gian làm:": [
+    "Time taken:",
+    "答题用时："
+  ],
+  "Điểm": [
+    "Score",
+    "分数"
+  ],
+  "Điểm chuẩn đỗ:": [
+    "Passing score:",
+    "及格分数："
+  ],
+  "điểm": [
+    "points",
+    "分"
+  ],
+  "Nghe hiểu": [
+    "Listening comprehension",
+    "听力理解"
+  ],
+  "Đọc hiểu": [
+    "Reading comprehension",
+    "阅读理解"
+  ],
+  "Viết câu": [
+    "Sentence writing",
+    "句子书写"
+  ],
+  "Làm lại đề này": [
+    "Retake this exam",
+    "重做此试卷"
+  ],
+  "Luyện đề tiếp theo": [
+    "Try the next exam",
+    "练习下一套试卷"
+  ],
+  "Gợi ý bài học khắc phục điểm yếu (AI Smart Recommender)": [
+    "Lessons for your weaker areas (AI recommendations)",
+    "针对薄弱点的课程推荐（AI智能推荐）"
+  ],
+  "chủ điểm cần bù đắp": [
+    "topics to review",
+    "个待巩固知识点"
+  ],
+  "Hệ thống AI đã phân tích các câu làm sai và đề xuất các bài học video trên HanFlix chứa chính điểm ngữ pháp hoặc từ vựng tương ứng:": [
+    "AI analysed your incorrect answers and recommends HanFlix videos covering the relevant grammar and vocabulary:",
+    "AI分析了您的错题，并推荐包含相关语法和词汇的HanFlix视频课程："
+  ],
+  "Đọc": [
+    "Reading",
+    "阅读"
+  ],
+  "Viết": [
+    "Writing",
+    "写作"
+  ],
+  "Nghe": [
+    "Listening",
+    "听力"
+  ],
+  "Lỗi sai kiến thức": [
+    "Knowledge gap",
+    "知识薄弱点"
+  ],
+  "Chủ điểm từ vựng & ngữ cảnh HSK 3": [
+    "HSK 3 vocabulary & contexts",
+    "HSK 3级词汇与语境"
+  ],
+  "Bài học ngữ pháp chuyên đề": [
+    "Targeted grammar lesson",
+    "专项语法课程"
+  ],
+  "Xem lại chi tiết bài làm & Lời giải": [
+    "Review answers & explanations",
+    "查看答题详情与解析"
+  ],
+  "Đối chiếu đáp án của bạn với đáp án chuẩn, xem phiên âm Pinyin và phân tích ngữ pháp.": [
+    "Compare your answers with the answer key, Pinyin and grammar explanations.",
+    "对照您的答案与标准答案，查看拼音及语法解析。"
+  ],
+  "Câu sai (": [
+    "Incorrect (",
+    "错题（"
+  ],
+  "Câu đúng (": [
+    "Correct (",
+    "正确题（"
+  ],
+  "Bạn đã chọn:": [
+    "You selected:",
+    "您选择了："
+  ],
+  "Đáp án chuẩn:": [
+    "Correct answer:",
+    "标准答案："
+  ],
+  "Văn bản hội thoại:": [
+    "Dialogue transcript:",
+    "对话文本："
+  ],
+  "Dịch nghĩa tiếng Việt:": [
+    "Vietnamese translation:",
+    "越南语翻译："
+  ],
+  "Phân tích giải thích:": [
+    "Explanation:",
+    "分析说明："
+  ],
+  "Điểm ngữ pháp cần nhớ:": [
+    "Grammar to remember:",
+    "需要记住的语法点："
+  ],
+  "Bài thi HSK đang diễn ra. Nếu rời khỏi hoặc tải lại trang, đồng hồ thời gian vẫn tiếp tục đếm!": [
+    "Your HSK exam is in progress. The timer continues if you leave or reload this page.",
+    "HSK考试正在进行。离开或刷新页面后，计时仍会继续！"
+  ],
+  "Cảnh báo bảo mật phòng thi": [
+    "Exam security notice",
+    "考试安全提示"
+  ],
+  "Thao tác bị hạn chế!": [
+    "Action restricted!",
+    "操作受限！"
+  ],
+  "Quy chế thi HSK trực tuyến (机考):": [
+    "Online HSK exam rules:",
+    "HSK在线机考规则："
+  ],
+  "Mọi hành vi mở DevTools (F12), kiểm tra phần tử hoặc can thiệp mã nguồn đều bị hạn chế nhằm bảo đảm tính công bằng tuyệt đối cho kỳ thi.": [
+    "Opening developer tools (F12), inspecting elements or modifying source code is restricted during the exam.",
+    "考试期间限制打开开发者工具（F12）、检查元素或修改源代码。"
+  ],
+  "Tôi đã hiểu & Tiếp tục làm bài": [
+    "Understood & continue",
+    "我已了解，继续答题"
+  ],
+  "Thoát phòng thi": [
+    "Exit exam room",
+    "退出考场"
+  ],
+  "Rời phòng": [
+    "Leave exam",
+    "离开考场"
+  ],
+  "Thời gian còn lại: {0}": [
+    "Time remaining: {0}",
+    "剩余时间：{0}"
+  ],
+  "Thu nhỏ cửa sổ": [
+    "Minimize window",
+    "缩小窗口"
+  ],
+  "Nộp bài": [
+    "Submit",
+    "提交"
+  ],
+  "Đang mất kết nối mạng:": [
+    "You are offline:",
+    "网络已断开："
+  ],
+  "Tiến độ bài thi của bạn đang được tự động lưu an toàn trong trình duyệt (Offline Safe). Bạn cứ tiếp tục làm bài bình thường, không đóng hoặc tải lại trang!": [
+    "Your exam progress is being saved in this browser. Keep working without closing or reloading the page.",
+    "答题进度正自动保存在浏览器中。请继续答题，不要关闭或刷新页面！"
+  ],
+  "Đã kết nối lại Internet:": [
+    "Connection restored:",
+    "网络已恢复："
+  ],
+  "Toàn bộ dữ liệu bài làm của bạn đã được đồng bộ hóa an toàn.": [
+    "All your answers have been synced.",
+    "您的答题数据已同步。"
+  ],
+  "Đã khôi phục bài làm từ phiên trước của bạn (": [
+    "Restored your previous session (",
+    "已恢复上次答题记录（"
+  ],
+  "câu đã trả lời). Thời gian làm bài tiếp tục được tính chuẩn xác.": [
+    "questions answered). The exam timer continues.",
+    "题已作答）。考试计时继续进行。"
+  ],
+  "Bật/Tắt hiển thị phiên âm Pinyin": [
+    "Toggle Pinyin",
+    "显示或隐藏拼音"
+  ],
+  "Ẩn Pinyin": [
+    "Hide Pinyin",
+    "隐藏拼音"
+  ],
+  "Hiện Pinyin": [
+    "Show Pinyin",
+    "显示拼音"
+  ],
+  "Đã gắn cờ": [
+    "Flagged",
+    "已标记"
+  ],
+  "Đánh dấu phân vân": [
+    "Flag for review",
+    "标记待检查"
+  ],
+  "Tạm dừng audio": [
+    "Pause audio",
+    "暂停音频"
+  ],
+  "Bấm để nghe audio đoạn hội thoại": [
+    "Play dialogue audio",
+    "播放对话音频"
+  ],
+  "Băng nghe chuẩn HSK 3": [
+    "HSK 3 listening audio",
+    "HSK 3级听力音频"
+  ],
+  "Đang phát âm thanh đoạn hội thoại...": [
+    "Playing dialogue audio…",
+    "正在播放对话音频…"
+  ],
+  "Bấm nút để nghe audio đoạn hội thoại": [
+    "Press to listen to the dialogue",
+    "点击按钮收听对话"
+  ],
+  "Giọng đọc phát âm chuẩn Bắc Kinh · Thí sinh lắng nghe kỹ để chọn đáp án": [
+    "Beijing pronunciation · Listen carefully to choose your answer",
+    "标准北京口音 · 请仔细听并选择答案"
+  ],
+  "Nghe lại từ đầu": [
+    "Replay from start",
+    "从头重听"
+  ],
+  "Nghe lại": [
+    "Listen again",
+    "再听一次"
+  ],
+  "Thay đổi tốc độ phát": [
+    "Change playback speed",
+    "更改播放速度"
+  ],
+  "CÂU": [
+    "QUESTION",
+    "题"
+  ],
+  "Đoạn hội thoại đã nghe:": [
+    "Dialogue you heard:",
+    "所听对话："
+  ],
+  "Câu đối chiếu nghe được:": [
+    "Reference sentence:",
+    "听力参照句："
+  ],
+  "Câu trên đề bài:": [
+    "Question sentence:",
+    "题目中的句子："
+  ],
+  "Bấm vào các thẻ chữ Hán bên dưới theo đúng trật tự ngữ pháp để ghép thành câu...": [
+    "Select the Chinese word cards below in the correct order to form a sentence…",
+    "按正确语序点击下方汉字卡片组成句子…"
+  ],
+  "Bấm để gỡ cụm này": [
+    "Click to remove this phrase",
+    "点击移除此短语"
+  ],
+  "Các cụm từ cần sắp xếp:": [
+    "Phrases to arrange:",
+    "待排序短语："
+  ],
+  "Xóa và sắp xếp lại từ đầu": [
+    "Clear and start arranging again",
+    "清空并重新排序"
+  ],
+  "Bảng tiến độ câu hỏi": [
+    "Question progress",
+    "答题进度"
+  ],
+  "Đã làm (": [
+    "Answered (",
+    "已作答（"
+  ],
+  "Chưa (": [
+    "Unanswered (",
+    "未作答（"
+  ],
+  "Cờ (": [
+    "Flagged (",
+    "已标记（"
+  ],
+  "Về câu hỏi trước (Phím ←)": [
+    "Previous question (←)",
+    "上一题（←键）"
+  ],
+  "Sang câu tiếp theo (Phím →)": [
+    "Next question (→)",
+    "下一题（→键）"
+  ],
+  "Câu tiếp": [
+    "Next question",
+    "下一题"
+  ],
+  "Đang làm câu": [
+    "Current question",
+    "当前题目"
+  ],
+  "Phím tắt: Dùng": [
+    "Shortcuts: use",
+    "快捷键：使用"
+  ],
+  "để đổi câu, bấm": [
+    "to change questions, press",
+    "切换题目，按"
+  ],
+  "để chọn đáp án.": [
+    "to choose an answer.",
+    "选择答案。"
+  ],
+  "Xác nhận nộp bài thi HSK?": [
+    "Submit your HSK exam?",
+    "确认提交HSK试卷？"
+  ],
+  "Hệ thống sẽ tiến hành chấm điểm và tổng hợp phân tích báo cáo kết quả của bạn ngay lập tức.": [
+    "Your exam will be graded and a results report generated immediately.",
+    "系统将立即评分并生成成绩分析报告。"
+  ],
+  "Tổng số câu:": [
+    "Total questions:",
+    "总题数："
+  ],
+  "Số câu đã làm:": [
+    "Answered:",
+    "已作答："
+  ],
+  "Số câu còn trống:": [
+    "Unanswered:",
+    "未作答："
+  ],
+  "Câu đang phân vân:": [
+    "Flagged:",
+    "待检查："
+  ],
+  "Tiếp tục làm bài": [
+    "Continue exam",
+    "继续答题"
+  ],
+  "Nộp bài ngay": [
+    "Submit now",
+    "立即提交"
+  ],
+  "Rời khỏi phòng thi?": [
+    "Leave the exam?",
+    "离开考场？"
+  ],
+  "Tiến độ làm bài của bạn sẽ không được lưu nếu bạn rời khỏi phòng thi trước khi nộp bài.": [
+    "Your progress will not be saved if you leave before submitting.",
+    "提交前离开考场将不保存答题进度。"
+  ],
+  "Ở lại làm bài": [
+    "Stay and continue",
+    "留下继续答题"
+  ],
+  "Xác nhận thoát": [
+    "Confirm exit",
+    "确认退出"
+  ],
+  "Phím F12 (Công cụ lập trình DevTools) đã bị khóa trong phòng thi HSK để đảm bảo tính công bằng và minh bạch.": [
+    "F12 (developer tools) is disabled in the HSK exam room.",
+    "HSK考场内已禁用F12开发者工具。"
+  ],
+  "Tổ hợp phím mở Developer Tools (Inspect / Console) đã bị vô hiệu hóa trong suốt quá trình làm bài thi.": [
+    "Developer tools shortcuts are disabled during the exam.",
+    "考试期间已禁用开发者工具快捷键。"
+  ],
+  "Tính năng xem mã nguồn trang (View Source) đã bị vô hiệu hóa trong phòng thi HSK.": [
+    "View Source is disabled in the HSK exam room.",
+    "HSK考场内已禁用查看网页源代码功能。"
+  ],
+  "Menu chuột phải đã bị khóa trong suốt thời gian làm bài thi nhằm ngăn chặn can thiệp kiểm tra mã nguồn.": [
+    "The context menu is disabled during the exam.",
+    "考试期间已禁用右键菜单。"
+  ],
+  "Khóa F12 · Phòng thi bảo mật": [
+    "F12 disabled · Exam room",
+    "F12已禁用 · 考场"
+  ],
+  "Luyện thi HSK Chuẩn Quốc Tế": [
+    "HSK exam preparation",
+    "HSK标准考试练习"
+  ],
+  "Mô phỏng 100% giao diện thi HSK trên máy tính (HSK 机考). Luyện đề thi thật có bấm giờ, âm thanh chuẩn Bắc Kinh, lời giải thích chi tiết và gợi ý bài học HanFlix bù đắp lỗ hổng kiến thức.": [
+    "Practise in a computer-based HSK exam interface with timed papers, Beijing-accent audio, detailed explanations and recommended lessons.",
+    "模拟HSK机考界面，提供计时练习、北京口音音频、详细解析及薄弱点课程推荐。"
+  ],
+  "Cấp HSK 1 - 6": [
+    "HSK levels 1–6",
+    "HSK 1至6级"
+  ],
+  "Chuẩn Hanban": [
+    "Hanban standard",
+    "汉办标准"
+  ],
+  "Mô phỏng máy": [
+    "Computer simulation",
+    "机考模拟"
+  ],
+  "Lưu ý phòng thi:": [
+    "Exam room notice:",
+    "考场须知："
+  ],
+  "Khi bắt đầu làm bài, hệ thống sẽ tự động khóa phím": [
+    "When the exam starts, the system disables",
+    "考试开始时，系统将禁用"
+  ],
+  ", phím tắt mở DevTools và menu chuột phải nhằm mô phỏng điều kiện thi thật nghiêm túc và công bằng.": [
+    ", developer tools shortcuts and the context menu to simulate exam conditions.",
+    "、开发者工具快捷键和右键菜单，以模拟考试环境。"
+  ],
+  "Có đề mẫu": [
+    "Sample available",
+    "有示例试卷"
+  ],
+  "Tất cả đề": [
+    "All exams",
+    "所有试卷"
+  ],
+  "Thi thử toàn diện (Full Mock)": [
+    "Full mock exam",
+    "全真模拟考试"
+  ],
+  "bộ đề": [
+    "exam sets",
+    "套试卷"
+  ],
+  "SẴN SÀNG THI": [
+    "READY",
+    "可以考试"
+  ],
+  "ĐANG NẠP ĐỀ": [
+    "LOADING EXAM",
+    "正在加载试卷"
+  ],
+  "Thời gian": [
+    "Duration",
+    "时长"
+  ],
+  "Số câu": [
+    "Questions",
+    "题数"
+  ],
+  "Điểm đỗ": [
+    "Passing score",
+    "及格分"
+  ],
+  "lượt thi": [
+    "attempts",
+    "次考试"
+  ],
+  "Vào phòng thi": [
+    "Enter exam",
+    "进入考场"
+  ],
+  "Sắp mở": [
+    "Coming soon",
+    "即将开放"
+  ],
+  "Luyện chuyên đề HSK": [
+    "HSK skill practice",
+    "HSK专项练习"
+  ],
+  "Tách nhỏ kỹ năng để ôn tập không áp lực": [
+    "Practise one skill at a time",
+    "分项练习，轻松复习"
+  ],
+  "Tự do làm từng phần có lời giải ngay lập tức": [
+    "Practise individual sections with instant explanations",
+    "自由练习各部分，即时查看解析"
+  ],
+  "Luyện Nghe HSK 3 (听力)": [
+    "HSK 3 listening practice (听力)",
+    "HSK 3级听力练习"
+  ],
+  "Luyện phản xạ nghe hội thoại 2-4 lượt, nhận diện từ khóa và bẫy phát âm.": [
+    "Practise short dialogues, keywords and tricky pronunciation.",
+    "练习2至4轮对话，识别关键词和发音陷阱。"
+  ],
+  "Làm bài nghe ngay": [
+    "Practise listening",
+    "开始听力练习"
+  ],
+  "Luyện Đọc hiểu HSK 3 (阅读)": [
+    "HSK 3 reading practice (阅读)",
+    "HSK 3级阅读练习"
+  ],
+  "Đọc hiểu nhanh đoạn văn, ghép câu đối thoại và điền từ vào chỗ trống.": [
+    "Read passages, match dialogue and fill in missing words.",
+    "快速阅读短文、匹配对话和填空。"
+  ],
+  "Làm bài đọc ngay": [
+    "Practise reading",
+    "开始阅读练习"
+  ],
+  "Luyện Viết & Sắp xếp câu (书写)": [
+    "Writing & sentence ordering (书写)",
+    "写作与句子排序练习"
+  ],
+  "Tương tác kéo thả cụm từ, làm chủ trật tự câu chữ 把, câu so sánh 比.": [
+    "Arrange phrases to master 把 constructions and 比 comparisons.",
+    "排列短语，掌握把字句和比字句的语序。"
+  ],
+  "Làm bài viết ngay": [
+    "Practise writing",
+    "开始写作练习"
+  ],
+  "Diễn đàn hỏi đáp": [
+    "Q&A forum",
+    "问答论坛"
+  ],
+  "Đặt câu hỏi về bài tập, nhận phản hồi từ cộng đồng và giáo viên": [
+    "Ask about exercises and get feedback from learners and teachers",
+    "提问练习问题，获得社区和老师的反馈"
+  ],
+  "Luyện nói 1-1": [
+    "One-to-one speaking",
+    "一对一口语练习"
+  ],
+  "Kết nối với học viên khác qua video call ngắn để luyện tiếng Trung thực tế": [
+    "Practise Chinese with other learners in short video calls",
+    "通过简短视频通话与其他学员练习实用中文"
+  ],
+  "Chia sẻ ghi chú": [
+    "Share notes",
+    "分享笔记"
+  ],
+  "Đăng và download ghi chú từ vựng, mẹo học của cộng đồng": [
+    "Share vocabulary notes and learning tips with the community",
+    "分享和下载社区词汇笔记及学习技巧"
+  ],
+  "Thử thách nhóm": [
+    "Group challenges",
+    "小组挑战"
+  ],
+  "Tham gia các thử thách học tập hàng tuần, thi đua cùng bạn bè": [
+    "Join weekly learning challenges with friends",
+    "与朋友参加每周学习挑战"
+  ],
+  "Cộng Đồng HanFlix": [
+    "HanFlix community",
+    "HanFlix社区"
+  ],
+  "Kết nối với hàng nghìn người học tiếng Trung. Hỏi đáp, luyện nói và thi đua cùng nhau.": [
+    "Connect with Chinese learners to ask questions, practise speaking and learn together.",
+    "与中文学习者交流、问答、练口语并共同进步。"
+  ],
+  "Sắp ra mắt · Q1 2027": [
+    "Coming soon · Q1 2027",
+    "即将推出 · 2027年第一季度"
+  ],
+  "Tính năng đang được phát triển. Đây là những gì đang đến:": [
+    "This feature is in development. Here's what's coming:",
+    "功能开发中，即将提供："
+  ],
+  "Đăng ký nhận thông báo sớm": [
+    "Get early updates",
+    "订阅上线通知"
+  ],
+  "Bạn sẽ là người đầu tiên trải nghiệm khi cộng đồng ra mắt.": [
+    "Be among the first to try the community when it launches.",
+    "社区上线时，抢先体验。"
+  ],
+  "Nhận thông báo": [
+    "Notify me",
+    "接收通知"
+  ],
+  "Tự động phát phụ đề Pinyin": [
+    "Automatically show Pinyin subtitles",
+    "自动显示拼音字幕"
+  ],
+  "Không thể bắt đầu bài luyện": [
+    "Could not start practice",
+    "无法开始练习"
+  ],
+  "Luyện kỹ năng HSK": [
+    "HSK skills practice",
+    "HSK技能练习"
+  ],
+  "Chọn bài luyện đã được duyệt. Kết quả giúp bạn tìm kỹ năng cần ôn; đây chưa phải đề thi thử HSK chính thức.": [
+    "Choose an approved practice set to identify skills to review. These are not official HSK mock exams.",
+    "选择已审核的练习，了解需要复习的技能。这并非正式HSK模拟考试。"
+  ],
+  "Đang tải bài luyện…": [
+    "Loading practice…",
+    "正在加载练习…"
+  ],
+  "câu ·": [
+    "questions ·",
+    "题 ·"
+  ],
+  "Bắt đầu / Tiếp tục": [
+    "Start / continue",
+    "开始 / 继续"
+  ],
+  "Chưa có bài luyện được duyệt cho lựa chọn này. Hãy chọn cấp hoặc kỹ năng khác.": [
+    "No approved practice for this selection. Try another level or skill.",
+    "此选项暂无已审核练习，请选择其他等级或技能。"
+  ],
+  "Lịch sử và bài đang làm": [
+    "History & current attempts",
+    "历史记录与进行中的练习"
+  ],
+  "Đang tải lịch sử…": [
+    "Loading history…",
+    "正在加载记录…"
+  ],
+  "Chưa có bài làm cho bộ lọc này.": [
+    "No attempts match these filters.",
+    "暂无符合筛选条件的答题记录。"
+  ],
+  "Không thể tải bài": [
+    "Could not load practice",
+    "无法加载练习"
+  ],
+  "Chưa lưu được đáp án": [
+    "Could not save answers",
+    "暂时无法保存答案"
+  ],
+  "Một số đáp án chưa tới máy chủ trước hạn hoặc bài đã được nộp ở tab khác nên không được tính. Kết quả dưới đây dùng đáp án máy chủ đã nhận.": [
+    "Some answers were not received before the deadline, or the attempt was submitted in another tab. Results use answers received by the server.",
+    "部分答案未在截止前送达服务器，或练习已在其他标签页提交。以下结果以服务器收到的答案为准。"
+  ],
+  "Chưa nộp được bài": [
+    "Could not submit practice",
+    "暂时无法提交练习"
+  ],
+  "Đang tải bài làm…": [
+    "Loading attempt…",
+    "正在加载答题记录…"
+  ],
+  "← Danh sách bài luyện": [
+    "← Practice list",
+    "← 练习列表"
+  ],
+  "câu đúng · +": [
+    "correct · +",
+    "题正确 · +"
+  ],
+  "Mỗi bộ luyện thưởng tối đa một lần/ngày. Điểm dưới 50% chưa được thưởng.": [
+    "Each set earns rewards at most once per day. Scores below 50% earn no reward.",
+    "每套练习每天最多奖励一次，低于50%不获得奖励。"
+  ],
+  "Chỉ ôn câu sai": [
+    "Review incorrect answers only",
+    "仅复习错题"
+  ],
+  "Đang lưu / gửi…": [
+    "Saving / submitting…",
+    "正在保存 / 提交…"
+  ],
+  "Có đáp án chưa lưu": [
+    "Unsaved answers",
+    "有未保存的答案"
+  ],
+  "Đã lưu trên máy chủ": [
+    "Saved to server",
+    "已保存至服务器"
+  ],
+  "Đáp án đang nhập vẫn ở trang này. Tải lại bản máy chủ sẽ thay thế phần chưa lưu.": [
+    "Your answers are still on this page. Loading the server version will replace unsaved answers.",
+    "当前答案仍保留在此页面，加载服务器版本将替换未保存的答案。"
+  ],
+  "Tải lại bản máy chủ sẽ thay thế đáp án chưa lưu.": [
+    "Loading the server version will replace unsaved answers.",
+    "加载服务器版本将替换未保存的答案。"
+  ],
+  "Tải bản máy chủ và thay phần đáp án chưa lưu?": [
+    "Load the server version and replace unsaved answers?",
+    "加载服务器版本并替换未保存的答案？"
+  ],
+  "Tải bản máy chủ": [
+    "Load server version",
+    "加载服务器版本"
+  ],
+  "Chọn đáp án": [
+    "Choose an answer",
+    "选择答案"
+  ],
+  "Câu trả lời": [
+    "Answer",
+    "答案"
+  ],
+  "Đánh dấu để xem lại": [
+    "Mark for review",
+    "标记待复习"
+  ],
+  "Bạn không có câu sai trong bài này.": [
+    "You have no incorrect answers in this practice.",
+    "此练习没有错题。"
+  ],
+  "Câu sau": [
+    "Next question",
+    "下一题"
+  ],
+  "Xác nhận nộp bài": [
+    "Confirm submission",
+    "确认提交"
+  ],
+  "Bạn đã trả lời": [
+    "You have answered",
+    "您已回答"
+  ],
+  "câu. Nộp bài để xem kết quả?": [
+    "questions. Submit to view results?",
+    "题。提交并查看结果？"
+  ],
+  "Tiếp tục làm": [
+    "Keep working",
+    "继续答题"
+  ],
+  "Xác nhận nộp": [
+    "Confirm submit",
+    "确认提交"
+  ],
+  "học viên": [
+    "learners",
+    "位学员"
+  ],
+  "Sơ cấp": [
+    "Beginner",
+    "初级"
+  ],
+  "Đang xem": [
+    "Watching",
+    "正在观看"
+  ],
+  "Giải thích từ": [
+    "Explain a word",
+    "解释词汇"
+  ],
+  "Giải thích từ vựng quan trọng trong bài học này": [
+    "Explain key vocabulary in this lesson",
+    "解释本课重点词汇"
+  ],
+  "Luyện ngữ pháp": [
+    "Practise grammar",
+    "语法练习"
+  ],
+  "Giải thích ngữ pháp trong bài học này và cho ví dụ dễ hiểu": [
+    "Explain this lesson's grammar with simple examples",
+    "解释本课语法，并提供易懂的例子"
+  ],
+  "Tạo ví dụ": [
+    "Create examples",
+    "生成例句"
+  ],
+  "Tạo 5 câu ví dụ thực tế dựa trên nội dung bài học này": [
+    "Create 5 practical examples based on this lesson",
+    "根据本课内容生成5个实用例句"
+  ],
+  "Luyện hội thoại": [
+    "Practise conversation",
+    "对话练习"
+  ],
+  "Hãy luyện một đoạn hội thoại ngắn với tôi theo chủ đề bài học này": [
+    "Practise a short conversation with me about this lesson's topic",
+    "请和我围绕本课主题练习一段简短对话"
+  ],
+  "bạn": [
+    "you",
+    "您"
+  ],
+  "Chào {0}! Mình là Panda AI. {1}": [
+    "Hi {0}! I'm Panda AI. {1}",
+    "您好，{0}！我是AI熊猫。{1}"
+  ],
+  "Mình sẽ dựa trên phụ đề của bài này để giải thích.": [
+    "I'll use this lesson's subtitles to explain.",
+    "我会根据本课字幕进行讲解。"
+  ],
+  "Hỏi mình về từ vựng, ngữ pháp hoặc cách dùng tiếng Trung nhé.": [
+    "Ask me about Chinese vocabulary, grammar or usage.",
+    "欢迎提问中文词汇、语法或用法。"
+  ],
+  "Hỏi tiếng Trung chung": [
+    "General Chinese questions",
+    "中文综合问答"
+  ],
+  "Vừa xong": [
+    "Just now",
+    "刚刚"
+  ],
+  "Chưa tải được lịch sử hội thoại.": [
+    "Could not load conversation history.",
+    "无法加载对话记录。"
+  ],
+  "Chưa xóa được hội thoại.": [
+    "Could not delete conversation.",
+    "无法删除对话。"
+  ],
+  "Chưa thể kết nối với Panda. Hãy thử lại.": [
+    "Could not connect to Panda. Please retry.",
+    "无法连接熊猫助手，请重试。"
+  ],
+  "Panda đang suy nghĩ": [
+    "Panda is thinking",
+    "熊猫正在思考"
+  ],
+  "Panda đang soạn câu trả lời": [
+    "Panda is writing a response",
+    "熊猫正在撰写回答"
+  ],
+  "Panda đang tìm nội dung phù hợp": [
+    "Panda is finding relevant content",
+    "熊猫正在查找相关内容"
+  ],
+  "Panda đang giải thích": [
+    "Panda is explaining",
+    "熊猫正在讲解"
+  ],
+  "Đóng Panda AI": [
+    "Close Panda AI",
+    "关闭AI熊猫"
+  ],
+  "Trợ lý Panda AI": [
+    "Panda AI assistant",
+    "AI熊猫助手"
+  ],
+  "Trợ giảng tiếng Trung": [
+    "Chinese learning assistant",
+    "中文学习助手"
+  ],
+  "Sẵn sàng": [
+    "Ready",
+    "准备就绪"
+  ],
+  "Xóa lịch sử hỏi đáp trong bài hoặc chế độ hiện tại": [
+    "Clear conversation history for this lesson or mode",
+    "清除当前课程或模式的问答记录"
+  ],
+  "Xóa hội thoại": [
+    "Clear conversation",
+    "清除对话"
+  ],
+  "Ngữ cảnh học tập": [
+    "Learning context",
+    "学习上下文"
+  ],
+  "Đang học:": [
+    "Studying:",
+    "正在学习："
+  ],
+  "Phạm vi câu hỏi": [
+    "Question scope",
+    "提问范围"
+  ],
+  "Đoạn đang xem": [
+    "Current segment",
+    "当前片段"
+  ],
+  "Câu đang xem": [
+    "Current sentence",
+    "当前句子"
+  ],
+  "Toàn bài": [
+    "Entire lesson",
+    "整节课"
+  ],
+  "Quay lại bài đang xem": [
+    "Back to current lesson",
+    "返回当前课程"
+  ],
+  "Đang tải phụ đề…": [
+    "Loading subtitles…",
+    "正在加载字幕…"
+  ],
+  "Chưa có phụ đề khả dụng. Panda sẽ kiểm tra lại khi bạn gửi câu hỏi.": [
+    "No subtitles available yet. Panda will check again when you ask a question.",
+    "暂无可用字幕，提问时熊猫会再次检查。"
+  ],
+  "Dựa trên phụ đề ·": [
+    "Based on subtitles ·",
+    "基于字幕 ·"
+  ],
+  "Toàn bộ bài học": [
+    "Entire lesson",
+    "整节课"
+  ],
+  "Đã ghim": [
+    "Pinned",
+    "已固定"
+  ],
+  "Chọn câu trong bản chép lời để hỏi cụ thể.": [
+    "Select a transcript sentence to ask about it.",
+    "选择字幕中的句子进行具体提问。"
+  ],
+  "Theo dõi video tiếp": [
+    "Follow video playback",
+    "继续跟随视频"
+  ],
+  "Ghim đoạn này để hỏi tiếp": [
+    "Pin this segment for questions",
+    "固定此片段以继续提问"
+  ],
+  "Gợi ý nhanh": [
+    "Quick suggestions",
+    "快捷建议"
+  ],
+  "bài học này": [
+    "this lesson",
+    "本课"
+  ],
+  "đoạn phụ đề đang chọn": [
+    "the selected subtitle segment",
+    "所选字幕片段"
+  ],
+  "trong bài học này": [
+    "in this lesson",
+    "在本课中"
+  ],
+  "tiếng Trung": [
+    "Chinese",
+    "中文"
+  ],
+  "dựa trên nội dung bài học này": [
+    "based on this lesson",
+    "根据本课内容"
+  ],
+  "bằng tiếng Trung": [
+    "in Chinese",
+    "用中文"
+  ],
+  "theo chủ đề bài học này": [
+    "about this lesson's topic",
+    "围绕本课主题"
+  ],
+  "về sinh hoạt hằng ngày": [
+    "about everyday life",
+    "关于日常生活"
+  ],
+  "Đang tải hội thoại…": [
+    "Loading conversation…",
+    "正在加载对话…"
+  ],
+  "Tải lại hội thoại": [
+    "Reload conversation",
+    "重新加载对话"
+  ],
+  "Đoạn hỏi: {0}": [
+    "Asked about: {0}",
+    "提问片段：{0}"
+  ],
+  "Nguồn phụ đề": [
+    "Subtitle source",
+    "字幕来源"
+  ],
+  "Xem lại": [
+    "Review",
+    "查看"
+  ],
+  "Thử lại câu hỏi": [
+    "Retry question",
+    "重新提问"
+  ],
+  "Tin nhắn mới": [
+    "New messages",
+    "新消息"
+  ],
+  "Đính kèm tệp sẽ sớm được hỗ trợ": [
+    "File attachments coming soon",
+    "即将支持附件"
+  ],
+  "Đính kèm tệp, sắp được hỗ trợ": [
+    "Attach file, coming soon",
+    "添加附件，即将支持"
+  ],
+  "Nhập câu hỏi cho Panda AI": [
+    "Enter a question for Panda AI",
+    "输入要问AI熊猫的问题"
+  ],
+  "Hỏi Panda về bài học này...": [
+    "Ask Panda about this lesson…",
+    "向熊猫提问本课内容…"
+  ],
+  "Nhập bằng giọng nói sẽ sớm được hỗ trợ": [
+    "Voice input coming soon",
+    "即将支持语音输入"
+  ],
+  "Nhập bằng giọng nói, sắp được hỗ trợ": [
+    "Voice input, coming soon",
+    "语音输入，即将支持"
+  ],
+  "Gửi câu hỏi": [
+    "Send question",
+    "发送问题"
+  ],
+  "Panda có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.": [
+    "Panda can make mistakes. Check important information.",
+    "熊猫可能会出错，请核实重要信息。"
+  ],
+  "Đã chọn": [
+    "Selected",
+    "已选择"
+  ],
+  "{0} phút trước": [
+    "{0} min ago",
+    "{0}分钟前"
+  ],
+  "{0} giờ trước": [
+    "{0} hr ago",
+    "{0}小时前"
+  ],
+  "Hôm qua": [
+    "Yesterday",
+    "昨天"
+  ],
+  "{0} ngày trước": [
+    "{0} days ago",
+    "{0}天前"
+  ],
+  "Đã đánh dấu {0} thông báo đã đọc": [
+    "Marked {0} notifications as read",
+    "已将{0}条通知标为已读"
+  ],
+  "Không thể đánh dấu tất cả đã đọc": [
+    "Could not mark all as read",
+    "无法全部标记已读"
+  ],
+  "{0} thông báo chưa đọc": [
+    "{0} unread notifications",
+    "{0}条未读通知"
+  ],
+  "Đang tải thông báo...": [
+    "Loading notifications…",
+    "正在加载通知…"
+  ],
+  "Xóa thông báo": [
+    "Delete notification",
+    "删除通知"
+  ],
+  "Mới bắt đầu": [
+    "Just starting",
+    "零基础"
+  ],
+  "150 từ vựng": [
+    "150 words",
+    "150个词汇"
+  ],
+  "Nhận diện bảng chữ cái Pinyin, phát âm chuẩn và chào hỏi cơ bản": [
+    "Learn Pinyin, pronunciation and basic greetings",
+    "认识拼音、掌握发音和基本问候"
+  ],
+  "Cơ bản": [
+    "Basic",
+    "基础"
+  ],
+  "300 từ vựng": [
+    "300 words",
+    "300个词汇"
+  ],
+  "Giao tiếp tình huống ngắn, hỏi giá, thời gian và chỉ dẫn đường": [
+    "Short conversations, prices, time and directions",
+    "简短情景交流、询价、时间与问路"
+  ],
+  "Trung cấp thông dụng": [
+    "Everyday intermediate",
+    "日常中级"
+  ],
+  "600 từ vựng": [
+    "600 words",
+    "600个词汇"
+  ],
+  "Xem video sinh hoạt, gọi món ăn, đặt phòng khách sạn, mua sắm": [
+    "Everyday videos, ordering food, hotels and shopping",
+    "日常视频、点餐、订酒店和购物"
+  ],
+  "Khuyên dùng": [
+    "Recommended",
+    "推荐"
+  ],
+  "Giao tiếp tự nhiên": [
+    "Natural conversation",
+    "自然交流"
+  ],
+  "1.200 từ vựng": [
+    "1,200 words",
+    "1,200个词汇"
+  ],
+  "Thảo luận nhiều chủ đề xã hội, phản xạ đối thoại lưu loát": [
+    "Discuss social topics and converse fluently",
+    "讨论多种社会话题，流利对话"
+  ],
+  "Nâng cao": [
+    "Advanced",
+    "进阶"
+  ],
+  "Thành thạo": [
+    "Proficient",
+    "熟练"
+  ],
+  "2.500 từ vựng": [
+    "2,500 words",
+    "2,500个词汇"
+  ],
+  "Xem phim và show truyền hình không cần phụ đề tiếng Việt, đọc báo chí": [
+    "Watch films and TV without Vietnamese subtitles, and read news",
+    "无需越南语字幕观看影视节目、阅读报刊"
+  ],
+  "Lưu loát": [
+    "Fluent",
+    "流利"
+  ],
+  "Chuyên sâu": [
+    "In-depth",
+    "深入"
+  ],
+  "5.000 từ vựng": [
+    "5,000 words",
+    "5,000个词汇"
+  ],
+  "Làm việc chuyên môn, đàm phán thương mại và nghiên cứu học thuật": [
+    "Professional work, business negotiations and academic research",
+    "专业工作、商务谈判与学术研究"
+  ],
+  "Chuyên gia": [
+    "Expert",
+    "专家"
+  ],
+  "Cao cấp 1": [
+    "Advanced 1",
+    "高级一"
+  ],
+  "5.000+ từ vựng": [
+    "5,000+ words",
+    "5,000多个词汇"
+  ],
+  "Làm chủ các chủ đề liên ngành: ngoại giao, luật pháp, khoa học kỹ thuật": [
+    "Cross-disciplinary topics: diplomacy, law, science and technology",
+    "掌握外交、法律、科学技术等跨学科话题"
+  ],
+  "Cao cấp 2": [
+    "Advanced 2",
+    "高级二"
+  ],
+  "Nắm vững ngôn ngữ học thuật, phân tích văn bản phức tạp đa ngữ cảnh": [
+    "Academic language and complex texts across contexts",
+    "掌握学术语言，分析多语境复杂文本"
+  ],
+  "Hoàn mỹ": [
+    "Mastery",
+    "精通"
+  ],
+  "Năng lực sử dụng tiếng Trung hoàn hảo ở tầm chuyên gia quốc tế": [
+    "Chinese proficiency at an international expert level",
+    "达到国际专家水平的中文能力"
+  ],
+  "Bậc thầy": [
+    "Master",
+    "大师"
+  ],
+  "Kinh doanh & Đi làm": [
+    "Business & work",
+    "商务与工作"
+  ],
+  "Giao tiếp công sở, email đối tác, văn hóa đàm phán thương mại": [
+    "Workplace communication, business emails and negotiation",
+    "职场交流、商务邮件和谈判文化"
+  ],
+  "Công việc": [
+    "Work",
+    "工作"
+  ],
+  "Du lịch & Trải nghiệm": [
+    "Travel & experiences",
+    "旅游与体验"
+  ],
+  "Đặt phòng, gọi món ăn, thủ tục sân bay, mua sắm và hỏi đường": [
+    "Hotels, food, airport procedures, shopping and directions",
+    "订房、点餐、机场手续、购物和问路"
+  ],
+  "Thực tế": [
+    "Practical",
+    "实用"
+  ],
+  "Nắm chắc ngữ pháp bẫy đề thi, nâng cao phản xạ nghe và đọc hiểu": [
+    "Master tricky grammar and improve listening and reading",
+    "掌握考试易错语法，提升听力与阅读能力"
+  ],
+  "Học thuật": [
+    "Academic",
+    "学术"
+  ],
+  "Giao tiếp đời sống hằng ngày": [
+    "Everyday communication",
+    "日常生活交流"
+  ],
+  "Cách nói tự nhiên như người bản xứ qua tình huống đời thực": [
+    "Natural expressions through real-life situations",
+    "通过真实场景学习地道表达"
+  ],
+  "Văn hóa, Phim ảnh & Show thực tế": [
+    "Culture, films & reality TV",
+    "文化、影视与真人秀"
+  ],
+  "Đu idol, xem phim cổ trang, gameshow Trung Quốc không rào cản": [
+    "Enjoy idols, period dramas and Chinese variety shows",
+    "轻松追星、看古装剧和中国综艺"
+  ],
+  "Ẩm thực & Nhà hàng": [
+    "Food & restaurants",
+    "美食与餐厅"
+  ],
+  "Du lịch & Khách sạn": [
+    "Travel & hotels",
+    "旅游与酒店"
+  ],
+  "Kinh doanh & Thương mại": [
+    "Business & commerce",
+    "商务与贸易"
+  ],
+  "Công nghệ & Đời sống số": [
+    "Technology & digital life",
+    "科技与数字生活"
+  ],
+  "Âm nhạc & Nghệ thuật": [
+    "Music & arts",
+    "音乐与艺术"
+  ],
+  "5 phút / ngày": [
+    "5 min / day",
+    "每天5分钟"
+  ],
+  "Mỗi ngày 1-2 video tình huống ngắn": [
+    "1–2 short videos each day",
+    "每天1至2个情景短视频"
+  ],
+  "15 phút / ngày": [
+    "15 min / day",
+    "每天15分钟"
+  ],
+  "Cân bằng lý tưởng để duy trì phản xạ đều đặn": [
+    "A balanced routine for steady progress",
+    "均衡安排，稳定提升"
+  ],
+  "30 phút / ngày": [
+    "30 min / day",
+    "每天30分钟"
+  ],
+  "Tăng tốc trình độ nhanh và bứt phá HSK": [
+    "Accelerate progress towards your HSK goals",
+    "加速提升水平，突破HSK目标"
+  ],
+  "Không thể lưu hồ sơ học tập.": [
+    "Could not save learning profile.",
+    "无法保存学习档案。"
+  ],
+  "Chào mừng": [
+    "Welcome",
+    "欢迎"
+  ],
+  "đến với HanFlix!": [
+    "to HanFlix!",
+    "来到HanFlix！"
+  ],
+  "Chọn các chủ đề bạn muốn học (có thể chọn nhiều). Đã chọn:": [
+    "Choose topics you want to learn (multiple allowed). Selected:",
+    "选择想学习的主题（可多选）。已选择："
+  ],
+  "chủ đề.": [
+    "topics.",
+    "个主题。"
+  ],
+  "+ Thêm": [
+    "+ Add",
+    "+ 添加"
+  ],
+  "Hán tự + Pinyin + Dịch tiếng Việt": [
+    "Chinese + Pinyin + Vietnamese",
+    "汉字 + 拼音 + 越南语翻译"
+  ],
+  "Rèn luyện phản xạ hiểu nghĩa trực tiếp": [
+    "Practise understanding directly",
+    "训练直接理解能力"
+  ],
+  "Dành cho luyện đọc chuyên sâu": [
+    "For focused reading practice",
+    "适合深入阅读练习"
+  ],
+  "Đấu Trường": [
+    "Leaderboard",
+    "排行榜"
+  ],
+  "Điểm kinh nghiệm đã được cộng vào bảng xếp hạng!": [
+    "Your XP has been added to the leaderboard!",
+    "经验值已计入排行榜！"
+  ],
+  "Hiển thị": [
+    "Showing",
+    "显示"
+  ],
+  "Số mục mỗi trang": [
+    "Items per page",
+    "每页条数"
+  ],
+  "/ trang": [
+    "/ page",
+    "/ 页"
+  ],
+  "Phân trang": [
+    "Pagination",
+    "分页"
+  ],
+  "Chọn một mục...": [
+    "Select an option…",
+    "选择一项…"
+  ],
+  "Song ngữ": [
+    "Bilingual",
+    "双语"
+  ],
+  "Xem bài học →": [
+    "View lesson →",
+    "查看课程 →"
+  ],
+  "Trang chủ": [
+    "Home",
+    "首页"
+  ],
+  "Gói Premium": [
+    "Premium plans",
+    "Premium套餐"
+  ],
+  "Quản lý các giao dịch đăng ký gói và đối soát hóa đơn của bạn": [
+    "Manage your plan purchases and payment records",
+    "管理套餐购买与付款记录"
+  ],
+  "Làm mới danh sách": [
+    "Refresh list",
+    "刷新列表"
+  ],
+  "Làm mới": [
+    "Refresh",
+    "刷新"
+  ],
+  "Xem các gói cước": [
+    "View plans",
+    "查看套餐"
+  ],
+  "Tài khoản hiện tại": [
+    "Current account",
+    "当前账号"
+  ],
+  "Gói Miễn phí": [
+    "Free plan",
+    "免费套餐"
+  ],
+  "Thời hạn: {0}": [
+    "Expires: {0}",
+    "有效期至：{0}"
+  ],
+  "Nâng cấp để mở khóa toàn bộ video & AI": [
+    "Upgrade to unlock all videos & AI",
+    "升级以解锁全部视频和AI"
+  ],
+  "Đơn thành công": [
+    "Successful orders",
+    "成功订单"
+  ],
+  "{0} giao dịch": [
+    "{0} transactions",
+    "{0}笔交易"
+  ],
+  "Tổng chi:": [
+    "Total spent:",
+    "总支出："
+  ],
+  "Phương thức thanh toán": [
+    "Payment method",
+    "支付方式"
+  ],
+  "Chuyển khoản QR 24/7 an toàn & tự động kích hoạt": [
+    "Secure QR transfers & automatic activation, 24/7",
+    "全天候安全二维码转账与自动激活"
+  ],
+  "Đã thanh toán (": [
+    "Paid (",
+    "已付款（"
+  ],
+  "Chờ thanh toán (": [
+    "Awaiting payment (",
+    "待付款（"
+  ],
+  "Khác (": [
+    "Other (",
+    "其他（"
+  ],
+  "giao dịch": [
+    "transactions",
+    "笔交易"
+  ],
+  "Đang tải dữ liệu đơn hàng...": [
+    "Loading orders…",
+    "正在加载订单…"
+  ],
+  "Không thể tải lịch sử thanh toán": [
+    "Could not load payment history",
+    "无法加载支付记录"
+  ],
+  "Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.": [
+    "Check your connection or try again.",
+    "请检查网络或重试。"
+  ],
+  "Bạn chưa có giao dịch nào": [
+    "No transactions yet",
+    "暂无交易"
+  ],
+  "Không tìm thấy giao dịch phù hợp với bộ lọc": [
+    "No transactions match the filters",
+    "未找到符合筛选条件的交易"
+  ],
+  "Khi bạn đăng ký các gói học Premium qua PayOS, toàn bộ thông tin mã đơn và hóa đơn điện tử sẽ được lưu trữ tại đây.": [
+    "When you purchase Premium through PayOS, order and payment details are stored here.",
+    "通过PayOS购买Premium后，订单和支付详情将保存在此处。"
+  ],
+  "Khám phá các gói học ngay": [
+    "Explore learning plans",
+    "探索学习套餐"
+  ],
+  "Mã đơn hàng": [
+    "Order ID",
+    "订单号"
+  ],
+  "Gói học": [
+    "Learning plan",
+    "学习套餐"
+  ],
+  "Thao tác": [
+    "Actions",
+    "操作"
+  ],
+  "Sao chép mã đơn": [
+    "Copy order ID",
+    "复制订单号"
+  ],
+  "Thời hạn:": [
+    "Duration:",
+    "时长："
+  ],
+  "tháng": [
+    "months",
+    "个月"
+  ],
+  "Thanh toán ngay": [
+    "Pay now",
+    "立即付款"
+  ],
+  "Xem chi tiết": [
+    "View details",
+    "查看详情"
+  ],
+  "Đang tạo đơn": [
+    "Creating order",
+    "正在创建订单"
+  ],
+  "Xem video học không giới hạn": [
+    "Unlimited lesson videos",
+    "无限观看教学视频"
+  ],
+  "Phụ đề Chữ Hán – Pinyin – Tiếng Việt": [
+    "Chinese–Pinyin–Vietnamese subtitles",
+    "汉字、拼音和越南语字幕"
+  ],
+  "Tra cứu và lưu từ vựng trực tiếp trong video": [
+    "Look up and save words in videos",
+    "直接在视频中查词和保存词汇"
+  ],
+  "Mở khóa toàn bộ quiz/bài luyện tập": [
+    "Unlock all quizzes and practice",
+    "解锁全部测验与练习"
+  ],
+  "AI cá nhân hóa & đề xuất nội dung": [
+    "Personalized AI & recommendations",
+    "个性化AI与内容推荐"
+  ],
+  "Theo dõi tiến độ học tập": [
+    "Track learning progress",
+    "跟踪学习进度"
+  ],
+  "Kho từ vựng & Flashcard": [
+    "Vocabulary & flashcards",
+    "词汇库与词卡"
+  ],
+  "Kho ngữ pháp": [
+    "Grammar library",
+    "语法库"
+  ],
+  "1 Tháng (Trải nghiệm)": [
+    "1 month (Explore)",
+    "1个月（体验）"
+  ],
+  "3 Tháng (Cơ bản - Tiết kiệm 16%)": [
+    "3 months (Standard – Save 16%)",
+    "3个月（基础 — 节省16%）"
+  ],
+  "1 Năm (Tiêu chuẩn - Best Value)": [
+    "1 year (Standard – Best value)",
+    "1年（标准 — 超值）"
+  ],
+  "Chặng học HSK {0}": [
+    "HSK {0} stage",
+    "HSK {0}级阶段"
+  ],
+  "Hoàn thành {0} bài học trong kho để đi tiếp. Chủ đề ưu tiên theo hồ sơ học tập của bạn.": [
+    "Complete {0} library lessons to continue. Topics follow your learning preferences.",
+    "完成词库中的{0}节课程以继续。主题优先匹配您的学习偏好。"
+  ],
+  "Chưa có bài học được xuất bản cho cấp này.": [
+    "No published lessons for this level yet.",
+    "此等级暂无已发布课程。"
+  ],
+  "Xác nhận": [
+    "Confirm",
+    "确认"
+  ],
+  "Đang tải...": [
+    "Loading…",
+    "正在加载…"
+  ],
+  "Vui lòng thử lại.": [
+    "Please try again.",
+    "请重试。"
+  ],
+  "Yêu cầu đã bị hủy": [
+    "Request cancelled",
+    "请求已取消"
+  ],
+  "Không thể kết nối đến máy chủ. Vui lòng thử lại.": [
+    "Cannot connect to the server. Please try again.",
+    "无法连接服务器，请重试。"
+  ],
+  "Không tìm thấy tài khoản thanh toán": [
+    "Payment account not found",
+    "未找到付款账号"
+  ],
+  "Đang cập nhật gói. Vui lòng kiểm tra lại thanh toán.": [
+    "Updating your plan. Please check payment again.",
+    "正在更新套餐，请再次检查支付状态。"
+  ],
+  "Không thể tải danh sách ngữ pháp": [
+    "Could not load grammar",
+    "无法加载语法列表"
+  ],
+  "Vui lòng thử lại sau.": [
+    "Please try again later.",
+    "请稍后重试。"
+  ],
+  "Lịch sử thanh toán & Đơn hàng": [
+    "Payments & orders",
+    "支付与订单记录"
+  ],
+  "Quản lý các giao dịch đăng ký gói, kiểm tra hóa đơn điện tử và đối soát thanh toán PayOS": [
+    "Manage plan purchases, view receipts and check PayOS payments",
+    "管理套餐交易、查看电子收据并核对PayOS付款"
+  ],
+  "Nâng cấp / Gia hạn gói": [
+    "Upgrade / renew plan",
+    "升级 / 续费套餐"
+  ],
+  "Hạn dùng: {0}": [
+    "Expires: {0}",
+    "有效期至：{0}"
+  ],
+  "Mở khóa toàn bộ video, phụ đề & AI": [
+    "Unlock all videos, subtitles & AI",
+    "解锁全部视频、字幕与AI"
+  ],
+  "Giao dịch thành công": [
+    "Successful transactions",
+    "成功交易"
+  ],
+  "{0} đơn hàng": [
+    "{0} orders",
+    "{0}个订单"
+  ],
+  "Đã kích hoạt quyền lợi học tập": [
+    "Learning benefits activated",
+    "学习权益已激活"
+  ],
+  "Tổng chi tiêu": [
+    "Total spent",
+    "总支出"
+  ],
+  "{0} đ": [
+    "{0} VND",
+    "{0}越南盾"
+  ],
+  "{0} đơn đang chờ xử lý": [
+    "{0} orders pending",
+    "{0}个订单待处理"
+  ],
+  "Tất cả đơn đã được đồng bộ": [
+    "All orders are synced",
+    "所有订单已同步"
+  ],
+  "Cổng thanh toán": [
+    "Payment gateway",
+    "支付网关"
+  ],
+  "Bảo mật Napas247 & kích hoạt tự động": [
+    "Napas247 security & automatic activation",
+    "Napas247安全支付与自动激活"
+  ],
+  "Tìm mã đơn hoặc gói...": [
+    "Search order ID or plan…",
+    "搜索订单号或套餐…"
+  ],
+  "Không tìm thấy đơn hàng nào khớp với từ khóa": [
+    "No orders match your search",
+    "未找到匹配的订单"
+  ],
+  "Không tìm thấy giao dịch với bộ lọc này": [
+    "No transactions match this filter",
+    "未找到符合此筛选条件的交易"
+  ],
+  "Khi bạn đăng ký các gói học Premium qua PayOS, toàn bộ thông tin đơn hàng và hóa đơn điện tử sẽ hiển thị tại đây.": [
+    "When you purchase Premium through PayOS, your order and payment details appear here.",
+    "通过PayOS购买Premium后，订单和支付详情将在此显示。"
+  ],
+  "Đặc quyền HanFlix VIP": [
+    "HanFlix VIP benefits",
+    "HanFlix VIP权益"
+  ],
+  "Mở khóa 100% kho video thực tế, phụ đề song ngữ": [
+    "Unlock the full real-life video library and bilingual subtitles",
+    "解锁全部真实场景视频和双语字幕"
+  ],
+  "Trợ lý AI phân tích ngữ pháp & hội thoại theo ngữ cảnh": [
+    "AI analysis of grammar & conversations in context",
+    "AI解析语境中的语法与对话"
+  ],
+  "Luyện thi và mô phỏng đề thi HSK 机考 trực tuyến": [
+    "Practise with online HSK computer-based mock exams",
+    "在线练习与模拟HSK机考"
+  ],
+  "Cộng dồn thời hạn tự động khi bạn mua thêm gói": [
+    "Additional purchases extend your remaining subscription",
+    "加购套餐自动延长剩余有效期"
+  ],
+  "Nâng cấp gói ngay": [
+    "Upgrade your plan",
+    "立即升级套餐"
+  ],
+  "Bảng giá & Đặc quyền VIP": [
+    "Plans & VIP benefits",
+    "价格与VIP权益"
+  ],
+  "Nâng tầm tiếng Trung cùng": [
+    "Improve your Chinese with",
+    "携手提升中文水平"
+  ],
+  "HanFlix Premium": [
+    "HanFlix Premium",
+    "HanFlix Premium"
+  ],
+  "Học tiếng Trung qua video cắt ngắn thực tế, phụ đề 3 tầng thông minh và luyện phản xạ cùng trợ lý AI. Chọn gói phù hợp để bứt phá mục tiêu của bạn.": [
+    "Learn Chinese with short real-life videos, three-layer subtitles and AI practice. Choose a plan for your goals.",
+    "通过真实场景短视频、三层字幕和AI练习学习中文，选择适合目标的套餐。"
+  ],
+  "Xem không giới hạn toàn bộ kho video bài học thực tế": [
+    "Unlimited access to all real-life lesson videos",
+    "无限观看全部真实场景教学视频"
+  ],
+  "Phụ đề thông minh 3 tầng (Hán tự, Pinyin, Tiếng Việt) & tra từ tức thì": [
+    "Three-layer subtitles (Chinese, Pinyin, Vietnamese) & instant lookup",
+    "三层字幕（汉字、拼音、越南语）与即时查词"
+  ],
+  "Trợ lý AI Panda giải thích ngữ pháp, ngữ cảnh & luyện phát âm chuẩn": [
+    "AI Panda explains grammar and context and helps with pronunciation",
+    "AI熊猫讲解语法、语境并帮助练习发音"
+  ],
+  "Hệ thống ôn tập thẻ ghi nhớ Flashcard ngắt quãng Spaced Repetition (SRS)": [
+    "Flashcard reviews with spaced repetition (SRS)",
+    "间隔重复（SRS）词卡复习系统"
+  ],
+  "Luyện tập Quiz tương tác & Đề thi thử HSK từ cấp 1 đến cấp 6": [
+    "Interactive quizzes & HSK 1–6 mock exams",
+    "互动测验与HSK 1至6级模拟考试"
+  ],
+  "Linh hoạt": [
+    "Flexible",
+    "灵活"
+  ],
+  "Trải nghiệm không ràng buộc, học thử thoải mái.": [
+    "Explore freely with no long-term commitment.",
+    "无长期承诺，轻松体验学习。"
+  ],
+  "đ/ngày": [
+    "VND/day",
+    "越南盾/天"
+  ],
+  "Mở khóa toàn bộ bài học": [
+    "Unlock all lessons",
+    "解锁全部课程"
+  ],
+  "Trợ lý AI Panda tương tác": [
+    "Interactive AI Panda assistant",
+    "互动AI熊猫助手"
+  ],
+  "Flashcard SRS ôn tập thông minh": [
+    "Smart SRS flashcard reviews",
+    "智能SRS词卡复习"
+  ],
+  "Đủ thời gian hoàn thành 1 cấp độ HSK mục tiêu.": [
+    "Time to work towards your next HSK level.",
+    "给自己时间迈向目标HSK等级。"
+  ],
+  "đ/tháng": [
+    "VND/month",
+    "越南盾/月"
+  ],
+  "BEST CHOICE · -41%": [
+    "BEST CHOICE · -41%",
+    "超值之选 · -41%"
+  ],
+  "VIP 12 Tháng": [
+    "12-month VIP",
+    "12个月VIP"
+  ],
+  "★ Đề xuất": [
+    "★ Recommended",
+    "★ 推荐"
+  ],
+  "1 Năm": [
+    "1 year",
+    "1年"
+  ],
+  "Bứt tốc làm chủ tiếng Trung, trọn vẹn cả năm.": [
+    "A full year to build your Chinese skills.",
+    "全年提升中文能力。"
+  ],
+  "AI Panda hỏi đáp không giới hạn": [
+    "Unlimited AI Panda Q&A",
+    "无限AI熊猫问答"
+  ],
+  "Luyện đề HSK 1 - 6 chuẩn đề thi": [
+    "HSK 1–6 exam practice",
+    "HSK 1至6级考试练习"
+  ],
+  "Thanh toán an toàn VietQR PayOS": [
+    "Secure VietQR PayOS payment",
+    "安全VietQR PayOS支付"
+  ],
+  "Kích hoạt tự động ngay sau khi quét": [
+    "Automatic activation after payment confirmation",
+    "确认付款后自动激活"
+  ],
+  "Không tự động trừ tiền kỳ tiếp theo": [
+    "No automatic charges for the next period",
+    "不会自动扣除下期费用"
+  ],
+  "Cấu trúc lịch sự trong giao tiếp thực tế với người bản xứ.": [
+    "Polite expressions for real conversations with native speakers.",
+    "与母语者交流时的礼貌表达。"
+  ],
+  "Luyện nghe giọng chuẩn Bắc Kinh với tốc độ tự nhiên.": [
+    "Practise listening to a Beijing accent at natural speed.",
+    "以自然语速练习标准北京口音听力。"
+  ],
+  "Cấu trúc trọng tâm HSK 3": [
+    "Key HSK 3 pattern",
+    "HSK 3级重点句型"
+  ],
+  "Mẫu câu trong video:": [
+    "Sentences from the video:",
+    "视频中的句型："
+  ],
+  "Đang tìm: “": [
+    "Searching: “",
+    "正在搜索：“"
+  ],
+  "Vô thời hạn": [
+    "No expiration",
+    "无期限"
+  ],
+  "Sửa": [
+    "Edit",
+    "编辑"
+  ],
+  "Giao tiếp đời sống và kết bạn": [
+    "Everyday conversation and making friends",
+    "日常交流与交友"
+  ],
+  "Du lịch và sinh hoạt tự túc": [
+    "Independent travel and daily life",
+    "自助旅行与生活"
+  ],
+  "Làm việc với đối tác Trung Quốc": [
+    "Working with Chinese partners",
+    "与中国合作伙伴工作"
+  ],
+  "Văn hóa và giải trí": [
+    "Culture and entertainment",
+    "文化与娱乐"
+  ],
+  "Mục tiêu khác": [
+    "Other goal",
+    "其他目标"
+  ],
+  "Chưa học bao giờ": [
+    "Never studied before",
+    "从未学过"
+  ],
+  "Đã học một chút": [
+    "Studied a little",
+    "学过一点"
+  ],
+  "Đã học nhưng chưa chắc trình độ": [
+    "Studied before, unsure of my level",
+    "学过，但不确定水平"
+  ],
+  "Tôi biết trình độ của mình": [
+    "I know my level",
+    "我了解自己的水平"
+  ],
+  "Luyện nghe": [
+    "Listening practice",
+    "听力练习"
+  ],
+  "Đọc tiếng Trung": [
+    "Reading Chinese",
+    "中文阅读"
+  ],
+  "Học từ vựng": [
+    "Learning vocabulary",
+    "词汇学习"
+  ],
+  "Dùng từ vào câu": [
+    "Using words in sentences",
+    "用词造句"
+  ],
+  "Chưa biết": [
+    "Not sure yet",
+    "尚不确定"
+  ],
+  "Phim ảnh và Âm nhạc": [
+    "Films and music",
+    "影视与音乐"
+  ],
+  "Đời sống hàng ngày": [
+    "Everyday life",
+    "日常生活"
+  ],
+  "Sức khỏe": [
+    "Health",
+    "健康"
+  ],
+  "Không có ưu tiên": [
+    "No preference",
+    "无偏好"
+  ],
+  "Cả ba lớp (Trung - Pinyin - Việt)": [
+    "All three (Chinese – Pinyin – Vietnamese)",
+    "三层全部显示（汉字、拼音、越南语）"
+  ],
+  "Trung và Pinyin": [
+    "Chinese and Pinyin",
+    "汉字与拼音"
+  ],
+  "Trung và Tiếng Việt": [
+    "Chinese and Vietnamese",
+    "中文与越南语"
+  ],
+  "Chỉ tiếng Trung": [
+    "Chinese only",
+    "仅中文"
+  ],
+  "Chưa biết, thử tất cả": [
+    "Not sure, try all",
+    "尚不确定，全部试试"
+  ],
+  "Giao tiếp đời sống": [
+    "Everyday communication",
+    "日常交流"
+  ],
+  "HSK 1 (Người mới bắt đầu)": [
+    "HSK 1 (Beginner)",
+    "HSK 1级（初学者）"
+  ],
+  "Chưa xác định": [
+    "Undecided",
+    "尚未确定"
+  ],
+  "Từ {0}": [
+    "From {0}",
+    "从{0}开始"
+  ],
+  "Tự đánh giá": [
+    "Self-assessed",
+    "自我评估"
+  ],
+  "Tự khai": [
+    "Self-reported",
+    "自我报告"
+  ],
+  "Đề xuất minh họa từ câu trả lời của bạn": [
+    "Sample recommendation based on your answers",
+    "根据回答生成的示例建议"
+  ],
+  "Lộ trình học dành riêng cho bạn": [
+    "Your personal learning path",
+    "专属学习路线"
+  ],
+  "Dựa trên mục tiêu": [
+    "Based on your goal",
+    "根据您的目标"
+  ],
+  "và thời gian": [
+    "and time of",
+    "以及每天"
+  ],
+  "phút mỗi ngày.": [
+    "minutes each day.",
+    "分钟的时间。"
+  ],
+  "Điểm xuất phát": [
+    "Starting point",
+    "起点"
+  ],
+  "Cam kết thời gian": [
+    "Time commitment",
+    "时间安排"
+  ],
+  "phút / ngày": [
+    "min / day",
+    "分钟/天"
+  ],
+  "ngày / tuần": [
+    "days / week",
+    "天/周"
+  ],
+  "Lịch học 7 ngày đầu tiên": [
+    "Your first 7 days",
+    "首周学习安排"
+  ],
+  "Ngày 1": [
+    "Day 1",
+    "第1天"
+  ],
+  "Chào hỏi và giới thiệu tên": [
+    "Greetings and introductions",
+    "问候与自我介绍"
+  ],
+  "Khởi động nhẹ nhàng · 2 phút": [
+    "Easy start · 2 min",
+    "轻松开始 · 2分钟"
+  ],
+  "Ngày 2": [
+    "Day 2",
+    "第2天"
+  ],
+  "Hỏi đường đến ga tàu": [
+    "Asking directions to the station",
+    "问路去车站"
+  ],
+  "Ứng dụng thực tế · 2 phút": [
+    "Practical use · 2 min",
+    "实际应用 · 2分钟"
+  ],
+  "Ngày 3": [
+    "Day 3",
+    "第3天"
+  ],
+  "Ôn tập 2 bài trước": [
+    "Review the first 2 lessons",
+    "复习前两课"
+  ],
+  "Flashcard từ vựng & bài tập": [
+    "Vocabulary flashcards & exercises",
+    "词汇卡片与练习"
+  ],
+  "Chỉnh sửa câu trả lời": [
+    "Edit answers",
+    "修改回答"
+  ],
+  "Xác nhận lộ trình": [
+    "Confirm learning path",
+    "确认学习路线"
+  ],
+  "Để sau (Lưu bản nháp và vào trang chủ)": [
+    "Later (save draft and go home)",
+    "稍后（保存草稿并返回首页）"
+  ],
+  "Bỏ qua": [
+    "Skip",
+    "跳过"
+  ],
+  "Mục tiêu chính khi học tiếng Trung của bạn là gì?": [
+    "What is your main goal for learning Chinese?",
+    "您学习中文的主要目标是什么？"
+  ],
+  "Chọn một mục tiêu phù hợp nhất.": [
+    "Choose the goal that fits you best.",
+    "选择最适合您的目标。"
+  ],
+  "Mục tiêu HSK (tùy chọn)": [
+    "HSK target (optional)",
+    "HSK目标（选填）"
+  ],
+  "Bạn đã từng học tiếng Trung chưa?": [
+    "Have you studied Chinese before?",
+    "您以前学过中文吗？"
+  ],
+  "\"Chưa biết trình độ\" là câu trả lời hợp lệ.": [
+    "It's fine to be unsure of your level.",
+    "不确定自己的水平也没关系。"
+  ],
+  "Trình độ hiện tại (theo đánh giá của bạn)": [
+    "Current level (your assessment)",
+    "当前水平（自我评估）"
+  ],
+  "Nguồn đánh giá": [
+    "Assessment source",
+    "评估依据"
+  ],
+  "Chứng chỉ HSK": [
+    "HSK certificate",
+    "HSK证书"
+  ],
+  "Sách giáo trình": [
+    "Textbook",
+    "教材"
+  ],
+  "Giáo viên nhận xét": [
+    "Teacher feedback",
+    "老师评价"
+  ],
+  "Bạn muốn tập trung luyện kỹ năng nào?": [
+    "Which skills would you like to focus on?",
+    "您想重点练习哪些技能？"
+  ],
+  "Chọn tối đa 2 kỹ năng. \"Chưa biết\" là lựa chọn hợp lệ.": [
+    "Choose up to 2 skills. It's fine to select \"Not sure yet\".",
+    "最多选择2项技能，也可以选择“尚不确定”。"
+  ],
+  "/2 kỹ năng": [
+    "/2 skills",
+    "/2项技能"
+  ],
+  "Bạn có thể dành bao nhiêu thời gian để học?": [
+    "How much time can you spend learning?",
+    "您能花多少时间学习？"
+  ],
+  "Phút mỗi ngày": [
+    "Minutes per day",
+    "每天分钟数"
+  ],
+  "Ngày học mỗi tuần": [
+    "Study days per week",
+    "每周学习天数"
+  ],
+  "Chủ đề nào bạn muốn học?": [
+    "Which topics would you like to learn?",
+    "您想学习哪些主题？"
+  ],
+  "Chọn tối đa 3 chủ đề, hoặc chọn \"Không có ưu tiên\".": [
+    "Choose up to 3 topics, or select \"No preference\".",
+    "最多选择3个主题，或选择“无偏好”。"
+  ],
+  "Bạn muốn xem phụ đề như thế nào?": [
+    "How would you like subtitles displayed?",
+    "您希望如何显示字幕？"
+  ],
+  "Có thể thay đổi bất cứ lúc nào trong phần cài đặt.": [
+    "You can change this anytime in settings.",
+    "随时可以在设置中更改。"
+  ],
+  "Xem lại câu trả lời của bạn": [
+    "Review your answers",
+    "查看您的回答"
+  ],
+  "Chỉnh sửa bằng cách quay lại các bước trước.": [
+    "Go back to previous steps to make changes.",
+    "返回之前的步骤即可修改。"
+  ],
+  "(chưa chọn)": [
+    "(not selected)",
+    "（未选择）"
+  ],
+  "Kinh nghiệm": [
+    "Experience",
+    "学习经历"
+  ],
+  "Kỹ năng muốn luyện": [
+    "Skills to practise",
+    "想练习的技能"
+  ],
+  "{0} phút/ngày, {1} ngày/tuần": [
+    "{0} min/day, {1} days/week",
+    "每天{0}分钟，每周{1}天"
+  ],
+  "Chủ đề yêu thích": [
+    "Favourite topics",
+    "喜欢的主题"
+  ],
+  "(không có ưu tiên)": [
+    "(no preference)",
+    "（无偏好）"
+  ],
+  "Phụ đề": [
+    "Subtitles",
+    "字幕"
+  ],
+  "Nhận đề xuất lộ trình": [
+    "Get a learning path",
+    "获取学习路线建议"
+  ],
+  "Đang tải học liệu...": [
+    "Loading learning materials…",
+    "正在加载学习资料…"
+  ],
+  "HanFlix Panda Lạc Đường": [
+    "HanFlix Panda is lost",
+    "HanFlix熊猫迷路了"
+  ],
+  "404 · LẠC ĐƯỜNG · 迷路": [
+    "404 · LOST · 迷路",
+    "404 · 迷路了"
+  ],
+  "Ối! Bạn đã đi lạc khỏi lộ trình rồi": [
+    "Oops! You've wandered off the path",
+    "哎呀！您走错路了"
+  ],
+  "Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển sang địa chỉ mới. Đừng lo, cùng HanFlix quay lại đường chính nhé!": [
+    "This page does not exist or has moved. Let's get you back to HanFlix.",
+    "您访问的页面不存在或已迁移。让我们一起返回HanFlix主页吧！"
+  ],
+  "Quay về Trang chủ": [
+    "Back to home",
+    "返回首页"
+  ],
+  "đang nghỉ": [
+    "resting",
+    "休息中"
+  ],
+  "đang suy nghĩ": [
+    "thinking",
+    "思考中"
+  ],
+  "đang làm việc": [
+    "working",
+    "工作中"
+  ],
+  "đang tìm kiếm": [
+    "searching",
+    "搜索中"
+  ],
+  "vui mừng": [
+    "celebrating",
+    "开心"
+  ],
+  "đang ngủ": [
+    "sleeping",
+    "睡觉中"
+  ],
+  "đang bối rối": [
+    "puzzled",
+    "困惑中"
+  ],
+  "Xin chào 👋": [
+    "Hello 👋",
+    "您好 👋"
+  ],
+  "Tôi là Panda AI. Tôi có thể giúp gì cho bạn trong hành trình học tiếng Trung?": [
+    "I'm Panda AI. How can I help with your Chinese learning?",
+    "我是AI熊猫，有什么可以帮助您学习中文的吗？"
+  ],
+  "Khò khò... 💤": [
+    "Zzz… 💤",
+    "呼呼… 💤"
+  ],
+  "Tôi vừa chợp mắt một chút. Bấm vào tôi để cùng học tiếp nhé!": [
+    "I was taking a nap. Click me to keep learning together!",
+    "我刚打了个盹，点击我一起继续学习吧！"
+  ],
+  "Đang suy nghĩ... 🤔": [
+    "Thinking… 🤔",
+    "思考中… 🤔"
+  ],
+  "Đợi tôi một chút, đang phân tích cấu trúc ngữ pháp và từ vựng cho bạn!": [
+    "One moment, I'm analysing the grammar and vocabulary for you!",
+    "请稍等，我正在为您分析语法和词汇！"
+  ],
+  "Đang biên soạn ⚡": [
+    "Writing ⚡",
+    "撰写中 ⚡"
+  ],
+  "Panda đang chăm chỉ tra cứu và soạn nội dung chi tiết cho bạn đây!": [
+    "Panda is researching and writing a detailed answer for you!",
+    "熊猫正在认真查阅资料，为您撰写详细解答！"
+  ],
+  "Đang tìm kiếm 🔍": [
+    "Searching 🔍",
+    "搜索中 🔍"
+  ],
+  "Đang tra cứu từ điển và kho bài học HanFlix phù hợp nhất...": [
+    "Searching dictionaries and relevant HanFlix lessons…",
+    "正在搜索词典及合适的HanFlix课程…"
+  ],
+  "Tuyệt vời quá! 🎉": [
+    "Well done! 🎉",
+    "太棒了！🎉"
+  ],
+  "Bạn làm rất tốt! Cùng giữ vững ngọn lửa học tập mỗi ngày nhé!": [
+    "You're doing well! Let's keep learning every day!",
+    "您做得很好！一起坚持每天学习吧！"
+  ],
+  "Bối rối một xíu... 😅": [
+    "A little puzzled… 😅",
+    "有点困惑… 😅"
+  ],
+  "Không sao cả, sai sót là một phần tự nhiên khi học một ngôn ngữ mới!": [
+    "It's okay — mistakes are part of learning a new language!",
+    "没关系，犯错是学习新语言的自然过程！"
+  ],
+  "Đóng lời chào của Panda": [
+    "Close Panda greeting",
+    "关闭熊猫问候"
+  ],
+  "Trợ lý Panda AI ({0})": [
+    "Panda AI assistant ({0})",
+    "AI熊猫助手（{0}）"
+  ],
+  "Mở trợ lý Panda AI": [
+    "Open Panda AI assistant",
+    "打开AI熊猫助手"
+  ],
+  "Trang": [
+    "Page",
+    "页"
+  ],
+  "Sale": [
+    "Sale",
+    "优惠"
+  ],
+  "Quiz": [
+    "Quiz",
+    "测验"
+  ],
+  "Flashcard": [
+    "Flashcards",
+    "词卡"
+  ],
+  "Xem video mẫu": [
+    "Watch sample videos",
+    "观看示例视频"
+  ],
+  "Chỉ xem video mẫu miễn phí": [
+    "Free sample videos only",
+    "仅观看免费示例视频"
+  ],
+  "Nâng cấp HanFlix Premium": [
+    "Upgrade to HanFlix Premium",
+    "升级HanFlix Premium"
+  ],
+  "Nâng cấp HanFlix Premium để mở khóa nội dung này": [
+    "Upgrade to HanFlix Premium to unlock this content",
+    "升级HanFlix Premium以解锁此内容"
+  ],
+  "Free: xem 5 video mẫu, phụ đề Chữ Hán – Pinyin – Tiếng Việt và tra cứu từ vựng cơ bản.": [
+    "Free: 5 sample videos, Chinese–Pinyin–Vietnamese subtitles and basic vocabulary lookup.",
+    "免费版：5个示例视频、汉字—拼音—越南语字幕与基础查词。"
+  ],
+  "Học tiếng Trung trọn vẹn hơn qua mỗi câu chuyện.": [
+    "Learn more Chinese through every story.",
+    "通过每个故事深入学习中文。"
+  ],
+  "Quyền lợi HanFlix Premium": [
+    "HanFlix Premium benefits",
+    "HanFlix Premium权益"
+  ],
+  "Các gói Premium": [
+    "Premium plans",
+    "Premium套餐"
+  ],
+  "Cả 3 gói đều mở khóa toàn bộ quyền lợi Premium, chỉ khác nhau về giá và thời hạn.": [
+    "All 3 plans unlock every Premium benefit; only price and duration differ.",
+    "3种套餐均解锁全部Premium权益，仅价格与时长不同。"
+  ],
+  "Được yêu thích nhất": [
+    "Most popular",
+    "最受欢迎"
+  ],
+  "Khoảng": [
+    "About",
+    "约"
+  ],
+  "Toàn bộ quyền lợi Premium": [
+    "All Premium benefits",
+    "全部Premium权益"
+  ],
+  "Chưa có nghĩa cho từ này.": [
+    "No meaning available for this word yet.",
+    "此词暂无释义。"
+  ],
+  "Đang tải": [
+    "Loading",
+    "加载中"
+  ],
+  "Tổng hợp": [
+    "General",
+    "综合"
+  ],
+  "Vui lòng thử lại sau ít phút.": [
+    "Please try again in a few minutes.",
+    "请几分钟后重试。"
+  ],
+  "Đã xảy ra lỗi không xác định": [
+    "An unexpected error occurred",
+    "发生未知错误"
+  ],
+  "Đăng nhập lại": [
+    "Sign in again",
+    "重新登录"
+  ],
+  "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.": [
+    "Your session expired. Please sign in again.",
+    "登录已过期，请重新登录。"
+  ],
+  "{0}+ TỪ": [
+    "{0}+ WORDS",
+    "{0}+ 个词"
+  ],
+  "Vui lòng đợi một chút trước khi thử lại.": [
+    "Please wait a moment before trying again.",
+    "请稍等片刻后重试。"
+  ],
+  "Chưa thể khôi phục phiên đăng nhập. Vui lòng thử lại.": [
+    "Unable to restore your session. Please try again.",
+    "暂时无法恢复登录状态，请重试。"
+  ],
+  "1 tháng": [
+    "1 month",
+    "1 个月"
+  ],
+  "3 tháng": [
+    "3 months",
+    "3 个月"
+  ],
+  "1 năm": [
+    "1 year",
+    "1 年"
+  ],
+  "Gia hạn ngay": [
+    "Renew now",
+    "立即续费"
+  ],
+  "Chưa chọn HSK": [
+    "HSK not selected",
+    "尚未选择 HSK 等级"
+  ],
+  "Cập nhật HSK": [
+    "Update HSK level",
+    "更新 HSK 等级"
+  ],
+  "Bạn chỉ được xem video thuộc HSK {0} theo hồ sơ hiện tại.": [
+    "Your current profile only allows videos at HSK {0}.",
+    "根据当前档案，你只能观看 HSK {0} 级的视频。"
+  ],
+  "Hãy cập nhật HSK hiện tại trong hồ sơ để xem video.": [
+    "Set your current HSK level in your profile to watch videos.",
+    "请在个人档案中设置当前 HSK 等级以观看视频。"
+  ],
+  "Video không thuộc HSK hiện tại": [
+    "Video outside your current HSK level",
+    "视频不属于当前 HSK 等级"
+  ],
+  "Xem video đúng HSK": [
+    "Browse videos at your HSK level",
+    "浏览当前 HSK 等级的视频"
+  ],
+  "Video được giới hạn theo HSK hiện tại trong hồ sơ, áp dụng cho cả Free và Premium.": [
+    "Videos are limited to the current HSK level in your profile for both Free and Premium accounts.",
+    "免费和 Premium 账户均只能观看个人档案中当前 HSK 等级的视频。"
+  ],
+  "Lịch sử thi HSK": [
+    "HSK exam history",
+    "HSK考试记录"
+  ],
+  "Không thể tải lịch sử thi.": [
+    "Unable to load exam history.",
+    "无法加载考试记录。"
+  ],
+  "Không thể tải kết quả thi.": [
+    "Unable to load exam results.",
+    "无法加载考试结果。"
+  ],
+  "Đang tải lịch sử thi…": [
+    "Loading exam history…",
+    "正在加载考试记录…"
+  ],
+  "Bạn chưa nộp bài thi nào.": [
+    "You have not submitted any exams yet.",
+    "您尚未提交任何考试。"
+  ],
+  "Xem kết quả": [
+    "View result",
+    "查看结果"
+  ],
+  "Hoạt động thi trong 30 ngày: {0} bài, {1} phút.": [
+    "Exam activity in 30 days: {0} exams, {1} minutes.",
+    "30天内的考试活动：{0}次考试，{1}分钟。"
+  ],
+  "Video & đề thi HSK ({0} đề)": [
+    "Videos & HSK exams ({0} exams)",
+    "视频及HSK考试（{0}次）"
+  ],
+  "Luyện Nghe HSK {0} (听力)": [
+    "HSK {0} listening practice (听力)",
+    "HSK {0} 听力练习"
+  ],
+  "Luyện Đọc hiểu HSK {0} (阅读)": [
+    "HSK {0} reading practice (阅读)",
+    "HSK {0} 阅读练习"
+  ],
+  "Bài nghe HSK {0}": [
+    "HSK {0} listening",
+    "HSK {0} 听力"
+  ],
+  "Nghe và chọn đáp án phù hợp.": [
+    "Listen and choose the appropriate answer.",
+    "请听录音并选择合适的答案。"
+  ],
+  "Đang tải lại kết quả thi…": [
+    "Restoring exam results…",
+    "正在恢复考试结果…"
+  ],
+  "Vui lòng đợi trong giây lát.": [
+    "Please wait a moment.",
+    "请稍候。"
+  ]
+}
