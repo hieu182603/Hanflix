@@ -18,20 +18,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <PandaPetProvider>
-          <NotificationProvider>
             {window.location.pathname === '/dev/panda'
               ? import.meta.env.DEV ? (
-                  <>
+                  <NotificationProvider>
                     <PandaPlayground />
                     <PandaPet />
-                  </>
+                  </NotificationProvider>
                 ) : <div>Trang này chỉ có trong môi trường phát triển.</div>
               : (
                 <BrowserRouter>
                   <App />
                 </BrowserRouter>
               )}
-          </NotificationProvider>
         </PandaPetProvider>
       </LanguageProvider>
     </QueryClientProvider>

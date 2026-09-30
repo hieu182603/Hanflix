@@ -1,3 +1,5 @@
+import { MemoryRouter } from 'react-router-dom';
+import { PremiumAccessProvider } from '../premium/PremiumAccess';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -21,9 +23,9 @@ function Register({ value }: { value: LearningAISource }) {
   const { register } = useLearningAI(); useEffect(() => register(value), [register, value]); return null;
 }
 function Harness({ value = source, open = true, prompt = '', consumed = vi.fn(), close = vi.fn() }) {
-  return <LearningAIProvider><Register value={value} />
+  return <MemoryRouter><PremiumAccessProvider user={{ premiumExpiresAt: new Date(Date.now() + 86400000) }}><LearningAIProvider><Register value={value} />
     <AIAssistantDrawer isOpen={open} onClose={close} initialPrompt={prompt} onPromptConsumed={consumed} currentUser={{ name: 'An' }} />
-  </LearningAIProvider>;
+  </LearningAIProvider></PremiumAccessProvider></MemoryRouter>;
 }
 async function send(question = 'Vì sao dùng 过?') {
   await waitFor(() => expect(screen.queryByText('Đang tải hội thoại…')).toBeNull());

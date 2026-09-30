@@ -1,5 +1,7 @@
+import { usePremiumAccess } from './premium/PremiumAccess';
+import { useI18n } from '../i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Play, Sparkles, Clock } from 'lucide-react';
+import { Play, Sparkles, Clock, Crown } from 'lucide-react';
 import type { PublishedLesson } from '../api/learning';
 import { formatDuration } from '../utils/text';
 import { useLessonPrefetchController } from '../hooks/useLessonPrefetchController';
@@ -42,8 +44,10 @@ export default function LessonCard({
   badgeText,
   className = '',
 }: LessonCardProps) {
+  const { tr } = useI18n();
   const [imageFailed, setImageFailed] = useState(false);
   const prefetcher = useLessonPrefetchController();
+  const isPremium = usePremiumAccess();
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sourceKey = `card:${lesson._id}`;
 
@@ -75,13 +79,13 @@ export default function LessonCard({
    * entirely (the click path still works — it just won't be warm).
    */
   const schedulePrefetch = useCallback(() => {
-    if (isConnectionConstrained()) return;
+    if (isConnectionConstrained() || (!isPremium && !lesson.isFreeSample)) return;
     if (hoverTimer.current) return;
     hoverTimer.current = setTimeout(() => {
       hoverTimer.current = null;
       prefetcher.acquire({ lessonId: lesson._id, source: sourceKey });
     }, PREFETCH_HOVER_MS);
-  }, [prefetcher, lesson._id, sourceKey]);
+  }, [prefetcher, lesson._id, sourceKey, isPremium, lesson.isFreeSample]);
 
   const cancelPrefetch = useCallback(() => {
     if (hoverTimer.current) {
@@ -156,10 +160,16 @@ export default function LessonCard({
           )}
         </div>
 
-        <div className="absolute top-2 right-2 z-10">
-          <span className="px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-white/10 text-white/90 text-[9px] font-bold shadow-sm">
-            Song ngữ
-          </span>
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+          {lesson.isFreeSample ? (
+            <span className="px-1.5 py-0.5 rounded bg-emerald-600/90 backdrop-blur-md border border-emerald-400/30 text-white text-[9px] font-black shadow-sm">{tr("Miễn phí")}</span>
+          ) : (
+            <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-amber-600 backdrop-blur-md border border-amber-300/40 text-white text-[9px] font-black shadow-sm flex items-center gap-0.5">
+              <Crown className="w-2.5 h-2.5 fill-white" />
+              VIP
+            </span>
+          )}
+          <span className="px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-white/10 text-white/90 text-[9px] font-bold shadow-sm">{tr("Song ngữ")}</span>
         </div>
 
         {/* Bottom Duration Badge */}
@@ -232,9 +242,7 @@ export default function LessonCard({
             </span>
           </div>
 
-          <span className="font-bold text-[#B91B1C] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform text-[11px]">
-            Xem bài học →
-          </span>
+          <span className="font-bold text-[#B91B1C] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform text-[11px]">{tr("Xem bài học →")}</span>
         </div>
       </div>
     </div>

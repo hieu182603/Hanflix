@@ -13,12 +13,13 @@ import AdminVideoList from './AdminVideoList';
 import AdminUserManager from './AdminUserManager';
 import AdminVideoUploader, { formatDurationMmSs } from './AdminVideoUploader';
 import AdminLessonReviewStudio from './AdminLessonReviewStudio';
+import AdminBillingManager from './AdminBillingManager';
 import { useNotification } from '../notifications';
 import { InlineBanner } from '../notifications';
 import { Spinner } from '../notifications';
 import { ApiRequestError } from '../../api/client';
 
-type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'quiz' | 'vocabulary' | 'grammar';
+type AdminTab = 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'users' | 'quiz' | 'vocabulary' | 'grammar' | 'billing';
 
 function errorText(error: unknown): string { return error instanceof Error ? error.message : 'Thao tác thất bại.'; }
 
@@ -742,5 +743,6 @@ export default function ConnectedAdmin({
     )}
     {tab === 'users' && <AdminUserManager />}
     {tab === 'quiz' && <AdminQuizManager />}
+    {tab === 'billing' && <AdminBillingManager />}
   </div>;
 }

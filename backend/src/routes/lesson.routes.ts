@@ -1,4 +1,7 @@
+import { lessonHskFilter, learnerHsk } from '../services/lesson-access.js';
 import { Router } from 'express';
+import { optionalAuth, requireLessonAccess, requireLessonHsk, requirePremium } from '../middleware/premium.js';
+import { freeSampleIds } from '../services/premium.js';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
@@ -20,9 +23,11 @@ import { withProcessingCompatibility } from '../services/lesson-presentation.js'
 import { NotificationService } from '../services/notification.service.js';
 
 const router = Router();
+router.use((_req, res, next) => { res.setHeader('Cache-Control', 'private, no-store'); next(); });
 
 const listSchema = z.object({
   q: z.string().trim().max(120).optional(),
+  sample: z.enum(['true', 'false']).optional(),
   hsk: z.coerce.number().int().min(1).max(9).optional(),
   topic: z.string().trim().max(50).optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -72,16 +77,18 @@ async function safeDownloadUrl(key?: string | null): Promise<string | null> {
   }
 }
 
-router.get('/', validateQuery(listSchema), asyncHandler(async (req, res) => {
-  const { q, hsk, topic, page, limit } = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listSchema>;
-  const filter: Record<string, unknown> = { status: 'published' };
-  if (hsk) filter.hsk = hsk;
+router.get('/', optionalAuth, validateQuery(listSchema), asyncHandler(async (req, res) => {
+  const { q, hsk, topic, page, limit, sample } = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof listSchema>;
+  const hskFilter = lessonHskFilter(req.auth, hsk);
+  const samples = await freeSampleIds(learnerHsk(req.auth));
+  const filter: Record<string, unknown> = { status: 'published', ...hskFilter };
+  if (sample === 'true') filter._id = { $in: samples };
   if (topic) filter.topicIds = topic;
   if (q) filter.$text = { $search: q };
 
   const [items, total] = await Promise.all([
     LessonModel.find(filter)
-      .select('-media.objectKey')
+      .select('-media.objectKey -lyricsRaw -chapters')
       .sort(q ? { score: { $meta: 'textScore' } } : { publishedAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -95,13 +102,14 @@ router.get('/', validateQuery(listSchema), asyncHandler(async (req, res) => {
   const itemsWithThumbnails = await Promise.all(
     items.map(async item => {
       const thumbnailUrl = await safeDownloadUrl(item.thumbnailKey);
-      return withProcessingCompatibility({ ...item, thumbnailUrl });
+      return withProcessingCompatibility({ ...item, playbackKey: undefined, thumbnailUrl, isFreeSample: samples.includes(String(item._id)) });
     }),
   );
-  res.json({ data: { items: itemsWithThumbnails, page, limit, total, pages: Math.ceil(total / limit) } });
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ data: { items: itemsWithThumbnails, page, limit, total, pages: Math.ceil(total / limit), currentHsk: learnerHsk(req.auth) ?? null } });
 }));
 
-router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+router.get('/:lessonId', validate(idSchema, 'params'), optionalAuth, requireLessonAccess, asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   // F12 fix (2026-09-19): prefer the faststart derivative when one exists.
@@ -112,10 +120,10 @@ router.get('/:lessonId', validate(idSchema, 'params'), asyncHandler(async (req, 
     safeDownloadUrl(playbackKey),
     safeDownloadUrl(lesson.thumbnailKey),
   ]);
-  res.json({ data: withProcessingCompatibility({ ...lesson, thumbnailUrl, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });
+  res.json({ data: withProcessingCompatibility({ ...lesson, playbackKey: undefined, thumbnailUrl, media: lesson.media ? { ...lesson.media, objectKey: undefined, url: mediaUrl } : null }) });
 }));
 
-router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+router.get('/:lessonId/subtitles', validate(idSchema, 'params'), optionalAuth, requireLessonAccess, asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeSubtitleRevision subtitleStyle').lean();
   if (!lesson?.activeSubtitleRevision) throw new AppError(404, 'SUBTITLES_NOT_FOUND', 'Bài học chưa có phụ đề đã xuất bản');
   const track = await SubtitleTrackModel.findOne({
@@ -129,7 +137,7 @@ router.get('/:lessonId/subtitles', validate(idSchema, 'params'), asyncHandler(as
   res.json({ data: { ...track, style: lesson.subtitleStyle } });
 }));
 
-router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+router.get('/:lessonId/quiz', validate(idSchema, 'params'), optionalAuth, requirePremium, requireLessonHsk, asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('activeQuizRevision').lean();
   if (!lesson?.activeQuizRevision) throw new AppError(404, 'QUIZ_NOT_FOUND', 'Bài học chưa có bài luyện tập');
   // FEATURE (2026-09-23): Send isCorrect in options so learner sees correct answer immediately after selection.
@@ -161,7 +169,7 @@ router.get('/:lessonId/quiz', validate(idSchema, 'params'), asyncHandler(async (
 // CONTENT MODE (2026-09-22) - PODCAST: chapters endpoint.
 // Trả về danh sách chapter cho podcast player. Trả về [] nếu lesson không phải podcast
 // hoặc chưa có chapters (an toàn — caller check truthy trước khi render).
-router.get('/:lessonId/chapters', validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+router.get('/:lessonId/chapters', validate(idSchema, 'params'), optionalAuth, requireLessonAccess, asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' })
     .select('contentMode chapters')
     .lean();
@@ -170,7 +178,7 @@ router.get('/:lessonId/chapters', validate(idSchema, 'params'), asyncHandler(asy
   res.json({ data: { chapters } });
 }));
 
-router.get('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), asyncHandler(async (req, res) => {
+router.get('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), requirePremium, requireLessonHsk, asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('durationSeconds').lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   const progress = await ProgressModel.findOne({ userId: req.auth!.userId, lessonId: lesson._id })
@@ -187,7 +195,7 @@ router.get('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), asy
   } });
 }));
 
-router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), validate(progressSchema), asyncHandler(async (req, res) => {
+router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), requireLessonAccess, validate(progressSchema), asyncHandler(async (req, res) => {
   const lesson = await LessonModel.findOne({ _id: req.params.lessonId, status: 'published' }).select('durationSeconds').lean();
   if (!lesson) throw new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài học');
   if (req.body.positionSeconds > lesson.durationSeconds) throw new AppError(422, 'INVALID_POSITION', 'Vị trí phát vượt quá thời lượng video');
@@ -225,7 +233,7 @@ router.patch('/:lessonId/progress', requireAuth, validate(idSchema, 'params'), v
   res.json({ data: { progress, coverage: watchedCoverage(ranges, lesson.durationSeconds), xpEarned, isNewCompletion } });
 }));
 
-router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), validate(attemptSchema), asyncHandler(async (req, res) => {
+router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), requirePremium, requireLessonHsk, validate(attemptSchema), asyncHandler(async (req, res) => {
   const input = req.body as AttemptInput;
   const existingAttempt = await QuizAttemptModel.findOne({ userId: req.auth!.userId, idempotencyKey: input.idempotencyKey }).lean();
   if (existingAttempt) {
@@ -240,6 +248,13 @@ router.post('/:lessonId/attempts', requireAuth, validate(idSchema, 'params'), va
 
   if (!quiz.questions.length) throw new AppError(422, 'QUIZ_EMPTY', 'Nội dung này không có bài luyện tập');
   const answerMap = new Map<string, AttemptInput['answers'][number]>(input.answers.map(answer => [answer.questionId, answer]));
+  const hasAnsweredQuestion = quiz.questions.some(question => {
+    const answer = answerMap.get(question.questionId);
+    return question.type === 'multiple_choice'
+      ? question.options.some(option => option.optionId === answer?.selectedOptionId)
+      : Boolean(answer?.textAnswer?.trim());
+  });
+  if (!hasAnsweredQuestion) throw new AppError(422, 'QUIZ_UNANSWERED', 'Hãy trả lời ít nhất một câu hỏi trước khi nộp.');
   const graded = quiz.questions.map(question => {
     const answer = answerMap.get(question.questionId);
     const correct = question.type === 'multiple_choice'

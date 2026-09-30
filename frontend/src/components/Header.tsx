@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Search,
@@ -11,6 +12,8 @@ import {
   Compass,
   Sparkles,
   Shield,
+  Crown,
+  ArrowLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +35,8 @@ interface HeaderProps {
   onOpenMenu?: () => void;
   onToggleCollapse?: () => void;
   isSidebarCollapsed?: boolean;
+  standaloneMode?: boolean;
+  onBack?: () => void;
   currentUser?: {
     name: string;
     email: string;
@@ -39,6 +44,7 @@ interface HeaderProps {
     totalXP?: number;
     avatarAsset?: string | null;
     learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null;
+    premiumExpiresAt?: Date | string | null;
   };
   onLogout?: () => void;
   streakDays?: number;
@@ -57,6 +63,8 @@ export default function Header({
   onOpenMenu,
   onToggleCollapse,
   isSidebarCollapsed = false,
+  standaloneMode = false,
+  onBack,
   currentUser,
   onLogout,
   streakDays = 0,
@@ -64,6 +72,7 @@ export default function Header({
   onNavigateToLessons,
   onNotificationAction,
 }: HeaderProps) {
+  const { tr, ui, locale } = useI18n();
   const { lang, setLang, t } = useLanguage();
   const panda = usePandaPet();
   const navigate = useNavigate();
@@ -73,7 +82,7 @@ export default function Header({
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const dashboardQuery = useQuery({
-    queryKey: dashboardQueryKeys.detail(),
+    queryKey: [...dashboardQueryKeys.detail(), currentUser?.learningProfile?.hskLevel ?? null],
     queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
     enabled: Boolean(currentUser),
     staleTime: 30000,
@@ -135,26 +144,45 @@ export default function Header({
     panda?.setPandaState('idle');
   };
 
+  const isUserPremium =
+    currentUser?.role === 'admin' ||
+    Boolean(currentUser?.premiumExpiresAt && new Date(currentUser.premiumExpiresAt) > new Date());
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E7E7EA] px-2 sm:px-4 md:pr-7 flex items-center justify-between shadow-xs safe-area-top min-h-[64px] sm:min-h-[68px]">
-      {/* Left: Hamburger (aligned with 72px sidebar rail center on desktop) + Brand Logo */}
+      {/* Left: Hamburger / Back Button + Brand Logo */}
       <div className="flex items-center shrink-0">
-        <div className="w-10 sm:w-12 lg:w-[72px] flex items-center justify-center shrink-0">
+        {standaloneMode ? (
           <button
             onClick={() => {
-              if (window.innerWidth < 1024) {
-                onOpenMenu?.();
-              } else {
-                onToggleCollapse?.();
-              }
+              if (onBack) onBack();
+              else navigate(-1);
             }}
-            aria-label={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
-            title={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] active:scale-95 transition-all cursor-pointer"
+            aria-label={tr("Quay lại")}
+            title={tr("Quay lại")}
+            className="h-10 px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold text-[#5F6368] hover:text-[#B91B1C] hover:bg-[#FFF2EE] active:scale-95 transition-all cursor-pointer mr-2"
           >
-            <Menu className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 text-[#B91B1C]" />
+            <span className="hidden sm:inline">{tr("Quay lại")}</span>
           </button>
-        </div>
+        ) : (
+          <div className="w-10 sm:w-12 lg:w-[72px] flex items-center justify-center shrink-0">
+            <button
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  onOpenMenu?.();
+                } else {
+                  onToggleCollapse?.();
+                }
+              }}
+              aria-label={isSidebarCollapsed ? tr("Mở rộng thanh điều hướng") : tr("Thu gọn thanh điều hướng")}
+              title={isSidebarCollapsed ? tr("Mở rộng thanh điều hướng") : tr("Thu gọn thanh điều hướng")}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] active:scale-95 transition-all cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        )}
         <div
           onClick={() => {
             if (currentUser) {
@@ -172,7 +200,7 @@ export default function Header({
             className="h-7 sm:h-8 md:h-10 w-auto max-w-[110px] sm:max-w-[160px] md:max-w-[190px] object-contain hover:scale-105 transition-transform drop-shadow-xs"
           />
           <span className="hidden md:inline-block px-2.5 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
-            HSK {currentUser?.learningProfile?.hskLevel || 3}
+            {currentUser?.learningProfile?.hskLevel ? `HSK ${currentUser.learningProfile.hskLevel}` : tr("Chưa chọn HSK")}
           </span>
         </div>
       </div>
@@ -245,6 +273,27 @@ export default function Header({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
+        {/* Nâng cấp Premium Button (Style chuẩn ảnh Hanzii với Sale badge góc trên) */}
+        <div className="relative shrink-0 mr-1 sm:mr-1.5">
+          <button
+            type="button"
+            onClick={() => navigate('/premium')}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 ${
+              isUserPremium
+                ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white shadow-amber-500/20'
+                : 'bg-[#FFF2EE] hover:bg-[#FFE6DF] text-[#B91B1C] border border-[#F2D0C7]'
+            }`}
+          >
+            <Crown className={`w-3.5 h-3.5 ${isUserPremium ? 'fill-white text-white' : 'text-[#B91B1C] fill-[#B91B1C]/20'}`} />
+            <span>{isUserPremium ? 'VIP' : tr("Nâng cấp")}</span>
+          </button>
+          {!isUserPremium && (
+            <span className="absolute -top-2.5 -right-1 px-1.5 py-0.5 rounded-full bg-[#E53935] text-white text-[9px] font-black tracking-wider uppercase rotate-12 shadow-xs pointer-events-none select-none">
+              {tr("Sale")}
+            </span>
+          )}
+        </div>
+
         {/* Interactive Streak Dropdown Center */}
         <StreakDropdown
           initialStreakDays={streakDays}
@@ -277,7 +326,7 @@ export default function Header({
                   key={item.code}
                   onClick={() => {
                     setLang(item.code);
-                    onLanguageChange?.(item.code);
+                    if (onLanguageChange !== setLang) onLanguageChange?.(item.code);
                     setShowLanguageMenu(false);
                   }}
                   className={`w-full px-3.5 py-2.5 text-left text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
@@ -286,7 +335,7 @@ export default function Header({
                 >
                   <span className="flex items-center gap-2.5">
                     <span className="text-base">{item.flag}</span>
-                    <span>{item.label}</span>
+                    <span lang={item.code}>{ui(item.label)}</span>
                   </span>
                   {lang === item.code && <Check className="w-4 h-4 text-[#B91B1C] stroke-[3]" />}
                 </button>
@@ -319,7 +368,7 @@ export default function Header({
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
-                    <span>HSK {currentUser?.learningProfile?.hskLevel || 3}</span>
+                    <span>{currentUser?.learningProfile?.hskLevel ? `HSK ${currentUser.learningProfile.hskLevel}` : tr("Chưa chọn HSK")}</span>
                     <span>·</span>
                     <span className="text-[#E7A92F]">Intermediate</span>
                   </div>
@@ -330,10 +379,10 @@ export default function Header({
                       navigate('/leaderboard');
                     }}
                     className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                    title="Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng"
+                    title={tr("Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng")}
                   >
                     <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
-                    <span>{liveXP.toLocaleString('vi-VN')} XP</span>
+                    <span>{liveXP.toLocaleString(locale)} XP</span>
                   </button>
                 </div>
               </div>
@@ -350,7 +399,7 @@ export default function Header({
                     className="w-full text-left px-4 py-2.5 text-sm font-bold text-[#B91B1C] hover:bg-[#FDF1F1] flex items-center gap-3 transition-colors cursor-pointer border-b border-[#E7E7EA]"
                   >
                     <Shield className="w-4 h-4 text-[#B91B1C]" />
-                    <span>Trang Quản Trị</span>
+                    <span>{tr("Trang Quản Trị")}</span>
                   </button>
                 )}
 
@@ -376,6 +425,24 @@ export default function Header({
                 >
                   <Compass className="w-4 h-4 text-[#B91B1C]" />
                   <span>{t.header.learningSurvey}</span>
+                </button>
+
+                {/* Payment History */}
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/payment-history');
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] flex items-center gap-3 transition-colors cursor-pointer"
+                >
+                  <span
+                    className="material-symbols-outlined text-[#5F6368] select-none flex items-center justify-center shrink-0 leading-none"
+                    style={{ fontSize: '16px', width: '16px', height: '16px' }}
+                    aria-hidden="true"
+                  >
+                    receipt_long
+                  </span>
+                  <span>{t.header.paymentHistory}</span>
                 </button>
               </div>
 

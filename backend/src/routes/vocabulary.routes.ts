@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { optionalAuth, requirePremium } from '../middleware/premium.js';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
@@ -17,7 +18,7 @@ import { asyncHandler } from '../utils/async-handler.js';
 const router = Router();
 
 // A completed catalog flashcard session counts once per day, without client-awarded XP.
-router.post('/practice-session', requireAuth, validate(z.object({
+router.post('/practice-session', requireAuth, requirePremium, validate(z.object({
   words: z.array(z.string().trim().min(1).max(50)).min(1).max(100),
 })), asyncHandler(async (req, res) => {
   const words = [...new Set<string>(req.body.words)];
@@ -61,7 +62,7 @@ const publicListQuerySchema = z.object({
 });
 
 // GET /api/vocabulary/saved
-router.get('/saved', requireAuth, asyncHandler(async (req, res) => {
+router.get('/saved', requireAuth, requirePremium, asyncHandler(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
   const skip = (page - 1) * limit;
@@ -90,7 +91,7 @@ router.get('/saved', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/vocabulary/due
-router.get('/due', requireAuth, asyncHandler(async (req, res) => {
+router.get('/due', requireAuth, requirePremium, asyncHandler(async (req, res) => {
   const items = await SavedWordModel.find({ userId: req.auth!.userId, nextReviewAt: { $lte: new Date() } })
     .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
     .sort({ nextReviewAt: 1 })
@@ -99,24 +100,23 @@ router.get('/due', requireAuth, asyncHandler(async (req, res) => {
   res.json({ data: { items, count: items.length } });
 }));
 
-// GET /api/vocabulary (Public HSK catalog OR backwards-compatible saved words)
-router.get('/', validateQuery(publicListQuerySchema), asyncHandler(async (req, res, next) => {
+// GET /api/vocabulary (Premium catalog OR backwards-compatible saved words)
+router.get('/', requireAuth, requirePremium, validateQuery(publicListQuerySchema), asyncHandler(async (req, res) => {
   const query = (req as unknown as Record<string, unknown>).parsedQuery as z.infer<typeof publicListQuerySchema>;
 
   // Backwards compatibility for user saved words
   if (query.view === 'saved' || query.saved === 'true') {
-    return requireAuth(req, res, async () => {
-      const items = await SavedWordModel.find({ userId: req.auth!.userId })
-        .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
-        .populate('sourceLessonId', 'titleVi titleZh slug')
-        .sort({ nextReviewAt: 1 })
-        .lean();
-      const dueCount = items.filter(item => item.nextReviewAt <= new Date()).length;
-      res.json({ data: { items, total: items.length, dueCount } });
-    });
+    const items = await SavedWordModel.find({ userId: req.auth!.userId })
+      .populate('wordId', 'hanzi pinyin meaningVi partOfSpeech examples audioKey')
+      .populate('sourceLessonId', 'titleVi titleZh slug')
+      .sort({ nextReviewAt: 1 })
+      .lean();
+    const dueCount = items.filter(item => item.nextReviewAt <= new Date()).length;
+    res.json({ data: { items, total: items.length, dueCount } });
+    return;
   }
 
-  // Public HSK catalog search
+  // Premium HSK catalog search
   const result = await vocabularyService.searchCatalog({
     page: query.page,
     limit: query.limit,
@@ -152,7 +152,7 @@ router.get('/:id', asyncHandler(async (req, res, next) => {
 }));
 
 // POST /api/vocabulary (Save word to notebook)
-router.post('/', requireAuth, validate(saveSchema), asyncHandler(async (req, res) => {
+router.post('/', requireAuth, requirePremium, validate(saveSchema), asyncHandler(async (req, res) => {
   const { wordId, sourceLessonId, sourceCueId, hanzi, pinyin, meaningVi, partOfSpeech } = req.body;
   let targetWordId: Types.ObjectId | null = null;
 
@@ -239,7 +239,7 @@ router.post('/', requireAuth, validate(saveSchema), asyncHandler(async (req, res
 }));
 
 // DELETE /api/vocabulary/:wordId (Remove from notebook)
-router.delete('/:wordId', requireAuth, validate(wordParam, 'params'), asyncHandler(async (req, res) => {
+router.delete('/:wordId', requireAuth, requirePremium, validate(wordParam, 'params'), asyncHandler(async (req, res) => {
   const targetId = new Types.ObjectId(req.params.wordId as string);
   await SavedWordModel.deleteOne({
     userId: req.auth!.userId,
@@ -249,7 +249,7 @@ router.delete('/:wordId', requireAuth, validate(wordParam, 'params'), asyncHandl
 }));
 
 // POST /api/vocabulary/:wordId/review (Submit SRS review)
-router.post('/:wordId/review', requireAuth, validate(wordParam, 'params'), validate(reviewSchema), asyncHandler(async (req, res) => {
+router.post('/:wordId/review', requireAuth, requirePremium, validate(wordParam, 'params'), validate(reviewSchema), asyncHandler(async (req, res) => {
   const saved = await SavedWordModel.findOne({ userId: req.auth!.userId, wordId: req.params.wordId });
   if (!saved) throw new AppError(404, 'SAVED_WORD_NOT_FOUND', 'Từ chưa có trong danh sách ôn tập');
   const result = scheduleReview({

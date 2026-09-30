@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import {
   useCallback,
   useEffect,
@@ -76,6 +77,7 @@ export default function YouTubePlayer({
   onTokenClick,
   onSaveWord,
 }: YouTubePlayerProps) {
+  const { tr, ui } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const volumeBarRef = useRef<HTMLDivElement | null>(null);
@@ -654,7 +656,7 @@ export default function YouTubePlayer({
             <AlertCircle className="w-6 h-6" />
           </div>
           <div className="max-w-md space-y-1">
-            <h3 className="font-bold text-base text-white">Chưa thể phát video này</h3>
+            <h3 className="font-bold text-base text-white">{tr("Chưa thể phát video này")}</h3>
             <p className="text-xs text-neutral-400 leading-relaxed">{loadError}</p>
           </div>
           <div className="flex items-center gap-2.5 pt-2">
@@ -668,16 +670,12 @@ export default function YouTubePlayer({
                 }
               }}
               className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
-            >
-              Thử tải lại
-            </button>
+            >{tr("Thử tải lại")}</button>
             <a
               href="/admin/upload"
               onClick={(e) => e.stopPropagation()}
               className="px-3.5 py-1.5 rounded-xl bg-[#B91B1C] hover:bg-[#991415] text-xs font-bold text-white transition-colors cursor-pointer shadow-sm"
-            >
-              Tải video mới (Admin)
-            </a>
+            >{tr("Tải video mới (Admin)")}</a>
           </div>
         </div>
       )}
@@ -739,7 +737,7 @@ export default function YouTubePlayer({
             onMouseEnter={() => setHoverTime(currentTime)}
             onMouseLeave={() => setHoverTime(null)}
             className="group/scrubber relative w-full h-1.5 hover:h-2.5 bg-white/20 hover:bg-white/30 rounded-full cursor-pointer transition-all flex items-center"
-            title="Kéo hoặc bấm để tua video"
+            title={tr("Kéo hoặc bấm để tua video")}
           >
             {/* Buffer progress bar */}
             <div
@@ -779,7 +777,7 @@ export default function YouTubePlayer({
                 type="button"
                 onClick={togglePlay}
                 className="p-1.5 sm:p-2 rounded-full text-white/90 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
-                title={isPlaying ? 'Tạm dừng (k)' : 'Phát (k)'}
+                title={isPlaying ? tr("Tạm dừng (k)") : tr("Phát (k)")}
               >
                 {isPlaying ? (
                   <Pause className="w-5 h-5 fill-white" />
@@ -802,7 +800,7 @@ export default function YouTubePlayer({
                   type="button"
                   onClick={toggleMute}
                   className="p-1.5 rounded-full text-white hover:bg-white/15 transition-all cursor-pointer flex items-center justify-center shrink-0"
-                  title={isMuted ? 'Bật âm thanh (m)' : 'Tắt âm thanh (m)'}
+                  title={isMuted ? tr("Bật âm thanh (m)") : tr("Tắt âm thanh (m)")}
                 >
                   {isMuted || volume === 0 ? (
                     <VolumeX className="w-5 h-5 text-white fill-white" />
@@ -826,7 +824,7 @@ export default function YouTubePlayer({
                     onMouseDown={handleVolumeMouseDown}
                     onTouchStart={handleVolumeTouchStart}
                     className="relative w-full h-8 flex items-center cursor-pointer select-none"
-                    title={`Âm lượng: ${Math.round((isMuted ? 0 : volume) * 100)}% (kéo để chỉnh)`}
+                    title={tr("Âm lượng: {0}% (kéo để chỉnh)", { 0: Math.round((isMuted ? 0 : volume) * 100) })}
                   >
                     {/* Background track (semi-transparent white) */}
                     <div className="w-full h-[3px] bg-white/30 rounded-full pointer-events-none" />
@@ -865,10 +863,10 @@ export default function YouTubePlayer({
                     ? 'bg-white/20 text-white border-white/30'
                     : 'bg-black/40 text-white/50 border-white/10'
                 }`}
-                title={`Tự động chuyển bài tiếp: ${autoplayNext ? 'Đang bật' : 'Đang tắt'}`}
+                title={tr("Tự động chuyển bài tiếp: {0}", { 0: autoplayNext ? 'Đang bật' : 'Đang tắt' })}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${autoplayNext ? 'bg-[#B91B1C] animate-pulse' : 'bg-neutral-400'}`} />
-                <span>Tự động phát</span>
+                <span>{tr("Tự động phát")}</span>
               </button>
 
               {/* Subtitles / CC Button (as seen in Image 2) */}
@@ -880,7 +878,7 @@ export default function YouTubePlayer({
                     ? 'text-white hover:bg-white/15'
                     : 'text-white/50 hover:text-white hover:bg-white/10'
                 }`}
-                title={areSubtitlesActive ? 'Tắt phụ đề (c)' : 'Bật phụ đề (c)'}
+                title={areSubtitlesActive ? tr("Tắt phụ đề (c)") : tr("Bật phụ đề (c)")}
               >
                 {areSubtitlesActive ? (
                   <div className="flex flex-col items-center">
@@ -907,7 +905,7 @@ export default function YouTubePlayer({
                     ? 'bg-white/20 text-white rotate-45'
                     : 'text-white/90 hover:text-white hover:bg-white/15'
                 }`}
-                title="Cài đặt phụ đề & tốc độ phát"
+                title={tr("Cài đặt phụ đề & tốc độ phát")}
               >
                 <Settings className="w-5 h-5 transition-transform duration-200" />
               </button>
@@ -921,9 +919,7 @@ export default function YouTubePlayer({
                   {/* Main Settings Menu */}
                   {settingsSubmenu === 'main' && (
                     <div className="space-y-1">
-                      <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/10">
-                        Cài đặt phát video
-                      </p>
+                      <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/10">{tr("Cài đặt phát video")}</p>
 
                       {/* Subtitle track 1 selector */}
                       <button
@@ -931,7 +927,7 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('topTrack')}
                         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-xs font-medium text-left cursor-pointer"
                       >
-                        <span className="text-neutral-300">Phụ đề dòng trên</span>
+                        <span className="text-neutral-300">{tr("Phụ đề dòng trên")}</span>
                         <div className="flex items-center gap-1 text-white font-bold">
                           <span>{TRACK_LABELS[topTrack]}</span>
                           <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
@@ -944,7 +940,7 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('bottomTrack')}
                         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-xs font-medium text-left cursor-pointer"
                       >
-                        <span className="text-neutral-300">Phụ đề dòng dưới</span>
+                        <span className="text-neutral-300">{tr("Phụ đề dòng dưới")}</span>
                         <div className="flex items-center gap-1 text-white font-bold">
                           <span>{TRACK_LABELS[bottomTrack]}</span>
                           <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
@@ -957,7 +953,7 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('size')}
                         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-xs font-medium text-left cursor-pointer"
                       >
-                        <span className="text-neutral-300">Cỡ chữ phụ đề</span>
+                        <span className="text-neutral-300">{tr("Cỡ chữ phụ đề")}</span>
                         <div className="flex items-center gap-1 text-white font-bold">
                           <span>{scale}%</span>
                           <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
@@ -970,9 +966,9 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('speed')}
                         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-xs font-medium text-left cursor-pointer"
                       >
-                        <span className="text-neutral-300">Tốc độ phát</span>
+                        <span className="text-neutral-300">{tr("Tốc độ phát")}</span>
                         <div className="flex items-center gap-1 text-white font-bold">
-                          <span>{playbackRate === 1 ? 'Chuẩn' : `${playbackRate}x`}</span>
+                          <span>{playbackRate === 1 ? tr("Chuẩn") : `${playbackRate}x`}</span>
                           <ChevronRight className="w-3.5 h-3.5 text-neutral-400" />
                         </div>
                       </button>
@@ -987,7 +983,7 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('main')}
                         className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white border-b border-white/10 cursor-pointer"
                       >
-                        <span>← Chọn dòng phụ đề trên</span>
+                        <span>{tr("← Chọn dòng phụ đề trên")}</span>
                       </button>
                       {(['off', 'zh', 'pinyin', 'vi'] as SubtitleLanguageTrack[]).map((track) => (
                         <button
@@ -1016,7 +1012,7 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('main')}
                         className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white border-b border-white/10 cursor-pointer"
                       >
-                        <span>← Chọn dòng phụ đề dưới</span>
+                        <span>{tr("← Chọn dòng phụ đề dưới")}</span>
                       </button>
                       {(['off', 'zh', 'pinyin', 'vi'] as SubtitleLanguageTrack[]).map((track) => (
                         <button
@@ -1045,13 +1041,13 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('main')}
                         className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white border-b border-white/10 cursor-pointer"
                       >
-                        <span>← Cỡ chữ phụ đề</span>
+                        <span>{tr("← Cỡ chữ phụ đề")}</span>
                       </button>
 
                       {/* Custom Size Stepper & Slider */}
                       <div className="bg-white/5 p-3 rounded-xl space-y-2.5 border border-white/5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-neutral-300 font-medium">Tùy chỉnh</span>
+                          <span className="text-neutral-300 font-medium">{tr("Tùy chỉnh")}</span>
                           <span className="text-[#B91B1C] font-mono font-bold">{scale}%</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1060,7 +1056,7 @@ export default function YouTubePlayer({
                             onClick={() => handleScaleChange(scale - 5)}
                             disabled={scale <= 60}
                             className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Giảm 5%"
+                            title={tr("Giảm 5%")}
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
@@ -1078,7 +1074,7 @@ export default function YouTubePlayer({
                             onClick={() => handleScaleChange(scale + 5)}
                             disabled={scale >= 180}
                             className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Tăng 5%"
+                            title={tr("Tăng 5%")}
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -1090,7 +1086,7 @@ export default function YouTubePlayer({
                             className="w-full text-center text-[10px] text-neutral-400 hover:text-white flex items-center justify-center gap-1 pt-1 cursor-pointer transition-colors"
                           >
                             <RotateCcw className="w-2.5 h-2.5" />
-                            <span>Về cỡ chuẩn 100%</span>
+                            <span>{tr("Về cỡ chuẩn 100%")}</span>
                           </button>
                         )}
                       </div>
@@ -1105,13 +1101,13 @@ export default function YouTubePlayer({
                         onClick={() => setSettingsSubmenu('main')}
                         className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white border-b border-white/10 cursor-pointer"
                       >
-                        <span>← Tốc độ phát video</span>
+                        <span>{tr("← Tốc độ phát video")}</span>
                       </button>
 
                       {/* Custom Speed Stepper & Slider */}
                       <div className="bg-white/5 p-2.5 rounded-xl space-y-2 border border-white/5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-neutral-300 font-medium">Tùy chỉnh tốc độ</span>
+                          <span className="text-neutral-300 font-medium">{tr("Tùy chỉnh tốc độ")}</span>
                           <span className="text-red-400 font-mono font-bold">{playbackRate.toFixed(2)}x</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1120,7 +1116,7 @@ export default function YouTubePlayer({
                             onClick={() => changePlaybackRate(Math.max(0.25, playbackRate - 0.05), false)}
                             disabled={playbackRate <= 0.25}
                             className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Chậm hơn 0.05x"
+                            title={tr("Chậm hơn 0.05x")}
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
@@ -1138,7 +1134,7 @@ export default function YouTubePlayer({
                             onClick={() => changePlaybackRate(Math.min(2.5, playbackRate + 0.05), false)}
                             disabled={playbackRate >= 2.5}
                             className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Nhanh hơn 0.05x"
+                            title={tr("Nhanh hơn 0.05x")}
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -1150,7 +1146,7 @@ export default function YouTubePlayer({
                             className="w-full text-center text-[10px] text-neutral-400 hover:text-white flex items-center justify-center gap-1 pt-0.5 cursor-pointer"
                           >
                             <RotateCcw className="w-2.5 h-2.5" />
-                            <span>Về tốc độ chuẩn 1.0x</span>
+                            <span>{tr("Về tốc độ chuẩn 1.0x")}</span>
                           </button>
                         )}
                       </div>
@@ -1176,7 +1172,7 @@ export default function YouTubePlayer({
                                 : 'hover:bg-white/10 text-neutral-300'
                             }`}
                           >
-                            <span>{item.label}</span>
+                            <span>{ui(item.label)}</span>
                             {playbackRate === item.rate && <Check className="w-4 h-4 text-[#B91B1C]" />}
                           </button>
                         ))}
@@ -1191,7 +1187,7 @@ export default function YouTubePlayer({
                 type="button"
                 onClick={toggleFullscreen}
                 className="p-1.5 sm:p-2 rounded-full text-white/90 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
-                title={isFullscreen ? 'Thoát toàn màn hình (f)' : 'Toàn màn hình (f)'}
+                title={isFullscreen ? tr("Thoát toàn màn hình (f)") : tr("Toàn màn hình (f)")}
               >
                 {isFullscreen ? (
                   <Minimize className="w-5 h-5" />

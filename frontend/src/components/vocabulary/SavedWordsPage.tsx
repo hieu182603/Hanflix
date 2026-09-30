@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 
 import {
@@ -56,6 +57,7 @@ export default function SavedWordsPage({
 
   hideTopBanner = false,
 }: SavedWordsPageProps) {
+  const { tr } = useI18n();
   // Flashcard state (rendered directly on page)
 
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -316,16 +318,10 @@ export default function SavedWordsPage({
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/15 text-[#B91B1C] text-xs font-bold mb-2">
               <Bookmark className="w-3.5 h-3.5 fill-[#B91B1C]" />
-              <span>Sổ Từ & Luyện Tập SRS</span>
+              <span>{tr("Sổ Từ & Luyện Tập SRS")}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">
-              Kho Lưu Trữ Từ Vựng
-            </h1>
-            <p className="text-xs md:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
-              Hệ thống ôn tập ngắt quãng (SRS) tự động tính toán thời điểm vàng
-              để đưa từ vựng trở lại bộ nhớ, giúp bạn nhớ từ sâu và lâu bền
-              nhất.
-            </p>
+            <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">{tr("Kho Lưu Trữ Từ Vựng")}</h1>
+            <p className="text-xs md:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">{tr("Hệ thống ôn tập ngắt quãng (SRS) tự động tính toán thời điểm vàng để đưa từ vựng trở lại bộ nhớ, giúp bạn nhớ từ sâu và lâu bền nhất.")}</p>
           </div>
         </div>
       )}
@@ -367,11 +363,9 @@ export default function SavedWordsPage({
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F7F7F9] border border-[#E7E7EA] text-[11px] font-bold text-[#5F6368] uppercase tracking-wider">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#B91B1C]" />
-                      <span>Mặt trước · Thuật ngữ</span>
+                      <span>{tr("Mặt trước · Thuật ngữ")}</span>
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-lg bg-neutral-100 text-[10px] font-medium text-[#5F6368]">
-                      Lặp {currentWord?.repetitions ?? 0} lần
-                    </span>
+                    <span className="px-2.5 py-0.5 rounded-lg bg-neutral-100 text-[10px] font-medium text-[#5F6368]">{tr("Lặp")} {currentWord?.repetitions ?? 0} {tr("lần")}</span>
                   </div>
 
                   <button
@@ -381,7 +375,7 @@ export default function SavedWordsPage({
 
                       playPronunciation(currentWord?.wordId?.hanzi || "")
                     }}
-                    title="Nghe phát âm chuẩn (Giọng Bắc Kinh)"
+                    title={tr("Nghe phát âm chuẩn (Giọng Bắc Kinh)")}
                     className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                       speakingHanzi === currentWord?.wordId?.hanzi
                         ? "bg-[#B91B1C] text-white border-[#B91B1C] scale-110 shadow-md"
@@ -400,7 +394,7 @@ export default function SavedWordsPage({
 
                   <div className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#8B9097] group-hover:text-[#B91B1C] bg-white group-hover:bg-[#FDF1F1] px-4 py-1.5 rounded-full border border-[#E7E7EA] group-hover:border-[#B91B1C]/30 transition-all shadow-2xs">
                     <RotateCcw className="w-3.5 h-3.5 text-[#B91B1C] transition-transform duration-500 group-hover:rotate-180" />
-                    <span>Chạm để lật xem định nghĩa & phát âm</span>
+                    <span>{tr("Chạm để lật xem định nghĩa & phát âm")}</span>
                   </div>
                 </div>
 
@@ -408,11 +402,9 @@ export default function SavedWordsPage({
                 <div className="relative z-10 flex items-center justify-between text-xs text-[#8B9097] border-t border-[#E7E7EA]/70 pt-3">
                   <span className="truncate max-w-[200px]">
                     {currentWord?.sourceLessonId?.titleVi ||
-                      "Từ vựng lưu từ bài học"}
+                      tr("Từ vựng lưu từ bài học")}
                   </span>
-                  <kbd className="px-2 py-0.5 rounded-md bg-[#F7F7F9] border border-[#E7E7EA] text-[10px] font-mono text-neutral-600 font-bold">
-                    Space để lật thẻ
-                  </kbd>
+                  <kbd className="px-2 py-0.5 rounded-md bg-[#F7F7F9] border border-[#E7E7EA] text-[10px] font-mono text-neutral-600 font-bold">{tr("Space để lật thẻ")}</kbd>
                 </div>
               </div>
 
@@ -436,7 +428,7 @@ export default function SavedWordsPage({
                 <div className="relative z-10 flex items-center justify-between gap-3">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/25 text-[11px] font-bold text-[#B91B1C] uppercase tracking-wider">
                     <Sparkles className="w-3.5 h-3.5 fill-[#B91B1C]" />
-                    <span>Mặt sau · Định nghĩa & Phát âm</span>
+                    <span>{tr("Mặt sau · Định nghĩa & Phát âm")}</span>
                   </span>
 
                   <button
@@ -446,7 +438,7 @@ export default function SavedWordsPage({
 
                       playPronunciation(currentWord?.wordId?.hanzi || "")
                     }}
-                    title="Nghe lại phát âm"
+                    title={tr("Nghe lại phát âm")}
                     className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                       speakingHanzi === currentWord?.wordId?.hanzi
                         ? "bg-[#B91B1C] text-white border-[#B91B1C] scale-110 shadow-md"
@@ -480,10 +472,10 @@ export default function SavedWordsPage({
 
                 {/* Bottom Row: Tip + Flip back hint */}
                 <div className="relative z-10 flex items-center justify-between text-xs text-[#8B9097] border-t border-[#E7E7EA]/70 pt-3">
-                  <span>Mặt sau định nghĩa & phát âm</span>
+                  <span>{tr("Mặt sau định nghĩa & phát âm")}</span>
                   <div className="inline-flex items-center gap-1.5 font-bold text-[#B91B1C] hover:underline">
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Lật lại mặt trước</span>
+                    <span>{tr("Lật lại mặt trước")}</span>
                   </div>
                 </div>
               </div>
@@ -503,7 +495,7 @@ export default function SavedWordsPage({
               className="h-11 px-4 sm:px-5 rounded-2xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-[#18181B] font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>Thẻ trước</span>
+              <span>{tr("Thẻ trước")}</span>
             </button>
 
             {/* Center: 2 Nút tích Thuộc & Chưa thuộc + Card Counter */}
@@ -521,10 +513,10 @@ export default function SavedWordsPage({
                     ? "bg-red-600 text-white border-red-600 shadow-sm"
                     : "bg-white hover:bg-red-50 text-red-600 border-red-200 hover:border-red-300"
                 }`}
-                title="Đánh dấu từ này là Chưa thuộc"
+                title={tr("Đánh dấu từ này là Chưa thuộc")}
               >
                 <XCircle className="w-4 h-4" />
-                <span>Chưa thuộc</span>
+                <span>{tr("Chưa thuộc")}</span>
               </button>
 
               <span className="font-mono text-xs sm:text-sm font-bold text-[#8B9097] bg-[#F7F7F9] px-3.5 py-2 rounded-xl border border-[#E7E7EA]">
@@ -546,10 +538,10 @@ export default function SavedWordsPage({
                     ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
                     : "bg-white hover:bg-emerald-50 text-emerald-600 border-emerald-200 hover:border-emerald-300"
                 }`}
-                title="Đánh dấu từ này là Đã thuộc"
+                title={tr("Đánh dấu từ này là Đã thuộc")}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Thuộc</span>
+                <span>{tr("Thuộc")}</span>
               </button>
             </div>
 
@@ -568,8 +560,8 @@ export default function SavedWordsPage({
             >
               <span>
                 {currentIndex + 1 === activeDeck.length
-                  ? "Bắt đầu lại"
-                  : "Thẻ tiếp theo"}
+                  ? tr("Bắt đầu lại")
+                  : tr("Thẻ tiếp theo")}
               </span>
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -588,7 +580,7 @@ export default function SavedWordsPage({
             <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Tìm từ theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt..."
+              placeholder={tr("Tìm từ theo chữ Hán, Pinyin hoặc nghĩa tiếng Việt...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs font-medium text-[#18181B] placeholder-[#8B9097] outline-none focus:border-[#B91B1C] focus:bg-white transition-all"
@@ -598,7 +590,7 @@ export default function SavedWordsPage({
                 type="button"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-0.5 cursor-pointer"
-                title="Xóa tìm kiếm"
+                title={tr("Xóa tìm kiếm")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -615,8 +607,7 @@ export default function SavedWordsPage({
                   ? "bg-[#18181B] text-white shadow-xs"
                   : "bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] hover:bg-[#EFEFF2]"
               }`}
-            >
-              Tất cả ({totalSavedCount})
+            >{tr("Tất cả (")}{totalSavedCount})
             </button>
 
             <button
@@ -629,7 +620,7 @@ export default function SavedWordsPage({
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Thuộc ({learnedCount})</span>
+              <span>{tr("Thuộc (")}{learnedCount})</span>
             </button>
 
             <button
@@ -642,7 +633,7 @@ export default function SavedWordsPage({
               }`}
             >
               <XCircle className="w-3.5 h-3.5" />
-              <span>Chưa thuộc ({unlearnedCount})</span>
+              <span>{tr("Chưa thuộc (")}{unlearnedCount})</span>
             </button>
           </div>
         </div>
@@ -653,32 +644,23 @@ export default function SavedWordsPage({
             <div className="w-16 h-16 rounded-3xl bg-[#FDF1F1] text-[#B91B1C] flex items-center justify-center mx-auto mb-4 border border-[#B91B1C]/15 shadow-inner">
               <Bookmark className="w-8 h-8 fill-[#B91B1C]" />
             </div>
-            <h2 className="text-xl font-black text-[#18181B]">
-              Chưa có từ vựng nào trong kho lưu trữ
-            </h2>
-            <p className="text-xs sm:text-sm text-[#5F6368] mt-2 max-w-md mx-auto leading-relaxed">
-              Khi xem video bài học hoặc khám phá danh mục từ vựng theo chủ đề,
-              hãy bấm biểu tượng lưu từ để thêm vào sổ tay luyện tập SRS.
-            </p>
+            <h2 className="text-xl font-black text-[#18181B]">{tr("Chưa có từ vựng nào trong kho lưu trữ")}</h2>
+            <p className="text-xs sm:text-sm text-[#5F6368] mt-2 max-w-md mx-auto leading-relaxed">{tr("Khi xem video bài học hoặc khám phá danh mục từ vựng theo chủ đề, hãy bấm biểu tượng lưu từ để thêm vào sổ tay luyện tập SRS.")}</p>
             {onNavigateToVocabulary && (
               <button
                 onClick={onNavigateToVocabulary}
                 className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#B91B1C]/20 transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 fill-white" />
-                <span>Khám phá Kho Từ Vựng ngay</span>
+                <span>{tr("Khám phá Kho Từ Vựng ngay")}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
         ) : filteredList.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 border border-[#E7E7EA] text-center">
-            <p className="text-sm font-bold text-[#18181B]">
-              Không tìm thấy từ vựng nào
-            </p>
-            <p className="text-xs text-[#8B9097] mt-1">
-              Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.
-            </p>
+            <p className="text-sm font-bold text-[#18181B]">{tr("Không tìm thấy từ vựng nào")}</p>
+            <p className="text-xs text-[#8B9097] mt-1">{tr("Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.")}</p>
           </div>
         ) : (
           /* List View (Dạng Danh Sách Hàng Ngang có đổi màu khi tích Thuộc / Chưa thuộc) */
@@ -725,7 +707,7 @@ export default function SavedWordsPage({
                             {pinyin}
                           </span>
                           <span className="text-[11px] text-[#8B9097] px-2.5 py-0.5 rounded-full bg-[#F7F7F9] border border-[#E7E7EA]/70">
-                            {item.sourceLessonId?.titleVi || "Từ vựng chủ đề"}
+                            {item.sourceLessonId?.titleVi || tr("Từ vựng chủ đề")}
                           </span>
                         </div>
                         <p className="text-xs sm:text-sm text-[#3F3F46] font-medium mt-1 line-clamp-2">
@@ -745,8 +727,8 @@ export default function SavedWordsPage({
                           }
                           title={
                             status === "unlearned"
-                              ? "Bỏ tích chưa thuộc"
-                              : "Tích chưa thuộc (đổi màu đỏ nhạt)"
+                              ? tr("Bỏ tích chưa thuộc")
+                              : tr("Tích chưa thuộc (đổi màu đỏ nhạt)")
                           }
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                             status === "unlearned"
@@ -755,7 +737,7 @@ export default function SavedWordsPage({
                           }`}
                         >
                           <XCircle className="w-3.5 h-3.5" />
-                          <span>Chưa thuộc</span>
+                          <span>{tr("Chưa thuộc")}</span>
                         </button>
 
                         <button
@@ -765,8 +747,8 @@ export default function SavedWordsPage({
                           }
                           title={
                             status === "learned"
-                              ? "Bỏ tích đã thuộc"
-                              : "Tích đã thuộc (đổi màu xanh nhạt)"
+                              ? tr("Bỏ tích đã thuộc")
+                              : tr("Tích đã thuộc (đổi màu xanh nhạt)")
                           }
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                             status === "learned"
@@ -775,7 +757,7 @@ export default function SavedWordsPage({
                           }`}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Thuộc</span>
+                          <span>{tr("Thuộc")}</span>
                         </button>
                       </div>
 
@@ -784,7 +766,7 @@ export default function SavedWordsPage({
                         <button
                           type="button"
                           onClick={() => playPronunciation(hanzi)}
-                          title="Nghe phát âm chuẩn"
+                          title={tr("Nghe phát âm chuẩn")}
                           className={`p-2 rounded-xl border transition-all cursor-pointer ${
                             isSpeaking
                               ? "bg-[#B91B1C] text-white border-[#B91B1C]"
@@ -798,7 +780,7 @@ export default function SavedWordsPage({
                           type="button"
                           disabled={deletingId === id || busy}
                           onClick={() => void handleDelete(item)}
-                          title="Bỏ lưu khỏi sổ tay"
+                          title={tr("Bỏ lưu khỏi sổ tay")}
                           className="p-2 rounded-xl border border-transparent hover:border-[#E7E7EA] text-neutral-400 hover:text-[#B91B1C] hover:bg-red-50 transition-all cursor-pointer disabled:opacity-40"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -817,7 +799,7 @@ export default function SavedWordsPage({
               pageSize={pageSize}
               visibleCount={paginatedList.length}
               unitLabel="từ vựng"
-              ariaLabel="Phân trang kho từ vựng"
+              ariaLabel={tr("Phân trang kho từ vựng")}
               onPageChange={(newPage) => setPage(newPage)}
               onPageSizeChange={(newSize) => {
                 setPageSize(newSize)

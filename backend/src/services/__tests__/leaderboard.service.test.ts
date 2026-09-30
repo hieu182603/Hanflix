@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Types } from 'mongoose';
+vi.mock('../exam-activity.js', () => ({ getExamActivity: vi.fn().mockResolvedValue([]) }));
+import { getExamActivity } from '../exam-activity.js';
 
-const { userModelMock, studyActivityModelMock, progressModelMock, practiceAttemptModelMock } = vi.hoisted(() => {
+const { userModelMock, studyActivityModelMock, progressModelMock, practiceAttemptModelMock, examAttemptModelMock } = vi.hoisted(() => {
   return {
     userModelMock: {
       find: vi.fn(),
@@ -14,6 +16,9 @@ const { userModelMock, studyActivityModelMock, progressModelMock, practiceAttemp
       aggregate: vi.fn(),
     },
     practiceAttemptModelMock: {
+      aggregate: vi.fn(),
+    },
+    examAttemptModelMock: {
       aggregate: vi.fn(),
     },
   };
@@ -33,6 +38,9 @@ vi.mock('../../models/progress.model.js', () => ({
 vi.mock('../../models/practice.model.js', () => ({
   PracticeAttemptModel: practiceAttemptModelMock,
 }));
+vi.mock('../../models/exam-attempt.model.js', () => ({
+  ExamAttemptModel: examAttemptModelMock,
+}));
 
 import { LeaderboardService } from '../leaderboard.service.js';
 import { toTimezoneDateKey } from '../study-activity.js';
@@ -42,6 +50,7 @@ describe('LeaderboardService.getLeaderboard', () => {
   const userB = new Types.ObjectId();
 
   beforeEach(() => {
+    vi.mocked(getExamActivity).mockReset().mockResolvedValue([]);
     userModelMock.find.mockReset();
     userModelMock.findById.mockReturnValue({ select: () => ({ lean: async () => null }) });
     studyActivityModelMock.aggregate.mockReset();
@@ -49,6 +58,8 @@ describe('LeaderboardService.getLeaderboard', () => {
     progressModelMock.aggregate.mockResolvedValue([]);
     practiceAttemptModelMock.aggregate.mockReset();
     practiceAttemptModelMock.aggregate.mockResolvedValue([]);
+    examAttemptModelMock.aggregate.mockReset();
+    examAttemptModelMock.aggregate.mockResolvedValue([]);
   });
 
   it('calculates ranks and highlights current user', async () => {
@@ -103,6 +114,17 @@ describe('LeaderboardService.getLeaderboard', () => {
     expect(result.currentUserRank?.isMe).toBe(true);
     expect(userModelMock.find).toHaveBeenCalledWith({ status: 'active', role: 'user' });
     expect(result.items.every(item => item.trend === 'same' && item.trendValue === undefined)).toBe(true);
+  });
+
+  it('includes exam-only days in both dashboard and leaderboard streaks', async () => {
+    const today = toTimezoneDateKey();
+    studyActivityModelMock.aggregate.mockResolvedValue([]);
+    vi.mocked(getExamActivity).mockResolvedValue([{ userId: userA, dateKey: today, examAttempts: 2, examStudySeconds: 120 }]);
+    userModelMock.find.mockReturnValue({ select: () => ({ lean: async () => [{ _id: userA, name: 'Exam learner' }] }) });
+    const board = await LeaderboardService.getLeaderboard({ period: 'all', currentUserId: String(userA) });
+    const dashboard = await LeaderboardService.getUserXP(String(userA));
+    expect(board.items[0]?.streakDays).toBe(1);
+    expect(dashboard.streakDays).toBe(1);
   });
 
   it('calculates getUserXP accurately for a single user', async () => {

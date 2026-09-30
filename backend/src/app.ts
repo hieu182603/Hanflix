@@ -23,6 +23,9 @@ import profileRoutes from './routes/profile.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import vocabularyRoutes from './routes/vocabulary.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import { billingRoutes, adminBillingRoutes } from './routes/billing.routes.js';
+import practiceRoutes from './routes/practice.routes.js';
+import { examRoutes, adminExamRoutes } from './routes/exam.routes.js';
 
 export const app = express();
 
@@ -124,6 +127,11 @@ app.get(env.API_PREFIX, (_req, res) => {
 });
 
 app.use(`${env.API_PREFIX}/auth`, authRoutes);
+app.use(`${env.API_PREFIX}/billing`, billingRoutes);
+app.use(`${env.API_PREFIX}/admin/billing`, adminBillingRoutes);
+app.use(`${env.API_PREFIX}/practice`, practiceRoutes);
+app.use(`${env.API_PREFIX}/exams`, examRoutes);
+app.use(`${env.API_PREFIX}/admin/exams`, adminExamRoutes);
 app.use(`${env.API_PREFIX}/profile`, profileRoutes);
 app.use(`${env.API_PREFIX}/uploads`, uploadRoutes);
 app.use(`${env.API_PREFIX}/lessons`, lessonRoutes);

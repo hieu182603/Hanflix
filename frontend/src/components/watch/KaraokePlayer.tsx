@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * CONTENT MODE (2026-09-22) - SONG: KaraokePlayer.
  *
@@ -54,6 +55,7 @@ export default function KaraokePlayer({
   onLoadedMetadata,
   onTokenClick,
 }: KaraokePlayerProps) {
+  const { tr, ui } = useI18n();
   const internalVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef ?? internalVideoRef;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -233,7 +235,7 @@ export default function KaraokePlayer({
           <button
             type="button"
             onClick={togglePlay}
-            aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+            aria-label={isPlaying ? tr("Tạm dừng") : tr("Phát")}
             className="text-white hover:text-[#FFD700] transition-colors p-1 cursor-pointer"
           >
             {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6" /> : <Play className="w-5 h-5 md:w-6 md:h-6" />}
@@ -261,7 +263,7 @@ export default function KaraokePlayer({
           <button
             type="button"
             onClick={toggleMute}
-            aria-label={isMuted ? 'Bật tiếng' : 'Tắt tiếng'}
+            aria-label={isMuted ? tr("Bật tiếng") : tr("Tắt tiếng")}
             className="text-white hover:text-[#FFD700] transition-colors p-1 cursor-pointer"
           >
             {isMuted || volume === 0 ? (
@@ -276,7 +278,7 @@ export default function KaraokePlayer({
           <button
             type="button"
             onClick={toggleFullscreen}
-            aria-label={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
+            aria-label={isFullscreen ? tr("Thu nhỏ") : tr("Toàn màn hình")}
             className="text-white hover:text-[#FFD700] transition-colors p-1 cursor-pointer"
           >
             {isFullscreen ? (
@@ -293,7 +295,7 @@ export default function KaraokePlayer({
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-white">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <AlertCircle className="w-5 h-5 text-red-400" />
-            <span>{error}</span>
+            <span>{ui(error)}</span>
           </div>
         </div>
       )}

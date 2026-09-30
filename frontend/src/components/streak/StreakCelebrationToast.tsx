@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Sparkles, X, CheckCircle2, Play, BookOpen } from 'lucide-react';
@@ -12,6 +13,7 @@ interface StreakEventDetail {
 }
 
 export default function StreakCelebrationToast() {
+  const { tr, ui } = useI18n();
   const [eventData, setEventData] = useState<StreakEventDetail | null>(null);
 
   useEffect(() => {
@@ -88,21 +90,15 @@ export default function StreakCelebrationToast() {
               <div className="flex-1 min-w-0 pr-6">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider">
-                    <Sparkles className="w-3 h-3 text-amber-600" />
-                    Tự động cộng Streak!
-                  </span>
-                  <span className="text-xs text-neutral-400 font-mono">
-                    +1 ngày
-                  </span>
+                    <Sparkles className="w-3 h-3 text-amber-600" />{tr("Tự động cộng Streak!")}</span>
+                  <span className="text-xs text-neutral-400 font-mono">{tr("+1 ngày")}</span>
                 </div>
 
-                <h4 className="text-sm font-black text-neutral-900 leading-snug">
-                  Đã đạt {eventData.streakCount} Ngày Chuỗi Liên Tiếp!
-                </h4>
+                <h4 className="text-sm font-black text-neutral-900 leading-snug">{tr("Đã đạt")} {eventData.streakCount} {tr("Ngày Chuỗi Liên Tiếp!")}</h4>
 
                 <p className="text-xs text-neutral-600 mt-1 leading-relaxed flex items-center gap-1.5">
                   <ActivityIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>{activityInfo.desc}</span>
+                  <span>{ui(activityInfo.desc)}</span>
                 </p>
               </div>
 
@@ -111,7 +107,7 @@ export default function StreakCelebrationToast() {
                 type="button"
                 onClick={() => setEventData(null)}
                 className="absolute top-2 right-2 p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                aria-label="Đóng thông báo"
+                aria-label={tr("Đóng thông báo")}
               >
                 <X className="w-4 h-4" />
               </button>

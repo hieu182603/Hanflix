@@ -1,4 +1,6 @@
+import { assertLessonHsk } from '../services/lesson-access.js';
 import { Router } from 'express';
+import { optionalAuth, requirePremium } from '../middleware/premium.js';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { AppError } from '../errors/app-error.js';
@@ -31,7 +33,8 @@ const askSchema = z.object({
   clientMessageId: z.string().uuid().optional(),
 });
 
-router.post('/history', requireAuth, validate(z.object({ lessonContext: lessonAiContextSchema.optional() })), asyncHandler(async (req, res) => {
+router.post('/history', requireAuth, requirePremium, validate(z.object({ lessonContext: lessonAiContextSchema.optional() })), asyncHandler(async (req, res) => {
+  if (req.body.lessonContext) await assertLessonHsk(req.auth, req.body.lessonContext.lessonId);
   const context = req.body.lessonContext ? await resolveLessonAiContext(req.body.lessonContext) : undefined;
   if (context && context.status === 'missing_transcript') {
     res.json({ data: { messages: [] } }); return;
@@ -39,19 +42,21 @@ router.post('/history', requireAuth, validate(z.object({ lessonContext: lessonAi
   res.json({ data: await readAiHistory(req.auth!.userId, context) });
 }));
 
-router.delete('/history', requireAuth, validate(z.object({ lessonContext: lessonAiContextSchema.optional() })), asyncHandler(async (req, res) => {
+router.delete('/history', requireAuth, requirePremium, validate(z.object({ lessonContext: lessonAiContextSchema.optional() })), asyncHandler(async (req, res) => {
+  if (req.body.lessonContext) await assertLessonHsk(req.auth, req.body.lessonContext.lessonId);
   const context = req.body.lessonContext ? await resolveLessonAiContext(req.body.lessonContext) : undefined;
   await clearAiHistory(req.auth!.userId, context);
   res.json({ data: { cleared: true } });
 }));
 
-router.post('/ask', requireAuth, aiLimiter, validate(askSchema), asyncHandler(async (req, res) => {
+router.post('/ask', requireAuth, requirePremium, aiLimiter, validate(askSchema), asyncHandler(async (req, res) => {
   // Server-side topic guard
   const guard = isOffTopicQuestion(req.body.question);
   if (guard.blocked) {
     throw new AppError(400, 'OFF_TOPIC', guard.reason);
   }
 
+  if (req.body.lessonContext) await assertLessonHsk(req.auth, req.body.lessonContext.lessonId);
   const context = req.body.lessonContext ? await resolveLessonAiContext(req.body.lessonContext, req.body.question) : undefined;
   const metadata = context ? (({ cues, status, ...rest }) => rest)(context) : undefined;
   if (context && context.status !== 'ready') {
@@ -91,7 +96,8 @@ router.post('/ask', requireAuth, aiLimiter, validate(askSchema), asyncHandler(as
   }
 }));
 
-router.post('/explain', requireAuth, aiLimiter, validate(explainSchema), asyncHandler(async (req, res) => {
+router.post('/explain', requireAuth, requirePremium, aiLimiter, validate(explainSchema), asyncHandler(async (req, res) => {
+  await assertLessonHsk(req.auth, req.body.lessonId);
   const [lesson, word, learner] = await Promise.all([
     LessonModel.findOne({ _id: req.body.lessonId, status: 'published' }).select('activeSubtitleRevision').lean(),
     WordModel.findById(req.body.wordId).lean(),

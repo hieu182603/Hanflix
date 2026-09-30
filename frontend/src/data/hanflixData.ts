@@ -29,6 +29,8 @@ export interface User {
   avatarConfig?: any;
   avatarPublicId?: string | null;
   learningProfile?: UserLearningProfile | null;
+  premiumExpiresAt?: Date | string | null;
+  subscriptionTier?: 'free' | 'premium';
 }
 
 export interface UserProfile {

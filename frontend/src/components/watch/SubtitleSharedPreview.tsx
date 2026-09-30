@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useMemo } from "react"
 
 import type { SubtitleCue } from "../../api/learning"
@@ -174,6 +175,7 @@ function ClickableTokens({
   cueId,
   style,
 }: ClickableTokensProps) {
+  const { tr } = useI18n();
   if (!tokens || tokens.length === 0 || !onTokenClick) {
     return <span style={style}>{text}</span>
   }
@@ -208,7 +210,7 @@ function ClickableTokens({
 
               onTokenClick(cueId, wordIdStr, token.text)
             }}
-            title={`Giải thích "${token.text}"`}
+            title={tr("Giải thích \"{0}\"", { 0: token.text })}
             style={style}
           >
             {token.text}

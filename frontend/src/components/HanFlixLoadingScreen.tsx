@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React from 'react';
 
 /**
@@ -13,6 +14,7 @@ import React from 'react';
  *  - Pure CSS animation for maximum performance & zero lag
  */
 export default function HanFlixLoadingScreen() {
+  const { tr } = useI18n();
   return (
     <div
       className="fixed inset-0 z-[9999] h-[100dvh] w-full flex flex-col items-center justify-center text-[#18181B] select-none overflow-hidden bg-no-repeat"
@@ -137,9 +139,7 @@ export default function HanFlixLoadingScreen() {
           <h2
             className="text-lg sm:text-xl font-bold text-[#18181B] tracking-tight"
             style={{ fontFamily: "'Fraunces', 'DM Sans', serif" }}
-          >
-            Đang tải học liệu...
-          </h2>
+          >{tr("Đang tải học liệu...")}</h2>
           <p className="text-xs sm:text-sm font-medium text-[#78716C] tracking-wider">
             正在加载 · <span className="font-sans">Zhèngzài jiāzài</span>
           </p>

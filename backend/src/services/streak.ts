@@ -4,10 +4,15 @@ import { DEFAULT_TIMEZONE, parseDateKey, toTimezoneDateKey } from './study-activ
 export const qualifyingStudyActivity = { $or: [
   { activeStudySeconds: { $gt: 0 } }, { completedLessons: { $gt: 0 } },
   { quizAttempts: { $gt: 0 } }, { vocabReviews: { $gt: 0 } }, { flashcardCompleted: true },
+  { examAttempts: { $gt: 0 } },
 ] };
 export const qualifyingPracticeActivity = {
   status: 'submitted',
-  $expr: { $gt: [{ $size: { $objectToArray: { $ifNull: ['$answers', {}] } } }, 0] },
+  $expr: { $gt: [{ $size: { $filter: {
+    input: { $objectToArray: { $ifNull: ['$answers', {}] } },
+    as: 'answer',
+    cond: { $ne: [{ $trim: { input: { $ifNull: ['$$answer.v', ''] } } }, ''] },
+  } } }, 0] },
 };
 
 export function summarizeStreak(dateKeys: string[], now = new Date(), timezone = DEFAULT_TIMEZONE) {

@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -49,6 +50,7 @@ export default function SettingsModal({
   onOpenSurvey,
   onUpdateUser,
 }: SettingsModalProps) {
+  const { tr, ui } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [currentStreak, setCurrentStreak] = useState(() => {
     const fromStorage = getStreakState().streakCount;
@@ -297,26 +299,30 @@ export default function SettingsModal({
         {/* Header Bar */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200/80 flex items-center justify-between bg-white shrink-0 safe-area-top">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C] flex items-center justify-center shadow-xs shrink-0">
-              <UserIcon className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-[#FFF2EE] border border-[#F2D0C7] text-[#B91B1C] flex items-center justify-center shadow-xs shrink-0">
+              <span className="material-symbols-outlined text-[22px] leading-none select-none" aria-hidden="true">
+                manage_accounts
+              </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">Cài Đặt Tài Khoản</h2>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-zinc-100 text-zinc-600 border border-zinc-200">
-                  {currentUser?.role === 'admin' ? 'Quản Trị Viên' : 'Học Viên HanFlix'}
+                <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">{tr("Cài Đặt Tài Khoản")}</h2>
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-zinc-100 text-zinc-600 border border-zinc-200">
+                  {currentUser?.role === 'admin' ? tr("Quản Trị Viên") : tr("Học Viên HanFlix")}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 font-medium line-clamp-1">Quản lý nhận diện cá nhân, lộ trình học và bảo mật tài khoản</p>
+              <p className="text-xs text-zinc-500 font-medium line-clamp-1">{tr("Quản lý nhận diện cá nhân, lộ trình học và bảo mật tài khoản")}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            aria-label="Đóng cài đặt"
+            aria-label={tr("Đóng cài đặt")}
             className="p-2 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
-            <X className="w-5 h-5" />
+            <span className="material-symbols-outlined text-[20px] leading-none select-none" aria-hidden="true">
+              close
+            </span>
           </button>
         </div>
 
@@ -331,7 +337,7 @@ export default function SettingsModal({
             }`}
           >
             <UserIcon className="w-4 h-4" />
-            <span>Hồ sơ cá nhân</span>
+            <span>{tr("Hồ sơ cá nhân")}</span>
           </button>
           <button
             onClick={() => setActiveTab('security')}
@@ -342,7 +348,7 @@ export default function SettingsModal({
             }`}
           >
             <Shield className="w-4 h-4" />
-            <span>Bảo mật</span>
+            <span>{tr("Bảo mật")}</span>
           </button>
         </div>
 
@@ -364,7 +370,7 @@ export default function SettingsModal({
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-zinc-900 truncate">
-                    {editName || currentUser?.name || 'Học viên'}
+                    {editName || currentUser?.name || tr("Học viên")}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-[#B91B1C]/10 text-[#B91B1C]">
@@ -376,7 +382,7 @@ export default function SettingsModal({
               </div>
 
               {/* Navigation Tabs */}
-              <nav className="space-y-1.5" aria-label="Cài đặt danh mục">
+              <nav className="space-y-1.5" aria-label={tr("Cài đặt danh mục")}>
                 {[
                   {
                     id: 'profile' as TabType,
@@ -416,7 +422,7 @@ export default function SettingsModal({
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="relative z-10 min-w-0">
-                        <div className="text-xs font-bold tracking-tight">{tab.title}</div>
+                        <div className="text-xs font-bold tracking-tight">{ui(tab.title)}</div>
                         <div className="text-[10px] text-zinc-400 font-medium truncate">{tab.sub}</div>
                       </div>
                     </button>
@@ -441,17 +447,17 @@ export default function SettingsModal({
                 >
                   {/* Status Alerts */}
                   {profileSuccess && (
-                    <InlineBanner variant="success" message={profileSuccess} />
+                    <InlineBanner variant="success" message={ui(profileSuccess)} />
                   )}
                   {profileError && (
-                    <InlineBanner variant="error" message={profileError} />
+                    <InlineBanner variant="error" message={ui(profileError)} />
                   )}
 
                   {/* Visual Identity & Avatar Studio Bento Card */}
                   <div className="p-6 rounded-3xl bg-zinc-50/70 border border-zinc-200/90 space-y-5">
                     <div>
-                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">Ảnh đại diện & Danh tính học tập</h3>
-                      <p className="text-xs text-zinc-500 font-medium">Hình ảnh đại diện và tiến độ học tập trên HanFlix</p>
+                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">{tr("Ảnh đại diện & Danh tính học tập")}</h3>
+                      <p className="text-xs text-zinc-500 font-medium">{tr("Hình ảnh đại diện và tiến độ học tập trên HanFlix")}</p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -464,7 +470,7 @@ export default function SettingsModal({
                           isDragOver ? 'ring-3 ring-[#B91B1C] rounded-full' : ''
                         }`}
                         onClick={() => !isUploadingImage && fileInputRef.current?.click()}
-                        title="Bấm để chọn ảnh từ máy tính"
+                        title={tr("Bấm để chọn ảnh từ máy tính")}
                       >
                         <div className="p-1 rounded-full bg-linear-to-b from-zinc-200 to-zinc-300 shadow-sm">
                           {previewUrl ? (
@@ -509,9 +515,9 @@ export default function SettingsModal({
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <h4 className="text-base font-black text-zinc-900 truncate">
-                            {editName || currentUser?.name || 'Học viên'}
+                            {editName || currentUser?.name || tr("Học viên")}
                           </h4>
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Đang trực tuyến" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title={tr("Đang trực tuyến")} />
                         </div>
                         <p className="text-xs text-zinc-500 font-medium truncate">
                           {currentUser?.email}
@@ -525,7 +531,7 @@ export default function SettingsModal({
                             className="text-xs font-bold text-[#B91B1C] hover:text-[#991213] cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50"
                           >
                             <Upload className="w-3.5 h-3.5" />
-                            <span>{isUploadingImage ? 'Đang tải ảnh...' : 'Tải ảnh cá nhân'}</span>
+                            <span>{isUploadingImage ? tr("Đang tải ảnh...") : tr("Tải ảnh cá nhân")}</span>
                           </button>
 
                           {isCustomAvatar && (
@@ -538,7 +544,7 @@ export default function SettingsModal({
                                 className="text-xs font-medium text-zinc-500 hover:text-red-600 cursor-pointer flex items-center gap-1 transition-colors disabled:opacity-50"
                               >
                                 <RotateCcw className="w-3 h-3" />
-                                <span>{isRestoringAvatar ? 'Đang đặt lại...' : 'Dùng avatar mặc định'}</span>
+                                <span>{isRestoringAvatar ? tr("Đang đặt lại...") : tr("Dùng avatar mặc định")}</span>
                               </button>
                             </>
                           )}
@@ -551,32 +557,32 @@ export default function SettingsModal({
                       <div className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
                         <div className="flex items-center gap-1.5 text-zinc-500 text-[11px] font-bold">
                           <GraduationCap className="w-3.5 h-3.5 text-[#B91B1C]" />
-                          <span>Cấp độ HSK</span>
+                          <span>{tr("Cấp độ HSK")}</span>
                         </div>
                         <div className="text-sm font-black text-zinc-900 mt-1 flex items-baseline gap-1.5">
                           <span>HSK {hskCurrent}</span>
-                          <span className="text-[11px] text-zinc-400 font-semibold">/ Mục tiêu HSK {hskTarget}</span>
+                          <span className="text-[11px] text-zinc-400 font-semibold">{tr("/ Mục tiêu HSK")} {hskTarget}</span>
                         </div>
                       </div>
 
                       <div className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
                         <div className="flex items-center gap-1.5 text-zinc-500 text-[11px] font-bold">
                           <Flame className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Chuỗi học tập</span>
+                          <span>{tr("Chuỗi học tập")}</span>
                         </div>
                         <div className="text-sm font-black text-zinc-900 mt-1 flex items-baseline gap-1">
                           <span>{streak}</span>
-                          <span className="text-[11px] text-zinc-400 font-semibold">ngày liên tục</span>
+                          <span className="text-[11px] text-zinc-400 font-semibold">{tr("ngày liên tục")}</span>
                         </div>
                       </div>
 
                       <div className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
                         <div className="flex items-center gap-1.5 text-zinc-500 text-[11px] font-bold">
                           <Compass className="w-3.5 h-3.5 text-[#B91B1C]" />
-                          <span>Mục tiêu chính</span>
+                          <span>{tr("Mục tiêu chính")}</span>
                         </div>
                         <div className="text-xs font-black text-zinc-900 mt-1 truncate">
-                          {goalMap[goalLabel] || 'Giao tiếp hàng ngày'}
+                          {ui(goalMap[goalLabel]) || tr("Giao tiếp hàng ngày")}
                         </div>
                       </div>
                     </div>
@@ -585,17 +591,14 @@ export default function SettingsModal({
                   {/* Form Editable Information */}
                   <form onSubmit={handleSaveProfile} className="space-y-4">
                     <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-xs space-y-4">
-                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">Thông tin hiển thị học viên</h3>
+                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">{tr("Thông tin hiển thị học viên")}</h3>
 
                       {/* Name Input */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label htmlFor="user-name-input" className="block text-xs font-bold text-zinc-800">
-                            Họ và tên hiển thị
-                          </label>
+                          <label htmlFor="user-name-input" className="block text-xs font-bold text-zinc-800">{tr("Họ và tên hiển thị")}</label>
                           <span className="text-[11px] text-zinc-400 font-medium">
-                            {editName.length}/80 ký tự
-                          </span>
+                            {editName.length}{tr("/80 ký tự")}</span>
                         </div>
                         <input
                           id="user-name-input"
@@ -604,7 +607,7 @@ export default function SettingsModal({
                           maxLength={80}
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Nhập tên hiển thị của bạn"
+                          placeholder={tr("Nhập tên hiển thị của bạn")}
                           className="w-full h-11 px-4 rounded-xl bg-white border border-zinc-300 text-sm font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[#B91B1C] focus:ring-4 focus:ring-[#B91B1C]/10 transition-all"
                         />
                       </div>
@@ -615,12 +618,10 @@ export default function SettingsModal({
                           <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
                             <span className="flex items-center gap-1.5">
                               <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                              <span>Địa chỉ Email</span>
+                              <span>{tr("Địa chỉ Email")}</span>
                             </span>
                             <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded-full font-bold">
-                              <BadgeCheck className="w-3 h-3" />
-                              Đã xác minh
-                            </span>
+                              <BadgeCheck className="w-3 h-3" />{tr("Đã xác minh")}</span>
                           </div>
                           <div className="text-xs font-bold text-zinc-900 truncate" title={currentUser?.email}>
                             {currentUser?.email}
@@ -631,14 +632,14 @@ export default function SettingsModal({
                           <div className="flex items-center justify-between text-xs font-bold text-zinc-500">
                             <span className="flex items-center gap-1.5">
                               <Shield className="w-3.5 h-3.5 text-zinc-400" />
-                              <span>Vai trò hệ thống</span>
+                              <span>{tr("Vai trò hệ thống")}</span>
                             </span>
                             <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
-                              {currentUser?.role === 'admin' ? 'Quyền cao' : 'Tiêu chuẩn'}
+                              {currentUser?.role === 'admin' ? tr("Quyền cao") : tr("Tiêu chuẩn")}
                             </span>
                           </div>
                           <div className="text-xs font-bold text-zinc-900 capitalize">
-                            {currentUser?.role === 'admin' ? 'Quản trị viên (Admin)' : 'Học viên HanFlix'}
+                            {currentUser?.role === 'admin' ? tr("Quản trị viên (Admin)") : tr("Học viên HanFlix")}
                           </div>
                         </div>
                       </div>
@@ -649,11 +650,9 @@ export default function SettingsModal({
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs font-black text-zinc-900">
                           <Compass className="w-4 h-4 text-[#B91B1C]" />
-                          <span>Lộ trình & Mục tiêu cá nhân hóa</span>
+                          <span>{tr("Lộ trình & Mục tiêu cá nhân hóa")}</span>
                         </div>
-                        <p className="text-xs text-zinc-600 font-medium">
-                          Cập nhật trình độ HSK và sở thích để thuật toán HanFlix đề xuất video chuẩn xác nhất cho bạn.
-                        </p>
+                        <p className="text-xs text-zinc-600 font-medium">{tr("Cập nhật trình độ HSK và sở thích để thuật toán HanFlix đề xuất video chuẩn xác nhất cho bạn.")}</p>
                       </div>
                       <button
                         type="button"
@@ -662,9 +661,7 @@ export default function SettingsModal({
                           onOpenSurvey?.();
                         }}
                         className="shrink-0 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-                      >
-                        Khảo sát lại
-                      </button>
+                      >{tr("Khảo sát lại")}</button>
                     </div>
 
                     {/* Submit Button */}
@@ -677,12 +674,12 @@ export default function SettingsModal({
                         {isSavingProfile ? (
                           <>
                             <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Đang lưu thay đổi...</span>
+                            <span>{tr("Đang lưu thay đổi...")}</span>
                           </>
                         ) : (
                           <>
                             <Check className="w-4 h-4" />
-                            <span>Lưu thông tin hồ sơ</span>
+                            <span>{tr("Lưu thông tin hồ sơ")}</span>
                           </>
                         )}
                       </button>
@@ -713,22 +710,20 @@ export default function SettingsModal({
                   <form onSubmit={handleChangePassword} className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-xs space-y-4">
                     <div className="flex items-center gap-2">
                       <KeyRound className="w-4 h-4 text-[#B91B1C]" />
-                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">Đổi mật khẩu tài khoản</h3>
+                      <h3 className="text-sm font-black text-zinc-900 tracking-tight">{tr("Đổi mật khẩu tài khoản")}</h3>
                     </div>
-                    <p className="text-xs text-zinc-500 font-medium">Đặt mật khẩu mạnh để bảo vệ thông tin học tập và lịch sử tra từ</p>
+                    <p className="text-xs text-zinc-500 font-medium">{tr("Đặt mật khẩu mạnh để bảo vệ thông tin học tập và lịch sử tra từ")}</p>
 
                     <div className="space-y-3.5">
                       <div>
-                        <label className="block text-xs font-bold text-zinc-800 mb-1.5">
-                          Mật khẩu hiện tại
-                        </label>
+                        <label className="block text-xs font-bold text-zinc-800 mb-1.5">{tr("Mật khẩu hiện tại")}</label>
                         <div className="relative">
                           <input
                             type={showCurrentPass ? 'text' : 'password'}
                             required
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Nhập mật khẩu đang sử dụng"
+                            placeholder={tr("Nhập mật khẩu đang sử dụng")}
                             className="w-full h-11 px-4 pr-11 rounded-xl bg-white border border-zinc-300 text-sm font-semibold focus:outline-none focus:border-[#B91B1C] focus:ring-4 focus:ring-[#B91B1C]/10 transition-all"
                           />
                           <button
@@ -743,16 +738,14 @@ export default function SettingsModal({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-bold text-zinc-800 mb-1.5">
-                            Mật khẩu mới (ít nhất 8 ký tự)
-                          </label>
+                          <label className="block text-xs font-bold text-zinc-800 mb-1.5">{tr("Mật khẩu mới (ít nhất 8 ký tự)")}</label>
                           <div className="relative">
                             <input
                               type={showNewPass ? 'text' : 'password'}
                               required
                               value={newPassword}
                               onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="Nhập mật khẩu mới"
+                              placeholder={tr("Nhập mật khẩu mới")}
                               className="w-full h-11 px-4 pr-11 rounded-xl bg-white border border-zinc-300 text-sm font-semibold focus:outline-none focus:border-[#B91B1C] focus:ring-4 focus:ring-[#B91B1C]/10 transition-all"
                             />
                             <button
@@ -766,16 +759,14 @@ export default function SettingsModal({
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-zinc-800 mb-1.5">
-                            Xác nhận mật khẩu mới
-                          </label>
+                          <label className="block text-xs font-bold text-zinc-800 mb-1.5">{tr("Xác nhận mật khẩu mới")}</label>
                           <div className="relative">
                             <input
                               type={showConfirmPass ? 'text' : 'password'}
                               required
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
-                              placeholder="Nhập lại mật khẩu mới"
+                              placeholder={tr("Nhập lại mật khẩu mới")}
                               className="w-full h-11 px-4 pr-11 rounded-xl bg-white border border-zinc-300 text-sm font-semibold focus:outline-none focus:border-[#B91B1C] focus:ring-4 focus:ring-[#B91B1C]/10 transition-all"
                             />
                             <button
@@ -799,12 +790,12 @@ export default function SettingsModal({
                         {isChangingPass ? (
                           <>
                             <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Đang đổi mật khẩu...</span>
+                            <span>{tr("Đang đổi mật khẩu...")}</span>
                           </>
                         ) : (
                           <>
                             <Lock className="w-3.5 h-3.5" />
-                            <span>Cập nhật mật khẩu mới</span>
+                            <span>{tr("Cập nhật mật khẩu mới")}</span>
                           </>
                         )}
                       </button>
@@ -815,8 +806,8 @@ export default function SettingsModal({
                   <div className="p-6 rounded-3xl bg-zinc-50/70 border border-zinc-200/90 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-black text-zinc-900 tracking-tight">Liên kết tài khoản Google</h3>
-                        <p className="text-xs text-zinc-500 font-medium">Đăng nhập nhanh 1 chạm bằng Google mà không cần nhập mật khẩu</p>
+                        <h3 className="text-sm font-black text-zinc-900 tracking-tight">{tr("Liên kết tài khoản Google")}</h3>
+                        <p className="text-xs text-zinc-500 font-medium">{tr("Đăng nhập nhanh 1 chạm bằng Google mà không cần nhập mật khẩu")}</p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white border border-zinc-200 text-zinc-700">
                         OAuth 2.0
@@ -834,7 +825,7 @@ export default function SettingsModal({
                       />
                       {googleLinkMessage && (
                         <p className="text-xs text-zinc-700 font-semibold mt-2" role="status">
-                          {googleLinkMessage}
+                          {ui(googleLinkMessage)}
                         </p>
                       )}
                     </div>
@@ -846,24 +837,20 @@ export default function SettingsModal({
                           type="button"
                           onClick={() => setShowUnlinkDialog(true)}
                           className="text-xs text-zinc-500 hover:text-red-600 transition-colors font-medium cursor-pointer underline"
-                        >
-                          Hủy liên kết tài khoản Google khỏi HanFlix
-                        </button>
+                        >{tr("Hủy liên kết tài khoản Google khỏi HanFlix")}</button>
                       ) : (
                         <form onSubmit={handleUnlinkGoogle} className="p-4 rounded-2xl bg-white border border-red-200 space-y-3 shadow-xs">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-red-700">
                             <AlertCircle className="w-4 h-4" />
-                            <span>Xác nhận hủy liên kết Google</span>
+                            <span>{tr("Xác nhận hủy liên kết Google")}</span>
                           </div>
-                          <p className="text-[11px] text-zinc-600 font-medium">
-                            Vui lòng nhập mật khẩu tài khoản HanFlix của bạn để xác thực gỡ bỏ tài khoản Google này.
-                          </p>
+                          <p className="text-[11px] text-zinc-600 font-medium">{tr("Vui lòng nhập mật khẩu tài khoản HanFlix của bạn để xác thực gỡ bỏ tài khoản Google này.")}</p>
                           <input
                             type="password"
                             required
                             value={unlinkPassword}
                             onChange={(e) => setUnlinkPassword(e.target.value)}
-                            placeholder="Nhập mật khẩu tài khoản"
+                            placeholder={tr("Nhập mật khẩu tài khoản")}
                             className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-300 text-xs font-medium focus:outline-none focus:border-[#B91B1C]"
                           />
                           <div className="flex justify-end gap-2 pt-1">
@@ -874,15 +861,13 @@ export default function SettingsModal({
                                 setUnlinkPassword('');
                               }}
                               className="px-3 py-1.5 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
-                            >
-                              Hủy
-                            </button>
+                            >{tr("Hủy")}</button>
                             <button
                               type="submit"
                               disabled={isUnlinkingGoogle}
                               className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:opacity-50 cursor-pointer shadow-2xs"
                             >
-                              {isUnlinkingGoogle ? 'Đang gỡ...' : 'Xác nhận gỡ liên kết'}
+                              {isUnlinkingGoogle ? tr("Đang gỡ...") : tr("Xác nhận gỡ liên kết")}
                             </button>
                           </div>
                         </form>

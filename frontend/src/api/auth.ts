@@ -12,6 +12,7 @@ interface AuthResponse {
     email: string;
     role: 'user' | 'admin';
     status: 'active' | 'locked';
+    premiumExpiresAt?: string | null;
     avatarUrl?: string | null;
     googleAvatarUrl?: string | null;
     avatarType?: 'generated' | 'custom' | null;
@@ -51,6 +52,7 @@ function toFrontendUser(u: AuthResponse['user']): User {
     id: u.id,
     role: u.role,
     status: u.status,
+    premiumExpiresAt: u.premiumExpiresAt ?? null,
     name: u.name,
     email: u.email,
     avatarAsset: u.avatarUrl ?? u.googleAvatarUrl ?? null,
@@ -61,7 +63,7 @@ function toFrontendUser(u: AuthResponse['user']): User {
     avatarPublicId: u.avatarPublicId ?? null,
 
     learningProfile: lp ? {
-      hskLevel: lp.currentHsk ?? 3,
+      hskLevel: lp.currentHsk ?? 0,
       goal: lp.goal ?? 'daily',
       topics: lp.topicIds ?? [],
       dailyMinutes: lp.dailyMinutes ?? 15,

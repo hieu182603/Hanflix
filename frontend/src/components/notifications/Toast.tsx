@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * Toast component + ToastViewport
  *
@@ -58,6 +59,7 @@ function Toast({
   toast: ToastItem;
   onDismiss: (id: string) => void;
 }) {
+  const { tr, ui } = useI18n();
   const reduce = useReducedMotion();
   const tokens = NOTIFICATION_VARIANTS[toast.variant];
   const Icon = tokens.icon;
@@ -179,7 +181,7 @@ function Toast({
         {/* Text content */}
         <div className="flex-1 min-w-0">
           {toast.title && (
-            <div className="font-black text-[13px] leading-tight">{toast.title}</div>
+            <div className="font-black text-[13px] leading-tight">{ui(toast.title)}</div>
           )}
           <div
             className={cn(
@@ -190,7 +192,7 @@ function Toast({
               'break-words',
             )}
           >
-            {toast.message}
+            {ui(toast.message)}
           </div>
 
           {/* Action button */}
@@ -207,7 +209,7 @@ function Toast({
                 'border border-current/20 hover:bg-white/20 active:scale-[0.97]',
               )}
             >
-              {toast.action.label}
+              {ui(toast.action.label)}
             </button>
           )}
         </div>
@@ -223,7 +225,7 @@ function Toast({
               'opacity-0 group-hover:opacity-100 focus:opacity-100',
               'text-current',
             )}
-            aria-label="Đóng thông báo"
+            aria-label={tr("Đóng thông báo")}
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -239,6 +241,7 @@ export function ToastViewport({
   onDismiss,
   position = 'top-right',
 }: ToastViewportProps) {
+  const { tr } = useI18n();
   if (typeof document === 'undefined') return null;
 
   const posConfig = TOAST_POSITIONS[position];
@@ -252,7 +255,7 @@ export function ToastViewport({
         'safe-area-top',
       )}
       style={{ zIndex: Z_INDEX.toast }}
-      aria-label="Thông báo"
+      aria-label={tr("Thông báo")}
     >
       <style>{`
         @keyframes icon-shake {

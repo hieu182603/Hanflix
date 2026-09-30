@@ -16,6 +16,10 @@ import '../models/user.model.js';
 import '../models/vocabulary.model.js';
 import '../models/word.model.js';
 import '../models/practice.model.js';
+import '../models/premium-plan.model.js';
+import '../models/payment-order.model.js';
+import '../models/exam.model.js';
+import '../models/exam-attempt.model.js';
 
 async function main() {
   // Atlas Stable API strict mode rejects text-index DDL. Runtime connections remain strict;

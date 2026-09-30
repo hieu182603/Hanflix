@@ -51,7 +51,7 @@ export class R2StorageService implements StorageService {
   }
 
   async createDownloadUrl(objectKey: string, expiresInSeconds = env.R2_DOWNLOAD_URL_TTL_SECONDS) {
-    if (env.R2_PUBLIC_BASE_URL && !objectKey.startsWith('processing/')) return `${env.R2_PUBLIC_BASE_URL.replace(/\/$/, '')}/${encodeURI(objectKey)}`;
+    if (env.R2_PUBLIC_BASE_URL && /^(thumbnails|avatars)\//.test(objectKey)) return `${env.R2_PUBLIC_BASE_URL.replace(/\/$/, '')}/${encodeURI(objectKey)}`;
     const config = this.config();
     return getSignedUrl(this.getClient(), new GetObjectCommand({ Bucket: config.bucket, Key: objectKey }), {
       expiresIn: expiresInSeconds,

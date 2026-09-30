@@ -6,7 +6,12 @@ vi.mock('../../services/signed-url-cache.js', () => ({
   getCachedSignedDownloadUrl: (...args: unknown[]) => getCachedSignedDownloadUrl(...args),
 }));
 
-const lessonModel = { findOne: vi.fn() };
+const userModel = { findById: vi.fn() };
+vi.mock('../../models/user.model.js', () => ({
+  UserModel: userModel,
+}));
+
+const lessonModel = { findOne: vi.fn(), find: vi.fn() };
 vi.mock('../../models/lesson.model.js', () => ({
   LessonModel: lessonModel,
 }));
@@ -25,7 +30,15 @@ beforeEach(async () => {
   process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'b'.repeat(32);
   ({ app } = await import('../../app.js'));
   ({ signAccessToken } = await import('../../services/jwt.js'));
+  userModel.findById.mockReset();
+  userModel.findById.mockReturnValue({
+    select: () => ({ lean: async () => ({ _id: new Types.ObjectId(), role: 'admin', status: 'active' }) }),
+  });
   lessonModel.findOne.mockReset();
+  lessonModel.find.mockReset();
+  lessonModel.find.mockReturnValue({
+    sort: () => ({ limit: () => ({ select: () => ({ lean: async () => [] }) }) }),
+  });
   getCachedSignedDownloadUrl.mockReset();
 });
 

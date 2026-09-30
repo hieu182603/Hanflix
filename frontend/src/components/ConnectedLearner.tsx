@@ -1,6 +1,8 @@
+import { PremiumNotice, usePremiumAccess, useLearnerHsk } from './premium/PremiumAccess';
+import { useI18n } from '../i18n';
 import { Suspense, lazy, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { BookOpen, ChevronLeft, ChevronRight, Clock3 } from "lucide-react"
+import { BookOpen, ChevronLeft, ChevronRight, Clock3, GraduationCap, RotateCcw } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   getLearnerDashboard,
@@ -110,6 +112,9 @@ export default function ConnectedLearner({
   onOpenPreferences: () => void
   onNavigateSection?: (section: string) => void
 }) {
+  const { tr, ui } = useI18n();
+  const isPremium = usePremiumAccess();
+  const { hsk: currentHsk, isLearner } = useLearnerHsk();
   // Synchronize lessons topic, HSK level, search, and pagination with URL search params
   const [searchParams, setSearchParams] = useSearchParams()
   // Validate URL params: silently drop invalid values so backend không bị spam với filter rác.
@@ -118,8 +123,12 @@ export default function ConnectedLearner({
   const rawSearch = section === "lessons" ? searchParams.get("q") || "" : ""
   const rawPage = section === "lessons" ? searchParams.get("page") || "" : ""
   const topic = VALID_TOPIC_IDS.has(rawTopic) ? rawTopic : ""
-  const hsk = VALID_HSK_IDS.has(rawHsk) ? rawHsk : ""
+  const effectiveHsk = isLearner
+    ? (currentHsk ? String(currentHsk) : "3")
+    : (VALID_HSK_IDS.has(rawHsk) ? rawHsk : "")
+  const hsk = effectiveHsk
   const search = rawSearch.slice(0, 120) // giới hạn theo backend schema
+  const sampleOnly = searchParams.get("sample") === "true";
   const page = /^\d+$/.test(rawPage) ? Math.max(1, Number(rawPage)) : 1
 
   const setTopic = (val: string) => {
@@ -137,7 +146,7 @@ export default function ConnectedLearner({
   }
 
   const setHsk = (val: string) => {
-    if (section !== "lessons") return
+    if (section !== "lessons" || isLearner) return
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -177,7 +186,7 @@ export default function ConnectedLearner({
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
-        for (const key of ["q", "topic", "hsk", "page"]) next.delete(key)
+        for (const key of ["q", "topic", "hsk", "sample", "page"]) next.delete(key)
         return next
       },
       { replace: true },
@@ -186,6 +195,7 @@ export default function ConnectedLearner({
 
   const lessonsQuery = useQuery({
     queryKey: lessonQueryKeys.list({
+      sample: sampleOnly || undefined,
       q: search || undefined,
       hsk: hsk ? Number(hsk) : undefined,
       topic: topic || undefined,
@@ -194,6 +204,7 @@ export default function ConnectedLearner({
     }),
     queryFn: ({ signal }) =>
       listPublishedLessons({
+        sample: sampleOnly || undefined,
         q: search || undefined,
         hsk: hsk ? Number(hsk) : undefined,
         topic: topic || undefined,
@@ -206,11 +217,11 @@ export default function ConnectedLearner({
   })
 
   const dashboardQuery = useQuery({
-    queryKey: dashboardQueryKeys.detail(),
+    queryKey: [...dashboardQueryKeys.detail(), currentHsk],
     queryFn: ({ signal }) =>
       getLearnerDashboard({ signal } as never).then((data) => data),
     enabled:
-      section === "feed" || section === "roadmap" || section === "history",
+      isPremium && (section === "feed" || section === "roadmap" || section === "history"),
     staleTime: DASHBOARD_STALE,
   })
 
@@ -331,26 +342,63 @@ export default function ConnectedLearner({
           setTopic(val)
         }}
         options={TOPIC_OPTIONS}
-        ariaLabel="Lọc chủ đề video"
+        ariaLabel={tr("Lọc chủ đề video")}
       />
-      <CustomSelect
-        className="w-full sm:w-36"
-        value={hsk}
-        onChange={(val) => {
-          setHsk(val)
-        }}
-        options={HSK_OPTIONS}
-        ariaLabel="Lọc HSK"
-      />
-      {(topic || hsk) && (
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="text-xs font-bold text-[#B91B1C] hover:bg-[#FDF1F1] px-2.5 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
-          title="Đặt lại bộ lọc"
-        >
-          Đặt lại
-        </button>
+      {isLearner ? (
+        <>
+          <div
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#E7E7EA] text-xs font-bold text-[#18181B] shadow-2xs shrink-0"
+            title={tr("Cấp độ HSK hiện tại của bạn")}
+          >
+            <GraduationCap className="w-4 h-4 text-[#B91B1C]" />
+            <span>HSK {currentHsk ?? 3}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              resetFilters();
+              onOpenPreferences();
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#FDF1F1] border border-[#E7E7EA] hover:border-red-200 text-xs font-bold text-[#B91B1C] transition-colors cursor-pointer shrink-0 shadow-2xs"
+            title={tr("Đặt lại khảo sát để đổi cấp độ HSK")}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{tr("Đặt lại")}</span>
+          </button>
+          {Boolean(topic || search || sampleOnly) && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs text-[#5F6368] hover:text-[#18181B] underline px-1 py-1 cursor-pointer shrink-0"
+              title={tr("Xóa bộ lọc chủ đề/tìm kiếm")}
+            >
+              {tr("Xóa lọc")}
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <CustomSelect
+            className="w-full sm:w-36"
+            value={hsk}
+            onChange={(val) => {
+              setHsk(val)
+            }}
+            options={HSK_OPTIONS}
+            ariaLabel={tr("Lọc HSK")}
+          />
+          {(topic || hsk || search || sampleOnly) && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-[#FDF1F1] border border-[#E7E7EA] text-xs font-bold text-[#B91B1C] transition-colors cursor-pointer shrink-0 shadow-2xs"
+              title={tr("Đặt lại bộ lọc")}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{tr("Đặt lại")}</span>
+            </button>
+          )}
+        </>
       )}
     </div>
   )
@@ -363,19 +411,19 @@ export default function ConnectedLearner({
           disabled={page <= 1}
           onClick={() => setPage(page - 1)}
           className="rounded-xl border border-[#E7E7EA] bg-white p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center disabled:opacity-40 hover:bg-[#F7F7F9] cursor-pointer"
-          aria-label="Trang trước"
+          aria-label={tr("Trang trước")}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="text-xs sm:text-sm font-bold text-[#5F6368]">
-          Trang {page}/{pages}
+          {tr("Trang")} {page}/{pages}
         </span>
         <button
           type="button"
           disabled={page >= pages}
           onClick={() => setPage(page + 1)}
           className="rounded-xl border border-[#E7E7EA] bg-white p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center disabled:opacity-40 hover:bg-[#F7F7F9] cursor-pointer"
-          aria-label="Trang sau"
+          aria-label={tr("Trang sau")}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -383,21 +431,18 @@ export default function ConnectedLearner({
     )
 
   const renderError = errorMessage ? (
-    <InlineBanner variant="error" message={errorMessage} />
+    <InlineBanner variant="error" message={ui(errorMessage)} />
   ) : null
 
   return (
     <div className="space-y-6">
       {renderError}
-      {section === "feed" && (
+      {section === "feed" && !isPremium && <><PremiumNotice /><button type="button" onClick={() => onNavigateSection?.("lessons?sample=true")} className="rounded-xl bg-[#B91B1C] px-5 py-3 text-white font-bold">{tr("Xem video mẫu")}</button></>}
+      {section === "feed" && isPremium && (
         <>
           <div className="rounded-3xl bg-[#18181B] p-5 sm:p-6 md:p-8 text-white shadow-sm">
-            <p className="text-xs sm:text-sm text-red-300 font-semibold">
-              Tiếp tục hành trình tiếng Trung
-            </p>
-            <h1 className="mt-1 text-xl sm:text-2xl font-black">
-              Bài học của bạn
-            </h1>
+            <p className="text-xs sm:text-sm text-red-300 font-semibold">{tr("Tiếp tục hành trình tiếng Trung")}</p>
+            <h1 className="mt-1 text-xl sm:text-2xl font-black">{tr("Bài học của bạn")}</h1>
             {dashboardQuery.data?.continueLearning?.lessonId?._id ? (
               <button
                 type="button"
@@ -407,26 +452,20 @@ export default function ConnectedLearner({
                   )
                 }
                 className="mt-4 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] px-4 py-2.5 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
-              >
-                Tiếp tục:{" "}
+              >{tr("Tiếp tục:")}{" "}
                 {dashboardQuery.data.continueLearning!.lessonId!.titleVi}
               </button>
             ) : (
-              <p className="mt-3 text-xs sm:text-sm text-neutral-300">
-                Chọn một bài học đã xuất bản để bắt đầu.
-              </p>
+              <p className="mt-3 text-xs sm:text-sm text-neutral-300">{tr("Chọn một bài học đã xuất bản để bắt đầu.")}</p>
             )}
             {dashboardQuery.data && (
               <div className="mt-5 flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm text-neutral-300">
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.completedLessons} bài hoàn thành
-                </span>
+                  {dashboardQuery.data.metrics.completedLessons} {tr("bài hoàn thành")}</span>
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.savedWords} từ đã lưu
-                </span>
+                  {dashboardQuery.data.metrics.savedWords} {tr("từ đã lưu")}</span>
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.dueWords} từ cần ôn
-                </span>
+                  {dashboardQuery.data.metrics.dueWords} {tr("từ cần ôn")}</span>
               </div>
             )}
           </div>
@@ -441,14 +480,17 @@ export default function ConnectedLearner({
           {/* Header & Controls */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-[#18181B]">
-                Kho bài học đã xuất bản
-              </h2>
+              <h2 className="text-xl font-black text-[#18181B]">{tr("Kho bài học đã xuất bản")}</h2>
               <p className="text-sm text-[#5F6368]">
-                {lessonsQuery.data?.total ?? 0} bài học
+                {lessonsQuery.data?.total ?? 0} {tr("bài học")}
+                {isLearner && (
+                  <span className="ml-1 font-semibold text-[#18181B]">
+                    · HSK {currentHsk ?? 3}
+                  </span>
+                )}
                 {topic && (
                   <span className="ml-1 text-[#B91B1C] font-semibold">
-                    · {TOPIC_OPTIONS.find((t) => t.value === topic)?.label}
+                    · {ui(TOPIC_OPTIONS.find((t) => t.value === topic)?.label)}
                   </span>
                 )}
               </p>
@@ -456,15 +498,16 @@ export default function ConnectedLearner({
             {controls}
           </div>
 
+
           {/* Global Search Notice if searched from top header bar */}
           {search && (
             <div className="flex items-center gap-2 bg-[#FDF1F1] text-[#B91B1C] px-3.5 py-1.5 rounded-full border border-red-200/80 w-fit text-xs font-semibold">
-              <span>Đang tìm: &ldquo;{search}&rdquo;</span>
+              <span>{tr("Đang tìm: “")}{search}&rdquo;</span>
               <button
                 type="button"
                 onClick={clearSearch}
                 className="text-[#B91B1C] hover:text-[#18181B] font-black cursor-pointer ml-1"
-                aria-label="Xóa từ khóa tìm kiếm"
+                aria-label={tr("Xóa từ khóa tìm kiếm")}
               >
                 <GoogleMaterialIcon
                   name="close"
@@ -473,6 +516,7 @@ export default function ConnectedLearner({
               </button>
             </div>
           )}
+
 
           {/* Quick Topic Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -483,7 +527,7 @@ export default function ConnectedLearner({
                   key={pill.value}
                   type="button"
                   onClick={() => {
-                    setTopic(pill.value)
+                    setTopic(topic === pill.value ? "" : pill.value)
                   }}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                     isActive
@@ -497,14 +541,14 @@ export default function ConnectedLearner({
                       isActive ? "text-white" : "text-[#8B9097]"
                     }`}
                   />
-                  <span>{pill.label}</span>
+                  <span>{ui(pill.label)}</span>
                 </button>
               )
             })}
           </div>
 
           {isLoading && lessonsQuery.isPending && (
-            <p className="text-sm text-[#5F6368]">Đang tải bài học…</p>
+            <p className="text-sm text-[#5F6368]">{tr("Đang tải bài học…")}</p>
           )}
 
           {!isLoading &&
@@ -517,21 +561,14 @@ export default function ConnectedLearner({
                   className="w-6 h-6 text-[#B91B1C]"
                 />
               </div>
-              <h3 className="font-black text-[#18181B] text-base">
-                Không tìm thấy bài học phù hợp
-              </h3>
-              <p className="text-xs text-[#5F6368]">
-                Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy
-                thử chọn chủ đề khác nhé!
-              </p>
+              <h3 className="font-black text-[#18181B] text-base">{tr("Không tìm thấy bài học phù hợp")}</h3>
+              <p className="text-xs text-[#5F6368]">{tr("Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy thử chọn chủ đề khác nhé!")}</p>
               {(topic || hsk || search) && (
                 <button
                   type="button"
                   onClick={resetFilters}
                   className="mt-2 inline-flex items-center px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-colors cursor-pointer"
-                >
-                  Xem tất cả bài học
-                </button>
+                >{tr("Xem tất cả bài học")}</button>
               )}
             </div>
           ) : (

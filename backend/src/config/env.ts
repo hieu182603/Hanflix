@@ -38,6 +38,12 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: optionalString,
+  PAYOS_CLIENT_ID: optionalString,
+  PAYOS_API_KEY: optionalString,
+  PAYOS_CHECKSUM_KEY: optionalString,
+  PAYOS_RETURN_URL: optionalUrl,
+  PAYOS_CANCEL_URL: optionalUrl,
+  PAYOS_LINK_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
   SMTP_HOST: optionalString,
   SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
   SMTP_SECURE: booleanFromString.default(false),
@@ -203,6 +209,13 @@ const envSchema = z.object({
   requireTogether(['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME'], 'Cloudflare R2');
   requireTogether(['AZURE_TRANSLATOR_KEY', 'AZURE_TRANSLATOR_REGION'], 'Azure Translator');
   requireTogether(['AZURE_SPEECH_KEY', 'AZURE_SPEECH_REGION'], 'Azure Speech');
+  requireTogether(['PAYOS_CLIENT_ID', 'PAYOS_API_KEY', 'PAYOS_CHECKSUM_KEY'], 'payOS');
+  for (const name of ['PAYOS_CLIENT_ID', 'PAYOS_API_KEY', 'PAYOS_CHECKSUM_KEY'] as const) rejectPlaceholder(name);
+  for (const name of ['PAYOS_RETURN_URL', 'PAYOS_CANCEL_URL'] as const) {
+    if (value.NODE_ENV === 'production' && value[name] && !value[name].startsWith('https://')) {
+      context.addIssue({ code: 'custom', path: [name], message: 'URL thanh toán phải dùng HTTPS trong production' });
+    }
+  }
 
   if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET) {
     context.addIssue({ code: 'custom', path: ['JWT_REFRESH_SECRET'], message: 'Refresh secret must differ from access secret' });

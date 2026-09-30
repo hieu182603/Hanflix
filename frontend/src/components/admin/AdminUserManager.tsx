@@ -22,9 +22,11 @@ import {
   UserX,
   Mail,
   MoreHorizontal,
+  Crown,
 } from 'lucide-react';
 import { listAdminUsers, setAdminUserStatus, type AdminUser } from '../../api/admin';
 import AdminPaginationBar, { DEFAULT_ADMIN_PAGE_SIZE } from './AdminPaginationBar';
+import AdminPremiumActivation from './AdminPremiumActivation';
 
 const HSK_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
@@ -614,108 +616,210 @@ export default function AdminUserManager({ userId: propUserId }: { userId?: stri
         }}
       />
 
-      {/* User Detail Modal */}
+      {/* Detail Modal (Pop-up ngang 2 cột sang trọng & cân xứng) */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md space-y-5 rounded-3xl border border-[#F2E4D8] bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-4xl max-h-[92dvh] flex flex-col rounded-3xl border border-[#F2E4D8] bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#F2E4D8] pb-3">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between border-b border-[#F2E4D8] bg-[#FFF9F5] px-6 py-4 sm:px-7 sm:py-4.5">
+              <div className="flex items-center gap-3">
                 <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-2xl font-black text-xs shadow-2xs ${getAvatarColor(
+                  className={`flex h-11 w-11 items-center justify-center rounded-2xl font-black text-sm shadow-xs shrink-0 ${getAvatarColor(
                     selectedUser._id
                   )}`}
                 >
                   {getInitials(selectedUser.name)}
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-[#2B2826]">{selectedUser.name}</h3>
-                  <span className="text-[11px] text-[#8C827A]">{selectedUser.email}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-[#2B2826] tracking-tight">{selectedUser.name}</h3>
+                    {selectedUser.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#2B2826] px-2.5 py-0.5 text-[10px] font-black text-white shadow-2xs">
+                        <Shield className="h-3 w-3 text-[#E7A92F]" />
+                        <span>Admin</span>
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-[#F2E4D8] bg-white px-2 py-0.5 text-[10px] font-bold text-[#5F5852]">
+                        Học viên
+                      </span>
+                    )}
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        selectedUser.status === 'active'
+                          ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
+                          : 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
+                      }`}
+                    >
+                      {selectedUser.status === 'active' ? 'Đang hoạt động' : 'Bị khóa'}
+                    </span>
+                    {Boolean(selectedUser.premiumExpiresAt && new Date(selectedUser.premiumExpiresAt) > new Date()) && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#B91B1C] px-2 py-0.5 text-[10px] font-black text-white shadow-2xs">
+                        <Crown className="h-3 w-3 fill-white" />
+                        <span>VIP</span>
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-[#8C827A]">{selectedUser.email}</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="rounded-lg p-1.5 text-[#8C827A] transition-colors hover:bg-[#FFF9F5] hover:text-[#2B2826]"
+                className="rounded-xl border border-transparent p-2 text-[#8C827A] transition-colors hover:border-[#F2E4D8] hover:bg-white hover:text-[#2B2826] cursor-pointer"
+                aria-label="Đóng cửa sổ"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Profile Information List */}
-            <div className="space-y-2.5 text-xs">
-              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="font-bold text-[#8C827A]">Mã định danh (User ID):</span>
-                <span className="font-mono text-[11px] font-bold text-[#2B2826]">{selectedUser._id}</span>
-              </div>
+            {/* Modal Body: Bố cục 2 cột ngang */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-7 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              {/* ── CỘT TRÁI (5 COLS): THÔNG TIN HỌC VIÊN & HÀNH ĐỘNG TÀI KHOẢN ── */}
+              <div className="md:col-span-5 space-y-4">
+                <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#8C827A]">
+                  <Users className="w-3.5 h-3.5 text-[#B91B1C]" />
+                  <span>Hồ sơ & Trạng thái</span>
+                </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="font-bold text-[#8C827A]">Vai trò:</span>
-                {selectedUser.role === 'admin' ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#2B2826] px-2.5 py-0.5 text-[10px] font-black text-white shadow-2xs">
-                    <Shield className="h-3 w-3 text-[#E7A92F]" />
-                    <span>Quản trị viên (Admin)</span>
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-[#F2E4D8] bg-white px-2.5 py-0.5 text-[10px] font-bold text-[#5F5852]">
-                    Học viên thông thường
-                  </span>
+                <div className="space-y-2.5 text-xs">
+                  {/* User ID có nút Copy */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Mã User ID:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedUser._id);
+                        setCopiedField('userId');
+                        setTimeout(() => setCopiedField(null), 1800);
+                      }}
+                      className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[#2B2826] hover:text-[#B91B1C] transition-colors cursor-pointer group"
+                      title="Bấm để sao chép"
+                    >
+                      <span>{selectedUser._id.slice(0, 10)}…{selectedUser._id.slice(-4)}</span>
+                      {copiedField === 'userId' ? (
+                        <Check className="w-3 h-3 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3 h-3 text-[#8C827A] group-hover:text-[#B91B1C]" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Vai trò */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Vai trò hệ thống:</span>
+                    <span className="font-bold text-[#2B2826]">
+                      {selectedUser.role === 'admin' ? 'Quản trị viên' : 'Học viên thông thường'}
+                    </span>
+                  </div>
+
+                  {/* Trạng thái tài khoản */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Trạng thái:</span>
+                    <span
+                      className={`font-black text-[11px] ${
+                        selectedUser.status === 'active' ? 'text-[#188A5A]' : 'text-[#B91B1C]'
+                      }`}
+                    >
+                      {selectedUser.status === 'active' ? 'Đang hoạt động bình thường' : 'Tài khoản đang bị khóa'}
+                    </span>
+                  </div>
+
+                  {/* Trình độ HSK */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Trình độ HSK:</span>
+                    {selectedUser.learningProfile?.currentHsk ? (
+                      <span className="rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-2.5 py-0.5 text-[10px] font-black text-[#188A5A]">
+                        HSK {selectedUser.learningProfile.currentHsk}
+                      </span>
+                    ) : (
+                      <span className="text-[#8C827A] italic">Chưa thiết lập</span>
+                    )}
+                  </div>
+
+                  {/* Ngày đăng ký */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Ngày tham gia:</span>
+                    <span className="font-bold text-[#2B2826]">{formatDate(selectedUser.createdAt)}</span>
+                  </div>
+
+                  {/* Gói HanFlix VIP */}
+                  <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
+                    <span className="font-bold text-[#8C827A]">Gói Premium:</span>
+                    {Boolean(selectedUser.premiumExpiresAt && new Date(selectedUser.premiumExpiresAt) > new Date()) ? (
+                      <span className="font-bold text-amber-800">
+                        Đến {formatDate(selectedUser.premiumExpiresAt as string)}
+                      </span>
+                    ) : (
+                      <span className="text-[#8C827A]">Chưa có gói VIP</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Thao tác khóa / mở khóa tài khoản */}
+                {selectedUser.role !== 'admin' && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={actionBusy}
+                      onClick={() => handleToggleStatus(selectedUser)}
+                      className={`w-full py-2.5 rounded-2xl text-xs font-bold text-white shadow-xs transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 ${
+                        selectedUser.status === 'active'
+                          ? 'bg-[#B91B1C] hover:bg-[#A3181A]'
+                          : 'bg-[#188A5A] hover:bg-[#137333]'
+                      }`}
+                    >
+                      {selectedUser.status === 'active' ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Khóa tài khoản này</span>
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Mở khóa tài khoản</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="font-bold text-[#8C827A]">Trạng thái tài khoản:</span>
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black tracking-wide uppercase ${
-                    selectedUser.status === 'active'
-                      ? 'border-[#C6E7DA] bg-[#EAF5F1] text-[#188A5A]'
-                      : 'border-[#F9D2D2] bg-[#FDF1F1] text-[#B91B1C]'
-                  }`}
-                >
-                  {selectedUser.status === 'active' ? 'Đang hoạt động' : 'Tài khoản bị khóa'}
-                </span>
-              </div>
+              {/* ── CỘT PHẢI (7 COLS): KÍCH HOẠT & QUẢN LÝ GÓI PREMIUM ── */}
+              <div className="md:col-span-7 space-y-4">
+                <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#8C827A]">
+                  <Crown className="w-3.5 h-3.5 text-[#E7A92F]" />
+                  <span>Đặc quyền & Kích hoạt gói</span>
+                </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="font-bold text-[#8C827A]">Trình độ HSK hiện tại:</span>
-                {selectedUser.learningProfile?.currentHsk ? (
-                  <span className="rounded-md border border-[#C6E7DA] bg-[#EAF5F1] px-2.5 py-0.5 text-[10px] font-black text-[#188A5A]">
-                    HSK {selectedUser.learningProfile.currentHsk}
-                  </span>
-                ) : (
-                  <span className="text-[#8C827A] italic">Chưa thiết lập</span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-[#F2E4D8] bg-[#FFFDFB] p-3">
-                <span className="font-bold text-[#8C827A]">Ngày đăng ký tham gia:</span>
-                <span className="font-bold text-[#2B2826]">{formatDate(selectedUser.createdAt)}</span>
+                <AdminPremiumActivation
+                  key={selectedUser._id}
+                  user={selectedUser}
+                  onActivated={premiumExpiresAt => {
+                    setUsers(previous =>
+                      previous.map(user =>
+                        user._id === selectedUser._id ? { ...user, premiumExpiresAt } : user
+                      )
+                    );
+                    setSelectedUser(previous =>
+                      previous?._id === selectedUser._id ? { ...previous, premiumExpiresAt } : previous
+                    );
+                  }}
+                />
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 border-t border-[#F2E4D8] pt-3">
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-[#F2E4D8] bg-[#FFFDFB] px-6 py-3.5">
+              <span className="text-[11px] text-[#8C827A]">
+                Thay đổi trạng thái và cấp gói cước sẽ áp dụng tức thì cho học viên.
+              </span>
               <button
                 type="button"
                 onClick={handleCloseModal}
-                className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-4 py-2 text-xs font-bold text-[#5F5852] transition-colors hover:bg-white hover:text-[#2B2826]"
+                className="rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] hover:bg-white px-5 py-2 text-xs font-bold text-[#5F5852] hover:text-[#2B2826] transition-colors cursor-pointer"
               >
                 Đóng
               </button>
-              {selectedUser.role !== 'admin' && (
-                <button
-                  type="button"
-                  disabled={actionBusy}
-                  onClick={() => handleToggleStatus(selectedUser)}
-                  className={`rounded-xl px-4 py-2 text-xs font-bold text-white shadow-2xs transition-all active:scale-[0.98] ${
-                    selectedUser.status === 'active'
-                      ? 'bg-[#B91B1C] hover:bg-[#A3181A]'
-                      : 'bg-[#188A5A] hover:bg-[#137333]'
-                  }`}
-                >
-                  {selectedUser.status === 'active' ? 'Khóa tài khoản này' : 'Mở khóa tài khoản'}
-                </button>
-              )}
             </div>
           </div>
         </div>

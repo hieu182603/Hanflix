@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "test:e2e": "playwright test",

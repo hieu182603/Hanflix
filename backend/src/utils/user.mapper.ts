@@ -6,6 +6,8 @@
  * violating the separation of concerns (route files should not export helpers).
  */
 
+import { hasPremium } from '../services/premium.js';
+
 export interface PublicUserInput {
   _id: unknown;
   name: string;
@@ -21,6 +23,7 @@ export interface PublicUserInput {
   avatarConfig?: unknown;
   avatarPublicId?: string | null;
   totalXP?: number;
+  premiumExpiresAt?: Date | null;
 }
 
 export function publicUser(user: PublicUserInput) {
@@ -33,6 +36,8 @@ export function publicUser(user: PublicUserInput) {
     emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequired),
     learningProfile: user.learningProfile,
     totalXP: user.totalXP ?? 0,
+    tier: hasPremium(user) ? 'premium' : 'free',
+    premiumExpiresAt: user.premiumExpiresAt ?? null,
     avatarType: user.avatarType ?? (user.avatarUrl ? 'custom' : 'generated'),
     avatarUrl: user.avatarUrl ?? user.googleAvatarUrl ?? null,
     googleAvatarUrl: user.googleAvatarUrl ?? null,

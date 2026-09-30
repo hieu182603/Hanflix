@@ -4,6 +4,7 @@ function cn(...args: Array<string | false | null | undefined>): string {
 
 import { forwardRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
 export type SpinnerSize = 'sm' | 'md' | 'lg';
 export type SpinnerTone = 'brand' | 'muted' | 'white';
@@ -29,12 +30,13 @@ const TONE_CLASS: Record<SpinnerTone, { ring: string; border: string }> = {
 
 export const Spinner = forwardRef<HTMLSpanElement, SpinnerProps>(
   ({ size = 'md', tone = 'brand', label, className }, ref) => {
+    const { ui } = useI18n();
     const toneClasses = TONE_CLASS[tone];
     return (
       <span
         ref={ref}
         role="status"
-        aria-label={label ?? 'Đang tải'}
+        aria-label={ui(label ?? 'Đang tải')}
         className={cn('inline-flex shrink-0', className)}
       >
         <Loader2

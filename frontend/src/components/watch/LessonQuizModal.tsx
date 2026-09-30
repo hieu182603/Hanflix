@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -49,6 +50,7 @@ export default function LessonQuizModal({
   bestScore,
   onRetry,
 }: LessonQuizModalProps) {
+  const { tr } = useI18n();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
@@ -213,9 +215,7 @@ export default function LessonQuizModal({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-black text-base sm:text-lg text-[#18181B] truncate">
-                    Bài luyện tập sau video
-                  </h2>
+                  <h2 className="font-black text-base sm:text-lg text-[#18181B] truncate">{tr("Bài luyện tập sau video")}</h2>
                   {hskLevel && (
                     <span className="px-2 py-0.5 rounded-md bg-[#18181B] text-white text-[10px] font-extrabold shrink-0">
                       HSK {hskLevel}
@@ -230,14 +230,14 @@ export default function LessonQuizModal({
               {bestScore !== null && bestScore !== undefined && (
                 <div className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-full bg-[#EBF5EE] text-[#1E7E44] text-xs font-bold border border-[#A4D8B6]">
                   <Trophy className="w-3.5 h-3.5" />
-                  <span>Kỷ lục: {bestScore}%</span>
+                  <span>{tr("Kỷ lục:")} {bestScore}%</span>
                 </div>
               )}
               <button
                 type="button"
                 onClick={onClose}
                 className="w-9 h-9 rounded-full hover:bg-neutral-100 flex items-center justify-center text-[#5F6368] hover:text-[#18181B] transition-colors cursor-pointer"
-                title="Đóng (Esc)"
+                title={tr("Đóng (Esc)")}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -250,13 +250,11 @@ export default function LessonQuizModal({
               <div className="flex items-center justify-between text-xs font-semibold">
                 <div className="flex items-center gap-1.5 text-[#18181B]">
                   <span className="w-2 h-2 rounded-full bg-[#B91B1C] animate-pulse" />
-                  <span>
-                    Câu hỏi <strong className="text-[#B91B1C]">{currentIndex + 1}</strong> / {totalQuestions}
+                  <span>{tr("Câu hỏi")} <strong className="text-[#B91B1C]">{currentIndex + 1}</strong> / {totalQuestions}
                   </span>
                 </div>
                 <span className="text-[#5F6368] font-mono">
-                  {answeredCount}/{totalQuestions} đã trả lời
-                </span>
+                  {answeredCount}/{totalQuestions} {tr("đã trả lời")}</span>
               </div>
 
               {/* Progress Line */}
@@ -290,7 +288,7 @@ export default function LessonQuizModal({
                           ? 'w-2.5 bg-emerald-500 hover:bg-emerald-600'
                           : 'w-2 bg-neutral-200 hover:bg-neutral-300'
                       }`}
-                      title={`Đến câu ${idx + 1}`}
+                      title={tr("Đến câu {0}", { 0: idx + 1 })}
                     />
                   );
                 })}
@@ -326,36 +324,30 @@ export default function LessonQuizModal({
 
                 <h3 className="font-black text-xl sm:text-2xl text-[#18181B]">
                   {quizResult.score === 100
-                    ? '🎉 Xuất sắc! 100% Tuyệt đối!'
+                    ? tr("🎉 Xuất sắc! 100% Tuyệt đối!")
                     : quizResult.score >= 80
-                    ? '👏 Rất tốt! Bạn nắm rất vững bài học!'
+                    ? tr("👏 Rất tốt! Bạn nắm rất vững bài học!")
                     : quizResult.score >= 50
-                    ? '👍 Hoàn thành! Khá tốt!'
-                    : '💪 Hãy ôn tập lại một chút nhé!'}
+                    ? tr("👍 Hoàn thành! Khá tốt!")
+                    : tr("💪 Hãy ôn tập lại một chút nhé!")}
                 </h3>
 
-                <p className="text-sm font-medium text-[#5F6368] mt-1">
-                  Đúng{' '}
+                <p className="text-sm font-medium text-[#5F6368] mt-1">{tr("Đúng")}{' '}
                   <strong className="text-[#18181B]">
-                    {quizResult.correctCount} / {quizResult.totalCount} câu hỏi
-                  </strong>{' '}
+                    {quizResult.correctCount} / {quizResult.totalCount} {tr("câu hỏi")}</strong>{' '}
                   ({quizResult.score}%)
                 </p>
 
                 {/* Score Pill Row */}
                 <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
-                  <span className="px-3.5 py-1.5 rounded-full bg-white/90 font-mono font-black text-sm text-[#18181B] shadow-2xs border border-black/5">
-                    Điểm: {quizResult.score}%
+                  <span className="px-3.5 py-1.5 rounded-full bg-white/90 font-mono font-black text-sm text-[#18181B] shadow-2xs border border-black/5">{tr("Điểm:")} {quizResult.score}%
                   </span>
                   <span className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 font-black text-xs shadow-2xs flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 fill-amber-950" />
-                    +{quizResult.xpEarned || (quizResult.score === 100 ? 50 : quizResult.score >= 80 ? 40 : 25)} XP Đấu Trường
-                  </span>
+                    +{quizResult.xpEarned || (quizResult.score === 100 ? 50 : quizResult.score >= 80 ? 40 : 25)} {tr("XP Đấu Trường")}</span>
                   {bestScore !== null && bestScore !== undefined && quizResult.score > bestScore && (
                     <span className="px-3.5 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-2xs flex items-center gap-1">
-                      <Flame className="w-3.5 h-3.5" />
-                      Kỷ lục mới!
-                    </span>
+                      <Flame className="w-3.5 h-3.5" />{tr("Kỷ lục mới!")}</span>
                   )}
                 </div>
               </div>
@@ -365,7 +357,7 @@ export default function LessonQuizModal({
                 <div className="flex items-center justify-between border-b border-[#E7E7EA] pb-3">
                   <h4 className="font-extrabold text-sm sm:text-base text-[#18181B] flex items-center gap-2">
                     <HelpCircle className="w-4 h-4 text-[#B91B1C]" />
-                    <span>Chi tiết đáp án & giải thích</span>
+                    <span>{tr("Chi tiết đáp án & giải thích")}</span>
                   </h4>
 
                   <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl text-xs font-bold">
@@ -377,8 +369,7 @@ export default function LessonQuizModal({
                           ? 'bg-white text-[#18181B] shadow-2xs'
                           : 'text-[#5F6368] hover:text-[#18181B]'
                       }`}
-                    >
-                      Tất cả ({quiz.length})
+                    >{tr("Tất cả (")}{quiz.length})
                     </button>
                     <button
                       type="button"
@@ -388,8 +379,7 @@ export default function LessonQuizModal({
                           ? 'bg-emerald-600 text-white shadow-2xs'
                           : 'text-emerald-700 hover:bg-emerald-50'
                       }`}
-                    >
-                      Đúng ({quizResult.correctCount})
+                    >{tr("Đúng (")}{quizResult.correctCount})
                     </button>
                     <button
                       type="button"
@@ -436,8 +426,7 @@ export default function LessonQuizModal({
                             >
                               {isCorrect ? '✓' : '✕'}
                             </span>
-                            <span className="font-extrabold text-xs text-[#5F6368]">
-                              Câu {idx + 1}
+                            <span className="font-extrabold text-xs text-[#5F6368]">{tr("Câu")} {idx + 1}
                             </span>
                           </div>
 
@@ -448,7 +437,7 @@ export default function LessonQuizModal({
                                 : 'bg-[#FDF1F1] text-[#B91B1C]'
                             }`}
                           >
-                            {isCorrect ? 'Chính xác' : 'Chưa đúng'}
+                            {isCorrect ? tr("Chính xác") : tr("Chưa đúng")}
                           </span>
                         </div>
 
@@ -459,13 +448,13 @@ export default function LessonQuizModal({
                         {/* Selected Answer Review */}
                         <div className="space-y-1.5 text-xs">
                           <div className="flex items-start gap-2 text-neutral-700">
-                            <span className="font-bold text-[#5F6368] shrink-0">Bạn chọn:</span>
+                            <span className="font-bold text-[#5F6368] shrink-0">{tr("Bạn chọn:")}</span>
                             <span
                               className={`font-semibold ${
                                 isCorrect ? 'text-emerald-700' : 'text-[#B91B1C] line-through'
                               }`}
                             >
-                              {selectedOpt?.text ?? selectedId ?? '(Chưa chọn)'}
+                              {selectedOpt?.text ?? selectedId ?? tr("(Chưa chọn)")}
                             </span>
                           </div>
 
@@ -473,7 +462,7 @@ export default function LessonQuizModal({
                           {ansResult?.explanationVi && (
                             <div className="mt-3 p-3 rounded-xl bg-white border border-[#E7E7EA] space-y-1 text-xs">
                               <p className="font-bold text-[#18181B] flex items-center gap-1.5 text-[11px]">
-                                <span>💡 Giải thích chi tiết:</span>
+                                <span>{tr("💡 Giải thích chi tiết:")}</span>
                               </p>
                               <p className="text-[#374151] leading-relaxed">
                                 {ansResult.explanationVi}
@@ -513,8 +502,8 @@ export default function LessonQuizModal({
                       <div className="flex items-center justify-between">
                         <span className="px-3 py-1 rounded-full bg-neutral-100 text-[#5F6368] text-xs font-extrabold uppercase tracking-wider">
                           {currentQuestion.type === 'multiple_choice'
-                            ? 'Chọn đáp án đúng'
-                            : 'Điền vào chỗ trống'}
+                            ? tr("Chọn đáp án đúng")
+                            : tr("Điền vào chỗ trống")}
                         </span>
 
                         <button
@@ -525,10 +514,10 @@ export default function LessonQuizModal({
                               ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
                               : 'bg-white hover:bg-neutral-50 text-[#5F6368] hover:text-[#18181B] border-[#E7E7EA]'
                           }`}
-                          title="Nghe phát âm câu hỏi"
+                          title={tr("Nghe phát âm câu hỏi")}
                         >
                           <Volume2 className="w-4 h-4" />
-                          <span className="hidden sm:inline">Phát âm</span>
+                          <span className="hidden sm:inline">{tr("Phát âm")}</span>
                         </button>
                       </div>
 
@@ -634,7 +623,7 @@ export default function LessonQuizModal({
                               [currentQuestion.questionId]: e.target.value,
                             }));
                           }}
-                          placeholder="Nhập câu trả lời bằng chữ Hán hoặc Pinyin…"
+                          placeholder={tr("Nhập câu trả lời bằng chữ Hán hoặc Pinyin…")}
                           className="w-full rounded-2xl border-2 border-[#E7E7EA] bg-white p-4 text-base font-semibold text-[#18181B] focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/20 outline-none transition-all shadow-2xs"
                         />
                       </div>
@@ -642,9 +631,7 @@ export default function LessonQuizModal({
                   </motion.div>
                 </AnimatePresence>
               ) : (
-                <div className="p-8 text-center text-[#5F6368] text-sm">
-                  Không có câu hỏi nào trong bài luyện tập này.
-                </div>
+                <div className="p-8 text-center text-[#5F6368] text-sm">{tr("Không có câu hỏi nào trong bài luyện tập này.")}</div>
               )}
             </div>
           )}
@@ -665,7 +652,7 @@ export default function LessonQuizModal({
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-[#E7E7EA] hover:bg-neutral-50 text-xs sm:text-sm font-bold text-[#18181B] transition-all cursor-pointer shadow-2xs"
               >
                 <RotateCcw className="w-4 h-4 text-[#5F6368]" />
-                <span>Làm lại bài</span>
+                <span>{tr("Làm lại bài")}</span>
               </button>
 
               <button
@@ -673,7 +660,7 @@ export default function LessonQuizModal({
                 onClick={onClose}
                 className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[#18181B] hover:bg-neutral-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer"
               >
-                <span>Đóng & Tiếp tục học</span>
+                <span>{tr("Đóng & Tiếp tục học")}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -688,7 +675,7 @@ export default function LessonQuizModal({
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed text-[#5F6368] hover:text-[#18181B] hover:bg-neutral-100"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Câu trước</span>
+                <span className="hidden sm:inline">{tr("Câu trước")}</span>
               </button>
 
               {/* Next or Submit Button */}
@@ -702,12 +689,12 @@ export default function LessonQuizModal({
                   {quizBusy ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Đang chấm điểm…</span>
+                      <span>{tr("Đang chấm điểm…")}</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 text-amber-300" />
-                      <span>Nộp bài & Xem kết quả</span>
+                      <span>{tr("Nộp bài & Xem kết quả")}</span>
                     </>
                   )}
                 </button>
@@ -721,7 +708,7 @@ export default function LessonQuizModal({
                       : 'bg-neutral-200 text-neutral-500 hover:bg-neutral-300'
                   }`}
                 >
-                  <span>Câu tiếp theo</span>
+                  <span>{tr("Câu tiếp theo")}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}

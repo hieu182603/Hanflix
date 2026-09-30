@@ -1,3 +1,5 @@
+import { useI18n } from '../../i18n';
+import LanguageSelect from '../../i18n/LanguageSelect';
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, Sparkles, BookOpen, Calendar, Clock, Edit2 } from 'lucide-react';
 import { UserLearningProfile } from '../../data/hanflixData';
@@ -104,6 +106,7 @@ const SUBTITLE_MODES = [
 const HSK_LEVELS = ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9'];
 
 export default function OnboardingView({ onCompleteOnboarding, onSkip }: OnboardingViewProps) {
+  const { tr, ui, lang } = useI18n();
   const [draft, setDraft] = useState<SurveyDraft>(loadDraft);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -178,7 +181,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
       preferredDuration: '1-5',
       subtitleDefaults: subtitleMap[draft.subtitleMode] ?? { zh: true, pinyin: true, vi: true },
       defaultSpeed: 1,
-      uiLanguage: 'vi',
+      uiLanguage: lang,
     };
     setSaving(true); setSaveError('');
     try {
@@ -205,7 +208,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
   if (draft.showProposal) {
     const goalLabel = GOALS.find((g) => g.id === draft.goal)?.label || 'Giao tiếp đời sống';
     const hskLabel = draft.experience === 'never' ? 'HSK 1 (Người mới bắt đầu)' : draft.selfHSK || 'Chưa xác định';
-    const sourceLabel = draft.experience === 'know' ? `Từ ${draft.selfHSKSource || 'Tự đánh giá'}` : 'Tự khai';
+    const sourceLabel = draft.experience === 'know' ? tr('Từ {0}', { 0: ui(draft.selfHSKSource || 'Tự đánh giá') }) : tr('Tự khai');
     
     return (
       <div className="min-h-[100dvh] bg-[#F7F7F9] flex flex-col">
@@ -217,71 +220,60 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
               className="h-8 w-auto object-contain"
             />
           </div>
+          <LanguageSelect />
         </div>
 
         <div className="flex-1 flex flex-col items-center py-8 px-4">
           <div className="bg-white w-full max-w-[720px] rounded-3xl shadow-sm border border-[#E7E7EA] overflow-hidden p-6 md:p-8 space-y-8">
             <div className="text-center space-y-2">
               <div className="inline-flex items-center gap-2 bg-[#FCE9E1] text-[#B91B1C] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                Đề xuất minh họa từ câu trả lời của bạn
-              </div>
-              <h2 className="text-2xl md:text-3xl font-black text-[#18181B]" style={{ fontFamily: "'Fraunces', serif" }}>
-                Lộ trình học dành riêng cho bạn
-              </h2>
-              <p className="text-[#5F6368]">Dựa trên mục tiêu {goalLabel.toLowerCase()} và thời gian {draft.dailyMinutes} phút mỗi ngày.</p>
+                <Sparkles className="w-3.5 h-3.5" />{tr("Đề xuất minh họa từ câu trả lời của bạn")}</div>
+              <h2 className="text-2xl md:text-3xl font-black text-[#18181B]" style={{ fontFamily: "'Fraunces', serif" }}>{tr("Lộ trình học dành riêng cho bạn")}</h2>
+              <p className="text-[#5F6368]">{tr("Dựa trên mục tiêu")} {ui(goalLabel)} {tr("và thời gian")} {draft.dailyMinutes} {tr("phút mỗi ngày.")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[#F7F7F9] rounded-2xl p-5 border border-[#E7E7EA]">
                 <div className="flex items-center gap-2 text-[#8B9097] text-xs font-bold uppercase tracking-wider mb-2">
-                  <Check className="w-4 h-4" /> Điểm xuất phát
-                </div>
-                <div className="text-lg font-bold text-[#18181B]">{hskLabel}</div>
+                  <Check className="w-4 h-4" /> {tr("Điểm xuất phát")}</div>
+                <div className="text-lg font-bold text-[#18181B]">{ui(hskLabel)}</div>
                 <div className="text-sm text-[#5F6368]">{sourceLabel}</div>
               </div>
               <div className="bg-[#F7F7F9] rounded-2xl p-5 border border-[#E7E7EA]">
                 <div className="flex items-center gap-2 text-[#8B9097] text-xs font-bold uppercase tracking-wider mb-2">
-                  <Clock className="w-4 h-4" /> Cam kết thời gian
-                </div>
-                <div className="text-lg font-bold text-[#18181B]">{draft.dailyMinutes} phút / ngày</div>
-                <div className="text-sm text-[#5F6368]">{draft.daysPerWeek} ngày / tuần</div>
+                  <Clock className="w-4 h-4" /> {tr("Cam kết thời gian")}</div>
+                <div className="text-lg font-bold text-[#18181B]">{draft.dailyMinutes} {tr("phút / ngày")}</div>
+                <div className="text-sm text-[#5F6368]">{draft.daysPerWeek} {tr("ngày / tuần")}</div>
               </div>
             </div>
 
             <div>
-              <h3 className="text-lg font-bold text-[#18181B] mb-4">Lịch học 7 ngày đầu tiên</h3>
+              <h3 className="text-lg font-bold text-[#18181B] mb-4">{tr("Lịch học 7 ngày đầu tiên")}</h3>
               <div className="space-y-3">
                 <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#FDF1F1] text-[#B91B1C] flex flex-col items-center justify-center font-bold text-sm">
-                    Ngày 1
-                  </div>
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#FDF1F1] text-[#B91B1C] flex flex-col items-center justify-center font-bold text-sm">{tr("Ngày 1")}</div>
                   <div className="flex-1 bg-white border border-[#E7E7EA] rounded-xl p-3 flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-sm text-[#18181B]">Chào hỏi và giới thiệu tên</div>
-                      <div className="text-xs text-[#5F6368]">Khởi động nhẹ nhàng · 2 phút</div>
+                      <div className="font-bold text-sm text-[#18181B]">{tr("Chào hỏi và giới thiệu tên")}</div>
+                      <div className="text-xs text-[#5F6368]">{tr("Khởi động nhẹ nhàng · 2 phút")}</div>
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#F7F7F9] text-[#5F6368] flex flex-col items-center justify-center font-bold text-sm">
-                    Ngày 2
-                  </div>
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#F7F7F9] text-[#5F6368] flex flex-col items-center justify-center font-bold text-sm">{tr("Ngày 2")}</div>
                   <div className="flex-1 bg-white border border-[#E7E7EA] rounded-xl p-3 flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-sm text-[#18181B]">Hỏi đường đến ga tàu</div>
-                      <div className="text-xs text-[#5F6368]">Ứng dụng thực tế · 2 phút</div>
+                      <div className="font-bold text-sm text-[#18181B]">{tr("Hỏi đường đến ga tàu")}</div>
+                      <div className="text-xs text-[#5F6368]">{tr("Ứng dụng thực tế · 2 phút")}</div>
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#F7F7F9] text-[#5F6368] flex flex-col items-center justify-center font-bold text-sm">
-                    Ngày 3
-                  </div>
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[#F7F7F9] text-[#5F6368] flex flex-col items-center justify-center font-bold text-sm">{tr("Ngày 3")}</div>
                   <div className="flex-1 bg-white border border-[#E7E7EA] rounded-xl p-3 flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-sm text-[#18181B]">Ôn tập 2 bài trước</div>
-                      <div className="text-xs text-[#5F6368]">Flashcard từ vựng & bài tập</div>
+                      <div className="font-bold text-sm text-[#18181B]">{tr("Ôn tập 2 bài trước")}</div>
+                      <div className="text-xs text-[#5F6368]">{tr("Flashcard từ vựng & bài tập")}</div>
                     </div>
                   </div>
                 </div>
@@ -292,23 +284,19 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
               <button
                 onClick={() => set('showProposal', false)}
                 className="flex-1 h-12 rounded-xl border border-[#E7E7EA] text-[#5F6368] font-bold text-sm hover:bg-[#F7F7F9] transition-colors"
-              >
-                Chỉnh sửa câu trả lời
-              </button>
+              >{tr("Chỉnh sửa câu trả lời")}</button>
               <button
                 onClick={handleFinish}
                 disabled={saving}
                 className="flex-[2] h-12 rounded-xl bg-[#B91B1C] text-white font-bold text-sm hover:bg-[#A3181A] transition-colors"
               >
-                {saving ? 'Đang lưu…' : 'Xác nhận lộ trình'}
+                {saving ? tr("Đang lưu…") : tr("Xác nhận lộ trình")}
               </button>
             </div>
-            {saveError && <InlineBanner variant="error" message={saveError} className="mb-3" />}
+            {saveError && <InlineBanner variant="error" message={ui(saveError)} className="mb-3" />}
             
             <div className="text-center">
-               <button onClick={() => { sessionStorage.removeItem(DRAFT_KEY); if (onSkip) onSkip(); }} className="text-xs text-[#8B9097] hover:text-[#5F6368] underline">
-                 Để sau (Lưu bản nháp và vào trang chủ)
-               </button>
+               <button onClick={() => { sessionStorage.removeItem(DRAFT_KEY); if (onSkip) onSkip(); }} className="text-xs text-[#8B9097] hover:text-[#5F6368] underline">{tr("Để sau (Lưu bản nháp và vào trang chủ)")}</button>
             </div>
 
           </div>
@@ -329,12 +317,11 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
           />
         </div>
         {draft.step <= totalSteps && (
-          <span className="text-xs font-bold text-[#8B9097]">Bước {draft.step}/{totalSteps}</span>
+          <span className="text-xs font-bold text-[#8B9097]">{tr("Bước")} {draft.step}/{totalSteps}</span>
         )}
+        <LanguageSelect />
         {onSkip && (
-          <button onClick={onSkip} className="text-xs text-[#8B9097] hover:text-[#18181B] font-semibold">
-            Bỏ qua
-          </button>
+          <button onClick={onSkip} className="text-xs text-[#8B9097] hover:text-[#18181B] font-semibold">{tr("Bỏ qua")}</button>
         )}
       </div>
 
@@ -355,8 +342,8 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 1: Goal */}
             {draft.step === 1 && (
               <div className="flex-1 space-y-4">
-                <h2 className="text-xl font-black text-[#18181B]">Mục tiêu chính khi học tiếng Trung của bạn là gì?</h2>
-                <p className="text-sm text-[#5F6368]">Chọn một mục tiêu phù hợp nhất.</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Mục tiêu chính khi học tiếng Trung của bạn là gì?")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("Chọn một mục tiêu phù hợp nhất.")}</p>
                 <div className="space-y-2.5 pt-1">
                   {GOALS.map((g) => (
                     <button
@@ -368,7 +355,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                           : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:bg-white'
                       }`}
                     >
-                      <span>{g.label}</span>
+                      <span>{ui(g.label)}</span>
                       {draft.goal === g.id && <Check className="w-4 h-4 text-[#B91B1C] shrink-0" />}
                     </button>
                   ))}
@@ -376,7 +363,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
 
                 {draft.goal === 'hsk' && (
                   <div className="pt-2 space-y-3">
-                    <p className="text-xs text-[#5F6368] font-semibold">Mục tiêu HSK (tùy chọn)</p>
+                    <p className="text-xs text-[#5F6368] font-semibold">{tr("Mục tiêu HSK (tùy chọn)")}</p>
                     <div className="grid grid-cols-3 gap-2">
                       {HSK_LEVELS.map((l) => (
                         <button
@@ -400,8 +387,8 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 2: Experience */}
             {draft.step === 2 && (
               <div className="flex-1 space-y-4">
-                <h2 className="text-xl font-black text-[#18181B]">Bạn đã từng học tiếng Trung chưa?</h2>
-                <p className="text-sm text-[#5F6368]">"Chưa biết trình độ" là câu trả lời hợp lệ.</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Bạn đã từng học tiếng Trung chưa?")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("\"Chưa biết trình độ\" là câu trả lời hợp lệ.")}</p>
                 <div className="space-y-2.5 pt-1">
                   {EXPERIENCES.map((e) => (
                     <button
@@ -413,7 +400,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                           : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:bg-white'
                       }`}
                     >
-                      <span>{e.label}</span>
+                      <span>{ui(e.label)}</span>
                       {draft.experience === e.id && <Check className="w-4 h-4 text-[#B91B1C] shrink-0" />}
                     </button>
                   ))}
@@ -421,7 +408,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
 
                 {draft.experience === 'know' && (
                   <div className="pt-2 space-y-3">
-                    <p className="text-xs text-[#5F6368] font-semibold">Trình độ hiện tại (theo đánh giá của bạn)</p>
+                    <p className="text-xs text-[#5F6368] font-semibold">{tr("Trình độ hiện tại (theo đánh giá của bạn)")}</p>
                     <div className="grid grid-cols-3 gap-2">
                       {HSK_LEVELS.map((l) => (
                         <button
@@ -438,7 +425,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                       ))}
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-xs text-[#5F6368] font-semibold">Nguồn đánh giá</p>
+                      <p className="text-xs text-[#5F6368] font-semibold">{tr("Nguồn đánh giá")}</p>
                       {['Chứng chỉ HSK', 'Sách giáo trình', 'Tự đánh giá', 'Giáo viên nhận xét'].map((src) => (
                         <button
                           key={src}
@@ -461,8 +448,8 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 3: Skills */}
             {draft.step === 3 && (
               <div className="flex-1 space-y-4">
-                <h2 className="text-xl font-black text-[#18181B]">Bạn muốn tập trung luyện kỹ năng nào?</h2>
-                <p className="text-sm text-[#5F6368]">Chọn tối đa 2 kỹ năng. "Chưa biết" là lựa chọn hợp lệ.</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Bạn muốn tập trung luyện kỹ năng nào?")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("Chọn tối đa 2 kỹ năng. \"Chưa biết\" là lựa chọn hợp lệ.")}</p>
                 <div className="space-y-2.5 pt-1">
                   {SKILLS.map((s) => {
                     const isSelected = draft.skills.includes(s.id);
@@ -484,14 +471,14 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                             : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:bg-white'
                         }`}
                       >
-                        <span>{s.label}</span>
+                        <span>{ui(s.label)}</span>
                         {isSelected && <Check className="w-4 h-4 text-[#B91B1C] shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
                 {draft.skills.length > 0 && !draft.skills.includes('unknown') && (
-                  <p className="text-xs text-[#8B9097]">Đã chọn {draft.skills.length}/2 kỹ năng</p>
+                  <p className="text-xs text-[#8B9097]">{tr("Đã chọn")} {draft.skills.length}{tr("/2 kỹ năng")}</p>
                 )}
               </div>
             )}
@@ -499,9 +486,9 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 4: Schedule */}
             {draft.step === 4 && (
               <div className="flex-1 space-y-6">
-                <h2 className="text-xl font-black text-[#18181B]">Bạn có thể dành bao nhiêu thời gian để học?</h2>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Bạn có thể dành bao nhiêu thời gian để học?")}</h2>
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-[#5F6368]">Phút mỗi ngày</p>
+                  <p className="text-sm font-semibold text-[#5F6368]">{tr("Phút mỗi ngày")}</p>
                   <div className="flex gap-2 flex-wrap">
                     {MINUTES.map((m) => (
                       <button
@@ -513,13 +500,12 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                             : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:border-[#B91B1C]'
                         }`}
                       >
-                        {m} phút
-                      </button>
+                        {m} {tr("phút")}</button>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-[#5F6368]">Ngày học mỗi tuần</p>
+                  <p className="text-sm font-semibold text-[#5F6368]">{tr("Ngày học mỗi tuần")}</p>
                   <div className="flex gap-2 flex-wrap">
                     {DAYS.map((d) => (
                       <button
@@ -531,8 +517,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                             : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:border-[#B91B1C]'
                         }`}
                       >
-                        {d} ngày
-                      </button>
+                        {d} {tr("ngày")}</button>
                     ))}
                   </div>
                 </div>
@@ -542,8 +527,8 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 5: Topics */}
             {draft.step === 5 && (
               <div className="flex-1 space-y-4">
-                <h2 className="text-xl font-black text-[#18181B]">Chủ đề nào bạn muốn học?</h2>
-                <p className="text-sm text-[#5F6368]">Chọn tối đa 3 chủ đề, hoặc chọn "Không có ưu tiên".</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Chủ đề nào bạn muốn học?")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("Chọn tối đa 3 chủ đề, hoặc chọn \"Không có ưu tiên\".")}</p>
                 <div className="grid grid-cols-2 gap-2.5 pt-1">
                   {TOPICS.map((t) => {
                     const isSelected = draft.topics.includes(t.id);
@@ -565,7 +550,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                             : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:bg-white'
                         }`}
                       >
-                        <span>{t.label}</span>
+                        <span>{ui(t.label)}</span>
                         {isSelected && <Check className="w-4 h-4 text-white shrink-0" />}
                       </button>
                     );
@@ -577,8 +562,8 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 6: Subtitles */}
             {draft.step === 6 && (
               <div className="flex-1 space-y-4">
-                <h2 className="text-xl font-black text-[#18181B]">Bạn muốn xem phụ đề như thế nào?</h2>
-                <p className="text-sm text-[#5F6368]">Có thể thay đổi bất cứ lúc nào trong phần cài đặt.</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Bạn muốn xem phụ đề như thế nào?")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("Có thể thay đổi bất cứ lúc nào trong phần cài đặt.")}</p>
                 <div className="space-y-2.5 pt-1">
                   {SUBTITLE_MODES.map((m) => (
                     <button
@@ -590,7 +575,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                           : 'bg-[#F7F7F9] text-[#18181B] border-[#E7E7EA] hover:bg-white'
                       }`}
                     >
-                      <span>{m.label}</span>
+                      <span>{ui(m.label)}</span>
                       {draft.subtitleMode === m.id && <Check className="w-4 h-4 text-[#B91B1C] shrink-0" />}
                     </button>
                   ))}
@@ -601,28 +586,26 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
             {/* Step 7: Summary */}
             {draft.step === 7 && (
               <div className="flex-1 space-y-5">
-                <h2 className="text-xl font-black text-[#18181B]">Xem lại câu trả lời của bạn</h2>
-                <p className="text-sm text-[#5F6368]">Chỉnh sửa bằng cách quay lại các bước trước.</p>
+                <h2 className="text-xl font-black text-[#18181B]">{tr("Xem lại câu trả lời của bạn")}</h2>
+                <p className="text-sm text-[#5F6368]">{tr("Chỉnh sửa bằng cách quay lại các bước trước.")}</p>
                 <div className="space-y-3">
                   {[
                     { label: 'Mục tiêu', value: GOALS.find((g) => g.id === draft.goal)?.label || '(chưa chọn)', step: 1 },
                     { label: 'Kinh nghiệm', value: EXPERIENCES.find((e) => e.id === draft.experience)?.label || '(chưa chọn)', step: 2 },
-                    { label: 'Kỹ năng muốn luyện', value: draft.skills.map((s) => SKILLS.find((x) => x.id === s)?.label).join(', ') || '(chưa chọn)', step: 3 },
-                    { label: 'Thời gian học', value: `${draft.dailyMinutes} phút/ngày, ${draft.daysPerWeek} ngày/tuần`, step: 4 },
-                    { label: 'Chủ đề yêu thích', value: draft.topics.map((t) => TOPICS.find((x) => x.id === t)?.label).join(', ') || '(không có ưu tiên)', step: 5 },
+                    { label: 'Kỹ năng muốn luyện', value: draft.skills.map((s) => ui(SKILLS.find((x) => x.id === s)?.label)).join(', ') || '(chưa chọn)', step: 3 },
+                    { label: 'Thời gian học', value: tr('{0} phút/ngày, {1} ngày/tuần', { 0: draft.dailyMinutes, 1: draft.daysPerWeek }), step: 4 },
+                    { label: 'Chủ đề yêu thích', value: draft.topics.map((t) => ui(TOPICS.find((x) => x.id === t)?.label)).join(', ') || '(không có ưu tiên)', step: 5 },
                     { label: 'Phụ đề', value: SUBTITLE_MODES.find((m) => m.id === draft.subtitleMode)?.label || '(chưa chọn)', step: 6 },
                   ].map((item) => (
                     <div key={item.label} className="flex items-start justify-between gap-4 p-4 bg-[#F7F7F9] rounded-2xl border border-[#E7E7EA]">
                       <div>
-                        <div className="text-xs font-bold text-[#8B9097] mb-0.5">{item.label}</div>
-                        <div className="text-sm font-semibold text-[#18181B]">{item.value}</div>
+                        <div className="text-xs font-bold text-[#8B9097] mb-0.5">{ui(item.label)}</div>
+                        <div className="text-sm font-semibold text-[#18181B]">{ui(item.value)}</div>
                       </div>
                       <button
                         onClick={() => set('step', item.step)}
                         className="text-xs text-[#B91B1C] font-bold hover:underline shrink-0"
-                      >
-                        Sửa
-                      </button>
+                      >{tr("Sửa")}</button>
                     </div>
                   ))}
                 </div>
@@ -637,9 +620,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                 onClick={goBack}
                 className="h-12 px-5 rounded-xl border border-[#E7E7EA] text-sm font-bold text-[#5F6368] hover:bg-[#F7F7F9] flex items-center gap-2"
               >
-                <ArrowLeft className="w-4 h-4" />
-                Quay lại
-              </button>
+                <ArrowLeft className="w-4 h-4" />{tr("Quay lại")}</button>
             )}
 
             {draft.step < 7 && (
@@ -648,7 +629,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                 disabled={!canContinue()}
                 className="flex-1 h-12 rounded-xl bg-[#B91B1C] text-white text-sm font-bold hover:bg-[#A3181A] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
               >
-                <span>Tiếp tục</span>
+                <span>{tr("Tiếp tục")}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
@@ -659,7 +640,7 @@ export default function OnboardingView({ onCompleteOnboarding, onSkip }: Onboard
                 className="flex-1 h-12 rounded-xl bg-[#B91B1C] text-white text-sm font-bold hover:bg-[#A3181A] flex items-center justify-center gap-2 transition-colors"
               >
                 <Sparkles className="w-4 h-4" style={{ fill: 'white' }} />
-                <span>Nhận đề xuất lộ trình</span>
+                <span>{tr("Nhận đề xuất lộ trình")}</span>
               </button>
             )}
           </div>

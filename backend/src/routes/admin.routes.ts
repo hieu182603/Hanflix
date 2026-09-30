@@ -1013,7 +1013,7 @@ router.get('/users', asyncHandler(async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
   const filter = q ? { $text: { $search: q } } : {};
   const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
-  const users = await UserModel.find(filter).select('name email role status learningProfile createdAt').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 100).limit(100).lean();
+  const users = await UserModel.find(filter).select('name email role status learningProfile premiumExpiresAt createdAt').sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 100).limit(100).lean();
   res.json({ data: { items: users, hasMore: users.length === 100 } });
 }));
 

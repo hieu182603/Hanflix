@@ -150,6 +150,7 @@ export interface AdminUser {
   email: string;
   role: 'user' | 'admin';
   status: 'active' | 'locked';
+  premiumExpiresAt?: string | null;
   learningProfile?: { currentHsk?: number; goal?: string } | null;
   createdAt?: string;
 }

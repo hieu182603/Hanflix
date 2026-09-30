@@ -130,6 +130,18 @@ export const uploadLimiter = rateLimit({
   handler: rateLimitHandler,
 });
 
+export const checkoutLimiter = rateLimit({
+  windowMs: 60_000, limit: 10, keyGenerator: accountOrIpKey,
+  standardHeaders: 'draft-8', legacyHeaders: false,
+  store: sharedStore('rl:checkout:') as never, handler: rateLimitHandler,
+});
+
+export const paymentStatusLimiter = rateLimit({
+  windowMs: 60_000, limit: 30, keyGenerator: accountOrIpKey,
+  standardHeaders: 'draft-8', legacyHeaders: false,
+  store: sharedStore('rl:payment-status:') as never, handler: rateLimitHandler,
+});
+
 /**
  * Limit broadcast notifications: admin duy nhất có thể gọi route này
  * nhưng cần giới hạn để phòng admin compromised spam DB. 30 broadcast

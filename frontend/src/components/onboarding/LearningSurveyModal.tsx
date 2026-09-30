@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useI18n } from '../../i18n';
+import React, { useState, useEffect } from 'react';
 import {
   Check,
   ChevronRight,
@@ -166,6 +167,7 @@ export default function LearningSurveyModal({
   onSavePreferences,
   currentUser,
 }: LearningSurveyModalProps) {
+  const { tr, ui } = useI18n();
   const [step, setStep] = useState<number>(1);
   const totalSteps = 4;
 
@@ -184,6 +186,18 @@ export default function LearningSurveyModal({
   const [subtitleDefault, setSubtitleDefault] = useState<'all' | 'zh-pinyin' | 'zh'>('all');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      const currentLevel = currentUser?.learningProfile?.hskLevel || userProfile?.hskLevel;
+      if (currentLevel) {
+        const levelStr = typeof currentLevel === 'number' ? `HSK ${currentLevel}` : String(currentLevel);
+        setSelectedHsk(levelStr);
+      }
+      setSaveError('');
+    }
+  }, [isOpen, currentUser?.learningProfile?.hskLevel, userProfile?.hskLevel]);
 
   if (!isOpen) return null;
 
@@ -234,6 +248,7 @@ export default function LearningSurveyModal({
       });
       onSavePreferences({ hskLevel: selectedHsk, targetGoal: goalMap[selectedGoal] || 'daily', interests: selectedInterests.map(value => topicMap[value] ?? value) });
       if (currentUser?.id) localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
+      window.dispatchEvent(new Event('hanflix:learning-profile-updated'));
       onClose();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Không thể lưu hồ sơ học tập.');
@@ -255,22 +270,17 @@ export default function LearningSurveyModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-[#18181B] tracking-tight">
-                  Thiết Lập Lộ Trình Học Tập
-                </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#F4F4F6] text-[#5F6368] text-[11px] font-bold">
-                  Bước {step} / {totalSteps}
+                <h2 className="text-base sm:text-lg font-black text-[#18181B] tracking-tight">{tr("Thiết Lập Lộ Trình Học Tập")}</h2>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#F4F4F6] text-[#5F6368] text-[11px] font-bold">{tr("Bước")} {step} / {totalSteps}
                 </span>
               </div>
-              <p className="text-xs text-[#5F6368] line-clamp-1">
-                Tùy chỉnh nội dung video và lộ trình tiếng Trung phù hợp với bạn
-              </p>
+              <p className="text-xs text-[#5F6368] line-clamp-1">{tr("Tùy chỉnh nội dung video và lộ trình tiếng Trung phù hợp với bạn")}</p>
             </div>
           </div>
 
           <button
             onClick={handleSkip}
-            aria-label="Đóng"
+            aria-label={tr("Đóng")}
             className="p-2 rounded-xl text-[#8B9097] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
@@ -296,11 +306,7 @@ export default function LearningSurveyModal({
               />
             </div>
             <div className="text-xs leading-relaxed text-[#5F6368] min-w-0">
-              <span className="font-extrabold text-[#18181B] text-sm block truncate">
-                Chào mừng {currentUser?.name || 'học viên'} đến với HanFlix!
-              </span>
-              Chỉ mất khoảng 30 giây để chọn trình độ và mục tiêu của bạn, giúp hệ thống gợi ý các bài học video sát với nhu cầu thực tế nhất.
-            </div>
+              <span className="font-extrabold text-[#18181B] text-sm block truncate">{tr("Chào mừng")} {currentUser?.name || tr("học viên")} {tr("đến với HanFlix!")}</span>{tr("Chỉ mất khoảng 30 giây để chọn trình độ và mục tiêu của bạn, giúp hệ thống gợi ý các bài học video sát với nhu cầu thực tế nhất.")}</div>
           </div>
         )}
 
@@ -312,11 +318,9 @@ export default function LearningSurveyModal({
               <div>
                 <h3 className="text-sm font-black text-[#18181B] flex items-center gap-2">
                   <GraduationCap className="w-4 h-4 text-[#B91B1C]" />
-                  <span>Trình độ tiếng Trung hiện tại của bạn là gì?</span>
+                  <span>{tr("Trình độ tiếng Trung hiện tại của bạn là gì?")}</span>
                 </h3>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Hệ thống sẽ sắp xếp các bài học có độ khó từ vựng và ngữ pháp vừa vặn nhất.
-                </p>
+                <p className="text-xs text-[#5F6368] mt-0.5">{tr("Hệ thống sẽ sắp xếp các bài học có độ khó từ vựng và ngữ pháp vừa vặn nhất.")}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -346,7 +350,7 @@ export default function LearningSurveyModal({
                         <div className="flex items-center justify-between gap-1">
                           <div className="flex items-center gap-1.5 truncate">
                             <span className="font-extrabold text-sm text-[#18181B]">{item.level}</span>
-                            <span className="text-xs font-semibold text-[#5F6368]">· {item.stage}</span>
+                            <span className="text-xs font-semibold text-[#5F6368]">· {ui(item.stage)}</span>
                           </div>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
@@ -355,10 +359,10 @@ export default function LearningSurveyModal({
                                 : 'bg-[#F1F1F4] text-[#5F6368]'
                             }`}
                           >
-                            {item.vocabCount}
+                            {ui(item.vocabCount)}
                           </span>
                         </div>
-                        <p className="text-xs text-[#5F6368] mt-1.5 leading-snug">{item.desc}</p>
+                        <p className="text-xs text-[#5F6368] mt-1.5 leading-snug">{ui(item.desc)}</p>
                       </div>
                     </button>
                   );
@@ -373,11 +377,9 @@ export default function LearningSurveyModal({
               <div>
                 <h3 className="text-sm font-black text-[#18181B] flex items-center gap-2">
                   <Target className="w-4 h-4 text-[#B91B1C]" />
-                  <span>Mục tiêu chính khi bạn học tiếng Trung là gì?</span>
+                  <span>{tr("Mục tiêu chính khi bạn học tiếng Trung là gì?")}</span>
                 </h3>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Chọn mục tiêu ưu tiên để hệ thống phân loại bài giảng trên trang chủ của bạn.
-                </p>
+                <p className="text-xs text-[#5F6368] mt-0.5">{tr("Chọn mục tiêu ưu tiên để hệ thống phân loại bài giảng trên trang chủ của bạn.")}</p>
               </div>
 
               <div className="space-y-2.5">
@@ -408,12 +410,12 @@ export default function LearningSurveyModal({
 
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-[#18181B]">{goal.title}</span>
+                            <span className="font-bold text-sm text-[#18181B]">{ui(goal.title)}</span>
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F4F4F6] text-[#5F6368] font-semibold">
-                              {goal.tag}
+                              {ui(goal.tag)}
                             </span>
                           </div>
-                          <p className="text-xs text-[#5F6368] mt-0.5 leading-snug">{goal.desc}</p>
+                          <p className="text-xs text-[#5F6368] mt-0.5 leading-snug">{ui(goal.desc)}</p>
                         </div>
                       </div>
 
@@ -439,11 +441,9 @@ export default function LearningSurveyModal({
               <div>
                 <h3 className="text-sm font-black text-[#18181B] flex items-center gap-2">
                   <Heart className="w-4 h-4 text-[#B91B1C]" />
-                  <span>Những chủ đề bạn quan tâm nhất khi xem video?</span>
+                  <span>{tr("Những chủ đề bạn quan tâm nhất khi xem video?")}</span>
                 </h3>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Chọn các chủ đề bạn muốn học (có thể chọn nhiều). Đã chọn: {selectedInterests.length} chủ đề.
-                </p>
+                <p className="text-xs text-[#5F6368] mt-0.5">{tr("Chọn các chủ đề bạn muốn học (có thể chọn nhiều). Đã chọn:")} {selectedInterests.length} {tr("chủ đề.")}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -471,7 +471,7 @@ export default function LearningSurveyModal({
                         >
                           <Icon className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-bold text-[#18181B]">{topic.label}</span>
+                        <span className="text-xs font-bold text-[#18181B]">{ui(topic.label)}</span>
                       </div>
 
                       <span
@@ -481,7 +481,7 @@ export default function LearningSurveyModal({
                             : 'bg-[#F1F1F4] text-[#8B9097]'
                         }`}
                       >
-                        {isSelected ? 'Đã chọn' : '+ Thêm'}
+                        {isSelected ? tr("Đã chọn") : tr("+ Thêm")}
                       </span>
                     </button>
                   );
@@ -496,18 +496,14 @@ export default function LearningSurveyModal({
               <div>
                 <h3 className="text-sm font-black text-[#18181B] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#B91B1C]" />
-                  <span>Thói quen học tập & Chế độ phụ đề</span>
+                  <span>{tr("Thói quen học tập & Chế độ phụ đề")}</span>
                 </h3>
-                <p className="text-xs text-[#5F6368] mt-0.5">
-                  Thiết lập thời lượng xem video và chế độ hiển thị phù hợp với bạn.
-                </p>
+                <p className="text-xs text-[#5F6368] mt-0.5">{tr("Thiết lập thời lượng xem video và chế độ hiển thị phù hợp với bạn.")}</p>
               </div>
 
               {/* Study duration */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#18181B] uppercase tracking-wider block">
-                  Thời lượng dự kiến học mỗi ngày
-                </label>
+                <label className="text-xs font-bold text-[#18181B] uppercase tracking-wider block">{tr("Thời lượng dự kiến học mỗi ngày")}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {STUDY_HABITS.map((item) => {
                     const isSelected = dailyMinutes === item.minutes;
@@ -522,8 +518,8 @@ export default function LearningSurveyModal({
                             : 'bg-white border-[#E7E7EA] hover:border-[#D1D5DB]'
                         }`}
                       >
-                        <div className="font-extrabold text-xs text-[#18181B]">{item.label}</div>
-                        <div className="text-[11px] text-[#5F6368] mt-1 leading-snug">{item.sub}</div>
+                        <div className="font-extrabold text-xs text-[#18181B]">{ui(item.label)}</div>
+                        <div className="text-[11px] text-[#5F6368] mt-1 leading-snug">{ui(item.sub)}</div>
                       </button>
                     );
                   })}
@@ -532,9 +528,7 @@ export default function LearningSurveyModal({
 
               {/* Subtitle mode */}
               <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-[#18181B] uppercase tracking-wider block">
-                  Chế độ hiển thị phụ đề mặc định
-                </label>
+                <label className="text-xs font-bold text-[#18181B] uppercase tracking-wider block">{tr("Chế độ hiển thị phụ đề mặc định")}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {[
                     { id: 'all', title: 'Song ngữ đầy đủ', desc: 'Hán tự + Pinyin + Dịch tiếng Việt' },
@@ -553,8 +547,8 @@ export default function LearningSurveyModal({
                             : 'bg-white border-[#E7E7EA] hover:border-[#D1D5DB]'
                         }`}
                       >
-                        <div className="font-bold text-xs text-[#18181B]">{sub.title}</div>
-                        <div className="text-[11px] text-[#5F6368] mt-1 leading-snug">{sub.desc}</div>
+                        <div className="font-bold text-xs text-[#18181B]">{ui(sub.title)}</div>
+                        <div className="text-[11px] text-[#5F6368] mt-1 leading-snug">{ui(sub.desc)}</div>
                       </button>
                     );
                   })}
@@ -564,7 +558,7 @@ export default function LearningSurveyModal({
           )}
         </div>
 
-        {saveError && <div className="px-6 mb-3"><InlineBanner variant="error" message={saveError} /></div>}
+        {saveError && <div className="px-6 mb-3"><InlineBanner variant="error" message={ui(saveError)} /></div>}
         {/* Modal Footer */}
         <div className="px-4 sm:px-6 pt-6 pb-10 sm:pt-7 sm:pb-12 border-t border-[#E7E7EA] bg-[#FAFAFC] flex items-center justify-between shrink-0 safe-area-bottom">
           <div>
@@ -575,27 +569,37 @@ export default function LearningSurveyModal({
                 className="px-4 py-2.5 min-h-[44px] rounded-xl border border-[#E7E7EA] bg-white text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>Quay lại</span>
+                <span>{tr("Quay lại")}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSkip}
                 className="text-xs font-semibold text-[#8B9097] hover:text-[#5F6368] px-2 py-1 min-h-[44px] inline-flex items-center transition-colors cursor-pointer"
-              >
-                Bỏ qua lần này
-              </button>
+              >{tr("Bỏ qua lần này")}</button>
             )}
           </div>
 
           <div className="flex items-center gap-2">
+            {step === 1 && (
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={saving}
+                className="px-4 py-2.5 min-h-[44px] rounded-xl border border-[#B91B1C] text-[#B91B1C] hover:bg-red-50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title={tr("Lưu nhanh cấp độ HSK này và áp dụng ngay")}
+              >
+                <Check className="w-4 h-4" />
+                <span>{saving ? tr("Đang lưu…") : tr("Lưu cấp độ này")}</span>
+              </button>
+            )}
             {step < totalSteps ? (
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
                 className="px-6 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
               >
-                <span>Tiếp tục</span>
+                <span>{tr("Tiếp tục")}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
@@ -606,7 +610,7 @@ export default function LearningSurveyModal({
                 className="px-6 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>{saving ? 'Đang lưu…' : 'Lưu & Bắt đầu học'}</span>
+                <span>{saving ? tr("Đang lưu…") : tr("Lưu & Bắt đầu học")}</span>
               </button>
             )}
           </div>

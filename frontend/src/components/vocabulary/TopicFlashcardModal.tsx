@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
@@ -33,6 +34,7 @@ export default function TopicFlashcardModal({
   onToggleSaveWord,
   isWordSaved,
 }: TopicFlashcardModalProps) {
+  const { tr, ui } = useI18n();
   const [deck, setDeck] = useState<DisplayWordItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -143,22 +145,20 @@ export default function TopicFlashcardModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-sm sm:text-base text-[#18181B] tracking-tight truncate">
-                  {topic.nameVi}
+                  {ui(topic.nameVi)}
                 </h3>
                 <span className="text-xs font-hanzi font-semibold text-[#8B9097] shrink-0">
                   {topic.nameZh}
                 </span>
               </div>
-              <p className="text-[11px] text-[#5F6368] truncate">
-                Luyện tập thẻ từ vựng Flashcard
-              </p>
+              <p className="text-[11px] text-[#5F6368] truncate">{tr("Luyện tập thẻ từ vựng Flashcard")}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={handleShuffle}
-              title="Xáo trộn thứ tự từ"
+              title={tr("Xáo trộn thứ tự từ")}
               className="w-10 h-10 rounded-xl text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] transition-colors cursor-pointer flex items-center justify-center"
             >
               <Shuffle className="w-4 h-4" />
@@ -166,7 +166,7 @@ export default function TopicFlashcardModal({
 
             <button
               onClick={onClose}
-              title="Đóng (Esc)"
+              title={tr("Đóng (Esc)")}
               className="w-10 h-10 rounded-xl text-[#5F6368] hover:text-[#B91B1C] hover:bg-red-50 transition-colors cursor-pointer flex items-center justify-center"
             >
               <X className="w-5 h-5" />
@@ -192,16 +192,13 @@ export default function TopicFlashcardModal({
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
                 <Trophy className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
-              <h4 className="text-xl sm:text-2xl font-black text-[#18181B]">
-                Hoàn thành chủ đề {topic.nameVi}!
+              <h4 className="text-xl sm:text-2xl font-black text-[#18181B]">{tr("Hoàn thành chủ đề")} {ui(topic.nameVi)}!
               </h4>
-              <p className="text-xs sm:text-sm text-[#5F6368] max-w-sm mx-auto">
-                Bạn đã luyện tập toàn bộ {deck.length} từ vựng trong chủ đề này. Các từ bạn đã lưu sẽ tiếp tục được nhắc lại trong mục Kho lưu trữ.
-              </p>
+              <p className="text-xs sm:text-sm text-[#5F6368] max-w-sm mx-auto">{tr("Bạn đã luyện tập toàn bộ")} {deck.length} {tr("từ vựng trong chủ đề này. Các từ bạn đã lưu sẽ tiếp tục được nhắc lại trong mục Kho lưu trữ.")}</p>
               <p role="status" className="text-xs text-neutral-600">
-                {syncStatus === 'saving' ? 'Đang lưu ngày học…' : syncStatus === 'saved' ? 'Đã lưu hoạt động ôn tập.' : syncStatus === 'error' ? 'Chưa lưu được ngày học. Kiểm tra kết nối và bộ thẻ trong kho đã xuất bản.' : ''}
+                {syncStatus === 'saving' ? tr("Đang lưu ngày học…") : syncStatus === 'saved' ? tr("Đã lưu hoạt động ôn tập.") : syncStatus === 'error' ? tr("Chưa lưu được ngày học. Kiểm tra kết nối và bộ thẻ trong kho đã xuất bản.") : ''}
               </p>
-              {syncStatus === 'error' && <button onClick={() => void saveSession()} className="text-sm underline">Thử lưu lại</button>}
+              {syncStatus === 'error' && <button onClick={() => void saveSession()} className="text-sm underline">{tr("Thử lưu lại")}</button>}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
                 <button
                   onClick={() => {
@@ -212,14 +209,12 @@ export default function TopicFlashcardModal({
                   className="px-5 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold transition-all shadow-sm cursor-pointer flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Ôn lại chủ đề này</span>
+                  <span>{tr("Ôn lại chủ đề này")}</span>
                 </button>
                 <button
                   onClick={onClose}
                   className="px-5 py-2.5 min-h-[44px] rounded-xl bg-[#F7F7F9] hover:bg-white text-[#18181B] border border-[#E7E7EA] text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center"
-                >
-                  Đóng
-                </button>
+                >{tr("Đóng")}</button>
               </div>
             </div>
           ) : currentWord ? (
@@ -266,7 +261,7 @@ export default function TopicFlashcardModal({
                     <div className="relative z-10 flex items-center justify-between gap-3">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F7F7F9] border border-[#E7E7EA] text-[11px] font-bold text-[#5F6368] uppercase tracking-wider">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#B91B1C]" />
-                        <span>Mặt trước · Thuật ngữ</span>
+                        <span>{tr("Mặt trước · Thuật ngữ")}</span>
                       </span>
 
                       <button
@@ -275,7 +270,7 @@ export default function TopicFlashcardModal({
                           e.stopPropagation();
                           playPronunciation(currentWord.simplified);
                         }}
-                        title="Nghe phát âm chuẩn (Giọng Bắc Kinh)"
+                        title={tr("Nghe phát âm chuẩn (Giọng Bắc Kinh)")}
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                           speakingHanzi === currentWord.simplified
                             ? 'bg-[#B91B1C] text-white border-[#B91B1C] scale-110 shadow-md'
@@ -294,7 +289,7 @@ export default function TopicFlashcardModal({
 
                       <div className="mt-3 sm:mt-5 inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-[#8B9097] group-hover:text-[#B91B1C] bg-white group-hover:bg-[#FDF1F1] px-3 sm:px-4 py-1.5 rounded-full border border-[#E7E7EA] group-hover:border-[#B91B1C]/30 transition-all shadow-2xs">
                         <RotateCcw className="w-3.5 h-3.5 text-[#B91B1C] transition-transform duration-500 group-hover:rotate-180" />
-                        <span>Chạm để lật thẻ (Space)</span>
+                        <span>{tr("Chạm để lật thẻ (Space)")}</span>
                       </div>
                     </div>
 
@@ -316,12 +311,12 @@ export default function TopicFlashcardModal({
                           {saved ? (
                             <>
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Đã lưu</span>
+                              <span>{tr("Đã lưu")}</span>
                             </>
                           ) : (
                             <>
                               <BookmarkPlus className="w-3.5 h-3.5" />
-                              <span>Lưu SRS</span>
+                              <span>{tr("Lưu SRS")}</span>
                             </>
                           )}
                         </button>
@@ -329,9 +324,7 @@ export default function TopicFlashcardModal({
                         <span />
                       )}
 
-                      <kbd className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-[#F7F7F9] border border-[#E7E7EA] text-[10px] font-mono text-neutral-600 font-bold">
-                        Space để lật
-                      </kbd>
+                      <kbd className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-[#F7F7F9] border border-[#E7E7EA] text-[10px] font-mono text-neutral-600 font-bold">{tr("Space để lật")}</kbd>
                     </div>
                   </div>
 
@@ -353,7 +346,7 @@ export default function TopicFlashcardModal({
                     <div className="relative z-10 flex items-center justify-between gap-3">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/25 text-[11px] font-bold text-[#B91B1C] uppercase tracking-wider">
                         <Sparkles className="w-3.5 h-3.5 fill-[#B91B1C]" />
-                        <span>Mặt sau · Định nghĩa</span>
+                        <span>{tr("Mặt sau · Định nghĩa")}</span>
                       </span>
 
                       <button
@@ -362,7 +355,7 @@ export default function TopicFlashcardModal({
                           e.stopPropagation();
                           playPronunciation(currentWord.simplified);
                         }}
-                        title="Nghe lại phát âm"
+                        title={tr("Nghe lại phát âm")}
                         className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                           speakingHanzi === currentWord.simplified
                             ? 'bg-[#B91B1C] text-white border-[#B91B1C] scale-110 shadow-md'
@@ -427,12 +420,12 @@ export default function TopicFlashcardModal({
                           {saved ? (
                             <>
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Đã lưu</span>
+                              <span>{tr("Đã lưu")}</span>
                             </>
                           ) : (
                             <>
                               <BookmarkPlus className="w-3.5 h-3.5" />
-                              <span>Lưu SRS</span>
+                              <span>{tr("Lưu SRS")}</span>
                             </>
                           )}
                         </button>
@@ -442,7 +435,7 @@ export default function TopicFlashcardModal({
 
                       <div className="inline-flex items-center gap-1.5 font-bold text-[#B91B1C] hover:underline cursor-pointer">
                         <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Lật lại</span>
+                        <span>{tr("Lật lại")}</span>
                       </div>
                     </div>
                   </div>
@@ -457,14 +450,14 @@ export default function TopicFlashcardModal({
                   className="px-4 py-2.5 min-h-[44px] rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-[#18181B] font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-2xs"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span>Thẻ trước</span>
+                  <span>{tr("Thẻ trước")}</span>
                 </button>
 
                 <button
                   onClick={handleNext}
                   className="px-5 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md shadow-[#B91B1C]/20 cursor-pointer"
                 >
-                  <span>{currentIndex + 1 === deck.length ? 'Hoàn thành' : 'Thẻ tiếp theo'}</span>
+                  <span>{currentIndex + 1 === deck.length ? tr("Hoàn thành") : tr("Thẻ tiếp theo")}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

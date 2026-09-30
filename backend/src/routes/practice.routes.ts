@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { optionalAuth, requirePremium } from '../middleware/premium.js';
 import { Types } from 'mongoose';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
@@ -8,7 +9,7 @@ import { PracticeAttemptModel, PracticeSetModel } from '../models/practice.model
 import { attemptInput, getPractice, practiceSkills, savePractice, startPractice, submitPractice } from '../services/practice.service.js';
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireAuth, requirePremium);
 const id = z.object({ id: z.string().refine(Types.ObjectId.isValid) });
 const list = z.object({
   hsk: z.coerce.number().int().min(1).max(9).optional(), skill: z.enum(practiceSkills).optional(),

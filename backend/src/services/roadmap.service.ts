@@ -1,3 +1,4 @@
+import { learnerHsk } from './lesson-access.js';
 import { Types } from 'mongoose';
 import { LessonModel } from '../models/lesson.model.js';
 import { ProgressModel } from '../models/progress.model.js';
@@ -25,8 +26,8 @@ const topicNames: Record<string, string> = {
 };
 export class RoadmapService {
   static async getRoadmap(userId: string) {
-    const user = await UserModel.findById(userId).select('learningProfile').lean();
-    const currentHsk = user?.learningProfile?.currentHsk || 1;
+    const user = await UserModel.findById(userId).select('role learningProfile').lean();
+    const currentHsk = learnerHsk({ role: user?.role, currentHsk: user?.learningProfile?.currentHsk }) ?? 1;
     const targetHsk = Math.max(currentHsk, user?.learningProfile?.targetHsk || 6);
     const dailyMinutes = user?.learningProfile?.dailyMinutes || 15;
     const preferredTopics = new Set(user?.learningProfile?.topicIds ?? []);
@@ -57,9 +58,9 @@ export class RoadmapService {
         return Number(bPreferred) - Number(aPreferred) || String(a._id).localeCompare(String(b._id));
       });
       const done = lessons.filter(l => completedIds.has(String(l._id))).length;
-      const unlocked = level <= currentHsk || stages[level - 2]?.status === 'completed';
+      const unlocked = user?.role === 'admin' || level === currentHsk;
       const status: RoadmapStage['status'] = !lessons.length ? 'unavailable'
-        : done === lessons.length ? 'completed' : unlocked ? 'in_progress' : 'locked';
+        : !unlocked ? 'locked' : done === lessons.length ? 'completed' : 'in_progress';
       const topicIds = [...new Set(lessons.flatMap(l => l.topicIds?.length ? l.topicIds : ['general']))];
       const topics: ModuleTopic[] = topicIds.map(id => {
         const subset = lessons.filter(l => l.topicIds?.length ? l.topicIds.includes(id) : id === 'general');
@@ -69,11 +70,11 @@ export class RoadmapService {
           status: count === subset.length ? 'completed' : count ? 'in_progress' : 'not_started' };
       });
       stages.push({ id: `hsk${level}`, level: `HSK ${level}`, title: `Chặng học HSK ${level}`,
-        description: lessons.length ? `Hoàn thành ${lessons.length} bài học trong kho để đi tiếp. Chủ đề ưu tiên theo hồ sơ học tập của bạn.` : 'Chưa có bài học được xuất bản cho cấp này.',
+        description: lessons.length ? `Chặng này có ${lessons.length} bài học. Video chỉ mở tại HSK hiện tại trong hồ sơ của bạn.` : 'Chưa có bài học được xuất bản cho cấp này.',
         status, progress: lessons.length ? Math.round(done / lessons.length * 100) : 0,
         wordCount: '', grammarCount: '', totalLessons: lessons.length, completedLessons: done, topics,
         nextLessonId: status === 'in_progress' ? String(lessons.find(l => !completedIds.has(String(l._id)))!._id) : null,
-        lessons: lessons.map(l => ({ id: String(l._id), title: l.titleVi, completed: completedIds.has(String(l._id)), durationSeconds: l.durationSeconds || 600 })),
+        lessons: (unlocked ? lessons : []).map(l => ({ id: String(l._id), title: l.titleVi, completed: completedIds.has(String(l._id)), durationSeconds: l.durationSeconds || 600 })),
       });
     }
     const relevant = stages.filter((_, index) => index + 1 >= currentHsk && index + 1 <= targetHsk);

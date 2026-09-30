@@ -1,19 +1,30 @@
 import React, { useState, useEffect, lazy } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import { useLanguage } from './i18n';
+import { useLanguage, LearnerLanguageScope } from './i18n';
+import { NotificationProvider } from './components/notifications';
 import AIAssistantDrawer from './components/AIAssistantDrawer';
 import PreferencesDrawer from './components/PreferencesDrawer';
 import LandingPage from './components/LandingPage';
 import { ExamPrepPage, LeaderboardPage, CommunityPage } from './components/ExamPrepPage';
 import GrammarPage from './components/grammar/GrammarPage';
+import { PremiumAccessProvider, PremiumGate } from './components/premium/PremiumAccess';
+import PremiumPricingPage from './components/premium/PremiumPricingPage';
+import PaymentReturnPage from './components/premium/PaymentReturnPage';
+import PaymentHistoryPage from './components/premium/PaymentHistoryPage';
+import AboutProjectPage from './components/AboutProjectPage';
+import TestimonialsPage from './components/TestimonialsPage';
+import FaqPage from './components/FaqPage';
+import PricingStandalonePage from './components/PricingStandalonePage';
+import { getUserSubscription } from './api/billing';
+import { queryClient } from './lib/queryClient';
 
 // Settings & Survey Modals
 import SettingsModal from './components/settings/SettingsModal';
 import LearningSurveyModal from './components/onboarding/LearningSurveyModal';
 import StreakCelebrationToast from './components/streak/StreakCelebrationToast';
 import XpCelebrationToast from './components/xp/XpCelebrationToast';
-import { getStreakState } from './lib/streak';
+import { getStreakState, setStreakUser, startStreakSync } from './lib/streak';
 
 // Watch Views
 const PublishedLessonView = lazy(() => import('./components/watch/PublishedLessonView'));
@@ -55,7 +66,7 @@ import {
   UserLearningProfile,
 } from './data/hanflixData';
 import {
-  Home, PlaySquare, BookMarked, BookOpenCheck, Map
+  Home, PlaySquare, BookMarked, BookOpenCheck, Map, Crown, ArrowRight, Menu, X
 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -66,7 +77,7 @@ function VideoToWatchRedirect() {
 
 type AuthView = 'login' | 'signup' | 'onboarding' | 'forgot-password' | 'verify-email' | 'reset-password';
 
-const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'grammar', 'settings', 'profile'] as const;
+const NAV_SECTIONS = ['feed', 'lessons', 'saved', 'vocabulary', 'roadmap', 'history', 'exam', 'leaderboard', 'grammar', 'community', 'settings', 'profile'] as const;
 type NavSection = typeof NAV_SECTIONS[number];
 
 // Map URL pathname → activeNav id (for learner pages).
@@ -112,6 +123,46 @@ export default function App() {
   // Always start in restoring state on mount — show loading until session is confirmed
   const [isRestoringSession, setIsRestoringSession] = useState<boolean>(true);
 
+  useEffect(() => {
+    if (isRestoringSession || !currentUser?.id) {
+      setStreakUser(null);
+      return;
+    }
+    return startStreakSync(currentUser.id);
+  }, [isRestoringSession, currentUser?.id]);
+
+  useEffect(() => {
+    if (isRestoringSession || !currentUser?.id) return;
+    const userId = currentUser.id;
+    const controller = new AbortController();
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const subscription = await getUserSubscription(controller.signal);
+        if (controller.signal.aborted) return;
+        setCurrentUser(user => user?.id === userId ? { ...user, premiumExpiresAt: subscription.premiumExpiresAt } : user);
+        queryClient.setQueryData(['billing', 'subscription'], subscription);
+        if (subscription.premiumExpiresAt !== currentUser.premiumExpiresAt) void queryClient.invalidateQueries();
+      } catch { /* Keep the confirmed session during temporary network failures. */ }
+      finally { refreshing = false; }
+    };
+    const visible = () => { if (document.visibilityState === 'visible') void refresh(); };
+    window.addEventListener('hanflix:subscription-updated', refresh);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    document.addEventListener('visibilitychange', visible);
+    const timer = window.setInterval(visible, 60_000);
+    return () => {
+      controller.abort(); window.clearInterval(timer);
+      window.removeEventListener('hanflix:subscription-updated', refresh);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [isRestoringSession, currentUser?.id, currentUser?.premiumExpiresAt]);
+
   // Modals & Drawers
   const [selectedLesson, setSelectedLesson] = useState<VideoLesson | null>(null);
   const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
@@ -127,8 +178,23 @@ export default function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const returnTo = typeof location.state?.returnTo === 'string' && /^\/premium(?:\/payment)?(?:\?|$)/.test(location.state.returnTo)
+    ? location.state.returnTo : '/feed';
 
   // Restore session on mount.
+  useEffect(() => {
+    let active = true;
+    const refreshProfile = () => {
+      void authApi.restoreSession().then(user => {
+        if (!active || !user) return;
+        setCurrentUser(current => current?.id === user.id ? user : current);
+        void queryClient.invalidateQueries();
+      }).catch(() => { /* Server access checks still apply if refreshing the UI fails. */ });
+    };
+    window.addEventListener('hanflix:learning-profile-updated', refreshProfile);
+    return () => { active = false; window.removeEventListener('hanflix:learning-profile-updated', refreshProfile); };
+  }, []);
+
   useEffect(() => {
     perfMarks.mark('restore_session:start');
     authApi.restoreSession().then((user) => {
@@ -145,22 +211,27 @@ export default function App() {
     });
   }, []);
 
-  // First-time login survey popup.
+  // Only survey eligibility changes may reset this modal. Subscription refreshes
+  // must preserve an explicitly opened survey and the learner's in-progress input.
+  const surveyUserId = currentUser?.id;
+  const surveyUserRole = currentUser?.role;
+  const surveyVersion = currentUser?.learningProfile?.surveyVersion;
+  const surveyHsk = currentUser?.learningProfile?.hskLevel;
   useEffect(() => {
+    if (isRestoringSession) return;
     try {
       localStorage.removeItem('hanflix_survey_completed_global');
     } catch {
       // ignore
     }
 
-    if (currentUser && currentUser.role === 'user') {
-      const serverSideCompleted = currentUser.learningProfile?.surveyVersion != null;
-      const localCompleted = localStorage.getItem(`hanflix_survey_completed_${currentUser.id}`);
-      if (!serverSideCompleted && !localCompleted) {
-        setIsSurveyOpen(true);
-      }
+    if (surveyUserId && surveyUserRole === 'user') {
+      const serverSideCompleted = surveyVersion != null;
+      const localCompleted = localStorage.getItem(`hanflix_survey_completed_${surveyUserId}`);
+      const hasHsk = Boolean(surveyHsk && surveyHsk >= 1 && surveyHsk <= 9);
+      setIsSurveyOpen(!hasHsk || (!serverSideCompleted && !localCompleted));
     }
-  }, [currentUser]);
+  }, [surveyUserId, surveyUserRole, surveyVersion, surveyHsk, isRestoringSession]);
 
   const handleOpenAI = (prompt?: string) => {
     if (prompt) {
@@ -172,35 +243,44 @@ export default function App() {
   };
 
   const handleSavePreferences = (updated: Partial<UserProfile>) => {
-    if (currentUser?.learningProfile) {
+    if (currentUser) {
       const hskLevel = updated.hskLevel
         ? Number(updated.hskLevel.replace(/\D/g, ''))
-        : currentUser.learningProfile.hskLevel;
+        : (currentUser.learningProfile?.hskLevel ?? 3);
 
       setCurrentUser({
         ...currentUser,
         learningProfile: {
-          ...currentUser.learningProfile,
+          ...(currentUser.learningProfile || {
+            goal: 'daily',
+            topics: [],
+            dailyMinutes: 15,
+            preferredDuration: '1-3',
+            subtitleDefaults: { zh: true, pinyin: true, vi: true },
+            defaultSpeed: 1,
+            uiLanguage: 'vi',
+          }),
           hskLevel,
-          goal: updated.targetGoal ?? currentUser.learningProfile.goal,
-          topics: updated.interests ?? currentUser.learningProfile.topics,
+          goal: updated.targetGoal ?? currentUser.learningProfile?.goal ?? 'daily',
+          topics: updated.interests ?? currentUser.learningProfile?.topics ?? [],
           subtitlePreference: updated.subtitleMode
             ? { all: 'all', 'zh-pinyin': 'zh_pinyin', zh: 'zh_only' }[updated.subtitleMode]
-            : currentUser.learningProfile.subtitlePreference,
-          surveyVersion: currentUser.learningProfile.surveyVersion ?? 1,
+            : (currentUser.learningProfile?.subtitlePreference ?? 'all'),
+          surveyVersion: currentUser.learningProfile?.surveyVersion ?? 1,
         },
       });
+      void queryClient.invalidateQueries();
     }
   };
 
   // Dedicated loading preview route — bypass everything.
   if (location.pathname === '/loading') {
-    return <HanFlixLoadingScreen />;
+    return <LearnerLanguageScope enabled={false}><HanFlixLoadingScreen /></LearnerLanguageScope>;
   }
 
   // Branded loading screen during session restore.
   if (isRestoringSession) {
-    return <HanFlixLoadingScreen />;
+    return <LearnerLanguageScope enabled={false}><HanFlixLoadingScreen /></LearnerLanguageScope>;
   }
 
   const handleLogout = async () => {
@@ -210,11 +290,14 @@ export default function App() {
   };
 
   return (
+    <LearnerLanguageScope enabled={!!currentUser && currentUser.role !== 'admin' && !/^\/(?:auth|admin|landing|welcome|about|testimonials|reviews|faq|help)(?:\/|$)/.test(location.pathname)}>
+    <NotificationProvider>
+    <PremiumAccessProvider user={currentUser}>
     <Routes>
       {/* Auth routes */}
       <Route path="/auth/login" element={
         currentUser ? (
-          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/feed" replace />
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to={returnTo} replace />
         ) : (
           <LoginView
             onLoginSuccess={(user) => {
@@ -223,7 +306,7 @@ export default function App() {
               if (user.role === 'admin') {
                 navigate('/admin', { replace: true });
               } else {
-                navigate('/feed', { replace: true });
+                navigate(returnTo, { replace: true });
                 const serverSideCompleted = user.learningProfile?.surveyVersion != null;
                 const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
                 if (!serverSideCompleted && !localCompleted && user.role === 'user') {
@@ -231,24 +314,24 @@ export default function App() {
                 }
               }
             }}
-            onNavigateToSignup={() => navigate('/auth/signup')}
-            onNavigateToForgotPassword={() => navigate('/auth/forgot-password')}
+            onNavigateToSignup={() => navigate('/auth/signup', { state: { returnTo } })}
+            onNavigateToForgotPassword={() => navigate('/auth/forgot-password', { state: { returnTo } })}
           />
         )
       } />
       <Route path="/auth/signup" element={
         currentUser ? (
-          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/feed" replace />
+          currentUser.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to={returnTo} replace />
         ) : (
           <SignupView
-            onNavigateToLogin={() => navigate('/auth/login')}
+            onNavigateToLogin={() => navigate('/auth/login', { state: { returnTo } })}
             onGoogleSuccess={(user) => {
               setCurrentUser(user);
               setSelectedLesson(null);
               if (user.role === 'admin') {
                 navigate('/admin', { replace: true });
               } else {
-                navigate('/feed', { replace: true });
+                navigate(returnTo, { replace: true });
                 const serverSideCompleted = user.learningProfile?.surveyVersion != null;
                 const localCompleted = localStorage.getItem(`hanflix_survey_completed_${user.id}`);
                 if (!serverSideCompleted && !localCompleted && user.role === 'user') {
@@ -261,18 +344,18 @@ export default function App() {
       } />
       <Route path="/auth/forgot-password" element={
         <ForgotPasswordView
-          onNavigateToLogin={() => navigate('/auth/login')}
+          onNavigateToLogin={() => navigate('/auth/login', { state: { returnTo } })}
           onNavigateToResetPassword={(email) =>
-            navigate(`/auth/reset-password?email=${encodeURIComponent(email)}`)
+            navigate(`/auth/reset-password?email=${encodeURIComponent(email)}`, { state: { returnTo } })
           }
         />
       } />
       <Route path="/auth/verify-email" element={
-        <VerifyEmailView onNavigateToLogin={() => navigate('/auth/login')} />
+        <VerifyEmailView onNavigateToLogin={() => navigate('/auth/login', { state: { returnTo } })} />
       } />
       <Route path="/auth/reset-password" element={
         <ResetPasswordView
-          onNavigateToLogin={() => navigate('/auth/login')}
+          onNavigateToLogin={() => navigate('/auth/login', { state: { returnTo } })}
           initialEmail={new URLSearchParams(location.search).get('email') || ''}
         />
       } />
@@ -282,7 +365,7 @@ export default function App() {
         !currentUser ? (
           <LoginView
             onLoginSuccess={(user) => { setCurrentUser(user); navigate('/onboarding', { replace: true }); }}
-            onNavigateToSignup={() => navigate('/auth/signup')}
+            onNavigateToSignup={() => navigate('/auth/signup', { state: { returnTo } })}
             onNavigateToForgotPassword={() => navigate('/auth/forgot-password')}
           />
         ) : (
@@ -391,6 +474,61 @@ export default function App() {
       <Route path="/videos/:lessonId" element={<VideoToWatchRedirect />} />
       <Route path="/saved" element={<Navigate to="/vocabulary?tab=saved" replace />} />
       <Route path="/favorites" element={<Navigate to="/vocabulary?tab=saved" replace />} />
+      <Route path="/pricing" element={<Navigate to="/premium" replace />} />
+      <Route path="/upgrade" element={<Navigate to="/premium" replace />} />
+
+      {/* Dedicated standalone About Project route (Dự án FPT EXE 2) */}
+      <Route path="/about" element={
+        <AboutProjectPage
+          onSignIn={() => navigate('/auth/login')}
+          onSignUp={() => navigate('/auth/signup')}
+          onStartSurvey={() => navigate('/auth/signup')}
+        />
+      } />
+
+      {/* Dedicated standalone Testimonials route (Cảm nhận học viên) */}
+      <Route path="/testimonials" element={
+        <TestimonialsPage
+          onSignIn={() => navigate('/auth/login')}
+          onSignUp={() => navigate('/auth/signup')}
+          onStartSurvey={() => navigate('/auth/signup')}
+        />
+      } />
+      <Route path="/reviews" element={<Navigate to="/testimonials" replace />} />
+
+      {/* Dedicated standalone FAQ route (Hỏi đáp thường gặp) */}
+      <Route path="/faq" element={
+        <FaqPage
+          onSignIn={() => navigate('/auth/login')}
+          onSignUp={() => navigate('/auth/signup')}
+          onStartSurvey={() => navigate('/auth/signup')}
+        />
+      } />
+      <Route path="/help" element={<Navigate to="/faq" replace />} />
+
+      {/* Dedicated standalone Premium Page route (không có sidebar) */}
+      <Route path="/premium/payment" element={
+        !currentUser ? <Navigate to="/auth/login" replace state={{ returnTo: location.pathname + location.search }} /> : <PaymentReturnPage />
+      } />
+      <Route path="/premium" element={
+        currentUser ? (
+          <PremiumDedicatedRoute currentUser={currentUser} onLogout={handleLogout} />
+        ) : (
+          <PricingStandalonePage
+            currentUser={currentUser}
+            onSignIn={() => navigate('/auth/login')}
+            onSignUp={() => navigate('/auth/signup')}
+            onStartSurvey={() => navigate('/auth/signup')}
+          />
+        )
+      } />
+      <Route path="/payment-history" element={
+        !currentUser
+          ? <Navigate to="/auth/login" replace />
+          : <PaymentHistoryDedicatedRoute currentUser={currentUser} onLogout={handleLogout} />
+      } />
+      <Route path="/orders" element={<Navigate to="/payment-history" replace />} />
+      <Route path="/billing/history" element={<Navigate to="/payment-history" replace />} />
 
       <Route path="/:section" element={
         !currentUser
@@ -418,6 +556,9 @@ export default function App() {
 
       <Route path="*" element={<NotFoundPage showHeader={false} currentUser={currentUser} onNavigateHome={() => navigate('/')} onNavigateLessons={() => navigate('/lessons')} />} />
     </Routes>
+    </PremiumAccessProvider>
+    </NotificationProvider>
+    </LearnerLanguageScope>
   );
 }
 
@@ -670,7 +811,7 @@ function LearnerSectionRoute(props: ShellProps) {
       />
     );
   } else if (activeNav === 'exam') {
-    content = <LazyRouteBoundary><ExamPrepPage onStartPractice={() => navigate('/lessons')} /></LazyRouteBoundary>;
+    content = <LazyRouteBoundary><ExamPrepPage onStartPractice={() => navigate('/lessons')} onNavigateLesson={(id) => navigate(`/watch/${id}`)} /></LazyRouteBoundary>;
   } else if (activeNav === 'leaderboard') {
     content = <LazyRouteBoundary><LeaderboardPage onStartPractice={() => navigate('/lessons')} onSelectLesson={() => navigate('/lessons')} /></LazyRouteBoundary>;
   } else if (activeNav === 'grammar') {
@@ -686,7 +827,85 @@ function LearnerSectionRoute(props: ShellProps) {
     />;
   }
 
+  if (['saved', 'vocabulary', 'roadmap', 'history', 'exam', 'grammar'].includes(activeNav)) {
+    content = <PremiumGate>{content}</PremiumGate>;
+  }
   return <LearnerRouteShell {...props}>{content}</LearnerRouteShell>;
+}
+
+/**
+ * Dedicated standalone Premium pricing route — Full width, no left sidebar,
+ * clean header with back button, exactly matching Hanzii's layout.
+ */
+function PremiumDedicatedRoute({
+  currentUser,
+  onLogout,
+}: {
+  currentUser: User | null;
+  onLogout: () => void;
+}) {
+  const navigate = useNavigate();
+  const { lang, setLang } = useLanguage();
+
+  return (
+    <div className="min-h-screen bg-[#FFF9F5] text-[#18181B] flex flex-col font-sans antialiased">
+      <Header
+        activeNav="premium"
+        standaloneMode={true}
+        onBack={() => navigate(-1)}
+        currentLang={lang}
+        onLanguageChange={setLang}
+        currentUser={currentUser ?? undefined}
+        onLogout={onLogout}
+        onNavigateToLessons={() => navigate('/lessons')}
+        onOpenSettings={() => navigate('/settings')}
+        onOpenPreferences={() => navigate('/settings')}
+      />
+
+      <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <PremiumPricingPage
+          currentUser={currentUser}
+          onNavigateLessons={() => navigate('/lessons')}
+        />
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Dedicated standalone Payment History route — Full width, no left sidebar,
+ * clean header with back button.
+ */
+function PaymentHistoryDedicatedRoute({
+  currentUser,
+  onLogout,
+}: {
+  currentUser: User;
+  onLogout: () => void;
+}) {
+  const navigate = useNavigate();
+  const { lang, setLang } = useLanguage();
+
+  return (
+    <div className="min-h-screen bg-[#F6F4EE] text-[#18181B] flex flex-col font-sans antialiased">
+      <Header
+        activeNav="payment-history"
+        standaloneMode={true}
+        onBack={() => navigate(-1)}
+        currentLang={lang}
+        onLanguageChange={setLang}
+        currentUser={currentUser}
+        onLogout={onLogout}
+        onNavigateToLessons={() => navigate('/lessons')}
+        onOpenSettings={() => navigate('/settings')}
+        onOpenPreferences={() => navigate('/settings')}
+      />
+
+      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 sm:py-7">
+        <PaymentHistoryPage currentUser={currentUser} />
+      </main>
+    </div>
+  );
 }
 
 /** Guest landing — renders LandingPage or guest WatchView. */
@@ -701,6 +920,8 @@ function LandingRoute({ onSelectSample }: { onSelectSample: (id: string) => void
         }}
         onSignIn={() => navigate('/auth/login')}
         onSignUp={() => navigate('/auth/signup')}
+        onNavigateToPricing={() => navigate('/premium')}
+        onNavigateToAbout={() => navigate('/about')}
       />
     </div>
   );
@@ -787,7 +1008,7 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
   const pathAfterAdmin = location.pathname.replace(/^\/admin\/?/, '');
   const parts = pathAfterAdmin.split('/').filter(Boolean);
 
-  let tab: 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'quiz' | 'users' | 'vocabulary' | 'grammar' | 'not_found' = 'overview';
+  let tab: 'overview' | 'videos' | 'upload' | 'processing' | 'editor' | 'quiz' | 'users' | 'vocabulary' | 'grammar' | 'billing' | 'not_found' = 'overview';
   let editingId: string | null = null;
   let processingId: string | null = null;
   let quizLessonId: string | null = null;
@@ -832,11 +1053,13 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
     tab = 'vocabulary';
   } else if (parts[0] === 'grammar') {
     tab = 'grammar';
+  } else if (parts[0] === 'billing') {
+    tab = 'billing';
   } else {
     tab = 'not_found';
   }
 
-  type ShellTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz';
+  type ShellTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz' | 'billing';
   const shellTab: ShellTab = 
     (tab === 'editor' || tab === 'processing' || tab === 'videos') ? 'videos' :
     (tab === 'upload') ? 'upload' :
@@ -844,7 +1067,8 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
     (tab === 'quiz') ? 'quiz' :
     (tab === 'users') ? 'users' :
     (tab === 'vocabulary') ? 'vocabulary' :
-    (tab === 'grammar') ? 'grammar' : 'overview';
+    (tab === 'grammar') ? 'grammar' :
+    (tab === 'billing') ? 'billing' : 'overview';
 
   const handleTabChange = (t: ShellTab) => {
     if (t === 'overview') {
@@ -885,7 +1109,7 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
       {tab === 'grammar' && <AdminGrammarManager />}
       {tab === 'quiz' && <AdminQuizManager lessonId={quizLessonId || undefined} />}
       {tab === 'users' && <AdminUserManager userId={userId || undefined} />}
-      {(tab === 'overview' || tab === 'videos' || tab === 'upload' || tab === 'processing' || tab === 'editor') && (
+      {(tab === 'overview' || tab === 'videos' || tab === 'upload' || tab === 'processing' || tab === 'editor' || tab === 'billing') && (
         <ConnectedAdmin
           tab={tab}
           setTab={(t) => {
@@ -901,6 +1125,7 @@ function AdminShellRoute({ currentUser, onLogout }: { currentUser: User; onLogou
             else if (t === 'users') navigate('/admin/users');
             else if (t === 'vocabulary') navigate('/admin/vocabulary');
             else if (t === 'grammar') navigate('/admin/grammar');
+            else if (t === 'billing') navigate('/admin/billing');
           }}
           editingId={editingId}
           processingId={processingId}
