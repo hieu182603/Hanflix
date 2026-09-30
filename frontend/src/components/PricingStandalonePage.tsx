@@ -52,14 +52,17 @@ export default function PricingStandalonePage({
           />
         </button>
 
-        {/* Desktop Navigation - Thứ tự: Phương pháp -> Giới thiệu -> Học viên -> Hỏi đáp -> Nâng cấp VIP */}
+        {/* Desktop Navigation - Thứ tự: Trang chủ -> Giới thiệu -> Học viên -> Hỏi đáp -> Nâng cấp VIP */}
         <nav className="hidden lg:flex items-center gap-7 xl:gap-8 text-sm font-semibold text-[#18181B]/80">
           <button
-            onClick={() => navigate('/#method')}
+            onClick={() => {
+              navigate('/');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#8FB9A7]" />
-            Phương pháp
+            Trang chủ
           </button>
           <button
             onClick={() => navigate('/about')}
@@ -129,12 +132,13 @@ export default function PricingStandalonePage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              navigate('/#method');
+              navigate('/');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
             <span className="w-2 h-2 rounded-full bg-[#8FB9A7]" />
-            Phương pháp
+            Trang chủ
           </button>
           <button
             onClick={() => {
@@ -278,10 +282,10 @@ export default function PricingStandalonePage({
                 <span>Phương Pháp</span>
               </h4>
               <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
-                <li><button onClick={() => navigate('/#method')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Phụ đề 3 tầng</button></li>
-                <li><button onClick={() => navigate('/#method')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Tra từ 1-chạm</button></li>
-                <li><button onClick={() => navigate('/#method')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Phản xạ cùng AI</button></li>
-                <li><button onClick={() => navigate('/#method')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Flashcard SRS</button></li>
+                <li><button onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Phụ đề 3 tầng</button></li>
+                <li><button onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Tra từ 1-chạm</button></li>
+                <li><button onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Phản xạ cùng AI</button></li>
+                <li><button onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Flashcard SRS</button></li>
                 <li><button onClick={handleStartSurvey} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Khảo sát lộ trình</button></li>
               </ul>
             </div>
@@ -301,8 +305,8 @@ export default function PricingStandalonePage({
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <button onClick={handleSignIn} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng nhập</button>
               <button onClick={handleStartSurvey} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng ký</button>
-              <button onClick={() => navigate('/#method')} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Điều khoản</button>
-              <button onClick={() => navigate('/#faq')} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Bảo mật</button>
+              <button onClick={() => navigate('/faq')} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Điều khoản</button>
+              <button onClick={() => navigate('/faq')} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Bảo mật</button>
             </div>
           </div>
         </div>

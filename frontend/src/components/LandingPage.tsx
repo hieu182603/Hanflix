@@ -193,6 +193,20 @@ export default function LandingPage({
     else navigate('/faq');
   };
 
+  const handleGoToHome = () => {
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (window.location.hash === '#method' || window.location.hash === '#') {
+      window.history.replaceState(null, '', window.location.pathname);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, []);
+
   const activeCue = CUES[activeCueIndex];
 
   const filteredLessons = SAMPLE_LESSONS.filter((lesson) => {
@@ -209,9 +223,9 @@ export default function LandingPage({
       <header className="sticky top-0 z-50 h-16 sm:h-20 md:h-[88px] flex items-center justify-between px-4 sm:px-6 md:px-12 bg-[#FFF9F5]/95 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all safe-area-top">
         {/* Logo */}
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={handleGoToHome}
           className="flex items-center group text-left cursor-pointer py-1"
-          aria-label="Về đầu trang HanFlix"
+          aria-label="Về trang chủ HanFlix"
         >
           <img
             src="/assets/logo.png"
@@ -220,12 +234,15 @@ export default function LandingPage({
           />
         </button>
 
-        {/* Desktop Navigation - Thứ tự hợp lý: Phương pháp -> Giới thiệu -> Học viên -> Hỏi đáp -> Nâng cấp VIP */}
+        {/* Desktop Navigation - Thứ tự: Trang chủ -> Giới thiệu -> Học viên -> Hỏi đáp -> Nâng cấp VIP */}
         <nav className="hidden lg:flex items-center gap-7 xl:gap-8 text-sm font-semibold text-[#18181B]/80">
-          <a href="#method" className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#8FB9A7]" />
-            Phương pháp
-          </a>
+          <button
+            onClick={handleGoToHome}
+            className="text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B91B1C]" />
+            Trang chủ
+          </button>
           <button
             onClick={handleGoToAbout}
             className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer text-sm font-semibold text-[#18181B]/80"
@@ -288,14 +305,16 @@ export default function LandingPage({
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className="lg:hidden sticky top-16 sm:top-20 z-40 bg-[#FFF9F5] border-b-2 border-[#F2E4D8] px-4 py-4 space-y-3 shadow-lg animate-in slide-in-from-top-2">
-          <a
-            href="#method"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-2 text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors"
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleGoToHome();
+            }}
+            className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#B91B1C] p-2 rounded-xl bg-white shadow-2xs cursor-pointer"
           >
-            <span className="w-2 h-2 rounded-full bg-[#8FB9A7]" />
-            Phương pháp
-          </a>
+            <span className="w-2 h-2 rounded-full bg-[#B91B1C]" />
+            Trang chủ
+          </button>
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
@@ -496,7 +515,7 @@ export default function LandingPage({
       </section>
 
       {/* ── 3. INTERACTIVE 4-STEP METHOD & VIDEO SUBTITLE DEMO ───────── */}
-      <section id="method" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
+      <section id="features" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-white relative">
         <div className="max-w-7xl mx-auto">
           
           {/* Section Header */}
@@ -1126,10 +1145,10 @@ export default function LandingPage({
                 <span>Phương Pháp</span>
               </h4>
               <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
-                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phụ đề 3 tầng</a></li>
-                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Tra từ 1-chạm</a></li>
-                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Phản xạ cùng AI</a></li>
-                <li><a href="#method" className="hover:text-[#B91B1C] transition-colors">Flashcard SRS</a></li>
+                <li><a href="#features" className="hover:text-[#B91B1C] transition-colors">Phụ đề 3 tầng</a></li>
+                <li><a href="#features" className="hover:text-[#B91B1C] transition-colors">Tra từ 1-chạm</a></li>
+                <li><a href="#features" className="hover:text-[#B91B1C] transition-colors">Phản xạ cùng AI</a></li>
+                <li><a href="#features" className="hover:text-[#B91B1C] transition-colors">Flashcard SRS</a></li>
                 <li><button onClick={onStartSurvey} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Khảo sát lộ trình</button></li>
               </ul>
             </div>
@@ -1174,8 +1193,8 @@ export default function LandingPage({
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <button onClick={onSignIn} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng nhập</button>
               <button onClick={onSignUp} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Đăng ký</button>
-              <a href="#method" className="hover:text-[#B91B1C] transition-colors">Điều khoản</a>
-              <a href="#faq" className="hover:text-[#B91B1C] transition-colors">Bảo mật</a>
+              <button onClick={handleGoToFaq} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Điều khoản</button>
+              <button onClick={handleGoToFaq} className="hover:text-[#B91B1C] transition-colors cursor-pointer">Bảo mật</button>
             </div>
           </div>
 
