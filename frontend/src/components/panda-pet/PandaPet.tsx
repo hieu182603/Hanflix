@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import {
   useEffect,
   useRef,
@@ -67,6 +68,7 @@ const BUBBLE_MESSAGES: Record<import("./panda.types").PandaState, {
 }
 
 export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
+  const { tr, ui } = useI18n();
   const { state, triggerReaction } = usePandaPet()
   const [position, setPosition] = useState<Position>(defaultPosition)
   const [bubbleOpen, setBubbleOpen] = useState(false)
@@ -148,7 +150,7 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
         : Math.min(window.innerHeight - 34, position.y + size + 6),
     width: statusWidth,
   }
-  const statusLabel = pandaLabels[state].replace(/^./, (letter) =>
+  const statusLabel = ui(pandaLabels[state]).replace(/^./, (letter) =>
     letter.toUpperCase(),
   )
 
@@ -171,18 +173,16 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
           <button
             type="button"
             className="panda-bubble-close"
-            aria-label="Đóng lời chào của Panda"
+            aria-label={tr("Đóng lời chào của Panda")}
             onClick={() => setBubbleOpen(false)}
-          >
-            ×
-          </button>
-          <p className="panda-bubble-title">{currentMsg.title}</p>
-          <p>{currentMsg.body}</p>
+          >×</button>
+          <p className="panda-bubble-title">{ui(currentMsg.title)}</p>
+          <p>{ui(currentMsg.body)}</p>
         </div>
       )}
       {showActionStatus && (
         <div className="panda-state-chip" role="status" style={statusStyle}>
-          {statusLabel}
+          {ui(statusLabel)}
         </div>
       )}
       <button
@@ -192,8 +192,8 @@ export function PandaPet({ onOpenAI, isAIOpen = false }: PandaPetProps = {}) {
         style={{ left: effectiveX, top: position.y }}
         aria-label={
           isAIOpen
-            ? `Trợ lý Panda AI (${pandaLabels[state]})`
-            : "Mở trợ lý Panda AI"
+            ? tr("Trợ lý Panda AI ({0})", { 0: ui(pandaLabels[state]) })
+            : tr("Mở trợ lý Panda AI")
         }
         aria-expanded={bubbleOpen}
         aria-controls="panda-pet-bubble"

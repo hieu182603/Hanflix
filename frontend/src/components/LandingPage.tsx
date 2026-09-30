@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
-import { Play, ChevronDown, ChevronUp, ArrowRight, Check, Star, Volume2, Sparkles, Film, BookOpen, Brain, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Play,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  Check,
+  Star,
+  Volume2,
+  Sparkles,
+  Film,
+  BookOpen,
+  Brain,
+  ShieldCheck,
+  Crown,
+  Menu,
+  X,
+} from 'lucide-react';
 import { SAMPLE_LESSONS } from '../data/hanflixData';
 import OrientalThreeCanvas from './OrientalThreeCanvas';
+import ContactShowcase from './common/ContactShowcase';
 
 interface LandingPageProps {
   onStartSurvey: () => void;
   onViewSample: (lessonId?: string) => void;
   onSignIn: () => void;
   onSignUp: () => void;
+  onNavigateToPricing?: () => void;
+  onNavigateToAbout?: () => void;
+  onNavigateToTestimonials?: () => void;
+  onNavigateToFaq?: () => void;
 }
 
 const CUES = [
@@ -118,7 +140,17 @@ function formatDuration(seconds: number): string {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onSignUp }: LandingPageProps) {
+export default function LandingPage({
+  onStartSurvey,
+  onViewSample,
+  onSignIn,
+  onSignUp,
+  onNavigateToPricing,
+  onNavigateToAbout,
+  onNavigateToTestimonials,
+  onNavigateToFaq,
+}: LandingPageProps) {
+  const navigate = useNavigate();
   const [activeCueIndex, setActiveCueIndex] = useState(0);
   const [showZh, setShowZh] = useState(true);
   const [showPinyin, setShowPinyin] = useState(true);
@@ -126,6 +158,40 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
   const [selectedToken, setSelectedToken] = useState<{ text: string; pinyin: string; vi: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'basic' | 'drama' | 'advanced'>('all');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Smooth scroll to hash anchor on mount if present
+  useEffect(() => {
+    if (window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 120);
+      }
+    }
+  }, []);
+
+  const handleGoToAbout = () => {
+    if (onNavigateToAbout) onNavigateToAbout();
+    else navigate('/about');
+  };
+
+  const handleGoToPricing = () => {
+    if (onNavigateToPricing) onNavigateToPricing();
+    else navigate('/premium');
+  };
+
+  const handleGoToTestimonials = () => {
+    if (onNavigateToTestimonials) onNavigateToTestimonials();
+    else navigate('/testimonials');
+  };
+
+  const handleGoToFaq = () => {
+    if (onNavigateToFaq) onNavigateToFaq();
+    else navigate('/faq');
+  };
 
   const activeCue = CUES[activeCueIndex];
 
@@ -140,7 +206,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
     <div className="relative min-h-[100dvh] bg-[#FFF9F5] text-[#18181B] selection:bg-[#B91B1C] selection:text-white font-sans overflow-x-hidden">
 
       {/* ── 1. PUBLIC HEADER ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 h-16 sm:h-20 md:h-[88px] flex items-center justify-between px-4 sm:px-6 md:px-12 bg-[#FFF9F5]/92 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all safe-area-top">
+      <header className="sticky top-0 z-50 h-16 sm:h-20 md:h-[88px] flex items-center justify-between px-4 sm:px-6 md:px-12 bg-[#FFF9F5]/95 backdrop-blur-md border-b border-[#F2E4D8]/80 transition-all safe-area-top">
         {/* Logo */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -154,22 +220,41 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           />
         </button>
 
-        {/* Navigation */}
-        <nav className="hidden lg:flex items-center gap-8 text-sm font-semibold text-[#18181B]/80">
-          <a href="#method" className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5">
+        {/* Desktop Navigation - Thứ tự hợp lý: Phương pháp -> Giới thiệu -> Học viên -> Hỏi đáp -> Nâng cấp VIP */}
+        <nav className="hidden lg:flex items-center gap-7 xl:gap-8 text-sm font-semibold text-[#18181B]/80">
+          <a href="#method" className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer">
             <span className="w-1.5 h-1.5 rounded-full bg-[#8FB9A7]" />
             Phương pháp
           </a>
-          <a href="#lessons" className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5">
+          <button
+            onClick={handleGoToAbout}
+            className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer text-sm font-semibold text-[#18181B]/80"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-[#E7A92F]" />
-            Bài học mẫu
-          </a>
-          <a href="#testimonials" className="hover:text-[#B91B1C] transition-colors">
+            Giới thiệu
+          </button>
+          <button
+            onClick={handleGoToTestimonials}
+            className="hover:text-[#B91B1C] transition-colors cursor-pointer text-sm font-semibold text-[#18181B]/80"
+          >
             Học viên
-          </a>
-          <a href="#faq" className="hover:text-[#B91B1C] transition-colors">
+          </button>
+          <button
+            onClick={handleGoToFaq}
+            className="hover:text-[#B91B1C] transition-colors cursor-pointer text-sm font-semibold text-[#18181B]/80"
+          >
             Hỏi đáp
-          </a>
+          </button>
+          <button
+            onClick={handleGoToPricing}
+            className="hover:text-[#B91B1C] transition-colors flex items-center gap-1.5 group cursor-pointer text-sm font-semibold text-[#18181B]/80"
+          >
+            <Crown className="w-4 h-4 text-[#B91B1C] group-hover:scale-110 transition-transform" />
+            <span className="relative">
+              Nâng cấp
+              <span className="absolute -top-2.5 -right-5 px-1.5 py-0.2 bg-[#B91B1C] text-white text-[9px] font-bold rounded-full uppercase tracking-tighter">VIP</span>
+            </span>
+          </button>
         </nav>
 
         {/* Header CTAs */}
@@ -188,8 +273,74 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
             <span className="inline xs:hidden sm:hidden">Lộ trình</span>
             <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
+
+          {/* Mobile Menu Hamburger */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 rounded-xl border border-[#F2E4D8] bg-white text-[#18181B] hover:text-[#B91B1C] hover:border-[#B91B1C] transition-colors cursor-pointer"
+            aria-label="Mở bảng chọn di động"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </header>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden sticky top-16 sm:top-20 z-40 bg-[#FFF9F5] border-b-2 border-[#F2E4D8] px-4 py-4 space-y-3 shadow-lg animate-in slide-in-from-top-2">
+          <a
+            href="#method"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-2 text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#8FB9A7]" />
+            Phương pháp
+          </a>
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleGoToAbout();
+            }}
+            className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#E7A92F]" />
+            Giới thiệu dự án FPT EXE 2
+          </button>
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleGoToTestimonials();
+            }}
+            className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+          >
+            Học viên
+          </button>
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleGoToFaq();
+            }}
+            className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+          >
+            Hỏi đáp
+          </button>
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              handleGoToPricing();
+            }}
+            className="w-full flex items-center justify-between text-sm font-bold text-[#B91B1C] p-2.5 rounded-xl bg-white border border-[#B91B1C]/20 shadow-2xs cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Crown className="w-4 h-4 text-[#B91B1C]" />
+              Nâng cấp gói VIP
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold uppercase">
+              Xem gói
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* ── 2. HERO SECTION WITH THREE.JS LIVE AMBIENCE ─────────────── */}
       <section className="relative min-h-[calc(100vh-80px)] flex items-center py-8 sm:py-12 md:py-20 px-4 sm:px-6 md:px-12 overflow-hidden">
@@ -558,7 +709,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
         </div>
       </section>
 
-      {/* ── 4. FEATURED LESSON CATALOG (HSK 1 - 6) ───────────────────── */}
+      {/* ── 3. FEATURED LESSON CATALOG (HSK 1 - 6) ───────────────────── */}
       <section id="lessons" className="py-14 sm:py-20 md:py-24 px-4 sm:px-6 md:px-12 bg-[#FFF9F5] relative">
         <div className="max-w-7xl mx-auto">
           
@@ -889,7 +1040,7 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
       </section>
 
       {/* ── 8. LUXURY ORIENTAL FOOTER ───────────────────────────────── */}
-      <footer className="relative bg-[#FFF9F5] border-t-2 border-[#F2E4D8] pt-12 sm:pt-16 pb-12 px-4 sm:px-6 md:px-12 overflow-hidden">
+      <footer className="relative bg-[#FFF9F5] border-t-2 border-[#F2E4D8] pt-12 sm:pt-16 pb-12 px-6 sm:px-10 lg:px-12 xl:px-16 overflow-hidden">
         
         {/* Architectural Pagoda Eaves Silhouette Top Transition */}
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-72 h-5 flex items-center justify-center pointer-events-none">
@@ -899,14 +1050,14 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full max-w-[1720px] mx-auto">
           
-          {/* Main Footer Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-10 sm:pb-12 border-b border-[#F2E4D8]">
+          {/* Main Footer Grid - 4 Balanced Columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-8 xl:gap-12 pb-10 sm:pb-12 border-b border-[#F2E4D8]">
             
-            {/* Col 1: Brand & Philosophy (4 cols) */}
-            <div className="sm:col-span-2 lg:col-span-4">
-              <div className="mb-4 sm:mb-6">
+            {/* Col 1: Brand & Philosophy */}
+            <div className="space-y-4">
+              <div className="mb-2 sm:mb-4">
                 <img
                   src="/assets/logo.png"
                   alt="HanFlix Logo"
@@ -914,34 +1065,62 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
                 />
               </div>
               
-              <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed mb-5 sm:mb-6 max-w-sm">
+              <p className="text-xs sm:text-sm text-[#5F6368] leading-relaxed max-w-sm">
                 Nền tảng học tiếng Trung qua phim ảnh và ngữ cảnh thực tế hàng đầu, kết hợp phụ đề 3 lớp thông minh và thuật toán ghi nhớ Spaced Repetition.
               </p>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-[#8FB9A7]">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-[#8FB9A7] pt-1">
                 <span className="px-2.5 py-1 rounded-full bg-[#8FB9A7]/15 border border-[#8FB9A7]/30">HSK 1 - 6</span>
                 <span className="px-2.5 py-1 rounded-full bg-[#E7A92F]/15 border border-[#E7A92F]/30 text-[#B7791F]">AI Pronounce</span>
                 <span className="px-2.5 py-1 rounded-full bg-[#B91B1C]/10 border border-[#B91B1C]/20 text-[#B91B1C]">SRS Method</span>
               </div>
             </div>
 
-            {/* Col 2: Khóa học (2 cols) */}
-            <div className="lg:col-span-2">
+            {/* Col 2: Khóa học & Dự án */}
+            <div className="lg:pl-6 xl:pl-10">
               <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-3 sm:mb-4 flex items-center gap-1.5">
                 <span className="text-[#8FB9A7]">🎋</span>
-                <span>Khóa Học</span>
+                <span>Khám Phá</span>
               </h4>
               <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
-                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 1 - 2 Cơ bản</a></li>
-                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 3 - 4 Phim ảnh</a></li>
-                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">HSK 5 - 6 Chuyên sâu</a></li>
-                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Giao tiếp đời thường</a></li>
-                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Thương mại & Du lịch</a></li>
+                <li>
+                  <button
+                    onClick={handleGoToAbout}
+                    className="hover:text-[#B91B1C] transition-colors font-semibold text-[#B91B1C] cursor-pointer text-left"
+                  >
+                    Dự án FPT EXE 2
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={handleGoToPricing}
+                    className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left"
+                  >
+                    Gói cước Premium
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={handleGoToTestimonials}
+                    className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left"
+                  >
+                    Cảm nhận học viên
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={handleGoToFaq}
+                    className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left"
+                  >
+                    Hỏi đáp thường gặp
+                  </button>
+                </li>
+                <li><a href="#lessons" className="hover:text-[#B91B1C] transition-colors">Kho bài học mẫu HSK</a></li>
               </ul>
             </div>
 
-            {/* Col 3: Phương pháp (2 cols) */}
-            <div className="lg:col-span-2">
+            {/* Col 3: Phương pháp */}
+            <div className="lg:pl-6 xl:pl-10">
               <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-3 sm:mb-4 flex items-center gap-1.5">
                 <span className="text-[#8FB9A7]">🎋</span>
                 <span>Phương Pháp</span>
@@ -955,42 +1134,29 @@ export default function LandingPage({ onStartSurvey, onViewSample, onSignIn, onS
               </ul>
             </div>
 
-            {/* Col 4: Bản tin & Nhận tài liệu (4 cols) */}
-            <div className="sm:col-span-2 lg:col-span-4">
-              <h4 className="font-bold text-sm text-[#18181B] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <span className="text-[#B91B1C]">📬</span>
-                <span>Bản Tin Văn Hóa & Từ Vựng</span>
-              </h4>
-              <p className="text-xs text-[#5F6368] mb-3 sm:mb-4">
-                Nhận trích đoạn phim hay và 5 từ vựng đắt giá mỗi sáng thứ Hai.
-              </p>
-
-              <form onSubmit={(e) => { e.preventDefault(); alert('Cảm ơn bạn đã đăng ký nhận bản tin HanFlix!'); }} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="email"
-                  required
-                  placeholder="Nhập email của bạn..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-[#F2E4D8] text-xs outline-none focus:border-[#B91B1C] transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-[#E7A92F] hover:bg-[#D7AF70] text-[#18181B] text-xs font-bold transition-colors cursor-pointer shadow-xs shrink-0"
-                >
-                  Nhận tin
-                </button>
-              </form>
+            {/* Col 4: Thông tin liên hệ & Kết nối */}
+            <div className="space-y-3.5">
+              <ContactShowcase variant="footer" />
 
               {/* Social Media Links */}
-              <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-3">
-                <span className="text-xs font-bold text-[#8B9097]">Kết nối:</span>
+              <div className="mt-3.5 flex flex-wrap items-center gap-2.5 pt-1">
+                <span className="text-xs font-bold text-[#8B9097]">Mạng xã hội:</span>
                 <div className="flex flex-wrap items-center gap-2">
-                  {['Facebook', 'YouTube', 'TikTok', 'Instagram'].map((network) => (
-                    <span
-                      key={network}
-                      className="px-2.5 py-1 rounded-lg bg-white border border-[#F2E4D8] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/40 text-xs font-semibold cursor-pointer transition-all"
+                  {[
+                    { name: 'Facebook', href: 'https://facebook.com' },
+                    { name: 'YouTube', href: 'https://youtube.com' },
+                    { name: 'TikTok', href: 'https://tiktok.com' },
+                    { name: 'Instagram', href: 'https://instagram.com' },
+                  ].map((s) => (
+                    <a
+                      key={s.name}
+                      href={s.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 rounded-xl bg-white border border-[#F2E4D8] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/40 text-xs font-semibold transition-all shadow-2xs hover:shadow-xs"
                     >
-                      {network}
-                    </span>
+                      {s.name}
+                    </a>
                   ))}
                 </div>
               </div>

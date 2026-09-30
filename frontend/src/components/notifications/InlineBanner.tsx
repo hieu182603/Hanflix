@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * InlineBanner + SectionBanner
  *
@@ -41,6 +42,7 @@ function BannerLayout({
   onDismiss?: () => void;
   className?: string;
 }) {
+  const { tr, ui } = useI18n();
   const reduce = useReducedMotion();
   const tokens = NOTIFICATION_VARIANTS[variant];
   const IconComponent = tokens.icon;
@@ -87,14 +89,14 @@ function BannerLayout({
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        {title && <div className="font-black text-[13px] leading-tight">{title}</div>}
+        {title && <div className="font-black text-[13px] leading-tight">{ui(title)}</div>}
         <div
           className={cn(
             title ? 'mt-0.5 text-xs font-semibold leading-snug' : 'text-xs font-bold leading-snug',
             'break-words',
           )}
         >
-          {message}
+          {ui(message)}
         </div>
         {action && <div className="mt-2">{action}</div>}
       </div>
@@ -109,7 +111,7 @@ function BannerLayout({
             'hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B91B1C]',
             'text-current opacity-60 hover:opacity-100',
           )}
-          aria-label="Đóng thông báo"
+          aria-label={tr("Đóng thông báo")}
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -146,6 +148,7 @@ export function InlineBanner({
   className,
   autoDismissMs = 0,
 }: InlineBannerProps) {
+  const { ui } = useI18n();
   const [visible, setVisible] = useState(true);
 
   // Auto-dismiss
@@ -172,8 +175,8 @@ export function InlineBanner({
       {visible && (
         <BannerLayout
           variant={variant}
-          title={title}
-          message={message}
+          title={ui(title)}
+          message={ui(message)}
           icon={icon}
           action={action}
           dismissible={dismissible}
@@ -209,11 +212,12 @@ export function SectionBanner({
   action,
   className,
 }: SectionBannerProps) {
+  const { ui } = useI18n();
   return (
     <BannerLayout
       variant={variant}
-      title={title}
-      message={message}
+      title={ui(title)}
+      message={ui(message)}
       icon={icon}
       action={action}
       dismissible={false}

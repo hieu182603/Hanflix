@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { WordExplanation } from '../../api/learning';
@@ -47,6 +48,7 @@ export default function WordExplanationPopover({
   onClose,
   onSaveWord,
 }: WordExplanationPopoverProps) {
+  const { tr, ui } = useI18n();
   const [position, setPosition] = useState<Position | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -92,7 +94,7 @@ export default function WordExplanationPopover({
           ref={containerRef}
           role="dialog"
           aria-live="polite"
-          aria-label={`Giải thích từ ${wordText}`}
+          aria-label={tr("Giải thích từ {0}", { 0: wordText })}
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
@@ -110,29 +112,28 @@ export default function WordExplanationPopover({
               type="button"
               onClick={onClose}
               className="shrink-0 rounded-md p-1 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900"
-              aria-label="Đóng"
-              title="Đóng (ESC)"
+              aria-label={tr("Đóng")}
+              title={tr("Đóng (ESC)")}
             >
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="space-y-2 px-4 py-3 text-sm overflow-y-auto" style={{ maxHeight: `${POPOVER_MAX_HEIGHT - 60}px` }}>
-            {loading && <p className="text-neutral-600">Panda AI đang phân tích từ…</p>}
-            {error && <p className="text-red-700">{error}</p>}
+            {loading && <p className="text-neutral-600">{tr("Panda AI đang phân tích từ…")}</p>}
+            {error && <p className="text-red-700">{ui(error)}</p>}
             {explanation && (
               <>
-                <p><strong className="text-neutral-900">Nghĩa:</strong> <span className="text-neutral-700">{explanation.meaningVi}</span></p>
-                <p><strong className="text-neutral-900">Cách dùng:</strong> <span className="text-neutral-700">{explanation.usageVi}</span></p>
-                <p><strong className="text-neutral-900">Ví dụ:</strong> <span className="text-neutral-700">{explanation.exampleZh} ({explanation.examplePinyin}) — {explanation.exampleVi}</span></p>
-                {explanation.cautionVi && <p><strong className="text-neutral-900">Lưu ý:</strong> <span className="text-neutral-700">{explanation.cautionVi}</span></p>}
+                <p><strong className="text-neutral-900">{tr("Nghĩa:")}</strong> <span className="text-neutral-700">{explanation.meaningVi}</span></p>
+                {explanation.pinyin && <p className="text-neutral-700">{explanation.pinyin}</p>}
+                {explanation.usageVi && <p><strong className="text-neutral-900">{tr("Cách dùng:")}</strong> <span className="text-neutral-700">{explanation.usageVi}</span></p>}
+                {explanation.exampleZh && <p><strong className="text-neutral-900">{tr("Ví dụ:")}</strong> <span className="text-neutral-700">{explanation.exampleZh} ({explanation.examplePinyin}) — {explanation.exampleVi}</span></p>}
+                {explanation.cautionVi && <p><strong className="text-neutral-900">{tr("Lưu ý:")}</strong> <span className="text-neutral-700">{explanation.cautionVi}</span></p>}
                 {onSaveWord && (
                   <button
                     type="button"
                     onClick={onSaveWord}
                     className="mt-2 w-full rounded-lg bg-[#B91B1C] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-700"
-                  >
-                    Lưu vào sổ ôn tập
-                  </button>
+                  >{tr("Lưu vào sổ ôn tập")}</button>
                 )}
               </>
             )}

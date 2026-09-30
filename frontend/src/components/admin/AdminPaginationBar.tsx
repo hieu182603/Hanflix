@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -63,6 +64,7 @@ export default function AdminPaginationBar({
   className = '',
   visibleCount,
 }: AdminPaginationBarProps) {
+  const { tr, ui } = useI18n();
   const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
   const safePage = Math.min(Math.max(1, page), totalPages);
   const startIndex = total === 0 ? 0 : (safePage - 1) * pageSize;
@@ -116,15 +118,14 @@ export default function AdminPaginationBar({
     >
       {/* Top tier on mobile (Info + Select size), Left tier on desktop */}
       <div className="flex items-center justify-between gap-2 border-b border-[#F2E4D8]/60 pb-2 sm:border-0 sm:pb-0 sm:justify-start sm:gap-3">
-        <p className="text-xs text-[#8B9097] leading-none sm:leading-normal">
-          Hiển thị{' '}
+        <p className="text-xs text-[#8B9097] leading-none sm:leading-normal">{tr("Hiển thị")}{' '}
           <span className="font-mono font-bold tabular-nums text-[#18181B]">
             {total === 0 ? 0 : startIndex + 1}-{endIndex}
           </span>
           {' / '}
           <span className="font-mono font-bold tabular-nums text-[#18181B]">{total}</span>
           {' '}
-          {unitLabel}
+          {ui(unitLabel)}
         </p>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -132,13 +133,12 @@ export default function AdminPaginationBar({
             value={pageSize}
             disabled={disabled}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            aria-label="Số mục mỗi trang"
+            aria-label={tr("Số mục mỗi trang")}
             className="h-8 rounded-xl border border-[#F2E4D8] bg-[#FFF9F5] px-2.5 text-xs font-semibold text-[#18181B] outline-none transition-colors hover:border-[#D1C3B7] focus:border-[#B91B1C] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
-                {size} / trang
-              </option>
+                {size} {tr("/ trang")}</option>
             ))}
           </select>
         </div>
@@ -147,14 +147,14 @@ export default function AdminPaginationBar({
       {/* Bottom tier on mobile (Centered Page Nav), Right tier on desktop */}
       <nav
         className="flex items-center justify-center sm:justify-end gap-1 sm:gap-1.5 w-full sm:w-auto pt-0.5 sm:pt-0"
-        aria-label={ariaLabel}
+        aria-label={ui(ariaLabel)}
       >
         <button
           type="button"
           disabled={disabled || safePage <= 1}
           onClick={() => onPageChange(Math.max(1, safePage - 1))}
           className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-xl text-[#5F6368] transition-colors hover:bg-[#FDF1F1] hover:text-[#B91B1C] disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer active:scale-95"
-          aria-label="Trang trước"
+          aria-label={tr("Trang trước")}
         >
           <ChevronLeft size={16} strokeWidth={2.2} />
         </button>
@@ -174,7 +174,7 @@ export default function AdminPaginationBar({
           disabled={disabled || safePage >= totalPages}
           onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
           className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-xl text-[#5F6368] transition-colors hover:bg-[#FDF1F1] hover:text-[#B91B1C] disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer active:scale-95"
-          aria-label="Trang sau"
+          aria-label={tr("Trang sau")}
         >
           <ChevronRight size={16} strokeWidth={2.2} />
         </button>

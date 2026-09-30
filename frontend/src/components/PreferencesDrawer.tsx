@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React, { useState } from 'react';
 import { X, SlidersHorizontal, Check, Sparkles } from 'lucide-react';
 import { UserProfile } from '../data/hanflixData';
@@ -15,6 +16,7 @@ export default function PreferencesDrawer({
   userProfile,
   onSavePreferences
 }: PreferencesDrawerProps) {
+  const { tr, ui } = useI18n();
   const [selectedHsk, setSelectedHsk] = useState(userProfile.hskLevel);
   const [selectedGoal, setSelectedGoal] = useState(userProfile.targetGoal);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(userProfile.interests);
@@ -52,15 +54,15 @@ export default function PreferencesDrawer({
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-extrabold text-base sm:text-lg text-[#18181B] tracking-tight truncate">Tùy chỉnh Sở thích AI</h3>
-              <p className="text-xs text-[#5F6368] truncate">Tối ưu bài học hiển thị trên Bảng tin</p>
+              <h3 className="font-extrabold text-base sm:text-lg text-[#18181B] tracking-tight truncate">{tr("Tùy chỉnh Sở thích AI")}</h3>
+              <p className="text-xs text-[#5F6368] truncate">{tr("Tối ưu bài học hiển thị trên Bảng tin")}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             className="w-10 h-10 min-h-[44px] min-w-[44px] rounded-full border border-[#E7E7EA] text-[#5F6368] hover:bg-[#F7F7F9] hover:text-[#18181B] flex items-center justify-center cursor-pointer shrink-0"
-            title="Đóng"
+            title={tr("Đóng")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -70,9 +72,7 @@ export default function PreferencesDrawer({
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
           {/* Section 1: Trình độ HSK */}
           <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">
-              1. Trình độ HSK mục tiêu
-            </label>
+            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">{tr("1. Trình độ HSK mục tiêu")}</label>
             <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
               {hskLevels.map((lvl) => (
                 <button
@@ -92,9 +92,7 @@ export default function PreferencesDrawer({
 
           {/* Section 2: Mục tiêu học */}
           <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">
-              2. Mục tiêu chính
-            </label>
+            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">{tr("2. Mục tiêu chính")}</label>
             <div className="space-y-2">
               {goalOptions.map((goal) => (
                 <button
@@ -106,7 +104,7 @@ export default function PreferencesDrawer({
                       : 'bg-[#F7F7F9] text-[#5F6368] border-[#E7E7EA] hover:bg-white'
                   }`}
                 >
-                  <span>Mục tiêu: {goal}</span>
+                  <span>{tr("Mục tiêu:")} {ui(goal)}</span>
                   {selectedGoal === goal && <Check className="w-4 h-4 text-[#B91B1C]" />}
                 </button>
               ))}
@@ -115,8 +113,7 @@ export default function PreferencesDrawer({
 
           {/* Section 3: Chủ đề yêu thích */}
           <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">
-              3. Chủ đề quan tâm ({selectedInterests.length})
+            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#18181B] mb-2.5">{tr("3. Chủ đề quan tâm (")}{selectedInterests.length})
             </label>
             <div className="flex flex-wrap gap-2">
               {interestTopics.map((topic) => {
@@ -131,7 +128,7 @@ export default function PreferencesDrawer({
                         : 'bg-[#F7F7F9] text-[#5F6368] border border-[#E7E7EA] hover:bg-[#E7E7EA]'
                     }`}
                   >
-                    {topic} {isSelected ? '✓' : '+'}
+                    {ui(topic)} {isSelected ? '✓' : '+'}
                   </button>
                 );
               })}
@@ -144,15 +141,13 @@ export default function PreferencesDrawer({
           <button
             onClick={onClose}
             className="px-5 py-2.5 min-h-[44px] rounded-xl border border-[#E7E7EA] text-xs font-bold text-[#5F6368] hover:bg-[#F7F7F9] cursor-pointer"
-          >
-            Hủy
-          </button>
+          >{tr("Hủy")}</button>
           <button
             onClick={handleSave}
             className="px-6 py-2.5 min-h-[44px] rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 fill-white" />
-            <span>Áp dụng gợi ý mới</span>
+            <span>{tr("Áp dụng gợi ý mới")}</span>
           </button>
         </div>
       </div>

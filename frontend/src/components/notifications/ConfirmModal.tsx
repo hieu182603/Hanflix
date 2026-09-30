@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * ConfirmModal + ConfirmModalViewport
  *
@@ -45,6 +46,7 @@ function cn(...args: Array<string | false | null | undefined>): string {
 }
 
 function ConfirmModal({ state, onClose }: ConfirmModalProps) {
+  const { ui } = useI18n();
   const reduce = useReducedMotion();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -152,7 +154,7 @@ function ConfirmModal({ state, onClose }: ConfirmModalProps) {
                 isDanger ? 'text-[#7F1D1D]' : 'text-[#2B2826]',
               )}
             >
-              {state.title}
+              {ui(state.title)}
             </h3>
             <div
               id={descId}
@@ -161,7 +163,7 @@ function ConfirmModal({ state, onClose }: ConfirmModalProps) {
                 isDanger ? 'text-[#991313]' : 'text-[#5F564F]',
               )}
             >
-              {state.message}
+              {ui(state.message)}
             </div>
           </div>
         </div>
@@ -187,7 +189,7 @@ function ConfirmModal({ state, onClose }: ConfirmModalProps) {
                 'hover:bg-[#F7F7F9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C827A]',
               )}
             >
-              {state.tertiaryText}
+              {ui(state.tertiaryText)}
             </button>
           )}
 
@@ -204,7 +206,7 @@ function ConfirmModal({ state, onClose }: ConfirmModalProps) {
                 : 'border-[#E7E7EA] bg-white text-[#2B2826] hover:bg-[#FFF9F5] focus-visible:ring-[#8C827A]',
             )}
           >
-            {state.cancelText}
+            {ui(state.cancelText)}
           </button>
 
           {/* Confirm */}
@@ -219,7 +221,7 @@ function ConfirmModal({ state, onClose }: ConfirmModalProps) {
               isDanger ? 'shadow-sm' : '',
             )}
           >
-            {state.confirmText}
+            {ui(state.confirmText)}
           </button>
         </div>
       </motion.div>

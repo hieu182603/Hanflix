@@ -10,6 +10,13 @@ const response = (status: number, body: unknown) => new Response(JSON.stringify(
 const user = { id: 'learner', name: 'Learner', role: 'user', status: 'active', email: 'learner@example.com' };
 
 describe('session restoration after reload', () => {
+  it('restores the Premium expiry from the authenticated server response', async () => {
+    const premiumExpiresAt = '2027-09-29T10:00:00.000Z';
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, { data: { accessToken: 'new-token' } }))
+      .mockResolvedValueOnce(response(200, { data: { user: { ...user, premiumExpiresAt } } }));
+    await expect(restoreSession()).resolves.toMatchObject({ premiumExpiresAt });
+    expect(JSON.parse(localStorage.getItem('hanflix_user')!)).not.toHaveProperty('premiumExpiresAt');
+  });
   beforeEach(() => {
     setAccessToken(null);
     localStorage.setItem('hanflix_user', JSON.stringify({ id: user.id }));

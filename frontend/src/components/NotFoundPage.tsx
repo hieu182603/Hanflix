@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React from 'react';
 import { Home, PlaySquare } from 'lucide-react';
 
@@ -12,6 +13,7 @@ export default function NotFoundPage({
   onNavigateHome,
   onNavigateLessons,
 }: NotFoundPageProps) {
+  const { tr } = useI18n();
   const handleHome = () => {
     if (onNavigateHome) return onNavigateHome();
     window.location.href = '/';
@@ -94,7 +96,7 @@ export default function NotFoundPage({
               <div className="relative z-10 w-22 h-22 sm:w-28 sm:h-28 md:w-34 md:h-34 lg:w-38 lg:h-38 flex items-center justify-center animate-[float-gentle_4s_ease-in-out_infinite]">
                 <img
                   src="/panda/error.webp"
-                  alt="HanFlix Panda Lạc Đường"
+                  alt={tr("HanFlix Panda Lạc Đường")}
                   className="w-full h-full object-contain filter drop-shadow-md"
                 />
               </div>
@@ -114,19 +116,14 @@ export default function NotFoundPage({
         <div className="space-y-2.5 max-w-lg mx-auto mb-6">
           {/* Crimson Pill Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#B91B1C] text-white text-xs sm:text-xs font-bold shadow-md shadow-[#B91B1C]/20 tracking-wide">
-            <span>404 · LẠC ĐƯỜNG · 迷路</span>
+            <span>{tr("404 · LẠC ĐƯỜNG · 迷路")}</span>
           </div>
 
           {/* H1 Headline */}
-          <h1 className="text-2xl sm:text-3xl md:text-3xl font-black text-[#18181B] tracking-tight">
-            Ối! Bạn đã đi lạc khỏi lộ trình rồi
-          </h1>
+          <h1 className="text-2xl sm:text-3xl md:text-3xl font-black text-[#18181B] tracking-tight">{tr("Ối! Bạn đã đi lạc khỏi lộ trình rồi")}</h1>
 
           {/* Friendly Subtitle */}
-          <p className="text-xs sm:text-sm md:text-sm text-[#5F6368] leading-relaxed max-w-md mx-auto font-medium">
-            Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển sang địa chỉ mới.
-            Đừng lo, cùng HanFlix quay lại đường chính nhé!
-          </p>
+          <p className="text-xs sm:text-sm md:text-sm text-[#5F6368] leading-relaxed max-w-md mx-auto font-medium">{tr("Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển sang địa chỉ mới. Đừng lo, cùng HanFlix quay lại đường chính nhé!")}</p>
         </div>
 
         {/* ── PRIMARY & SECONDARY CTA BUTTONS ── */}
@@ -137,7 +134,7 @@ export default function NotFoundPage({
             className="w-full sm:w-auto min-w-[170px] h-11 px-6 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] active:scale-[0.98] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#B91B1C]/30 hover:shadow-xl hover:shadow-[#B91B1C]/40 transition-all cursor-pointer"
           >
             <Home className="w-4 h-4" />
-            <span>Quay về Trang chủ</span>
+            <span>{tr("Quay về Trang chủ")}</span>
           </button>
 
           {/* Secondary CTA: Tiếp tục bài học */}
@@ -146,7 +143,7 @@ export default function NotFoundPage({
             className="w-full sm:w-auto min-w-[170px] h-11 px-6 rounded-full bg-white/90 backdrop-blur-xs border border-[#E5D5C8] hover:border-[#B91B1C] hover:bg-white active:scale-[0.98] text-[#18181B] font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
           >
             <PlaySquare className="w-4 h-4 text-[#B91B1C]" />
-            <span>Tiếp tục bài học</span>
+            <span>{tr("Tiếp tục bài học")}</span>
           </button>
         </div>
       </main>

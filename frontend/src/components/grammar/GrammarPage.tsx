@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 'use client';
 
 import React, { useState } from 'react';
@@ -40,6 +41,7 @@ interface GrammarStats {
 }
 
 export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
+  const { tr } = useI18n();
   const [selectedHsk, setSelectedHsk] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -122,14 +124,12 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-black tracking-tight text-[#2B2826]">Ngữ Pháp HSK 3.0</h1>
+                    <h1 className="text-2xl font-black tracking-tight text-[#2B2826]">{tr("Ngữ Pháp HSK 3.0")}</h1>
                     <span className="rounded-full border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-[#B91B1C]">
                       HSK 1 - 9
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-[#8C827A]">
-                    Hệ thống cấu trúc câu và công thức ngữ pháp chuẩn từ HSK 1 đến HSK 9.
-                  </p>
+                  <p className="mt-0.5 text-xs text-[#8C827A]">{tr("Hệ thống cấu trúc câu và công thức ngữ pháp chuẩn từ HSK 1 đến HSK 9.")}</p>
                 </div>
               </div>
             </div>
@@ -145,9 +145,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                   : 'bg-white border-[#F2E4D8] hover:border-[#B91B1C]/40'
               }`}
             >
-              <div className={`text-[10px] font-extrabold uppercase ${selectedHsk === '' ? 'text-[#E5DCD3]' : 'text-[#8C827A]'}`}>
-                Tất cả
-              </div>
+              <div className={`text-[10px] font-extrabold uppercase ${selectedHsk === '' ? 'text-[#E5DCD3]' : 'text-[#8C827A]'}`}>{tr("Tất cả")}</div>
               <div className="text-lg font-black mt-0.5">{statsQuery.data?.total ?? '—'}</div>
             </button>
 
@@ -184,7 +182,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm cấu trúc, công thức hoặc giải thích nghĩa..."
+              placeholder={tr("Tìm kiếm cấu trúc, công thức hoặc giải thích nghĩa...")}
               className="w-full pl-12 pr-4 py-3 rounded-2xl border-2 border-[#F2E4D8] bg-[#FFF9F5] text-sm font-medium text-[#2B2826] placeholder:text-[#8C827A] focus:border-[#B91B1C] focus:ring-2 focus:ring-[#B91B1C]/10 focus:bg-white outline-none transition-all"
             />
             {searchQuery && (
@@ -207,10 +205,10 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
             <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-[#FFF9F5] border-b border-[#F2E4D8] text-[#8C827A] uppercase font-bold text-[10px] tracking-wider">
                 <tr>
-                  <th className="p-4 w-[200px]">Cấu trúc</th>
-                  <th className="p-4 w-[200px]">Công thức</th>
-                  <th className="p-4">Giải thích</th>
-                  <th className="p-4 w-[100px]">Cấp độ</th>
+                  <th className="p-4 w-[200px]">{tr("Cấu trúc")}</th>
+                  <th className="p-4 w-[200px]">{tr("Công thức")}</th>
+                  <th className="p-4">{tr("Giải thích")}</th>
+                  <th className="p-4 w-[100px]">{tr("Cấp độ")}</th>
                   <th className="p-4 w-[60px]"></th>
                 </tr>
               </thead>
@@ -220,15 +218,29 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                     <td colSpan={5} className="p-12 text-center text-[#8C827A]">
                       <div className="inline-flex items-center gap-2">
                         <Spinner size="sm" tone="brand" />
-                        <span>Đang tải danh sách ngữ pháp...</span>
+                        <span>{tr("Đang tải danh sách ngữ pháp...")}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : grammarQuery.isError ? (
+                  <tr>
+                    <td colSpan={5} className="p-12 text-center text-[#8C827A]">
+                      <div className="space-y-2">
+                        <p className="text-sm font-bold text-[#18181B]">{tr("Không thể tải danh sách ngữ pháp")}</p>
+                        <p className="text-xs text-[#5F6368]">{tr("Vui lòng thử lại sau.")}</p>
+                        <button
+                          type="button"
+                          onClick={() => void grammarQuery.refetch()}
+                          className="mt-2 px-4 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold hover:bg-neutral-800 transition-colors cursor-pointer"
+                        >
+                          {tr("Thử lại")}
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ) : grammarQuery.data?.items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-12 text-center text-[#8C827A]">
-                      Không tìm thấy điểm ngữ pháp nào phù hợp với bộ lọc hiện tại.
-                    </td>
+                    <td colSpan={5} className="p-12 text-center text-[#8C827A]">{tr("Không tìm thấy điểm ngữ pháp nào phù hợp với bộ lọc hiện tại.")}</td>
                   </tr>
                 ) : (
                   grammarQuery.data?.items.map((item) => {
@@ -255,7 +267,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                                   ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
                                   : 'bg-white text-[#8C827A] border-[#F2E4D8] hover:border-[#B91B1C] hover:text-[#B91B1C]'
                               }`}
-                              title="Nghe phát âm"
+                              title={tr("Nghe phát âm")}
                             >
                               <Volume2 className="w-3.5 h-3.5" />
                             </button>
@@ -315,7 +327,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
               visibleCount={grammarQuery.data.items.length}
               unitLabel="điểm ngữ pháp"
               disabled={grammarQuery.isLoading}
-              ariaLabel="Phân trang ngữ pháp"
+              ariaLabel={tr("Phân trang ngữ pháp")}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
@@ -387,7 +399,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                         ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
                         : 'bg-[#FFF9F5] text-[#8C827A] border-[#F2E4D8] hover:border-[#B91B1C] hover:text-[#B91B1C]'
                     }`}
-                    title="Nghe phát âm"
+                    title={tr("Nghe phát âm")}
                   >
                     <Volume2 className="w-5 h-5" />
                   </button>
@@ -395,7 +407,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
 
                 {/* Explanation */}
                 <div className="mb-6">
-                  <h3 className="text-[10px] font-extrabold uppercase text-[#8C827A] tracking-wider mb-2">Giải thích</h3>
+                  <h3 className="text-[10px] font-extrabold uppercase text-[#8C827A] tracking-wider mb-2">{tr("Giải thích")}</h3>
                   <p className="text-sm text-[#2B2826] leading-relaxed font-medium">
                     {selectedGrammar.explanationVi}
                   </p>
@@ -409,7 +421,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                 {/* Examples */}
                 {selectedGrammar.examples && selectedGrammar.examples.length > 0 && (
                   <div>
-                    <h3 className="text-[10px] font-extrabold uppercase text-[#8C827A] tracking-wider mb-3">Ví dụ</h3>
+                    <h3 className="text-[10px] font-extrabold uppercase text-[#8C827A] tracking-wider mb-3">{tr("Ví dụ")}</h3>
                     <div className="space-y-3">
                       {selectedGrammar.examples.map((example, idx) => (
                         <div
@@ -425,7 +437,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                                 <button
                                   onClick={() => speakChinese(example.chinese)}
                                   className="p-1.5 rounded-lg border border-[#F2E4D8] bg-white text-[#8C827A] hover:text-[#B91B1C] hover:border-[#B91B1C] transition-colors opacity-0 group-hover:opacity-100"
-                                  title="Nghe phát âm"
+                                  title={tr("Nghe phát âm")}
                                 >
                                   <Volume2 className="w-3.5 h-3.5" />
                                 </button>
@@ -466,9 +478,7 @@ export default function GrammarPage({ onStartPractice }: GrammarPageProps) {
                 <button
                   onClick={() => setSelectedGrammar(null)}
                   className="px-6 py-2.5 rounded-xl bg-[#2B2826] text-white text-xs font-bold hover:bg-[#1a1917] transition-colors"
-                >
-                  Đóng
-                </button>
+                >{tr("Đóng")}</button>
               </div>
             </motion.div>
           </motion.div>

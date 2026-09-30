@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -25,6 +26,7 @@ export default function CustomSelect({
   menuClassName = '',
   ariaLabel,
 }: CustomSelectProps) {
+  const { ui } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -65,14 +67,14 @@ export default function CustomSelect({
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label={ariaLabel || displayLabel}
+        aria-label={ui(ariaLabel || displayLabel)}
         className={`w-full h-10 px-3.5 rounded-xl border bg-white flex items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold outline-none cursor-pointer transition-all shadow-2xs ${
           isOpen
             ? 'border-[#B91B1C] ring-2 ring-[#B91B1C]/15 text-[#18181B]'
             : 'border-[#E7E7EA] hover:border-[#8B9097] text-[#18181B]'
         }`}
       >
-        <span className="truncate text-left font-medium">{displayLabel}</span>
+        <span className="truncate text-left font-medium">{ui(displayLabel)}</span>
         <ChevronDown
           className={`w-4 h-4 text-[#8B9097] shrink-0 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-[#B91B1C]' : ''
@@ -83,7 +85,7 @@ export default function CustomSelect({
       {isOpen && (
         <div
           role="listbox"
-          aria-label={ariaLabel}
+          aria-label={ui(ariaLabel)}
           className={`absolute left-0 right-0 sm:right-auto sm:min-w-full top-full mt-1.5 py-1.5 bg-white border border-[#E7E7EA] rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto scrollbar-thin ${menuClassName}`}
         >
           {options.map((opt) => {
@@ -104,7 +106,7 @@ export default function CustomSelect({
                     : 'text-[#3A3F45] hover:bg-[#F7F7F9] hover:text-[#18181B]'
                 }`}
               >
-                <span className="truncate">{opt.label}</span>
+                <span className="truncate">{ui(opt.label)}</span>
                 {isSelected && (
                   <Check className="w-3.5 h-3.5 text-[#B91B1C] shrink-0" />
                 )}

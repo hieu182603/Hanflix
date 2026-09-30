@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n';
 import React from 'react';
 import {
   Home,
@@ -43,12 +44,13 @@ function NavButton({
   onNavChange: (id: string) => void;
   isCollapsed: boolean;
 }) {
+  const { ui } = useI18n();
   const Icon = item.icon;
   return (
     <div className="relative group">
       <button
         onClick={() => onNavChange(item.id)}
-        aria-label={item.label}
+        aria-label={ui(item.label)}
         aria-current={isActive ? 'page' : undefined}
         className={`w-full h-[46px] rounded-xl flex items-center gap-3 text-sm font-semibold transition-all duration-150 cursor-pointer ${
           isCollapsed ? 'justify-center px-2' : 'px-4'
@@ -59,13 +61,13 @@ function NavButton({
         }`}
       >
         <Icon className={`shrink-0 w-5 h-5 ${isActive ? 'text-white' : 'text-[#5F6368] group-hover:text-[#B91B1C]'}`} />
-        {!isCollapsed && <span className="truncate">{item.label}</span>}
+        {!isCollapsed && <span className="truncate">{ui(item.label)}</span>}
       </button>
 
       {/* Floating Tooltip in Collapsed Rail Mode */}
       {isCollapsed && (
         <div className="hidden lg:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-          {item.label}
+          {ui(item.label)}
           <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#18181B]" />
         </div>
       )}
@@ -82,6 +84,7 @@ export default function Sidebar({
   onCloseDrawer,
   isCollapsed = false,
 }: SidebarProps) {
+  const { tr, locale } = useI18n();
   const { t } = useLanguage();
 
   // Lock background scroll when mobile drawer is active
@@ -127,7 +130,7 @@ export default function Sidebar({
           />
           <button
             onClick={onCloseDrawer}
-            aria-label="Đóng menu"
+            aria-label={tr("Đóng menu")}
             className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] active:scale-95 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -145,7 +148,7 @@ export default function Sidebar({
               onCloseDrawer?.();
             }}
             className="bg-[#F7F7F9] hover:bg-[#F2E4D8]/30 cursor-pointer rounded-2xl p-4 border border-[#E7E7EA] flex flex-col items-center text-center transition-all duration-200 group"
-            title="Xem & Chỉnh sửa hồ sơ cá nhân"
+            title={tr("Xem & Chỉnh sửa hồ sơ cá nhân")}
           >
             <div className="relative mb-2.5">
               <UserAvatar
@@ -169,10 +172,10 @@ export default function Sidebar({
                   onCloseDrawer?.();
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 hover:border-amber-300 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                title="Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng"
+                title={tr("Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng")}
               >
                 <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
-                <span>{liveXP.toLocaleString('vi-VN')} XP</span>
+                <span>{liveXP.toLocaleString(locale)} XP</span>
               </button>
             </div>
 
@@ -204,14 +207,14 @@ export default function Sidebar({
             </div>
             {/* Tooltip on mini avatar */}
             <div className="hidden lg:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-              {userProfile.name} ({userProfile.hskLevel}) · {liveXP.toLocaleString('vi-VN')} XP
+              {userProfile.name} ({userProfile.hskLevel}) · {liveXP.toLocaleString(locale)} XP
               <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#18181B]" />
             </div>
           </div>
         )}
 
         {/* Navigation Items */}
-        <nav className="space-y-1" aria-label="Điều hướng chính">
+        <nav className="space-y-1" aria-label={tr("Điều hướng chính")}>
           {navItems.map((item) => (
             <NavButton
               key={item.id}

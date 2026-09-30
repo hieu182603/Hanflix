@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
@@ -50,6 +51,7 @@ export default function WatchView({
   onSaveWord,
   guestMode = false,
 }: WatchViewProps) {
+  const { tr } = useI18n();
   const { t } = useLanguage();
   // Player state
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
@@ -183,7 +185,7 @@ export default function WatchView({
             {/* Center Big Play / Pause Overlay Button */}
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              aria-label={isPlaying ? 'Tạm dừng video' : 'Tiếp tục phát'}
+              aria-label={isPlaying ? tr("Tạm dừng video") : tr("Tiếp tục phát")}
               className="absolute inset-0 m-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#B91B1C]/90 hover:bg-[#B91B1C] text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer z-20"
             >
               {isPlaying ? (
@@ -231,7 +233,7 @@ export default function WatchView({
                       setProgressPercent((prev) => Math.max(0, prev - 10));
                       setActiveSubtitleIndex((prev) => Math.max(0, prev - 1));
                     }}
-                    title="Lùi 5 giây"
+                    title={tr("Lùi 5 giây")}
                     className="p-1 hover:text-yellow-300 transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -244,7 +246,7 @@ export default function WatchView({
                         setActiveSubtitleIndex((prev) => Math.min(lesson.transcript!.length - 1, prev + 1));
                       }
                     }}
-                    title="Tiến 5 giây"
+                    title={tr("Tiến 5 giây")}
                     className="p-1 hover:text-yellow-300 transition-colors cursor-pointer"
                   >
                     <RotateCw className="w-4 h-4" />
@@ -299,7 +301,7 @@ export default function WatchView({
                         document.exitFullscreen?.();
                       }
                     }}
-                    title="Toàn màn hình"
+                    title={tr("Toàn màn hình")}
                     className="p-1 hover:text-yellow-300 transition-colors cursor-pointer"
                   >
                     <Maximize2 className="w-4 h-4" />
@@ -319,9 +321,7 @@ export default function WatchView({
               <button
                 onClick={() => setSavedWordToast(null)}
                 className="text-[#1E7E44] hover:underline text-[11px]"
-              >
-                Đóng
-              </button>
+              >{tr("Đóng")}</button>
             </div>
           )}
 
@@ -434,16 +434,16 @@ export default function WatchView({
 
               <p className="text-[#5F6368] leading-relaxed">
                 {lesson.description ||
-                  'Bài học giúp bạn tự tin ứng dụng tiếng Trung vào các tình huống thực tế: từ phát âm chuẩn, cách dùng từ vựng đúng ngữ cảnh, đến phản xạ giao tiếp tự nhiên.'}
+                  tr("Bài học giúp bạn tự tin ứng dụng tiếng Trung vào các tình huống thực tế: từ phát âm chuẩn, cách dùng từ vựng đúng ngữ cảnh, đến phản xạ giao tiếp tự nhiên.")}
               </p>
 
               {isDescriptionExpanded && (
                 <div className="pt-2 border-t border-[#E7E7EA] space-y-2 text-[#5F6368] animate-in fade-in">
                   <div className="font-bold text-[#18181B]">💡 {t.watch.academicHighlights}</div>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Từ vựng trọng tâm: {lesson.vocabularyList?.map((v) => v.word).join(', ') || 'Đang cập nhật'}</li>
-                    <li>Cấu trúc lịch sự trong giao tiếp thực tế với người bản xứ.</li>
-                    <li>Luyện nghe giọng chuẩn Bắc Kinh với tốc độ tự nhiên.</li>
+                    <li>{tr("Từ vựng trọng tâm:")} {lesson.vocabularyList?.map((v) => v.word).join(', ') || tr("Đang cập nhật")}</li>
+                    <li>{tr("Cấu trúc lịch sự trong giao tiếp thực tế với người bản xứ.")}</li>
+                    <li>{tr("Luyện nghe giọng chuẩn Bắc Kinh với tốc độ tự nhiên.")}</li>
                   </ul>
                 </div>
               )}
@@ -495,7 +495,7 @@ export default function WatchView({
               {activeTab === 'transcript' && (
                 <div className="space-y-2.5">
                   <div className="text-[11px] text-[#8B9097] px-1 flex items-center justify-between">
-                    <span>Bấm vào câu để phát âm và nhảy tới đoạn video:</span>
+                    <span>{tr("Bấm vào câu để phát âm và nhảy tới đoạn video:")}</span>
                   </div>
 
                   {lesson.transcript && lesson.transcript.length > 0 ? (
@@ -527,7 +527,7 @@ export default function WatchView({
                                   ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
                                   : 'bg-white border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C]'
                               }`}
-                              title="Nghe phát âm chuẩn"
+                              title={tr("Nghe phát âm chuẩn")}
                             >
                               <Volume2 className="w-3.5 h-3.5" />
                             </button>
@@ -546,9 +546,7 @@ export default function WatchView({
                       );
                     })
                   ) : (
-                    <div className="text-center py-6 text-xs text-[#8B9097]">
-                      Chưa có phụ đề lời thoại cho bài học này.
-                    </div>
+                    <div className="text-center py-6 text-xs text-[#8B9097]">{tr("Chưa có phụ đề lời thoại cho bài học này.")}</div>
                   )}
                 </div>
               )}
@@ -584,7 +582,7 @@ export default function WatchView({
                                   ? 'bg-[#B91B1C] text-white border-[#B91B1C]'
                                   : 'bg-white border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C]'
                               }`}
-                              title="Nghe phát âm"
+                              title={tr("Nghe phát âm")}
                             >
                               <Volume2 className="w-3.5 h-3.5" />
                             </button>
@@ -593,7 +591,7 @@ export default function WatchView({
                               type="button"
                               onClick={() => handleSaveSingleWord(vocab.word)}
                               className="p-1.5 rounded-full bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C] transition-colors"
-                              title="Lưu từ vựng này"
+                              title={tr("Lưu từ vựng này")}
                             >
                               <Bookmark className="w-3.5 h-3.5" />
                             </button>
@@ -603,15 +601,13 @@ export default function WatchView({
                         <div className="text-xs font-bold text-[#18181B]">{vocab.meaning}</div>
 
                         <div className="text-[11px] text-[#5F6368] pt-1.5 border-t border-[#E7E7EA] leading-relaxed">
-                          <span className="font-semibold text-[#18181B]">Ví dụ: </span>
+                          <span className="font-semibold text-[#18181B]">{tr("Ví dụ:")} </span>
                           {vocab.example}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-6 text-xs text-[#8B9097]">
-                      Chưa có danh sách từ vựng chi tiết.
-                    </div>
+                    <div className="text-center py-6 text-xs text-[#8B9097]">{tr("Chưa có danh sách từ vựng chi tiết.")}</div>
                   )}
                 </div>
               )}
@@ -620,25 +616,17 @@ export default function WatchView({
               {activeTab === 'grammar' && (
                 <div className="space-y-3 text-xs">
                   <div className="p-4 rounded-2xl bg-[#FFF5F5] border border-[#B91B1C]/20 space-y-1">
-                    <span className="text-[10px] font-bold text-[#B91B1C] uppercase tracking-wider">
-                      Cấu trúc trọng tâm HSK 3
-                    </span>
-                    <div className="text-base font-bold font-mono text-[#18181B]">
-                      请 + Động từ + 一下 (Qǐng ... yíxià)
-                    </div>
-                    <p className="text-[#5F6368] pt-1 leading-relaxed">
-                      Dùng để đưa ra lời đề nghị lịch sự, nhẹ nhàng: &quot;Xin vui lòng làm gì đó một chút&quot;.
-                    </p>
+                    <span className="text-[10px] font-bold text-[#B91B1C] uppercase tracking-wider">{tr("Cấu trúc trọng tâm HSK 3")}</span>
+                    <div className="text-base font-bold font-mono text-[#18181B]">请 + Động từ + 一下 (Qǐng ... yíxià)</div>
+                    <p className="text-[#5F6368] pt-1 leading-relaxed">Dùng để đưa ra lời đề nghị lịch sự, nhẹ nhàng: &quot;Xin vui lòng làm gì đó một chút&quot;.</p>
                   </div>
 
                   <div className="p-3.5 rounded-2xl bg-[#F7F7F9] border border-[#E7E7EA] space-y-1.5">
-                    <div className="font-bold text-[#18181B]">Mẫu câu trong video:</div>
+                    <div className="font-bold text-[#18181B]">{tr("Mẫu câu trong video:")}</div>
                     <p className="text-[#5F6368]">
-                      • <span className="font-mono font-semibold text-[#18181B]">请拿一下菜单。</span> (Xin cho lấy menu một chút.)
-                    </p>
+                      • <span className="font-mono font-semibold text-[#18181B]">请拿一下菜单。</span> (Xin cho lấy menu một chút.)</p>
                     <p className="text-[#5F6368]">
-                      • <span className="font-mono font-semibold text-[#18181B]">请稍等，马上就来。</span> (Xin chờ một chút, có ngay.)
-                    </p>
+                      • <span className="font-mono font-semibold text-[#18181B]">请稍等，马上就来。</span> (Xin chờ một chút, có ngay.)</p>
                   </div>
 
                   <button
@@ -648,7 +636,7 @@ export default function WatchView({
                     className="w-full py-2.5 rounded-xl bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#B91B1C] hover:text-white font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Hỏi AI giải thích thêm ngữ pháp</span>
+                    <span>{tr("Hỏi AI giải thích thêm ngữ pháp")}</span>
                   </button>
                 </div>
               )}
@@ -658,8 +646,8 @@ export default function WatchView({
           {/* Up Next Recommendations List (YouTube Style) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h3 className="font-black text-sm text-[#18181B] tracking-tight">Bài học tiếp theo</h3>
-              <span className="text-xs text-[#8B9097]">{upNextLessons.length} bài gợi ý</span>
+              <h3 className="font-black text-sm text-[#18181B] tracking-tight">{tr("Bài học tiếp theo")}</h3>
+              <span className="text-xs text-[#8B9097]">{upNextLessons.length} {tr("bài gợi ý")}</span>
             </div>
 
             <div className="space-y-2.5">
@@ -696,7 +684,7 @@ export default function WatchView({
                       <span className="px-1.5 py-0.5 rounded bg-[#F7F7F9] border border-[#E7E7EA]">
                         {item.category}
                       </span>
-                      <span>{item.viewCount} lượt xem</span>
+                      <span>{item.viewCount} {tr("lượt xem")}</span>
                     </div>
                   </div>
                 </div>

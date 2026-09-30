@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { Sparkles, GraduationCap, ListChecks } from 'lucide-react';
 import type { LearningTip } from '../../api/admin';
 
@@ -9,6 +10,7 @@ interface LearningTipsPanelProps {
 }
 
 export default function LearningTipsPanel({ tips, drillWords, audience = 'learner' }: LearningTipsPanelProps) {
+  const { tr } = useI18n();
   const safeTips = tips ?? [];
   const safeWords = drillWords ?? [];
   if (safeTips.length === 0 && safeWords.length === 0) return null;
@@ -20,11 +22,11 @@ export default function LearningTipsPanel({ tips, drillWords, audience = 'learne
           <GraduationCap size={16} />
         </span>
         <div className="flex-1">
-          <h3 className="text-sm font-black text-[#2B2826]">Mẹo học tập cho video này</h3>
+          <h3 className="text-sm font-black text-[#2B2826]">{tr("Mẹo học tập cho video này")}</h3>
           <p className="text-[11px] text-[#7A6F66]">
             {audience === 'admin'
-              ? 'AI đã sinh mẹo dựa trên phụ đề. Bạn có thể sửa hoặc xóa.'
-              : 'AI gợi ý cách học hiệu quả nhất với nội dung này.'}
+              ? tr("AI đã sinh mẹo dựa trên phụ đề. Bạn có thể sửa hoặc xóa.")
+              : tr("AI gợi ý cách học hiệu quả nhất với nội dung này.")}
           </p>
         </div>
         <span className="rounded-full bg-[#FFF0D6] px-2 py-0.5 text-[10px] font-bold text-[#B45309]">
@@ -62,7 +64,7 @@ export default function LearningTipsPanel({ tips, drillWords, audience = 'learne
         <div className="mt-3 rounded-xl border border-dashed border-[#F2E4D8] bg-white p-3">
           <div className="mb-1.5 flex items-center gap-1.5">
             <ListChecks size={12} className="text-[#188A5A]" />
-            <p className="text-[11px] font-bold text-[#2B2826]">Từ vựng nên ôn lại sau khi xem</p>
+            <p className="text-[11px] font-bold text-[#2B2826]">{tr("Từ vựng nên ôn lại sau khi xem")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {safeWords.map((w, idx) => (

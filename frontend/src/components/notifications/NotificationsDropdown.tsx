@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useRef, useEffect, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
@@ -15,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react"
 import { useLanguage } from "../../i18n"
+import { LOCALES } from '../../i18n/messages';
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -86,7 +88,7 @@ function formatRelativeTime(
           ? `${diffDays}天前`
           : `${diffDays} ngày trước`
     }
-    return date.toLocaleDateString()
+    return date.toLocaleDateString(LOCALES[lang])
   } catch {
     return ""
   }
@@ -110,6 +112,7 @@ export default function NotificationsDropdown({
 }: {
   onSelectAction?: (actionUrl?: string) => void
 }) {
+  const { tr, ui } = useI18n();
   const { lang, t } = useLanguage()
   const notify = useNotification()
   const [isOpen, setIsOpen] = useState(false)
@@ -413,7 +416,7 @@ export default function NotificationsDropdown({
               ? `${unreadCount} unread notifications`
               : lang === "zh"
                 ? `${unreadCount} 条未读通知`
-                : `${unreadCount} thông báo chưa đọc`
+                : tr("{0} thông báo chưa đọc", { 0: unreadCount })
             : ""}
         </span>
         {unreadCount > 0 && (
@@ -485,7 +488,7 @@ export default function NotificationsDropdown({
                       : "text-[#5F6368] hover:text-[#18181B] hover:bg-[#EAEAEF]"
                   }`}
                 >
-                  {tab.label}
+                  {ui(tab.label)}
                 </button>
               )
             })}
@@ -503,7 +506,7 @@ export default function NotificationsDropdown({
                     ? "Loading notifications..."
                     : lang === "zh"
                       ? "正在加载通知..."
-                      : "Đang tải thông báo..."}
+                      : tr("Đang tải thông báo...")}
                 </span>
               </div>
             ) : notifications.length > 0 ? (
@@ -567,7 +570,7 @@ export default function NotificationsDropdown({
                           ? "Delete notification"
                           : lang === "zh"
                             ? "删除通知"
-                            : "Xóa thông báo"
+                            : tr("Xóa thông báo")
                       }
                     >
                       <X className="w-3.5 h-3.5" aria-hidden="true" />
@@ -601,7 +604,7 @@ export default function NotificationsDropdown({
                 disabled={page === 1 || isFetching}
                 className="font-bold text-[#5F6368] hover:text-[#18181B] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B91B1C] rounded px-2 py-1"
               >
-                ‹ {lang === "en" ? "Prev" : lang === "zh" ? "上一页" : "Trước"}
+                ‹ {lang === "en" ? "Prev" : lang === "zh" ? "上一页" : tr("Trước")}
               </button>
               <span className="text-[#8B9097] font-medium">
                 {page} / {totalPages}
@@ -612,7 +615,7 @@ export default function NotificationsDropdown({
                 disabled={page === totalPages || isFetching}
                 className="font-bold text-[#5F6368] hover:text-[#18181B] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B91B1C] rounded px-2 py-1 inline-flex items-center gap-1"
               >
-                {lang === "en" ? "Next" : lang === "zh" ? "下一页" : "Sau"}{" "}
+                {lang === "en" ? "Next" : lang === "zh" ? "下一页" : tr("Sau")}{" "}
                 <ChevronDown
                   className="w-3 h-3 -rotate-90"
                   aria-hidden="true"

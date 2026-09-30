@@ -1,3 +1,4 @@
+import { usePremiumAccess, useLearnerHsk } from '../components/premium/PremiumAccess';
 /**
  * Centralised hook for prefetching the next lesson into React Query.
  *
@@ -46,6 +47,8 @@ const inFlight = new Map<string, AbortController>();
 const acquiredBy = new Map<string, string>(); // source -> lessonId
 
 export function useLessonPrefetchController(): PrefetchController {
+  const isPremium = usePremiumAccess();
+  const { hsk: currentHsk } = useLearnerHsk();
   const subscribed = useRef(false);
 
   useEffect(() => {
@@ -80,20 +83,20 @@ export function useLessonPrefetchController(): PrefetchController {
       try {
         await Promise.all([
           queryClient.ensureQueryData({
-            queryKey: lessonQueryKeys.lesson(lessonId),
+            queryKey: [...lessonQueryKeys.lesson(lessonId), isPremium, currentHsk],
             queryFn: () => getPublishedLesson(lessonId, { signal: controller.signal }).then((data) => data),
             staleTime: 5 * 60 * 1000,
           }),
           queryClient.ensureQueryData({
-            queryKey: lessonQueryKeys.subtitles(lessonId),
+            queryKey: [...lessonQueryKeys.subtitles(lessonId), isPremium, currentHsk],
             queryFn: () => getPublishedSubtitles(lessonId, { signal: controller.signal }).then((data) => data),
             staleTime: 10 * 60 * 1000,
           }),
-          queryClient.ensureQueryData({
-            queryKey: lessonQueryKeys.progress(lessonId),
+          isPremium ? queryClient.ensureQueryData({
+            queryKey: [...lessonQueryKeys.progress(lessonId), currentHsk],
             queryFn: () => getLessonProgress(lessonId, { signal: controller.signal }).then((data) => data),
             staleTime: 60 * 1000,
-          }),
+          }) : Promise.resolve(),
         ]);
       } catch {
         // Cancellation or genuine failure — neither should throw into the UI.
@@ -102,7 +105,7 @@ export function useLessonPrefetchController(): PrefetchController {
         acquiredBy.delete(source);
       }
     })();
-  }, []);
+  }, [isPremium, currentHsk]);
 
   const release = useCallback((source: string) => {
     const controller = inFlight.get(source);

@@ -1,3 +1,5 @@
+import { requestPremiumUpgrade, usePremiumAccess, useLearnerHsk } from '../premium/PremiumAccess';
+import { useI18n } from '../../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
@@ -18,7 +20,10 @@ import {
   Sparkles,
   Volume2,
   X,
+  Crown,
+  ShieldCheck,
 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   explainWord,
@@ -72,6 +77,10 @@ export default function PublishedLessonView({
   onSelectLesson,
   onAskAI,
 }: PublishedLessonViewProps) {
+  const { tr, ui } = useI18n();
+  const navigate = useNavigate()
+  const isPremium = usePremiumAccess()
+  const { hsk: currentHsk } = useLearnerHsk()
   const notify = useNotification()
   const videoRef = useRef<HTMLVideoElement>(null)
   const activeCueRef = useRef<HTMLDivElement | null>(null)
@@ -79,9 +88,9 @@ export default function PublishedLessonView({
 
   /**
    * Data layer (React Query):
-   *   - `lessonQuery` returns the lesson doc including `media.url`. As soon
-   *     as `media.url` is present we mount the `<YouTubePlayer>` and play
-   *     without waiting for subtitles, progress, or quiz.
+   *   - Revalidate lesson access on every visit before mounting the player.
+   *     Cached playback URLs are not proof of current HSK/Premium access.
+   *     Subtitles, progress, and quiz do not block authorized playback.
    *   - `subtitlesQuery`, `progressQuery`, `quizQuery` all run in parallel
    *     and only affect their own UI sections. Failures render a banner
    *     while the player keeps playing.
@@ -91,15 +100,17 @@ export default function PublishedLessonView({
   const queryClient = useQueryClient()
 
   const lessonQuery = useQuery({
-    queryKey: lessonQueryKeys.lesson(lessonId),
+    queryKey: [...lessonQueryKeys.lesson(lessonId), isPremium, currentHsk],
     queryFn: ({ signal }) => getPublishedLesson(lessonId, { signal }),
     enabled: Boolean(lessonId),
+    refetchOnMount: 'always',
+    retry: (count, error) => !(error instanceof ApiRequestError && error.status >= 400 && error.status < 500) && count < 1,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   })
 
   const subtitlesQuery = useQuery({
-    queryKey: lessonQueryKeys.subtitles(lessonId),
+    queryKey: [...lessonQueryKeys.subtitles(lessonId), isPremium, currentHsk],
     queryFn: ({ signal }) => getPublishedSubtitles(lessonId, { signal }),
     enabled: Boolean(lessonId),
     staleTime: 10 * 60 * 1000,
@@ -108,18 +119,18 @@ export default function PublishedLessonView({
   })
 
   const progressQuery = useQuery({
-    queryKey: lessonQueryKeys.progress(lessonId),
+    queryKey: [...lessonQueryKeys.progress(lessonId), currentHsk],
     queryFn: ({ signal }) => getLessonProgress(lessonId, { signal }),
-    enabled: Boolean(lessonId),
+    enabled: Boolean(lessonId) && isPremium,
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 1,
   })
 
   const quizQuery = useQuery({
-    queryKey: lessonQueryKeys.quiz(lessonId),
+    queryKey: [...lessonQueryKeys.quiz(lessonId), currentHsk],
     queryFn: ({ signal }) => getLessonQuiz(lessonId, { signal }),
-    enabled: Boolean(lessonId),
+    enabled: Boolean(lessonId) && isPremium,
     staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
@@ -131,17 +142,18 @@ export default function PublishedLessonView({
     perfMarks.mark("watch_open:start", { lessonId })
     return () => {
       for (const key of [
-        lessonQueryKeys.lesson(lessonId),
-        lessonQueryKeys.subtitles(lessonId),
-        lessonQueryKeys.progress(lessonId),
-        lessonQueryKeys.quiz(lessonId),
+        [...lessonQueryKeys.lesson(lessonId), isPremium, currentHsk],
+        [...lessonQueryKeys.subtitles(lessonId), isPremium, currentHsk],
+        [...lessonQueryKeys.progress(lessonId), currentHsk],
+        [...lessonQueryKeys.quiz(lessonId), currentHsk],
       ]) {
         void queryClient.cancelQueries({ queryKey: key, exact: true })
       }
     }
-  }, [lessonId, queryClient])
+  }, [lessonId, queryClient, currentHsk, isPremium])
 
-  const lesson = lessonQuery.data ?? null
+  const awaitingAccess = !lessonQuery.isFetchedAfterMount && !lessonQuery.error
+  const lesson = lessonQuery.error || awaitingAccess ? null : lessonQuery.data ?? null
   const subtitleTrack = subtitlesQuery.data ?? null
   const cues: SubtitleCue[] = useMemo(
     () => subtitleTrack?.cues ?? [],
@@ -150,10 +162,10 @@ export default function PublishedLessonView({
   const translationImproved = Boolean(subtitleTrack?.translationImproved)
   const learningTips: LearningTip[] = subtitleTrack?.learningTips ?? []
   const drillWords: string[] = subtitleTrack?.drillWords ?? []
-  const progress: LessonProgress | null = progressQuery.data ?? null
+  const progress: LessonProgress | null = isPremium ? progressQuery.data ?? null : null
   const quiz: PublicQuestion[] = useMemo(
-    () => quizQuery.data?.questions ?? [],
-    [quizQuery.data],
+    () => isPremium ? quizQuery.data?.questions ?? [] : [],
+    [quizQuery.data, isPremium],
   )
 
   // Recommendation list (Up Next) — only fires once we know the lesson's HSK.
@@ -175,13 +187,6 @@ export default function PublishedLessonView({
       perfMarks.since("lesson_media:ready", "watch_open:start", { lessonId })
     }
   }, [lesson?.media?.url, lessonId])
-
-  // Record learning activity for daily streak
-  useEffect(() => {
-    if (lessonId) {
-      recordLearningActivity("video")
-    }
-  }, [lessonId])
 
   const [currentMs, setCurrentMs] = useState(0)
   const [loading] = useState(false) // retained for type compatibility; no longer used to gate the player
@@ -298,9 +303,9 @@ export default function PublishedLessonView({
         // Refresh the cached progress in the background so coverage/completed
         // reflects the latest write, without blocking playback.
         void queryClient.invalidateQueries({
-          queryKey: lessonQueryKeys.progress(lessonId),
+          queryKey: [...lessonQueryKeys.progress(lessonId), currentHsk],
         })
-        window.dispatchEvent(new Event("hanflix:activity-updated"))
+        window.dispatchEvent(new CustomEvent("hanflix:activity-updated", { detail: { source: "video" } }))
       })
       .catch(() => setMessage("Chưa lưu được tiến độ. Hãy thử phát lại video."))
   }
@@ -310,12 +315,14 @@ export default function PublishedLessonView({
     // Reset transient state when navigating between lessons so we never
     // confuse lesson A's modal/quiz state with lesson B's.
     hasUserInitiatedPlayRef.current = false
+    setPopoverAnchor(null)
+    setVocabViewMode("list")
     setCurrentMs(0)
     setQuizResult(null)
     setQuizOpen(false)
     setAnswers({})
     quizAttemptKey.current = crypto.randomUUID()
-  }, [lessonId])
+  }, [lessonId, isPremium, currentHsk])
 
   const activeCue = cues.find(
     (cue) => cue.startMs <= currentMs && currentMs < cue.endMs,
@@ -357,6 +364,7 @@ export default function PublishedLessonView({
   }
 
   const submitQuiz = async () => {
+    if (!isPremium) { requestPremiumUpgrade(); return; }
     if (quiz.some((question) => !answers[question.questionId]?.trim())) {
       setMessage("Hãy trả lời tất cả câu hỏi trước khi nộp.")
       return
@@ -393,6 +401,7 @@ export default function PublishedLessonView({
   }
 
   const saveWord = async (cueId: string, wordId: string) => {
+    if (!isPremium) { requestPremiumUpgrade(); return; }
     setMessage("")
     try {
       await saveSubtitleWord(wordId, lessonId, cueId)
@@ -426,6 +435,14 @@ export default function PublishedLessonView({
       wordId,
       wordText,
     })
+    if (!isPremium) {
+      const word = cues.find(cue => cue.cueId === cueId)?.tokens.find(token => token.wordId?._id === wordId)?.wordId;
+      setExplanation({ meaningVi: word?.meaningVi || tr("Chưa có nghĩa cho từ này."), pinyin: word?.pinyin,
+        usageVi: '', exampleZh: '', examplePinyin: '', exampleVi: '' });
+      setExplanationError('');
+      setExplaining(false);
+      return;
+    }
     setExplaining(true)
     setExplanation(null)
     setExplanationError("")
@@ -661,7 +678,7 @@ export default function PublishedLessonView({
           className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] rounded-xl bg-white border border-[#E7E7EA] hover:border-[#B91B1C]/30 hover:bg-[#FFF5F5] text-xs sm:text-sm font-semibold text-[#18181B] shadow-2xs transition-all cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 text-[#5F6368] group-hover:-translate-x-0.5 group-hover:text-[#B91B1C] transition-transform" />
-          <span>Quay lại gợi ý</span>
+          <span>{tr("Quay lại gợi ý")}</span>
         </button>
 
         {lesson && (
@@ -669,34 +686,97 @@ export default function PublishedLessonView({
             <span className="px-2.5 py-1 rounded-full bg-[#18181B] text-white font-bold tracking-wide">
               HSK {lesson.hsk}
             </span>
-            <span className="hidden sm:inline-block px-2.5 py-1 rounded-full bg-white border border-[#E7E7EA] text-[#5F6368] font-semibold">
-              Bài học đã xuất bản
-            </span>
+            <span className="hidden sm:inline-block px-2.5 py-1 rounded-full bg-white border border-[#E7E7EA] text-[#5F6368] font-semibold">{tr("Bài học đã xuất bản")}</span>
             <AiImprovedBadge visible={translationImproved} size="sm" />
           </div>
         )}
       </div>
 
-      {lessonQuery.isPending && (
+      {(lessonQuery.isPending || awaitingAccess) && (
         <div className="rounded-3xl bg-white border border-[#E7E7EA] p-8 text-center shadow-xs">
           <div className="inline-block w-8 h-8 border-3 border-[#B91B1C] border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-sm font-semibold text-[#5F6368]">
-            Đang tải video bài học…
-          </p>
+          <p className="text-sm font-semibold text-[#5F6368]">{tr("Đang tải video bài học…")}</p>
         </div>
       )}
 
       {lessonQuery.error && (
-        <div className="my-4">
-          <InlineBanner
-            variant="error"
-            message={
-              lessonQuery.error instanceof ApiRequestError
-                ? lessonQuery.error.message
-                : "Không thể tải bài học."
-            }
-          />
-        </div>
+        (() => {
+          const isPremiumRequired =
+            lessonQuery.error instanceof ApiRequestError &&
+            lessonQuery.error.code === 'PREMIUM_REQUIRED';
+
+          if (lessonQuery.error instanceof ApiRequestError && ['HSK_LEVEL_MISMATCH', 'HSK_PROFILE_REQUIRED'].includes(lessonQuery.error.code)) {
+            return <section className="rounded-3xl border border-[#E7E7EA] bg-white p-8 space-y-4" role="alert">
+              <h2 className="text-xl font-bold">{tr("Video không thuộc HSK hiện tại")}</h2>
+              <p>{ui(lessonQuery.error.message)}</p>
+              <button type="button" onClick={() => navigate('/lessons')} className="rounded-xl bg-[#B91B1C] px-5 py-3 text-white font-bold">{tr("Xem video đúng HSK")}</button>
+              <button type="button" onClick={() => navigate('/settings')} className="ml-3 underline">{tr("Cập nhật HSK")}</button>
+            </section>;
+          }
+          if (isPremiumRequired) {
+            return (
+              <div className="rounded-3xl bg-white border border-[#E7E7EA] p-6 sm:p-10 shadow-lg text-center max-w-2xl mx-auto my-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-white mx-auto shadow-xl shadow-amber-500/25 ring-8 ring-amber-100/60">
+                  <Crown className="w-8 h-8 sm:w-10 sm:h-10 fill-white" />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black uppercase tracking-wider">{tr("Nội dung HanFlix Premium")}</span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">{tr("Bài học này dành riêng cho thành viên Premium")}</h2>
+                  <p className="text-xs sm:text-sm text-[#5F6368] max-w-lg mx-auto leading-relaxed">{tr("Tài khoản Miễn phí (Free) của bạn được xem 3–5 video mẫu. Hãy nâng cấp tài khoản HanFlix Premium để mở khóa toàn bộ bài học này, xem kho video không giới hạn, phụ đề song ngữ và nhận sự trợ giúp của AI Panda!")}</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#FFF9F5] border border-[#F2E4D8] grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left text-xs font-semibold text-[#18181B]">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{tr("Xem video bài học không giới hạn")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{tr("Phụ đề tương tác & Lưu từ tức thì")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{tr("Trợ lý AI Panda giải thích 24/7")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{tr("Mở khóa toàn bộ bài tập & Quiz HSK")}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/premium')}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] text-white font-extrabold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Crown className="w-4 h-4 fill-white" />
+                    <span>{tr("Nâng cấp Premium ngay")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/lessons')}
+                    className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white border border-[#E7E7EA] hover:bg-[#F7F7F9] text-[#18181B] font-bold text-sm transition-all cursor-pointer"
+                  >{tr("Xem các bài học mẫu miễn phí")}</button>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="my-4">
+              <InlineBanner
+                variant="error"
+                message={
+                  lessonQuery.error instanceof ApiRequestError
+                    ? lessonQuery.error.message
+                    : tr("Không thể tải bài học.")
+                }
+              />
+            </div>
+          );
+        })()
       )}
 
       {/* Subtitle / progress / quiz banners render only AFTER the player
@@ -705,7 +785,7 @@ export default function PublishedLessonView({
         <div className="my-2">
           <InlineBanner
             variant="warning"
-            message="Không thể tải phụ đề. Vẫn có thể xem video."
+            message={tr("Không thể tải phụ đề. Vẫn có thể xem video.")}
           />
         </div>
       )}
@@ -713,7 +793,7 @@ export default function PublishedLessonView({
         <div className="my-2">
           <InlineBanner
             variant="warning"
-            message="Không thể tải bài tập. Có thể thử lại sau."
+            message={tr("Không thể tải bài tập. Có thể thử lại sau.")}
           />
         </div>
       )}
@@ -721,7 +801,7 @@ export default function PublishedLessonView({
         <div className="my-2">
           <InlineBanner
             variant="warning"
-            message="Không thể đồng bộ tiến độ."
+            message={tr("Không thể đồng bộ tiến độ.")}
           />
         </div>
       )}
@@ -878,7 +958,7 @@ export default function PublishedLessonView({
                     }}
                     onEnded={() => {
                       flushProgress(lesson.durationSeconds)
-                      setQuizOpen(true)
+                      if (isPremium && quiz.length) setQuizOpen(true)
                     }}
                     onLoadedMetadata={(event) => {
                       if (hasUserInitiatedPlayRef.current) return
@@ -902,9 +982,7 @@ export default function PublishedLessonView({
               </>
             ) : (
               <div className="w-full aspect-video rounded-2xl md:rounded-3xl bg-neutral-900 flex flex-col items-center justify-center p-8 text-white border border-[#E7E7EA] shadow-xl">
-                <p className="text-sm font-medium">
-                  Nội dung chưa sẵn sàng để phát.
-                </p>
+                <p className="text-sm font-medium">{tr("Nội dung chưa sẵn sàng để phát.")}</p>
               </div>
             )}
 
@@ -961,10 +1039,8 @@ export default function PublishedLessonView({
                     </span>
                   </div>
                   <p className="text-xs text-[#5F6368]">
-                    HSK {lesson.hsk} · Bài học tương tác
-                    {progress && (
-                      <span className="ml-1.5 text-[#188A5A] font-semibold">
-                        · Đã xem {Math.round(progress.coverage * 100)}%
+                    HSK {lesson.hsk} {tr("· Bài học tương tác")}{progress && (
+                      <span className="ml-1.5 text-[#188A5A] font-semibold">{tr("· Đã xem")} {Math.round(progress.coverage * 100)}%
                       </span>
                     )}
                   </p>
@@ -974,15 +1050,15 @@ export default function PublishedLessonView({
               {/* YouTube-style Pill Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 {/* 1. Primary Practice Button (Opens Quiz Modal) */}
-                {quiz.length > 0 && (
+                {(quiz.length > 0 || !isPremium) && (
                   <button
                     type="button"
-                    onClick={() => setQuizOpen(true)}
+                    onClick={() => isPremium ? setQuizOpen(true) : requestPremiumUpgrade()}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer"
                   >
                     <BookOpenCheck className="w-4 h-4 text-white" />
                     <span>
-                      {quizResult ? "Xem kết quả bài tập" : "Làm bài luyện tập"}
+                      {quizResult ? tr("Xem kết quả bài tập") : tr("Làm bài luyện tập")}
                     </span>
                     <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-white/20 text-[11px] font-mono">
                       {quiz.length}
@@ -1006,10 +1082,10 @@ export default function PublishedLessonView({
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F7F7F9] hover:bg-[#ECECED] border border-[#E7E7EA] text-[#18181B] text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                  title="Hỏi trợ lý AI Panda"
+                  title={tr("Hỏi trợ lý AI Panda")}
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#E7A92F]" />
-                  <span>Hỏi AI</span>
+                  <span>{tr("Hỏi AI")}</span>
                 </button>
 
                 {/* 3. Bookmark / Save Button */}
@@ -1028,7 +1104,7 @@ export default function PublishedLessonView({
                       ? "bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30"
                       : "bg-[#F7F7F9] hover:bg-[#ECECED] border-[#E7E7EA] text-[#18181B]"
                   }`}
-                  title={isSavedLesson ? "Đã lưu bài học" : "Lưu bài học"}
+                  title={isSavedLesson ? tr("Đã lưu bài học") : tr("Lưu bài học")}
                 >
                   <Bookmark
                     className={`w-3.5 h-3.5 ${
@@ -1037,7 +1113,7 @@ export default function PublishedLessonView({
                         : "text-[#5F6368]"
                     }`}
                   />
-                  <span>{isSavedLesson ? "Đã lưu" : "Lưu bài"}</span>
+                  <span>{isSavedLesson ? tr("Đã lưu") : tr("Lưu bài")}</span>
                 </button>
 
                 {/* 4. Share Button */}
@@ -1045,14 +1121,14 @@ export default function PublishedLessonView({
                   type="button"
                   onClick={handleCopyLink}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#F7F7F9] hover:bg-[#ECECED] border border-[#E7E7EA] text-[#5F6368] hover:text-[#18181B] text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                  title="Chia sẻ liên kết"
+                  title={tr("Chia sẻ liên kết")}
                 >
                   {copiedLink ? (
                     <Check className="w-3.5 h-3.5 text-[#188A5A]" />
                   ) : (
                     <Share2 className="w-3.5 h-3.5" />
                   )}
-                  <span>{copiedLink ? "Đã sao chép" : "Chia sẻ"}</span>
+                  <span>{copiedLink ? tr("Đã sao chép") : tr("Chia sẻ")}</span>
                 </button>
               </div>
             </div>
@@ -1073,8 +1149,8 @@ export default function PublishedLessonView({
                   <span>•</span>
                   <span>
                     {progress
-                      ? `Đã học ${Math.round(progress.coverage * 100)}%`
-                      : "Chưa có tiến độ"}
+                      ? tr("Đã học {0}%", { 0: Math.round(progress.coverage * 100) })
+                      : tr("Chưa có tiến độ")}
                   </span>
                   <span>•</span>
                   <span className="text-[#B91B1C] font-semibold">
@@ -1089,7 +1165,7 @@ export default function PublishedLessonView({
                   type="button"
                   className="inline-flex items-center gap-1 font-bold text-[#18181B] hover:text-[#B91B1C] text-xs cursor-pointer"
                 >
-                  <span>{isDescriptionExpanded ? "Rút gọn" : "Hiện thêm"}</span>
+                  <span>{isDescriptionExpanded ? tr("Rút gọn") : tr("Hiện thêm")}</span>
                   {isDescriptionExpanded ? (
                     <ChevronUp className="w-3.5 h-3.5" />
                   ) : (
@@ -1105,7 +1181,7 @@ export default function PublishedLessonView({
                 }`}
               >
                 {lesson.descriptionVi ||
-                  "Video học tiếng Trung tương tác cùng HanFlix: luyện nghe phát âm chuẩn, ghi nhớ từ vựng qua phụ đề song ngữ và củng cố phản xạ tự nhiên."}
+                  tr("Video học tiếng Trung tương tác cùng HanFlix: luyện nghe phát âm chuẩn, ghi nhớ từ vựng qua phụ đề song ngữ và củng cố phản xạ tự nhiên.")}
               </p>
 
               {/* Expanded Extra Details */}
@@ -1114,23 +1190,12 @@ export default function PublishedLessonView({
                   className="pt-3 border-t border-[#E7E7EA] space-y-2 text-xs text-[#5F6368] animate-in fade-in"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <p className="font-bold text-[#18181B]">
-                    💡 Hướng dẫn học tập:
-                  </p>
+                  <p className="font-bold text-[#18181B]">{tr("💡 Hướng dẫn học tập:")}</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>
-                      Bấm vào các từ Hán tự trên phụ đề để tra cứu và xem giải
-                      thích ngữ nghĩa.
-                    </li>
-                    <li>
-                      Xem chi tiết tại tab{" "}
-                      <strong>Mẹo học ({learningTips.length})</strong> ở bảng
-                      phụ đề bên phải.
-                    </li>
-                    <li>
-                      Hoàn thành bài tập trắc nghiệm sau video để củng cố kiến
-                      thức và ghi nhận tiến độ.
-                    </li>
+                    <li>{tr("Bấm vào các từ Hán tự trên phụ đề để tra cứu và xem giải thích ngữ nghĩa.")}</li>
+                    <li>{tr("Xem chi tiết tại tab")}{" "}
+                      <strong>{tr("Mẹo học (")}{learningTips.length})</strong> {tr("ở bảng phụ đề bên phải.")}</li>
+                    <li>{tr("Hoàn thành bài tập trắc nghiệm sau video để củng cố kiến thức và ghi nhận tiến độ.")}</li>
                   </ul>
                 </div>
               )}
@@ -1141,7 +1206,7 @@ export default function PublishedLessonView({
                 role="status"
                 className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 text-xs font-semibold text-amber-900"
               >
-                {message}
+                {ui(message)}
               </p>
             )}
           </div>
@@ -1160,8 +1225,7 @@ export default function PublishedLessonView({
                       ? "border-[#B91B1C] text-[#B91B1C] bg-white"
                       : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
-                >
-                  Phụ đề ({cues.length})
+                >{tr("Phụ đề (")}{cues.length})
                 </button>
                 <button
                   type="button"
@@ -1171,8 +1235,7 @@ export default function PublishedLessonView({
                       ? "border-[#B91B1C] text-[#B91B1C] bg-white"
                       : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
-                >
-                  Từ vựng ({detailedVocabList.length})
+                >{tr("Từ vựng (")}{detailedVocabList.length})
                 </button>
                 <button
                   type="button"
@@ -1182,8 +1245,7 @@ export default function PublishedLessonView({
                       ? "border-[#B91B1C] text-[#B91B1C] bg-white"
                       : "border-transparent text-[#5F6368] hover:text-[#18181B]"
                   }`}
-                >
-                  Mẹo học ({learningTips.length})
+                >{tr("Mẹo học (")}{learningTips.length})
                 </button>
               </div>
 
@@ -1196,7 +1258,7 @@ export default function PublishedLessonView({
                       type="text"
                       value={searchCueQuery}
                       onChange={(e) => setSearchCueQuery(e.target.value)}
-                      placeholder="Tìm từ vựng, Hán tự, nghĩa…"
+                      placeholder={tr("Tìm từ vựng, Hán tự, nghĩa…")}
                       className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-[#E7E7EA] bg-white text-xs outline-none focus:border-[#B91B1C] transition-all"
                     />
                   </div>
@@ -1204,7 +1266,7 @@ export default function PublishedLessonView({
                   <button
                     type="button"
                     onClick={() => setAutoScroll((v) => !v)}
-                    title={autoScroll ? "Bật tự động cuộn" : "Tắt tự động cuộn"}
+                    title={autoScroll ? tr("Bật tự động cuộn") : tr("Tắt tự động cuộn")}
                     className={`shrink-0 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       autoScroll
                         ? "bg-[#FDF1F1] text-[#B91B1C] border-[#B91B1C]/30"
@@ -1218,7 +1280,7 @@ export default function PublishedLessonView({
                           : "bg-neutral-400"
                       }`}
                     />
-                    <span>Cuộn tự động</span>
+                    <span>{tr("Cuộn tự động")}</span>
                   </button>
                 </div>
               )}
@@ -1229,8 +1291,8 @@ export default function PublishedLessonView({
                   {filteredCues.length === 0 ? (
                     <p className="text-xs text-[#5F6368] text-center py-6">
                       {searchCueQuery
-                        ? "Không tìm thấy câu phù hợp."
-                        : "Bài học chưa có phụ đề khả dụng."}
+                        ? tr("Không tìm thấy câu phù hợp.")
+                        : tr("Bài học chưa có phụ đề khả dụng.")}
                     </p>
                   ) : (
                     filteredCues.map((cue) => {
@@ -1262,9 +1324,7 @@ export default function PublishedLessonView({
                             </button>
 
                             {isActive && (
-                              <span className="text-[10px] font-bold text-[#B91B1C] px-2 py-0.5 rounded-full bg-white border border-[#B91B1C]/20">
-                                Đang phát
-                              </span>
+                              <span className="text-[10px] font-bold text-[#B91B1C] px-2 py-0.5 rounded-full bg-white border border-[#B91B1C]/20">{tr("Đang phát")}</span>
                             )}
                           </div>
 
@@ -1285,7 +1345,7 @@ export default function PublishedLessonView({
                                           )
                                         }
                                         className="hover:text-[#B91B1C] hover:underline cursor-pointer transition-colors"
-                                        title={`Bấm để xem giải thích: ${token.text}`}
+                                        title={tr("Bấm để xem giải thích: {0}", { 0: token.text })}
                                       >
                                         {token.text}
                                       </button>
@@ -1328,7 +1388,7 @@ export default function PublishedLessonView({
                           type="text"
                           value={searchVocabQuery}
                           onChange={(e) => setSearchVocabQuery(e.target.value)}
-                          placeholder="Tìm chữ Hán, pinyin, Hán-Việt hoặc nghĩa…"
+                          placeholder={tr("Tìm chữ Hán, pinyin, Hán-Việt hoặc nghĩa…")}
                           className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-[#E7E7EA] bg-white text-xs outline-none focus:border-[#B91B1C] transition-all"
                         />
                         {searchVocabQuery && (
@@ -1336,7 +1396,7 @@ export default function PublishedLessonView({
                             type="button"
                             onClick={() => setSearchVocabQuery("")}
                             className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8B9097] hover:text-[#18181B] transition-colors p-0.5 cursor-pointer"
-                            title="Xóa tìm kiếm"
+                            title={tr("Xóa tìm kiếm")}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -1353,14 +1413,15 @@ export default function PublishedLessonView({
                               ? "bg-white text-[#18181B] shadow-3xs"
                               : "text-neutral-600 hover:text-neutral-900"
                           }`}
-                          title="Xem danh sách chi tiết"
+                          title={tr("Xem danh sách chi tiết")}
                         >
                           <BookOpenCheck className="w-3 h-3 text-[#B91B1C]" />
-                          <span>Chi tiết</span>
+                          <span>{tr("Chi tiết")}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => {
+                            if (!isPremium) { requestPremiumUpgrade(); return; }
                             setVocabViewMode("flashcard")
                             setIsCardFlipped(false)
                           }}
@@ -1369,7 +1430,7 @@ export default function PublishedLessonView({
                               ? "bg-white text-[#18181B] shadow-3xs"
                               : "text-neutral-600 hover:text-neutral-900"
                           }`}
-                          title="Luyện tập với Flashcard"
+                          title={tr("Luyện tập với Flashcard")}
                         >
                           <Layers className="w-3 h-3 text-[#B91B1C]" />
                           <span>Flashcard</span>
@@ -1391,8 +1452,7 @@ export default function PublishedLessonView({
                               ? "bg-[#18181B] text-white"
                               : "bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#18181B]"
                           }`}
-                        >
-                          Tất cả ({detailedVocabList.length})
+                        >{tr("Tất cả (")}{detailedVocabList.length})
                         </button>
                         {drillWords.length > 0 && (
                           <button
@@ -1408,7 +1468,7 @@ export default function PublishedLessonView({
                             }`}
                           >
                             <Sparkles className="w-3 h-3 text-[#E7A92F]" />
-                            <span>Trọng tâm ({drillWords.length})</span>
+                            <span>{tr("Trọng tâm (")}{drillWords.length})</span>
                           </button>
                         )}
 
@@ -1441,8 +1501,7 @@ export default function PublishedLessonView({
                       </div>
 
                       <span className="text-[11px] text-[#8B9097] font-medium">
-                        {filteredVocabList.length} từ khả dụng
-                      </span>
+                        {filteredVocabList.length} {tr("từ khả dụng")}</span>
                     </div>
                   </div>
 
@@ -1452,8 +1511,8 @@ export default function PublishedLessonView({
                       {filteredVocabList.length === 0 ? (
                         <p className="text-xs text-[#5F6368] text-center py-8">
                           {searchVocabQuery
-                            ? "Không tìm thấy từ vựng phù hợp với tìm kiếm."
-                            : "Chưa có dữ liệu từ vựng cho bài học này."}
+                            ? tr("Không tìm thấy từ vựng phù hợp với tìm kiếm.")
+                            : tr("Chưa có dữ liệu từ vựng cho bài học này.")}
                         </p>
                       ) : (
                         filteredVocabList.map((item) => (
@@ -1485,7 +1544,7 @@ export default function PublishedLessonView({
                                   {item.hanViet && (
                                     <span
                                       className="text-[11px] font-bold text-[#713F12] bg-[#FEF3C7] px-2 py-0.5 rounded-md border border-[#FDE68A]"
-                                      title="Âm Hán-Việt"
+                                      title={tr("Âm Hán-Việt")}
                                     >
                                       [{item.hanViet}]
                                     </span>
@@ -1508,24 +1567,19 @@ export default function PublishedLessonView({
                                   {/* Core AI drill badge */}
                                   {item.isDrill && (
                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#B45309] bg-[#FFFBEB] border border-[#FDE68A] px-2 py-0.5 rounded-full">
-                                      <Sparkles className="w-2.5 h-2.5 text-[#E7A92F]" />
-                                      Trọng tâm
-                                    </span>
+                                      <Sparkles className="w-2.5 h-2.5 text-[#E7A92F]" />{tr("Trọng tâm")}</span>
                                   )}
                                 </div>
 
                                 {/* Frequency & Status Info */}
                                 <div className="text-[11px] text-[#71717A] flex items-center gap-2">
-                                  <span>
-                                    Xuất hiện trong bài:{" "}
+                                  <span>{tr("Xuất hiện trong bài:")}{" "}
                                     <strong className="text-[#18181B] font-semibold">
-                                      {item.occurrences} lần
-                                    </strong>
+                                      {item.occurrences} {tr("lần")}</strong>
                                   </span>
                                   {masteredWords.has(item.word) && (
                                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                      <Check className="w-2.5 h-2.5" /> Đã thuộc
-                                    </span>
+                                      <Check className="w-2.5 h-2.5" /> {tr("Đã thuộc")}</span>
                                   )}
                                 </div>
                               </div>
@@ -1541,7 +1595,7 @@ export default function PublishedLessonView({
                                       ? "bg-[#B91B1C] text-white border-[#B91B1C] scale-105 shadow-xs"
                                       : "bg-white border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/30"
                                   }`}
-                                  title={`Nghe phát âm chuẩn: ${item.word}`}
+                                  title={tr("Nghe phát âm chuẩn: {0}", { 0: item.word })}
                                 >
                                   <Volume2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1554,7 +1608,7 @@ export default function PublishedLessonView({
                                       void saveWord(item.cueId!, item.wordId!)
                                     }
                                     className="p-2 rounded-full bg-white border border-[#E7E7EA] text-[#5F6368] hover:text-[#B91B1C] hover:border-[#B91B1C]/30 transition-all cursor-pointer"
-                                    title={`Lưu từ "${item.word}" vào sổ ôn tập`}
+                                    title={tr("Lưu từ \"{0}\" vào sổ ôn tập", { 0: item.word })}
                                   >
                                     <Bookmark className="w-3.5 h-3.5" />
                                   </button>
@@ -1578,10 +1632,10 @@ export default function PublishedLessonView({
                                     }
                                   }}
                                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#F7F7F9] hover:bg-[#FFF5F5] border border-[#E7E7EA] hover:border-[#B91B1C]/30 text-[#18181B] hover:text-[#B91B1C] text-[11px] font-bold transition-all cursor-pointer"
-                                  title="Xem phân tích ngữ nghĩa, bộ thủ và cách nhớ từ AI"
+                                  title={tr("Xem phân tích ngữ nghĩa, bộ thủ và cách nhớ từ AI")}
                                 >
                                   <Sparkles className="w-3 h-3 text-[#E7A92F]" />
-                                  <span>Tra từ AI</span>
+                                  <span>{tr("Tra từ AI")}</span>
                                 </button>
                               </div>
                             </div>
@@ -1589,12 +1643,10 @@ export default function PublishedLessonView({
                             {/* Meaning in Vietnamese */}
                             <div className="bg-[#FAF9F6] px-3 py-2 rounded-xl border border-[#F0ECE1] text-xs">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A16207]">
-                                  Nghĩa:
-                                </span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A16207]">{tr("Nghĩa:")}</span>
                                 <span className="text-xs font-semibold text-[#18181B]">
                                   {item.meaningVi ||
-                                    "Đang cập nhật nghĩa chi tiết"}
+                                    tr("Đang cập nhật nghĩa chi tiết")}
                                 </span>
                               </div>
                             </div>
@@ -1603,9 +1655,7 @@ export default function PublishedLessonView({
                             {item.collocations &&
                               item.collocations.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                  <span className="text-[11px] font-semibold text-[#71717A]">
-                                    Cụm từ hay gặp:
-                                  </span>
+                                  <span className="text-[11px] font-semibold text-[#71717A]">{tr("Cụm từ hay gặp:")}</span>
                                   {item.collocations.map((colloc, idx) => (
                                     <span
                                       key={idx}
@@ -1631,12 +1681,12 @@ export default function PublishedLessonView({
                                   }
                                 }}
                                 className="p-2.5 rounded-xl bg-[#F8F9FA] hover:bg-[#F2F4F7] border border-[#E5E7EB] transition-all cursor-pointer group space-y-1"
-                                title="Bấm để phát lại đoạn này trong video"
+                                title={tr("Bấm để phát lại đoạn này trong video")}
                               >
                                 <div className="flex items-center justify-between text-[10px] text-[#6B7280]">
                                   <span className="font-bold text-[#374151] flex items-center gap-1.5">
                                     <Play className="w-2.5 h-2.5 text-[#B91B1C] fill-[#B91B1C] group-hover:scale-110 transition-transform" />
-                                    <span>Ngữ cảnh xuất hiện trong video:</span>
+                                    <span>{tr("Ngữ cảnh xuất hiện trong video:")}</span>
                                   </span>
                                   {item.startMs !== undefined && (
                                     <span className="font-mono font-bold text-[#B91B1C] bg-white px-2 py-0.5 rounded-md border border-[#E5E7EB] group-hover:border-[#B91B1C] transition-colors">
@@ -1672,9 +1722,7 @@ export default function PublishedLessonView({
                   {vocabViewMode === "flashcard" && (
                     <div className="p-3 overflow-y-auto flex-1 flex flex-col justify-between space-y-3">
                       {filteredVocabList.length === 0 ? (
-                        <p className="text-xs text-[#5F6368] text-center py-8">
-                          Không có thẻ từ vựng nào để ôn tập.
-                        </p>
+                        <p className="text-xs text-[#5F6368] text-center py-8">{tr("Không có thẻ từ vựng nào để ôn tập.")}</p>
                       ) : (
                         (() => {
                           const currentCard =
@@ -1690,8 +1738,7 @@ export default function PublishedLessonView({
                             <div className="flex flex-col h-full justify-between space-y-3">
                               {/* Header stats & progress */}
                               <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-[#18181B]">
-                                  Thẻ {flashcardIndex + 1} /{" "}
+                                <span className="font-bold text-[#18181B]">{tr("Thẻ")} {flashcardIndex + 1} /{" "}
                                   {filteredVocabList.length}
                                 </span>
                                 <div className="flex items-center gap-2">
@@ -1717,8 +1764,8 @@ export default function PublishedLessonView({
                                     <Check className="w-2.5 h-2.5" />
                                     <span>
                                       {masteredWords.has(currentCard.word)
-                                        ? "Đã thuộc"
-                                        : "Chưa thuộc"}
+                                        ? tr("Đã thuộc")
+                                        : tr("Chưa thuộc")}
                                     </span>
                                   </button>
                                 </div>
@@ -1743,9 +1790,7 @@ export default function PublishedLessonView({
                                     )}
                                     {currentCard.isDrill && (
                                       <span className="text-[10px] font-bold text-[#B45309] bg-[#FFFBEB] px-2 py-0.5 rounded-full border border-[#FDE68A] flex items-center gap-0.5">
-                                        <Sparkles className="w-2.5 h-2.5 text-[#E7A92F]" />
-                                        Trọng tâm
-                                      </span>
+                                        <Sparkles className="w-2.5 h-2.5 text-[#E7A92F]" />{tr("Trọng tâm")}</span>
                                     )}
                                   </div>
 
@@ -1756,7 +1801,7 @@ export default function PublishedLessonView({
                                       playPronunciation(currentCard.word)
                                     }}
                                     className="p-2 rounded-full bg-[#FDF1F1] text-[#B91B1C] hover:bg-[#B91B1C] hover:text-white transition-all cursor-pointer shadow-3xs"
-                                    title="Nghe phát âm"
+                                    title={tr("Nghe phát âm")}
                                   >
                                     <Volume2 className="w-4 h-4" />
                                   </button>
@@ -1770,9 +1815,7 @@ export default function PublishedLessonView({
                                     </h2>
                                     <p className="text-xs text-[#8B9097] flex items-center justify-center gap-1">
                                       <RotateCcw className="w-3 h-3 text-[#B91B1C]" />
-                                      <span>
-                                        Chạm để lật thẻ xem Pinyin & nghĩa
-                                      </span>
+                                      <span>{tr("Chạm để lật thẻ xem Pinyin & nghĩa")}</span>
                                     </p>
                                   </div>
                                 ) : (
@@ -1788,19 +1831,17 @@ export default function PublishedLessonView({
                                     )}
 
                                     {currentCard.hanViet && (
-                                      <p className="text-xs font-bold text-[#713F12]">
-                                        Hán-Việt: [{currentCard.hanViet}]
+                                      <p className="text-xs font-bold text-[#713F12]">{tr("Hán-Việt: [")}{currentCard.hanViet}]
                                       </p>
                                     )}
 
                                     <div className="bg-[#FAF9F6] p-2.5 rounded-xl border border-[#F0ECE1] text-xs">
                                       <p className="font-bold text-neutral-800 text-sm">
                                         {currentCard.meaningVi ||
-                                          "Chưa cập nhật nghĩa"}
+                                          tr("Chưa cập nhật nghĩa")}
                                       </p>
                                       {currentCard.partOfSpeech && (
-                                        <p className="text-[10px] text-neutral-500 mt-0.5">
-                                          Từ loại: {currentCard.partOfSpeech}
+                                        <p className="text-[10px] text-neutral-500 mt-0.5">{tr("Từ loại:")} {currentCard.partOfSpeech}
                                         </p>
                                       )}
                                     </div>
@@ -1819,7 +1860,7 @@ export default function PublishedLessonView({
                                           }
                                         }}
                                         className="p-2 rounded-lg bg-neutral-50 border border-neutral-200 text-left hover:border-[#B91B1C] transition-colors"
-                                        title="Bấm để phát lại trong video"
+                                        title={tr("Bấm để phát lại trong video")}
                                       >
                                         <p className="text-[11px] font-hanzi font-semibold text-neutral-800">
                                           {currentCard.contextZh}
@@ -1839,8 +1880,8 @@ export default function PublishedLessonView({
                                 {/* Bottom flip reminder */}
                                 <div className="text-[10px] font-medium text-neutral-400">
                                   {isCardFlipped
-                                    ? "Chạm để lật lại"
-                                    : "Nhấn để lật thẻ"}
+                                    ? tr("Chạm để lật lại")
+                                    : tr("Nhấn để lật thẻ")}
                                 </div>
                               </div>
 
@@ -1856,7 +1897,7 @@ export default function PublishedLessonView({
                                   className="flex-1 py-2 rounded-xl border border-[#E7E7EA] bg-white text-xs font-bold text-[#18181B] hover:bg-[#F7F7F9] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-1"
                                 >
                                   <ArrowLeft className="w-3.5 h-3.5" />
-                                  <span>Trước</span>
+                                  <span>{tr("Trước")}</span>
                                 </button>
 
                                 <button
@@ -1865,7 +1906,7 @@ export default function PublishedLessonView({
                                   className="px-4 py-2 rounded-xl border border-[#B91B1C]/30 bg-[#FDF1F1] text-xs font-bold text-[#B91B1C] hover:bg-[#B91B1C] hover:text-white transition-all cursor-pointer flex items-center gap-1"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5" />
-                                  <span>Lật thẻ</span>
+                                  <span>{tr("Lật thẻ")}</span>
                                 </button>
 
                                 <button
@@ -1885,7 +1926,7 @@ export default function PublishedLessonView({
                                   }}
                                   className="flex-1 py-2 rounded-xl bg-[#18181B] hover:bg-neutral-800 text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                                 >
-                                  <span>Tiếp theo</span>
+                                  <span>{tr("Tiếp theo")}</span>
                                   <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                               </div>
@@ -1908,9 +1949,7 @@ export default function PublishedLessonView({
                       audience="learner"
                     />
                   ) : (
-                    <p className="text-xs text-[#5F6368] text-center py-8">
-                      Chưa có mẹo học tập cho bài học này.
-                    </p>
+                    <p className="text-xs text-[#5F6368] text-center py-8">{tr("Chưa có mẹo học tập cho bài học này.")}</p>
                   )}
                 </div>
               )}
@@ -1922,11 +1961,9 @@ export default function PublishedLessonView({
                 <div className="flex items-center justify-between pb-1">
                   <h3 className="font-extrabold text-sm text-[#18181B] flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-[#B91B1C]" />
-                    <span>Bài học tiếp theo</span>
+                    <span>{tr("Bài học tiếp theo")}</span>
                   </h3>
-                  <span className="text-[11px] font-bold text-[#5F6368]">
-                    Tự động phát
-                  </span>
+                  <span className="text-[11px] font-bold text-[#5F6368]">{tr("Tự động phát")}</span>
                 </div>
 
                 <div className="space-y-2.5">

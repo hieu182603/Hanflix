@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +9,7 @@ import { ApiRequestError } from '../../api/client';
 const button = 'min-h-11 rounded-xl border border-[#E7E7EA] px-4 py-2 text-sm font-bold disabled:opacity-40';
 const panel = 'rounded-2xl border border-[#E7E7EA] bg-white p-5 space-y-4';
 export default function PracticePage() {
+  const { tr, ui, locale } = useI18n();
   const [params, setParams] = useSearchParams();
   const attemptId = params.get('attempt');
   const hsk = /^[1-9]$/.test(params.get('hsk') ?? '') ? Number(params.get('hsk')) : 1;
@@ -35,29 +37,31 @@ export default function PracticePage() {
   };
   if (attemptId) return <PracticeSession key={attemptId} id={attemptId} onBack={() => setParams(prev => { const next = new URLSearchParams(prev); next.delete('attempt'); return next; })} />;
   return <div className="mx-auto max-w-5xl space-y-6">
-    <header className={panel}><h1 className="text-2xl font-black">Luyện kỹ năng HSK</h1><p className="text-sm text-neutral-600">Chọn bài luyện đã được duyệt. Kết quả giúp bạn tìm kỹ năng cần ôn; đây chưa phải đề thi thử HSK chính thức.</p>
+    <header className={panel}><h1 className="text-2xl font-black">{tr("Luyện kỹ năng HSK")}</h1><p className="text-sm text-neutral-600">{tr("Chọn bài luyện đã được duyệt. Kết quả giúp bạn tìm kỹ năng cần ôn; đây chưa phải đề thi thử HSK chính thức.")}</p>
       <div className="flex flex-wrap gap-4">
-        <label>Cấp độ <select aria-label="Cấp HSK" className={button} value={hsk} onChange={e => changeFilter('hsk', e.target.value)}>{Array.from({ length: 9 }, (_, i) => <option key={i} value={i + 1}>HSK {i + 1}</option>)}</select></label>
-        <label>Kỹ năng <select aria-label="Kỹ năng" className={button} value={skill} onChange={e => changeFilter('skill', e.target.value)}><option value="">Tất cả</option>{Object.entries(skillLabels).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+        <label>{tr("Cấp độ")} <select aria-label={tr("Cấp HSK")} className={button} value={hsk} onChange={e => changeFilter('hsk', e.target.value)}>{Array.from({ length: 9 }, (_, i) => <option key={i} value={i + 1}>HSK {i + 1}</option>)}</select></label>
+        <label>{tr("Kỹ năng")} <select aria-label={tr("Kỹ năng")} className={button} value={skill} onChange={e => changeFilter('skill', e.target.value)}><option value="">{tr("Tất cả")}</option>{Object.entries(skillLabels).map(([id, name]) => <option key={id} value={id}>{ui(name)}</option>)}</select></label>
       </div>
     </header>
-    {(error || sets.error || history.error) && <p role="alert" className="text-red-700">{error || sets.error?.message || history.error?.message} <button className={button} onClick={() => { void sets.refetch(); void history.refetch(); }}>Thử lại</button></p>}
-    {sets.isPending ? <p>Đang tải bài luyện…</p> : <section className="grid gap-4 sm:grid-cols-2">{sets.data?.items.map(set => <article key={set.id} className={panel}>
-      <span className="text-xs font-bold text-[#B91B1C]">HSK {set.hsk} · {skillLabels[set.skill]}</span><h2 className="text-lg font-bold">{set.title}</h2><p>{set.questionCount} câu · {Math.ceil(set.durationSeconds / 60)} phút</p><button className={`${button} bg-[#B91B1C] text-white`} disabled={starting} onClick={() => void begin(set.id)}>Bắt đầu / Tiếp tục</button>
+    {(error || sets.error || history.error) && <p role="alert" className="text-red-700">{ui(error || sets.error?.message || history.error?.message)} <button className={button} onClick={() => { void sets.refetch(); void history.refetch(); }}>{tr("Thử lại")}</button></p>}
+    {sets.isPending ? <p>{tr("Đang tải bài luyện…")}</p> : <section className="grid gap-4 sm:grid-cols-2">{sets.data?.items.map(set => <article key={set.id} className={panel}>
+      <span className="text-xs font-bold text-[#B91B1C]">HSK {set.hsk} · {ui(skillLabels[set.skill])}</span><h2 className="text-lg font-bold">{set.title}</h2><p>{set.questionCount} {tr("câu ·")} {Math.ceil(set.durationSeconds / 60)} {tr("phút")}</p><button className={`${button} bg-[#B91B1C] text-white`} disabled={starting} onClick={() => void begin(set.id)}>{tr("Bắt đầu / Tiếp tục")}</button>
     </article>)}</section>}
-    {sets.data?.items.length === 0 && <p className={panel}>Chưa có bài luyện được duyệt cho lựa chọn này. Hãy chọn cấp hoặc kỹ năng khác.</p>}
+    {sets.data?.items.length === 0 && <p className={panel}>{tr("Chưa có bài luyện được duyệt cho lựa chọn này. Hãy chọn cấp hoặc kỹ năng khác.")}</p>}
     <Pager page={page} pages={sets.data?.totalPages ?? 1} onChange={setPage} />
-    <section className={panel}><h2 className="text-lg font-bold">Lịch sử và bài đang làm</h2>
-      {history.isPending && <p>Đang tải lịch sử…</p>}{history.data?.items.length === 0 && <p>Chưa có bài làm cho bộ lọc này.</p>}
-      {history.data?.items.map(a => <button key={a.id} className="flex w-full flex-wrap items-center justify-between gap-2 border-b py-3 text-left" onClick={() => open(a.id)}><span>{a.title}<small className="block text-neutral-500">{new Date(a.startedAt).toLocaleString('vi-VN')}</small></span><strong>{a.status === 'submitted' ? `${a.score}% · +${a.rewardXp} XP` : 'Tiếp tục làm bài'}</strong></button>)}
+    <section className={panel}><h2 className="text-lg font-bold">{tr("Lịch sử và bài đang làm")}</h2>
+      {history.isPending && <p>{tr("Đang tải lịch sử…")}</p>}{history.data?.items.length === 0 && <p>{tr("Chưa có bài làm cho bộ lọc này.")}</p>}
+      {history.data?.items.map(a => <button key={a.id} className="flex w-full flex-wrap items-center justify-between gap-2 border-b py-3 text-left" onClick={() => open(a.id)}><span>{a.title}<small className="block text-neutral-500">{new Date(a.startedAt).toLocaleString(locale)}</small></span><strong>{a.status === 'submitted' ? `${a.score}% · +${a.rewardXp} XP` : tr("Tiếp tục làm bài")}</strong></button>)}
       <Pager page={historyPage} pages={history.data?.totalPages ?? 1} onChange={setHistoryPage} />
     </section>
   </div>;
 }
 function Pager({ page, pages, onChange }: { page: number; pages: number; onChange: (page: number) => void }) {
-  return <div className="flex items-center justify-end gap-3"><button className={button} disabled={page <= 1} onClick={() => onChange(page - 1)}>Trước</button><span>{page}/{pages}</span><button className={button} disabled={page >= pages} onClick={() => onChange(page + 1)}>Sau</button></div>;
+  const { tr } = useI18n();
+  return <div className="flex items-center justify-end gap-3"><button className={button} disabled={page <= 1} onClick={() => onChange(page - 1)}>{tr("Trước")}</button><span>{page}/{pages}</span><button className={button} disabled={page >= pages} onClick={() => onChange(page + 1)}>{tr("Sau")}</button></div>;
 }
 export function PracticeSession({ id, onBack }: { id: string; onBack: () => void }) {
+  const { tr, ui } = useI18n();
   const queryClient = useQueryClient();
   const [attempt, setAttempt] = useState<PracticeAttempt | null>(null);
   const attemptRef = useRef<PracticeAttempt | null>(null);
@@ -215,7 +219,7 @@ export function PracticeSession({ id, onBack }: { id: string; onBack: () => void
     if (needsSave() && !await prepareToLeave()) return;
     onBack();
   };
-  if (!attempt) return <div className={panel}><p>{error || 'Đang tải bài làm…'}</p><button className={button} onClick={() => void load()}>Thử lại</button><button className={button} onClick={onBack}>Quay lại</button></div>;
+  if (!attempt) return <div className={panel}><p>{error || tr("Đang tải bài làm…")}</p><button className={button} onClick={() => void load()}>{tr("Thử lại")}</button><button className={button} onClick={onBack}>{tr("Quay lại")}</button></div>;
   const submitted = attempt.status === 'submitted';
   const questions = onlyWrong && submitted ? attempt.questions.filter(q => !q.correct) : attempt.questions;
   const question = questions[Math.min(index, questions.length - 1)];
@@ -225,20 +229,20 @@ export function PracticeSession({ id, onBack }: { id: string; onBack: () => void
     if (Date.now() >= saveRetryAt.current) void save().catch(() => {});
   };
   return <div className="mx-auto max-w-4xl space-y-5">
-    <header className={panel}><button className={button} disabled={busy} onClick={() => void leave()}>← Danh sách bài luyện</button><h1 className="text-2xl font-black">{attempt.title}</h1><p>HSK {attempt.hsk} · {skillLabels[attempt.skill]}</p>
-      {submitted ? <div><strong className="text-xl">{attempt.score}% · {attempt.correctCount}/{attempt.questions.length} câu đúng · +{attempt.rewardXp} XP</strong><p className="text-sm">Mỗi bộ luyện thưởng tối đa một lần/ngày. Điểm dưới 50% chưa được thưởng.</p><label><input type="checkbox" checked={onlyWrong} onChange={e => { setOnlyWrong(e.target.checked); setIndex(0); }} /> Chỉ ôn câu sai</label></div>
-        : <div className="flex justify-between"><strong role="timer">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</strong><span aria-live="polite">{busy ? 'Đang lưu / gửi…' : dirty ? 'Có đáp án chưa lưu' : 'Đã lưu trên máy chủ'}</span></div>}
+    <header className={panel}><button className={button} disabled={busy} onClick={() => void leave()}>{tr("← Danh sách bài luyện")}</button><h1 className="text-2xl font-black">{attempt.title}</h1><p>HSK {attempt.hsk} · {ui(skillLabels[attempt.skill])}</p>
+      {submitted ? <div><strong className="text-xl">{attempt.score}% · {attempt.correctCount}/{attempt.questions.length} {tr("câu đúng · +")}{attempt.rewardXp} XP</strong><p className="text-sm">{tr("Mỗi bộ luyện thưởng tối đa một lần/ngày. Điểm dưới 50% chưa được thưởng.")}</p><label><input type="checkbox" checked={onlyWrong} onChange={e => { setOnlyWrong(e.target.checked); setIndex(0); }} /> {tr("Chỉ ôn câu sai")}</label></div>
+        : <div className="flex justify-between"><strong role="timer">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</strong><span aria-live="polite">{busy ? tr("Đang lưu / gửi…") : dirty ? tr("Có đáp án chưa lưu") : tr("Đã lưu trên máy chủ")}</span></div>}
     </header>
-    {notice && <p role="status" className={panel}>{notice}</p>}
-    {error && <div role="alert" className={`${panel} text-red-700`}><p>{error}</p><p>Đáp án đang nhập vẫn ở trang này. Tải lại bản máy chủ sẽ thay thế phần chưa lưu.</p><button disabled={busy} className={button} onClick={() => void save().catch(() => {})}>Thử lưu lại</button><button disabled={busy} className={button} onClick={() => { if (window.confirm('Tải bản máy chủ và thay phần đáp án chưa lưu?')) void load(); }}>Tải bản máy chủ</button></div>}
-    <nav className="flex flex-wrap gap-2" aria-label="Danh sách câu hỏi">{questions.map((q, i) => <button key={q.id} aria-current={q.id === question?.id ? 'step' : undefined} className={`${button} ${q.id === question?.id ? 'bg-[#B91B1C] text-white' : answers[q.id] ? 'bg-green-50' : 'bg-white'}`} onClick={() => setIndex(i)}>{i + 1}{flagged.includes(q.id) ? ' ★' : ''}</button>)}</nav>
+    {notice && <p role="status" className={panel}>{ui(notice)}</p>}
+    {error && <div role="alert" className={`${panel} text-red-700`}><p>{ui(error)}</p><p>{tr("Đáp án đang nhập vẫn ở trang này. Tải lại bản máy chủ sẽ thay thế phần chưa lưu.")}</p><button disabled={busy} className={button} onClick={() => void save().catch(() => {})}>{tr("Thử lưu lại")}</button><button disabled={busy} className={button} onClick={() => { if (window.confirm(tr('Tải bản máy chủ và thay phần đáp án chưa lưu?'))) void load(); }}>{tr("Tải bản máy chủ")}</button></div>}
+    <nav className="flex flex-wrap gap-2" aria-label={tr("Danh sách câu hỏi")}>{questions.map((q, i) => <button key={q.id} aria-current={q.id === question?.id ? 'step' : undefined} className={`${button} ${q.id === question?.id ? 'bg-[#B91B1C] text-white' : answers[q.id] ? 'bg-green-50' : 'bg-white'}`} onClick={() => setIndex(i)}>{i + 1}{flagged.includes(q.id) ? ' ★' : ''}</button>)}</nav>
     {question ? <article className={panel}><h2 className="whitespace-pre-wrap text-lg font-bold">{question.prompt}</h2>{question.audioUrl && <audio key={question.id} controls preload="metadata" src={question.audioUrl} className="w-full" />}
-      {question.type === 'choice' ? <fieldset disabled={submitted || !remaining || submitting.current} className="space-y-3"><legend className="sr-only">Chọn đáp án</legend>{question.options.map(o => <label key={o.id} className="flex items-start gap-3 rounded-xl border p-4"><input type="radio" name={question.id} checked={answers[question.id] === o.id} onChange={() => changeAnswer(o.id)} /><span>{o.text}</span></label>)}</fieldset>
-        : <label className="block">Câu trả lời<input aria-label="Câu trả lời" maxLength={1000} className="mt-2 w-full rounded-xl border p-3" disabled={submitted || !remaining || submitting.current} value={answers[question.id] ?? ''} onChange={e => changeAnswer(e.target.value)} /></label>}
-      {submitted ? <div className="rounded-xl bg-neutral-50 p-4"><strong>{question.correct ? 'Đúng' : 'Chưa đúng'}</strong><p>Đáp án: {question.type === 'choice' ? question.options.find(o => o.id === question.correctOptionId)?.text : question.acceptedAnswers?.join(' / ')}</p><p className="mt-2 whitespace-pre-wrap">{question.explanation}</p></div>
-        : <label><input type="checkbox" checked={flagged.includes(question.id)} onChange={e => { ++editVersion.current; flaggedRef.current = e.target.checked ? [...flaggedRef.current, question.id] : flaggedRef.current.filter(id => id !== question.id); setFlagged(flaggedRef.current); setDirty(true); }} disabled={!remaining || submitting.current} /> Đánh dấu để xem lại</label>}
-    </article> : <p className={panel}>Bạn không có câu sai trong bài này.</p>}
-    <div className="flex flex-wrap justify-between gap-3"><button className={button} disabled={index <= 0} onClick={() => setIndex(i => i - 1)}>Câu trước</button><button className={button} disabled={index >= questions.length - 1} onClick={() => setIndex(i => i + 1)}>Câu sau</button>{!submitted && <button className={`${button} bg-[#B91B1C] text-white`} disabled={busy} onClick={() => setConfirmSubmit(true)}>Nộp bài</button>}</div>
-    {confirmSubmit && <div role="dialog" aria-modal="true" aria-label="Xác nhận nộp bài" className={panel}><p>Bạn đã trả lời {Object.values(answers).filter(Boolean).length}/{attempt.questions.length} câu. Nộp bài để xem kết quả?</p><button className={button} onClick={() => setConfirmSubmit(false)}>Tiếp tục làm</button><button className={button} onClick={() => void finish()}>Xác nhận nộp</button></div>}
+      {question.type === 'choice' ? <fieldset disabled={submitted || !remaining || submitting.current} className="space-y-3"><legend className="sr-only">{tr("Chọn đáp án")}</legend>{question.options.map(o => <label key={o.id} className="flex items-start gap-3 rounded-xl border p-4"><input type="radio" name={question.id} checked={answers[question.id] === o.id} onChange={() => changeAnswer(o.id)} /><span>{o.text}</span></label>)}</fieldset>
+        : <label className="block">{tr("Câu trả lời")}<input aria-label={tr("Câu trả lời")} maxLength={1000} className="mt-2 w-full rounded-xl border p-3" disabled={submitted || !remaining || submitting.current} value={answers[question.id] ?? ''} onChange={e => changeAnswer(e.target.value)} /></label>}
+      {submitted ? <div className="rounded-xl bg-neutral-50 p-4"><strong>{question.correct ? tr("Đúng") : tr("Chưa đúng")}</strong><p>{tr("Đáp án:")} {question.type === 'choice' ? question.options.find(o => o.id === question.correctOptionId)?.text : question.acceptedAnswers?.join(' / ')}</p><p className="mt-2 whitespace-pre-wrap">{question.explanation}</p></div>
+        : <label><input type="checkbox" checked={flagged.includes(question.id)} onChange={e => { ++editVersion.current; flaggedRef.current = e.target.checked ? [...flaggedRef.current, question.id] : flaggedRef.current.filter(id => id !== question.id); setFlagged(flaggedRef.current); setDirty(true); }} disabled={!remaining || submitting.current} /> {tr("Đánh dấu để xem lại")}</label>}
+    </article> : <p className={panel}>{tr("Bạn không có câu sai trong bài này.")}</p>}
+    <div className="flex flex-wrap justify-between gap-3"><button className={button} disabled={index <= 0} onClick={() => setIndex(i => i - 1)}>{tr("Câu trước")}</button><button className={button} disabled={index >= questions.length - 1} onClick={() => setIndex(i => i + 1)}>{tr("Câu sau")}</button>{!submitted && <button className={`${button} bg-[#B91B1C] text-white`} disabled={busy} onClick={() => setConfirmSubmit(true)}>{tr("Nộp bài")}</button>}</div>
+    {confirmSubmit && <div role="dialog" aria-modal="true" aria-label={tr("Xác nhận nộp bài")} className={panel}><p>{tr("Bạn đã trả lời")} {Object.values(answers).filter(Boolean).length}/{attempt.questions.length} {tr("câu. Nộp bài để xem kết quả?")}</p><button className={button} onClick={() => setConfirmSubmit(false)}>{tr("Tiếp tục làm")}</button><button className={button} onClick={() => void finish()}>{tr("Xác nhận nộp")}</button></div>}
   </div>;
 }

@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * CONTENT MODE (2026-09-22) - PODCAST: PodcastPlayer.
  *
@@ -66,6 +67,7 @@ export default function PodcastPlayer({
   onLoadedMetadata,
   onChapterClick,
 }: PodcastPlayerProps) {
+  const { tr, ui } = useI18n();
   const internalVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef ?? internalVideoRef;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -152,7 +154,7 @@ export default function PodcastPlayer({
           <div className="sticky top-0 bg-white border-b border-[#E7E7EA] px-4 py-3">
             <h3 className="font-extrabold text-sm text-[#18181B] flex items-center gap-2">
               <BookOpenCheck className="w-4 h-4 text-[#B91B1C]" />
-              <span>Mục lục ({chapters.length})</span>
+              <span>{tr("Mục lục (")}{chapters.length})</span>
             </h3>
           </div>
           <div className="p-2 space-y-1">
@@ -207,9 +209,7 @@ export default function PodcastPlayer({
         {/* Chapter header */}
         {activeChapter && (
           <div className="px-4 py-3 rounded-2xl bg-[#F7F7F9] border border-[#E7E7EA]">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#5F6368] mb-1">
-              Đang phát
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#5F6368] mb-1">{tr("Đang phát")}</p>
             <p className="text-sm font-bold text-[#18181B]">{activeChapter.title}</p>
           </div>
         )}
@@ -256,7 +256,7 @@ export default function PodcastPlayer({
             );
           })()}
 
-      {error && <div role="alert" className="absolute z-30 inset-x-3 top-3 rounded-xl bg-black/80 p-3 text-sm text-white">{error}</div>}
+      {error && <div role="alert" className="absolute z-30 inset-x-3 top-3 rounded-xl bg-black/80 p-3 text-sm text-white">{ui(error)}</div>}
           <video
             ref={videoRef}
             src={src}
@@ -287,7 +287,7 @@ export default function PodcastPlayer({
               <button
                 type="button"
                 onClick={togglePlay}
-                aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+                aria-label={isPlaying ? tr("Tạm dừng") : tr("Phát")}
                 className="text-white hover:text-[#FFD700] transition-colors cursor-pointer"
               >
                 {isPlaying ? (
@@ -353,7 +353,7 @@ export default function PodcastPlayer({
                 className={`text-white hover:text-[#FFD700] transition-colors cursor-pointer ${
                   showChapters ? 'opacity-100' : 'opacity-50'
                 }`}
-                title={showChapters ? 'Ẩn mục lục' : 'Hiện mục lục'}
+                title={showChapters ? tr("Ẩn mục lục") : tr("Hiện mục lục")}
               >
                 <BookOpenCheck className="w-5 h-5" />
               </button>

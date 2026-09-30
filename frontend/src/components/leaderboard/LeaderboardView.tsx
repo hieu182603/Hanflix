@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -37,6 +38,7 @@ function getAvatarSrc(avatar?: string, name?: string): string {
 }
 
 export default function LeaderboardView({ onStartPractice, onSelectLesson }: LeaderboardViewProps) {
+  const { tr, ui, locale } = useI18n();
   const [period, setPeriod] = useState<LeaderboardPeriod>('week');
   const [hsk, setHsk] = useState('');
   const [page, setPage] = useState(1);
@@ -74,15 +76,11 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
               <Trophy className="w-3.5 h-3.5 text-amber-600" />
-              <span>Cộng đồng học tập HanFlix</span>
+              <span>{tr("Cộng đồng học tập HanFlix")}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>
-              Bảng Xếp Hạng Học Tập
-            </h1>
-            <p className="text-neutral-500 text-xs sm:text-sm max-w-xl leading-relaxed">
-              Thi đua cùng hàng nghìn học viên HanFlix. Tích lũy điểm kinh nghiệm (XP) qua từng video bài học, làm bài tập và duy trì chuỗi Streak mỗi ngày.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>{tr("Bảng Xếp Hạng Học Tập")}</h1>
+            <p className="text-neutral-500 text-xs sm:text-sm max-w-xl leading-relaxed">{tr("Thi đua cùng hàng nghìn học viên HanFlix. Tích lũy điểm kinh nghiệm (XP) qua từng video bài học, làm bài tập và duy trì chuỗi Streak mỗi ngày.")}</p>
           </div>
 
           {/* Right Action: Rules & League Tier */}
@@ -93,7 +91,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
             >
               <HelpCircle className="w-4 h-4 text-neutral-500" />
-              <span>Quy tắc tính XP</span>
+              <span>{tr("Quy tắc tính XP")}</span>
             </button>
           </div>
         </div>
@@ -109,9 +107,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   ? 'bg-white text-neutral-900 shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-900'
               }`}
-            >
-              Tuần này
-            </button>
+            >{tr("Tuần này")}</button>
             <button
               type="button"
               onClick={() => { setPeriod('month'); setPage(1); } }
@@ -120,9 +116,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   ? 'bg-white text-neutral-900 shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-900'
               }`}
-            >
-              Tháng này
-            </button>
+            >{tr("Tháng này")}</button>
             <button
               type="button"
               onClick={() => { setPeriod('all'); setPage(1); } }
@@ -131,15 +125,13 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   ? 'bg-white text-neutral-900 shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-900'
               }`}
-            >
-              Mọi lúc
-            </button>
+            >{tr("Mọi lúc")}</button>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <Clock className="w-3.5 h-3.5 text-neutral-400" />
-            <span>{period === 'week' ? 'Cập nhật theo thời gian thực' : period === 'month' ? 'Tổng kết trong tháng' : 'Toàn thời gian'}</span>
-            <span className="font-semibold text-neutral-700">• {data?.totalParticipants ?? leaders.length} học viên tham gia</span>
+            <span>{period === 'week' ? tr("Cập nhật theo thời gian thực") : period === 'month' ? tr("Tổng kết trong tháng") : tr("Toàn thời gian")}</span>
+            <span className="font-semibold text-neutral-700">• {data?.totalParticipants ?? leaders.length} {tr("học viên tham gia")}</span>
           </div>
         </div>
       </div>
@@ -150,8 +142,8 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="flex items-center gap-3">
             <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
             <div>
-              <p className="font-bold">Không thể tải bảng xếp hạng</p>
-              <p className="text-xs text-rose-700 mt-0.5">{error instanceof Error ? error.message : 'Vui lòng kiểm tra kết nối mạng.'}</p>
+              <p className="font-bold">{tr("Không thể tải bảng xếp hạng")}</p>
+              <p className="text-xs text-rose-700 mt-0.5">{error instanceof Error ? error.message : tr("Vui lòng kiểm tra kết nối mạng.")}</p>
             </div>
           </div>
           <button
@@ -159,7 +151,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
             className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Thử lại</span>
+            <span>{tr("Thử lại")}</span>
           </button>
         </div>
       )}
@@ -186,7 +178,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-700 uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span>BỤC VINH DANH TOP 3</span>
+              <span>{tr("BỤC VINH DANH TOP 3")}</span>
             </div>
           </div>
 
@@ -231,7 +223,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 {/* Silver Pillar */}
                 <div className="w-full h-20 sm:h-28 md:h-36 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-slate-100 via-slate-200/90 to-slate-300/80 border-t-2 border-x-2 border-slate-300 flex flex-col items-center justify-between py-2 sm:py-3 shadow-inner">
                   <span className="font-black text-[10px] sm:text-sm text-slate-800">
-                    {top2.xp.toLocaleString()} XP
+                    {top2.xp.toLocaleString(locale)} XP
                   </span>
                   <span className="text-2xl sm:text-4xl font-black text-slate-400/40 select-none">
                     2
@@ -279,22 +271,21 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                     {top1.name}
                   </div>
                   <span className="inline-block px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full bg-amber-100 text-amber-900 text-[9px] sm:text-[10px] font-bold border border-amber-300/80">
-                    {top1.badge || 'Quán Quân'}
+                    {top1.badge || tr("Quán Quân")}
                   </span>
                   <div className="flex items-center justify-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-neutral-500 pt-0.5">
                     <span className="font-semibold text-neutral-700">{top1.hskLevel}</span>
                     <span>•</span>
                     <span className="inline-flex items-center text-amber-700 font-bold">
                       <Flame className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-500 fill-amber-500 mr-0.5" />
-                      {top1.streakDays} ngày
-                    </span>
+                      {top1.streakDays} {tr("ngày")}</span>
                   </div>
                 </div>
 
                 {/* Gold Pillar */}
                 <div className="w-full h-28 sm:h-36 md:h-48 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-amber-200 via-amber-300/90 to-amber-400/90 border-t-2 border-x-2 border-amber-300 flex flex-col items-center justify-between py-2 sm:py-3 shadow-lg shadow-amber-400/20">
                   <span className="font-black text-xs sm:text-base text-amber-950">
-                    {top1.xp.toLocaleString()} XP
+                    {top1.xp.toLocaleString(locale)} XP
                   </span>
                   <span className="text-3xl sm:text-5xl font-black text-amber-600/30 select-none">
                     1
@@ -343,7 +334,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 {/* Bronze Pillar */}
                 <div className="w-full h-16 sm:h-24 md:h-32 mt-2 sm:mt-3 rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-b from-orange-100 via-orange-200/90 to-amber-300/60 border-t-2 border-x-2 border-amber-300/80 flex flex-col items-center justify-between py-2 sm:py-3 shadow-inner">
                   <span className="font-black text-[10px] sm:text-sm text-amber-950">
-                    {top3.xp.toLocaleString()} XP
+                    {top3.xp.toLocaleString(locale)} XP
                   </span>
                   <span className="text-2xl sm:text-4xl font-black text-amber-700/30 select-none">
                     3
@@ -376,27 +367,23 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 <h3 className="font-black text-base text-neutral-900">
                   {myUser.name}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">
-                  Bạn
-                </span>
+                <span className="px-2 py-0.5 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">{tr("Bạn")}</span>
                 <span className="text-xs font-mono font-bold text-neutral-500 bg-white px-2 py-0.5 rounded-md border border-neutral-200">
                   {myUser.hskLevel}
                 </span>
               </div>
 
               <p className="text-xs text-neutral-600 mt-1 flex items-center gap-2">
-                <span>Điểm: <strong className="text-amber-800 font-extrabold">{myUser.xp.toLocaleString()} XP</strong></span>
+                <span>{tr("Điểm:")} <strong className="text-amber-800 font-extrabold">{myUser.xp.toLocaleString(locale)} XP</strong></span>
                 <span>•</span>
                 <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
-                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  Chuỗi {myUser.streakDays} ngày
-                </span>
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />{tr("Chuỗi")} {myUser.streakDays} {tr("ngày")}</span>
               </p>
 
               {gapToFirst > 0 && top1 && (
                 <div className="text-xs text-amber-800 font-medium mt-1 flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                  <span>Cách vị trí #1 ({top1.name}) <strong>{gapToFirst.toLocaleString()} XP</strong></span>
+                  <span>{tr("Cách vị trí #1 (")}{top1.name}) <strong>{gapToFirst.toLocaleString(locale)} XP</strong></span>
                 </div>
               )}
             </div>
@@ -411,7 +398,7 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-98 cursor-pointer"
               >
                 <BookOpenCheck className="w-4 h-4" />
-                <span>Luyện tập tích XP</span>
+                <span>{tr("Luyện tập tích XP")}</span>
               </button>
             )}
 
@@ -436,21 +423,19 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
           <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
             <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
               <Trophy className="w-4 h-4 text-amber-600" />
-              <span>DANH SÁCH XẾP HẠNG CHI TIẾT</span>
+              <span>{tr("DANH SÁCH XẾP HẠNG CHI TIẾT")}</span>
             </div>
             <div className="flex items-center gap-4 text-xs font-medium text-neutral-500">
               <span className="flex items-center gap-1 text-emerald-700">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Top 3 Thăng hạng Tinh Anh</span>
+                <span>{tr("Top 3 Thăng hạng Tinh Anh")}</span>
               </span>
             </div>
           </div>
 
           {/* Empty State */}
           {leaders.length === 0 && (
-            <div className="p-12 text-center text-neutral-500 text-sm">
-              Chưa có dữ liệu học tập trong kỳ này. Hãy xem một bài học để ghi danh đầu tiên!
-            </div>
+            <div className="p-12 text-center text-neutral-500 text-sm">{tr("Chưa có dữ liệu học tập trong kỳ này. Hãy xem một bài học để ghi danh đầu tiên!")}</div>
           )}
 
           {/* Table Rows */}
@@ -503,13 +488,11 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                         {user.name}
                       </span>
                       {user.isMe && (
-                        <span className="px-1.5 py-0.2 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">
-                          Bạn
-                        </span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#B91B1C] text-white text-[10px] font-bold">{tr("Bạn")}</span>
                       )}
                       {user.badge && (
                         <span className="px-2 py-0.2 rounded-full bg-amber-100/80 text-amber-900 text-[10px] font-semibold border border-amber-200 hidden sm:inline">
-                          {user.badge}
+                          {ui(user.badge)}
                         </span>
                       )}
                     </div>
@@ -519,15 +502,14 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                       <span>•</span>
                       <span className="inline-flex items-center gap-0.5 text-amber-700 font-bold">
                         <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        {user.streakDays} ngày liên tiếp
-                      </span>
+                        {user.streakDays} {tr("ngày liên tiếp")}</span>
                     </div>
                   </div>
 
                   {/* XP Score & Progress bar */}
                   <div className="text-right shrink-0 w-20 sm:w-48 md:w-60">
                     <div className="text-xs sm:text-sm font-black text-neutral-900">
-                      {user.xp.toLocaleString()} <span className="text-[10px] text-amber-700 font-bold">XP</span>
+                      {user.xp.toLocaleString(locale)} <span className="text-[10px] text-amber-700 font-bold">XP</span>
                     </div>
                     {/* Fluid Progress Bar relative to leader */}
                     <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden mt-1 hidden sm:block">
@@ -547,19 +529,19 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                   {/* Trend Indicator */}
                   <div className="w-8 flex items-center justify-center shrink-0">
                     {user.trend === 'up' && (
-                      <span className="flex items-center text-emerald-600 text-xs font-bold" title={`Tăng ${user.trendValue} bậc`}>
+                      <span className="flex items-center text-emerald-600 text-xs font-bold" title={tr("Tăng {0} bậc", { 0: user.trendValue ?? 0 })}>
                         <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
                         <span className="text-[10px]">+{user.trendValue}</span>
                       </span>
                     )}
                     {user.trend === 'down' && (
-                      <span className="flex items-center text-rose-500 text-xs font-bold" title={`Tụt ${user.trendValue} bậc`}>
+                      <span className="flex items-center text-rose-500 text-xs font-bold" title={tr("Tụt {0} bậc", { 0: user.trendValue ?? 0 })}>
                         <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
                         <span className="text-[10px]">-{user.trendValue}</span>
                       </span>
                     )}
                     {user.trend === 'same' && (
-                      <span className="text-neutral-300" title="Chưa có dữ liệu so sánh thứ hạng">
+                      <span className="text-neutral-300" title={tr("Chưa có dữ liệu so sánh thứ hạng")}>
                         <Minus className="w-3.5 h-3.5" />
                       </span>
                     )}
@@ -572,16 +554,15 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E7E7EA] bg-white p-4">
-        <label className="text-sm font-bold">Cấp HSK
-          <select aria-label="Lọc bảng xếp hạng theo HSK" value={hsk} onChange={e => { setHsk(e.target.value); setPage(1); }} className="ml-3 rounded-lg border p-2">
-            <option value="">Tất cả cấp</option>
+        <label className="text-sm font-bold">{tr("Cấp HSK")}<select aria-label={tr("Lọc bảng xếp hạng theo HSK")} value={hsk} onChange={e => { setHsk(e.target.value); setPage(1); }} className="ml-3 rounded-lg border p-2">
+            <option value="">{tr("Tất cả cấp")}</option>
             {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>HSK {i + 1}</option>)}
           </select>
         </label>
         <div className="flex items-center gap-3 text-sm">
-          <button disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)}>Trước</button>
-          <span>Trang {data?.page ?? page}/{data?.totalPages ?? 1}</span>
-          <button disabled={page >= (data?.totalPages ?? 1) || isLoading} onClick={() => setPage(p => p + 1)}>Sau</button>
+          <button disabled={page <= 1 || isLoading} onClick={() => setPage(p => p - 1)}>{tr("Trước")}</button>
+          <span>{tr("Trang")} {data?.page ?? page}/{data?.totalPages ?? 1}</span>
+          <button disabled={page >= (data?.totalPages ?? 1) || isLoading} onClick={() => setPage(p => p + 1)}>{tr("Sau")}</button>
         </div>
       </div>
 
@@ -601,10 +582,8 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                     <Trophy className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-base text-neutral-900">
-                      Quy Tắc Đấu Trường & Điểm XP
-                    </h3>
-                    <p className="text-xs text-neutral-500">Điểm giảm dần; đồng điểm xét chuỗi học, tên và mã tài khoản</p>
+                    <h3 className="font-extrabold text-base text-neutral-900">{tr("Quy Tắc Đấu Trường & Điểm XP")}</h3>
+                    <p className="text-xs text-neutral-500">{tr("Điểm giảm dần; đồng điểm xét chuỗi học, tên và mã tài khoản")}</p>
                   </div>
                 </div>
                 <button
@@ -616,43 +595,41 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
                 </button>
               </div>
 
-              <p className="text-xs text-neutral-600">Luyện kỹ năng: đạt 50–79% nhận 10 XP, từ 80% nhận 25 XP. Mỗi bộ luyện chỉ thưởng một lần/ngày theo giờ Việt Nam. Điểm cũ được giữ nguyên.</p>
+              <p className="text-xs text-neutral-600">{tr("Luyện kỹ năng: đạt 50–79% nhận 10 XP, từ 80% nhận 25 XP. Mỗi bộ luyện chỉ thưởng một lần/ngày theo giờ Việt Nam. Điểm cũ được giữ nguyên.")}</p>
               {/* XP Earning Mechanics */}
               <div className="space-y-2.5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  Cách kiếm điểm kinh nghiệm (XP)
-                </h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">{tr("Cách kiếm điểm kinh nghiệm (XP)")}</h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
                     <Play className="w-4 h-4 text-[#B91B1C] shrink-0 fill-current" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Xem video bài học</div>
-                      <div className="text-[11px] text-amber-700 font-bold">+50 XP / bài hoàn thành</div>
+                      <div className="text-xs font-bold text-neutral-900">{tr("Xem video bài học")}</div>
+                      <div className="text-[11px] text-amber-700 font-bold">{tr("+50 XP / bài hoàn thành")}</div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
                     <BookOpenCheck className="w-4 h-4 text-amber-600 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Làm bài tập Quiz</div>
-                      <div className="text-[11px] text-amber-700 font-bold">+25 XP / lần luyện tập</div>
+                      <div className="text-xs font-bold text-neutral-900">{tr("Làm bài tập Quiz")}</div>
+                      <div className="text-[11px] text-amber-700 font-bold">{tr("+25 XP / lần luyện tập")}</div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
                     <Clock className="w-4 h-4 text-blue-600 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Thời gian chủ động học</div>
-                      <div className="text-[11px] text-blue-700 font-bold">+2 XP / phút học</div>
+                      <div className="text-xs font-bold text-neutral-900">{tr("Thời gian chủ động học")}</div>
+                      <div className="text-[11px] text-blue-700 font-bold">{tr("+2 XP / phút học")}</div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 flex items-center gap-2.5">
                     <Flame className="w-4 h-4 text-orange-600 shrink-0 fill-current" />
                     <div>
-                      <div className="text-xs font-bold text-neutral-900">Duy trì Streak mỗi ngày</div>
-                      <div className="text-[11px] text-orange-700 font-bold">+10 XP / ngày streak</div>
+                      <div className="text-xs font-bold text-neutral-900">{tr("Duy trì Streak mỗi ngày")}</div>
+                      <div className="text-[11px] text-orange-700 font-bold">{tr("+10 XP / ngày streak")}</div>
                     </div>
                   </div>
                 </div>
@@ -662,20 +639,16 @@ export default function LeaderboardView({ onStartPractice, onSelectLesson }: Lea
               <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-xs text-amber-950 space-y-1.5">
                 <div className="font-extrabold flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Quy chế thăng & rớt hạng</span>
+                  <span>{tr("Quy chế thăng & rớt hạng")}</span>
                 </div>
-                <p className="leading-relaxed text-neutral-700">
-                  Bảng tuần tính từ thứ Hai theo giờ Việt Nam. Top 3 hiển thị theo điểm của kỳ đang chọn; chưa có chức năng trao thưởng theo mùa.
-                </p>
+                <p className="leading-relaxed text-neutral-700">{tr("Bảng tuần tính từ thứ Hai theo giờ Việt Nam. Top 3 hiển thị theo điểm của kỳ đang chọn; chưa có chức năng trao thưởng theo mùa.")}</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
                 className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs transition-colors cursor-pointer"
-              >
-                Đã hiểu
-              </button>
+              >{tr("Đã hiểu")}</button>
             </motion.div>
           </div>
         )}

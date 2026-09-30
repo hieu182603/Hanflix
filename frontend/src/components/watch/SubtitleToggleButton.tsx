@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Captions, CaptionsOff, Settings } from 'lucide-react';
 import type { SubtitleLanguageTrack } from './SubtitleOverlay';
@@ -24,6 +25,7 @@ export default function SubtitleToggleButton({
   bottomTrack,
   onQuickToggle,
 }: SubtitleToggleButtonProps) {
+  const { tr } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -76,8 +78,8 @@ export default function SubtitleToggleButton({
           event.stopPropagation();
           handleMainClick();
         }}
-        aria-label={anyOn ? 'Tắt phụ đề' : 'Bật phụ đề'}
-        title={anyOn ? 'Tắt phụ đề (CC)' : 'Bật phụ đề (CC)'}
+        aria-label={anyOn ? tr("Tắt phụ đề") : tr("Bật phụ đề")}
+        title={anyOn ? tr("Tắt phụ đề (CC)") : tr("Bật phụ đề (CC)")}
         className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-sm transition shadow-lg ${
           anyOn
             ? 'border-white/30 bg-black/55 text-white hover:bg-black/75'
@@ -93,8 +95,8 @@ export default function SubtitleToggleButton({
           event.stopPropagation();
           setOpen((value) => !value);
         }}
-        aria-label="Tuỳ chỉnh phụ đề"
-        title="Tuỳ chỉnh phụ đề"
+        aria-label={tr("Tuỳ chỉnh phụ đề")}
+        title={tr("Tuỳ chỉnh phụ đề")}
         className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition shadow-lg hover:bg-black/75 ${
           open ? 'bg-black/75 ring-2 ring-white/30' : ''
         }`}
@@ -104,11 +106,9 @@ export default function SubtitleToggleButton({
 
       {open && (
         <div className="absolute bottom-11 right-0 z-30 w-64 rounded-xl border border-neutral-200 bg-white/95 p-3 shadow-xl backdrop-blur">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-            Chọn dòng phụ đề
-          </p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-neutral-500">{tr("Chọn dòng phụ đề")}</p>
           <TrackRow
-            label="Dòng trên"
+            label={tr("Dòng trên")}
             value={topTrack}
             onChange={(track) => {
               onQuickToggle({ top: track, bottom: bottomTrack });
@@ -116,7 +116,7 @@ export default function SubtitleToggleButton({
             }}
           />
           <TrackRow
-            label="Dòng dưới"
+            label={tr("Dòng dưới")}
             value={bottomTrack}
             onChange={(track) => {
               onQuickToggle({ top: topTrack, bottom: track });
@@ -127,9 +127,7 @@ export default function SubtitleToggleButton({
             type="button"
             onClick={() => setOpen(false)}
             className="mt-2 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[11px] font-bold text-neutral-600 hover:bg-neutral-100"
-          >
-            Đóng
-          </button>
+          >{tr("Đóng")}</button>
         </div>
       )}
     </div>
@@ -154,9 +152,10 @@ function TrackRow({
   value: SubtitleLanguageTrack;
   onChange: (next: SubtitleLanguageTrack) => void;
 }) {
+  const { ui } = useI18n();
   return (
     <div className="mb-2 last:mb-0">
-      <p className="mb-1 text-[10px] font-bold text-neutral-500">{label}</p>
+      <p className="mb-1 text-[10px] font-bold text-neutral-500">{ui(label)}</p>
       <div className="flex flex-wrap gap-1">
         {TRACK_OPTIONS.map((track) => {
           const isActive = value === track;

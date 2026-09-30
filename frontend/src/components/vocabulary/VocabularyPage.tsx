@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useEffect, useMemo } from "react"
 
 import { useSearchParams } from "react-router-dom"
@@ -1202,6 +1203,7 @@ export default function VocabularyPage({
 
   initialTab,
 }: VocabularyPageProps) {
+  const { tr, ui } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams()
 
   const tabFromUrl = searchParams.get("tab")
@@ -1604,20 +1606,12 @@ export default function VocabularyPage({
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">
-                  Kho Từ Vựng
-                </h1>
-                <span className="text-xs text-[#8B9097] font-medium">
-                  HSK 3.0 Chuẩn
-                </span>
+                <h1 className="text-2xl md:text-3xl font-black text-[#18181B] tracking-tight">{tr("Kho Từ Vựng")}</h1>
+                <span className="text-xs text-[#8B9097] font-medium">{tr("HSK 3.0 Chuẩn")}</span>
               </div>
             </div>
 
-            <p className="text-sm text-[#5F6368] max-w-xl leading-relaxed">
-              Học từ vựng trực quan theo các nhóm bối cảnh đời sống thực tế, kết
-              hợp nghe phát âm chuẩn giọng Bắc Kinh và ôn luyện ngắt quãng
-              (SRS).
-            </p>
+            <p className="text-sm text-[#5F6368] max-w-xl leading-relaxed">{tr("Học từ vựng trực quan theo các nhóm bối cảnh đời sống thực tế, kết hợp nghe phát âm chuẩn giọng Bắc Kinh và ôn luyện ngắt quãng (SRS).")}</p>
           </div>
 
           {/* Right: Stats Grid */}
@@ -1625,17 +1619,13 @@ export default function VocabularyPage({
             {/* Stats Row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
               <div className="bg-[#F7F7F9] rounded-2xl p-3 sm:p-4 border border-[#E7E7EA] min-w-[95px]">
-                <div className="text-[10px] font-bold text-[#8B9097] uppercase tracking-wider mb-1">
-                  Tổng kho
-                </div>
+                <div className="text-[10px] font-bold text-[#8B9097] uppercase tracking-wider mb-1">{tr("Tổng kho")}</div>
                 <div className="text-lg sm:text-xl font-black text-[#18181B]">
                   12,500+
                 </div>
               </div>
               <div className="bg-emerald-50 rounded-2xl p-3 sm:p-4 border border-emerald-100 min-w-[95px]">
-                <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">
-                  Làm chủ
-                </div>
+                <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">{tr("Làm chủ")}</div>
                 <div className="text-lg sm:text-xl font-black text-emerald-600">
                   68%
                 </div>
@@ -1648,10 +1638,10 @@ export default function VocabularyPage({
                     ? "bg-[#FDF1F1] border-[#B91B1C]/30 shadow-xs"
                     : "bg-white hover:bg-neutral-50 border-[#E7E7EA]"
                 }`}
-                title="Bấm để mở Sổ từ đã lưu"
+                title={tr("Bấm để mở Sổ từ đã lưu")}
               >
                 <div className="text-[10px] font-bold text-[#5F6368] uppercase tracking-wider mb-1 flex items-center justify-between">
-                  <span>Đã lưu</span>
+                  <span>{tr("Đã lưu")}</span>
                   <Bookmark className="w-3 h-3 text-[#B91B1C]" />
                 </div>
                 <div className="text-lg sm:text-xl font-black text-[#B91B1C]">
@@ -1666,10 +1656,10 @@ export default function VocabularyPage({
                     ? "bg-red-50 hover:bg-red-100/80 border-red-200"
                     : "bg-[#F7F7F9] hover:bg-neutral-100 border-[#E7E7EA]"
                 }`}
-                title="Bấm để ôn tập các từ đến hạn"
+                title={tr("Bấm để ôn tập các từ đến hạn")}
               >
                 <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1 flex items-center justify-between">
-                  <span>Cần ôn</span>
+                  <span>{tr("Cần ôn")}</span>
                   <Clock className="w-3 h-3 text-red-500" />
                 </div>
                 <div className="text-lg sm:text-xl font-black text-red-600">
@@ -1695,14 +1685,14 @@ export default function VocabularyPage({
             }`}
           >
             <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Các Hộp Chủ Đề (Topic Hub)</span>
+            <span>{tr("Các Hộp Chủ Đề (Topic Hub)")}</span>
           </button>
 
           {/* Breadcrumb if inside topic */}
           {selectedTopic && activeTab === "topics" && (
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#B91B1C] pb-3 px-2 border-b-2 border-[#B91B1C] shrink-0">
               <span className="text-[#8B9097]">/</span>
-              <span>{selectedTopic.nameVi}</span>
+              <span>{ui(selectedTopic.nameVi)}</span>
               <span className="text-zinc-400 font-normal">
                 ({selectedTopic.nameZh})
               </span>
@@ -1724,7 +1714,7 @@ export default function VocabularyPage({
                 activeTab === "saved" ? "fill-[#B91B1C]" : ""
               }`}
             />
-            <span>Kho Lưu Trữ (Sổ Từ Của Bạn)</span>
+            <span>{tr("Kho Lưu Trữ (Sổ Từ Của Bạn)")}</span>
           </button>
         </div>
 
@@ -1736,7 +1726,7 @@ export default function VocabularyPage({
             className="self-start sm:self-auto text-xs font-bold text-[#5F6368] hover:text-[#B91B1C] flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-[#FDF1F1] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Tất cả chủ đề</span>
+            <span>{tr("Tất cả chủ đề")}</span>
           </button>
         )}
       </div>
@@ -1748,15 +1738,10 @@ export default function VocabularyPage({
             <div>
               <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#B91B1C] bg-[#FDF1F1] px-2.5 py-1 rounded-full mb-1">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Kho Chủ Đề Phong Phú</span>
+                <span>{tr("Kho Chủ Đề Phong Phú")}</span>
               </div>
-              <h2 className="text-xl font-black text-[#18181B]">
-                Chọn Chủ Đề Để Mở Danh Sách Từ Vựng
-              </h2>
-              <p className="text-xs text-[#5F6368]">
-                Bấm vào từng hộp chủ đề để xem chi tiết danh sách từ, câu ví dụ
-                thực tế và nghe phát âm.
-              </p>
+              <h2 className="text-xl font-black text-[#18181B]">{tr("Chọn Chủ Đề Để Mở Danh Sách Từ Vựng")}</h2>
+              <p className="text-xs text-[#5F6368]">{tr("Bấm vào từng hộp chủ đề để xem chi tiết danh sách từ, câu ví dụ thực tế và nghe phát âm.")}</p>
             </div>
           </div>
 
@@ -1830,13 +1815,11 @@ export default function VocabularyPage({
                         </div>
                       </div>
                       <div className="flex flex-col text-left">
-                        <span className="text-[9px] font-black tracking-wider text-[#A1A1AA] uppercase">
-                          Làm chủ
-                        </span>
+                        <span className="text-[9px] font-black tracking-wider text-[#A1A1AA] uppercase">{tr("Làm chủ")}</span>
                         <span className="text-[11px] font-bold text-white/90">
                           {stats.progress > 0
-                            ? `${stats.progress}% Hoàn tất`
-                            : "Chưa học"}
+                            ? tr("{0}% Hoàn tất", { 0: stats.progress })
+                            : tr("Chưa học")}
                         </span>
                       </div>
                     </div>
@@ -1846,7 +1829,7 @@ export default function VocabularyPage({
                   <div className="relative z-10 my-4">
                     <div className="flex items-baseline gap-2.5">
                       <h3 className="text-xl font-black text-white group-hover:text-red-400 transition-colors">
-                        {topic.nameVi}
+                        {ui(topic.nameVi)}
                       </h3>
                       <span className="text-sm font-serif font-black text-amber-300/80 tracking-wide">
                         {topic.nameZh}
@@ -1854,7 +1837,7 @@ export default function VocabularyPage({
                     </div>
 
                     <p className="text-xs text-[#D4D4D8]/80 mt-2 line-clamp-2 leading-relaxed">
-                      {topic.description}
+                      {ui(topic.description)}
                     </p>
                   </div>
 
@@ -1866,7 +1849,7 @@ export default function VocabularyPage({
                       </span>
                       <span className="bg-[#B91B1C] text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
-                        <span>{topic.wordCountBadge}</span>
+                        <span>{ui(topic.wordCountBadge)}</span>
                       </span>
                     </div>
 
@@ -1879,10 +1862,10 @@ export default function VocabularyPage({
                           handleOpenTopicFlashcards(topic)
                         }}
                         className="h-8 px-3 rounded-full bg-white/15 hover:bg-[#B91B1C] border border-white/20 hover:border-[#B91B1C] text-white text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-                        title="Luyện flashcard chủ đề này"
+                        title={tr("Luyện flashcard chủ đề này")}
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        <span>Luyện thẻ</span>
+                        <span>{tr("Luyện thẻ")}</span>
                       </button>
                       <div className="w-8 h-8 rounded-full bg-white/10 group-hover:bg-[#B91B1C] border border-white/15 group-hover:border-[#B91B1C] flex items-center justify-center text-white/90 group-hover:text-white group-hover:scale-105 group-hover:translate-x-1 transition-all duration-300 shadow-md">
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -1910,7 +1893,7 @@ export default function VocabularyPage({
                   className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-[#E7E7EA] bg-[#F7F7F9] hover:bg-white hover:border-[#B91B1C]/40 text-[#18181B] text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 text-[#B91B1C]" />
-                  <span>Quay lại tất cả chủ đề</span>
+                  <span>{tr("Quay lại tất cả chủ đề")}</span>
                 </button>
               </div>
 
@@ -1928,18 +1911,17 @@ export default function VocabularyPage({
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
                       <h1 className="text-2xl sm:text-3xl font-black text-[#18181B] tracking-tight">
-                        {selectedTopic.nameVi}
+                        {ui(selectedTopic.nameVi)}
                       </h1>
                       <span className="text-lg sm:text-xl font-hanzi font-bold text-[#8B9097]">
                         / {selectedTopic.nameZh}
                       </span>
                       <span className="px-3 py-1 rounded-full bg-[#FDF1F1] border border-[#B91B1C]/20 text-xs font-bold text-[#B91B1C] whitespace-nowrap shrink-0">
-                        {totalItems} từ vựng
-                      </span>
+                        {totalItems} {tr("từ vựng")}</span>
                     </div>
                     <p className="text-xs sm:text-sm text-[#5F6368] mt-1.5 max-w-2xl leading-relaxed">
                       {selectedTopic.description ||
-                        "Danh sách từ vựng trọng tâm theo bối cảnh thực tế. Bấm vào biểu tượng loa để nghe AI phát âm chuẩn hoặc lưu vào sổ tay SRS để tự động lên lịch ôn tập."}
+                        tr("Danh sách từ vựng trọng tâm theo bối cảnh thực tế. Bấm vào biểu tượng loa để nghe AI phát âm chuẩn hoặc lưu vào sổ tay SRS để tự động lên lịch ôn tập.")}
                     </p>
                   </div>
                 </div>
@@ -1951,7 +1933,7 @@ export default function VocabularyPage({
                     className="h-11 px-5 rounded-2xl bg-[#B91B1C] hover:bg-[#A3181A] text-white text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-md hover:shadow-lg shadow-[#B91B1C]/20 transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
                   >
                     <Layers className="w-4 h-4" />
-                    <span>Luyện Flashcard ({totalItems} từ)</span>
+                    <span>{tr("Luyện Flashcard (")}{totalItems} {tr("từ)")}</span>
                   </button>
                 </div>
               </div>
@@ -1964,7 +1946,7 @@ export default function VocabularyPage({
                 <Search className="w-4 h-4 text-[#8B9097] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Tìm từ trong chủ đề (chữ Hán, pinyin, nghĩa)..."
+                  placeholder={tr("Tìm từ trong chủ đề (chữ Hán, pinyin, nghĩa)...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-9 py-2 bg-[#F7F7F9] border border-[#E7E7EA] rounded-xl text-xs font-medium text-[#18181B] placeholder-[#8B9097] outline-none focus:border-[#B91B1C] focus:bg-white transition-all"
@@ -1981,9 +1963,7 @@ export default function VocabularyPage({
 
               {/* HSK Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-                <span className="text-[11px] font-bold text-[#8B9097] uppercase tracking-wider mr-1 hidden lg:inline-block shrink-0">
-                  Cấp độ:
-                </span>
+                <span className="text-[11px] font-bold text-[#8B9097] uppercase tracking-wider mr-1 hidden lg:inline-block shrink-0">{tr("Cấp độ:")}</span>
                 {[
                   { label: "Tất cả", value: "all" },
 
@@ -2010,7 +1990,7 @@ export default function VocabularyPage({
                         : "bg-[#F7F7F9] text-[#5F6368] hover:text-[#18181B] hover:bg-neutral-200/50 border border-[#E7E7EA]"
                     }`}
                   >
-                    {chip.label}
+                    {ui(chip.label)}
                   </button>
                 ))}
               </div>
@@ -2021,18 +2001,12 @@ export default function VocabularyPage({
           {apiLoading ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-[#E7E7EA]">
               <div className="w-8 h-8 border-3 border-[#B91B1C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs font-bold text-[#8B9097]">
-                Đang tải danh sách từ vựng...
-              </p>
+              <p className="text-xs font-bold text-[#8B9097]">{tr("Đang tải danh sách từ vựng...")}</p>
             </div>
           ) : paginatedWords.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-[#E7E7EA]">
-              <p className="text-sm font-bold text-[#18181B]">
-                Không tìm thấy từ vựng nào
-              </p>
-              <p className="text-xs text-[#8B9097] mt-1">
-                Thử tìm với từ khóa khác hoặc chọn mức độ HSK khác.
-              </p>
+              <p className="text-sm font-bold text-[#18181B]">{tr("Không tìm thấy từ vựng nào")}</p>
+              <p className="text-xs text-[#8B9097] mt-1">{tr("Thử tìm với từ khóa khác hoặc chọn mức độ HSK khác.")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -2057,7 +2031,7 @@ export default function VocabularyPage({
                         {/* Audio Pronunciation Button */}
                         <button
                           onClick={() => playPronunciation(word.simplified)}
-                          title="Nghe phát âm chuẩn AI"
+                          title={tr("Nghe phát âm chuẩn AI")}
                           className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
                             isSpeaking
                               ? "bg-[#B91B1C] text-white border-[#B91B1C] scale-105 shadow-sm"
@@ -2126,17 +2100,17 @@ export default function VocabularyPage({
                         {savingWordIds.has(word.id) ? (
                           <>
                             <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            <span>Đang xử lý...</span>
+                            <span>{tr("Đang xử lý...")}</span>
                           </>
                         ) : saved ? (
                           <>
                             <CheckCircle2 className="w-3.5 h-3.5 text-[#137333]" />
-                            <span>Đã lưu sổ tay</span>
+                            <span>{tr("Đã lưu sổ tay")}</span>
                           </>
                         ) : (
                           <>
                             <BookmarkPlus className="w-3.5 h-3.5" />
-                            <span>Lưu vào sổ tay SRS</span>
+                            <span>{tr("Lưu vào sổ tay SRS")}</span>
                           </>
                         )}
                       </button>
@@ -2151,11 +2125,10 @@ export default function VocabularyPage({
           {totalPages > 1 && (
             <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-[#E7E7EA] flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 shadow-2xs">
               <div className="text-xs text-[#5F6368] font-bold w-full text-center sm:text-left sm:w-auto">
-                Trang <span className="text-[#18181B]">{currentPage}</span> /{" "}
+                {tr("Trang")} <span className="text-[#18181B]">{currentPage}</span> /{" "}
                 {totalPages}{" "}
                 <span className="text-[#8B9097] font-normal">
-                  ({totalItems} từ vựng)
-                </span>
+                  ({totalItems} {tr("từ vựng)")}</span>
               </div>
 
               <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full sm:w-auto">
@@ -2168,10 +2141,10 @@ export default function VocabularyPage({
                     window.scrollTo({ top: 120, behavior: "smooth" })
                   }}
                   className="h-9 px-2.5 sm:px-3 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] text-xs font-bold text-[#18181B] flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer active:scale-95"
-                  aria-label="Trang trước"
+                  aria-label={tr("Trang trước")}
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Trang trước</span>
+                  <span className="hidden sm:inline">{tr("Trang trước")}</span>
                 </button>
 
                 {/* Page Numbers */}
@@ -2228,9 +2201,9 @@ export default function VocabularyPage({
                     window.scrollTo({ top: 120, behavior: "smooth" })
                   }}
                   className="h-9 px-2.5 sm:px-3 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] text-xs font-bold text-white flex items-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-xs active:scale-95"
-                  aria-label="Trang sau"
+                  aria-label={tr("Trang sau")}
                 >
-                  <span className="hidden sm:inline">Trang sau</span>
+                  <span className="hidden sm:inline">{tr("Trang sau")}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

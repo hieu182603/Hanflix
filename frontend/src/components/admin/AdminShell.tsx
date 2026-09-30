@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText, ListChecks, Sparkles, Menu, X } from 'lucide-react';
+import { Video, Users, BarChart2, LogOut, Upload, Shield, BookOpen, FileText, ListChecks, Sparkles, Menu, X, CreditCard } from 'lucide-react';
 import { User } from '../../data/hanflixData';
 import UserAvatar from '../common/UserAvatar';
 
-type AdminTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz';
+type AdminTab = 'overview' | 'videos' | 'upload' | 'users' | 'vocabulary' | 'grammar' | 'quiz' | 'billing';
 
 interface AdminShellProps {
   activeTab: AdminTab;
@@ -28,6 +28,7 @@ export default function AdminShell({
     { id: 'quiz', label: 'Bài Luyện Tập', icon: ListChecks },
     { id: 'vocabulary', label: 'Kho Từ vựng HSK', icon: BookOpen },
     { id: 'grammar', label: 'Quản lý Ngữ pháp', icon: FileText },
+    { id: 'billing', label: 'Gói Cước & Doanh Thu', icon: CreditCard },
     { id: 'upload', label: 'Tải video mới', icon: Upload },
     { id: 'users', label: 'Quản lý Người dùng', icon: Users },
   ];

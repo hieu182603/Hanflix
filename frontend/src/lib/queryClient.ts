@@ -1,4 +1,4 @@
-import { QueryClient, type DefaultOptions } from '@tanstack/react-query';
+import { QueryClient, defaultShouldDehydrateQuery, type DefaultOptions } from '@tanstack/react-query';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { createLocalStoragePersister } from './persistedQueryClient';
 
@@ -66,5 +66,9 @@ persistQueryClient({
   queryClient,
   persister: persister as unknown as Parameters<typeof persistQueryClient>[0]['persister'],
   maxAge: 1000 * 60 * 60 * 24,
-  buster: 'hanflix-query-cache-v1',
+  buster: 'hanflix-query-cache-v2-hsk-access',
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) => defaultShouldDehydrateQuery(query)
+      && !['lesson', 'subtitles', 'quiz'].includes(String(query.queryKey[0])),
+  },
 });

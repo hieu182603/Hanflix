@@ -1,3 +1,5 @@
+import { useLearnerHsk } from './premium/PremiumAccess';
+import { useI18n } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, SlidersHorizontal, RefreshCw, Filter } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -41,20 +43,22 @@ export default function AIRecommendationSection({
   onSelectLessonId,
   onOpenPreferences,
 }: AIRecommendationSectionProps) {
+  const { tr, ui } = useI18n();
   const { t } = useLanguage();
   const [activeChip, setActiveChip] = useState<string>('all');
   const queryClient = useQueryClient();
+  const { hsk: currentHsk, isLearner } = useLearnerHsk();
   const hasReportedFeedReady = useRef(false);
 
   const ruleQuery = useQuery({
-    queryKey: learningQueryKeys.recsRule(),
+    queryKey: [...learningQueryKeys.recsRule(), currentHsk],
     queryFn: ({ signal }) => getRuleBasedRecommendations({ signal } as never).then((data) => data),
     staleTime: RULE_STALE,
     retry: 1,
   });
 
   const aiQuery = useQuery({
-    queryKey: learningQueryKeys.recsAi(),
+    queryKey: [...learningQueryKeys.recsAi(), currentHsk],
     queryFn: ({ signal }) =>
       getAiRecommendations({ signal, timeoutMs: AI_TIMEOUT_MS } as never).then((data) => data),
     staleTime: AI_STALE,
@@ -99,10 +103,11 @@ export default function AIRecommendationSection({
     return '';
   })();
 
+  useEffect(() => setActiveChip('all'), [currentHsk]);
+
   const filterChips = [
     { id: 'all', label: t.feed.filterAll },
-    { id: 'HSK 3', label: t.feed.filterHsk3, isLevel: true },
-    { id: 'HSK 6', label: 'HSK 6' },
+    ...(isLearner ? (currentHsk ? [{ id: `HSK ${currentHsk}`, label: `HSK ${currentHsk}`, isLevel: true }] : []) : [{ id: 'HSK 3', label: t.feed.filterHsk3, isLevel: true }, { id: 'HSK 6', label: 'HSK 6' }]),
     { id: 'business', label: t.feed.filterBusiness },
     { id: 'travel', label: t.feed.filterTravel },
     { id: 'food', label: t.feed.filterFood },
@@ -110,8 +115,7 @@ export default function AIRecommendationSection({
 
   const filteredLessons = lessons.filter(({ lesson }) => {
     if (activeChip === 'all') return true;
-    if (activeChip === 'HSK 3') return lesson.hsk === 3;
-    if (activeChip === 'HSK 6') return lesson.hsk === 6;
+    if (activeChip.startsWith('HSK ')) return lesson.hsk === Number(activeChip.slice(4));
     return lesson.topicIds.includes(activeChip);
   });
 
@@ -131,15 +135,13 @@ export default function AIRecommendationSection({
                 {t.feed.basedOnProfile}
               </span>
               {aiQuery.isFetching && (
-                <span className="px-3 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">AI đang tải…</span>
+                <span className="px-3 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">{tr("AI đang tải…")}</span>
               )}
               {aiQuery.data && aiQuery.data.length > 0 && (
-                <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">Cá nhân hoá bởi AI</span>
+                <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">{tr("Cá nhân hoá bởi AI")}</span>
               )}
             </div>
-            <p className="text-xs md:text-sm text-[#5F6368] mt-1">
-              Bài học đã xuất bản, được xếp theo trình độ, sở thích và mục tiêu học tập của bạn.
-            </p>
+            <p className="text-xs md:text-sm text-[#5F6368] mt-1">{tr("Bài học đã xuất bản, được xếp theo trình độ, sở thích và mục tiêu học tập của bạn.")}</p>
           </div>
         </div>
 
@@ -156,7 +158,7 @@ export default function AIRecommendationSection({
             onClick={() => void refetchAll()}
             disabled={isRefreshing}
             className="w-10 h-10 rounded-xl border border-[#E7E7EA] bg-white hover:bg-[#F7F7F9] hover:border-[#D1D5DB] text-[#5F6368] hover:text-[#18181B] flex items-center justify-center transition-all shadow-2xs active:scale-95"
-            title="Làm mới gợi ý"
+            title={tr("Làm mới gợi ý")}
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#B91B1C]' : ''}`} />
           </button>
@@ -179,16 +181,16 @@ export default function AIRecommendationSection({
                   : 'bg-[#F7F7F9] text-[#5F6368] hover:bg-[#E7E7EA] hover:text-[#18181B]'
               }`}
             >
-              {chip.label}
+              {ui(chip.label)}
             </button>
           );
         })}
       </div>
 
-      {error && <InlineBanner variant="warning" message={error} className="mb-4" />}
-      {!error && !isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Chưa có bài học đã xuất bản để gợi ý.</p>}
-      {!error && isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Đang tìm bài học phù hợp…</p>}
-      {!error && lessons.length > 0 && filteredLessons.length === 0 && <p className="py-6 text-sm text-neutral-600">Không có bài học phù hợp với bộ lọc này.</p>}
+      {error && <InlineBanner variant="warning" message={ui(error)} className="mb-4" />}
+      {!error && !isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">{tr("Chưa có bài học đã xuất bản để gợi ý.")}</p>}
+      {!error && isRefreshing && lessons.length === 0 && <p className="py-6 text-sm text-neutral-600">{tr("Đang tìm bài học phù hợp…")}</p>}
+      {!error && lessons.length > 0 && filteredLessons.length === 0 && <p className="py-6 text-sm text-neutral-600">{tr("Không có bài học phù hợp với bộ lọc này.")}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-2">
         {!error &&
           filteredLessons.map(({ lesson, reasonVi }) => (

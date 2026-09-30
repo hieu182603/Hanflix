@@ -15,7 +15,7 @@
  */
 export const lessonQueryKeys = {
   all: ['lessons'] as const,
-  list: (params: { q?: string; hsk?: number; topic?: string; page?: number; limit?: number }) =>
+  list: (params: { sample?: boolean; q?: string; hsk?: number; topic?: string; page?: number; limit?: number }) =>
     [...lessonQueryKeys.all, 'list', params] as const,
   lesson: (id: string) => ['lesson', id] as const,
   subtitles: (id: string) => ['subtitles', id] as const,

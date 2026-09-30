@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useMemo } from 'react';
 import type { SubtitleCue } from '../../api/learning';
 import { cleanPinyinText, cleanSubtitleText, stripTrailingPunctuation } from '../../utils/text';
@@ -102,6 +103,7 @@ function ClickableTokens({
   onTokenClick?: (cueId: string, wordId: string, wordText: string, event: React.MouseEvent) => void;
   cueId: string;
 }) {
+  const { tr } = useI18n();
   const cleanedFullText = cleanSubtitleText(text);
 
   if (!tokens || tokens.length === 0 || !onTokenClick) {
@@ -134,7 +136,7 @@ function ClickableTokens({
               event.stopPropagation();
               onTokenClick(cueId, wordIdStr, token.text, event);
             }}
-            title={`Bấm để xem giải thích: ${token.text}`}
+            title={tr("Bấm để xem giải thích: {0}", { 0: token.text })}
           >
             {displayText}
           </button>

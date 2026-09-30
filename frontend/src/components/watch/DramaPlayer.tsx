@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 /**
  * CONTENT MODE (2026-09-22) - DRAMA: DramaPlayer.
  *
@@ -63,6 +64,7 @@ export default function DramaPlayer({
   onLoadedMetadata,
   onTokenClick,
 }: DramaPlayerProps) {
+  const { tr, ui } = useI18n();
   const internalVideoRef = useRef<HTMLVideoElement>(null);
   const videoRef = externalVideoRef ?? internalVideoRef;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,7 +156,7 @@ export default function DramaPlayer({
       ref={containerRef}
       className="relative w-full aspect-video rounded-2xl md:rounded-3xl bg-black overflow-hidden shadow-xl group"
     >
-      {error && <div role="alert" className="absolute z-30 inset-x-3 top-3 rounded-xl bg-black/80 p-3 text-sm text-white">{error}</div>}
+      {error && <div role="alert" className="absolute z-30 inset-x-3 top-3 rounded-xl bg-black/80 p-3 text-sm text-white">{ui(error)}</div>}
       <video
         ref={videoRef}
         src={src}
@@ -228,7 +230,7 @@ export default function DramaPlayer({
                             onTokenClick?.(activeCue.cueId, token.wordId!._id, token.text, e);
                           }}
                           className="hover:underline cursor-pointer transition-colors"
-                          title={`Tra từ: ${token.text}`}
+                          title={tr("Tra từ: {0}", { 0: token.text })}
                         >
                           {token.text}
                         </button>
@@ -295,7 +297,7 @@ export default function DramaPlayer({
           <button
             type="button"
             onClick={togglePlay}
-            aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+            aria-label={isPlaying ? tr("Tạm dừng") : tr("Phát")}
             className="text-white hover:text-[#FFD700] transition-colors p-1 cursor-pointer"
           >
             {isPlaying ? (

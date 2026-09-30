@@ -205,6 +205,10 @@ export async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const errBody = (json as { error?: { code?: string; message?: string } } | null)?.error;
+    if (errBody?.code === 'PREMIUM_REQUIRED' && options.method && options.method !== 'GET') {
+      window.dispatchEvent(new Event('hanflix:premium-required'));
+      window.dispatchEvent(new Event('hanflix:subscription-updated'));
+    }
     throw new ApiRequestError(
       res.status,
       errBody?.code || 'UNKNOWN',
@@ -212,9 +216,18 @@ export async function apiFetch<T = unknown>(
     );
   }
 
-  if (typeof window !== 'undefined' && options.method && options.method.toUpperCase() !== 'GET'
-    && /^\/(lessons|vocabulary|practice)\//.test(path)) {
-    window.dispatchEvent(new CustomEvent('hanflix:activity-updated', { detail: { source: path.startsWith('/vocabulary/') ? 'review' : path.endsWith('/progress') ? 'video' : 'practice' } }));
+  const method = options.method?.toUpperCase();
+  if ((method === 'PUT' && path === '/profile/learning') || (method === 'PATCH' && path === '/learning/roadmap/preferences')) {
+    window.dispatchEvent(new Event('hanflix:learning-profile-updated'));
+  }
+  const learningSource = method === 'PATCH' && /^\/lessons\/[^/]+\/progress$/.test(path) ? 'video'
+    : method === 'POST' && /^\/lessons\/[^/]+\/attempts$/.test(path) ? 'practice'
+    : method === 'POST' && /^\/exams\/[^/]+\/submit$/.test(path) ? 'practice'
+    : method === 'POST' && /^\/vocabulary\/(practice-session|[^/]+\/review)$/.test(path) ? 'review'
+    : /^\/practice\//.test(path) && (json as { data?: { status?: string } }).data?.status === 'submitted' ? 'practice'
+    : null;
+  if (typeof window !== 'undefined' && learningSource) {
+    window.dispatchEvent(new CustomEvent('hanflix:activity-updated', { detail: { source: learningSource } }));
   }
 
   return (json as { data: T }).data;
