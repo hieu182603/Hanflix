@@ -6,6 +6,7 @@ import {
   UserCheck,
   Copy,
   Check,
+  ExternalLink,
   Sparkles,
   HeartHandshake,
 } from 'lucide-react';
