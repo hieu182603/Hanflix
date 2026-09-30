@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Star,
@@ -245,6 +245,10 @@ export default function TestimonialsPage({
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   const handleSignIn = () => {
     if (onSignIn) onSignIn();
     else navigate('/auth/login');
@@ -297,9 +301,10 @@ export default function TestimonialsPage({
             Giới thiệu
           </button>
           <button
-            onClick={() => navigate('/#students')}
-            className="hover:text-[#B91B1C] transition-colors cursor-pointer text-sm font-semibold text-[#18181B]/80"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="text-[#B91B1C] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
           >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#B91B1C]" />
             Học viên
           </button>
           <button
@@ -377,10 +382,11 @@ export default function TestimonialsPage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              navigate('/#students');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
+            className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#B91B1C] bg-white p-2 rounded-xl border border-[#B91B1C]/20 transition-colors cursor-pointer"
           >
+            <span className="w-2 h-2 rounded-full bg-[#B91B1C]" />
             Học viên
           </button>
           <button
@@ -717,7 +723,7 @@ export default function TestimonialsPage({
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/#students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
                     Cảm nhận học viên
                   </button>
                 </li>

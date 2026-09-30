@@ -113,7 +113,7 @@ export default function AboutProjectPage({
             Giới thiệu
           </button>
           <button
-            onClick={() => navigate('/#students')}
+            onClick={() => navigate('/students')}
             className="hover:text-[#B91B1C] transition-colors cursor-pointer"
           >
             Học viên
@@ -186,7 +186,7 @@ export default function AboutProjectPage({
             Giới thiệu dự án FPT EXE 2
           </button>
           <button
-            onClick={() => { setIsMobileMenuOpen(false); navigate('/#students'); }}
+            onClick={() => { setIsMobileMenuOpen(false); navigate('/students'); }}
             className="w-full text-left block text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
             Học viên
@@ -577,7 +577,7 @@ export default function AboutProjectPage({
               <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm text-[#5F6368]">
                 <li><button onClick={() => navigate('/about')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Dự án FPT EXE 2</button></li>
                 <li><button onClick={() => navigate('/premium')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Gói cước Premium</button></li>
-                <li><button onClick={() => navigate('/#students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Cảm nhận học viên</button></li>
+                <li><button onClick={() => navigate('/students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Cảm nhận học viên</button></li>
                 <li><button onClick={() => navigate('/faq')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Hỏi đáp thường gặp</button></li>
                 <li><button onClick={() => navigate('/#lessons')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">Kho bài học mẫu HSK</button></li>
               </ul>

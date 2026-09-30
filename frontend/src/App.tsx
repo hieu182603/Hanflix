@@ -486,18 +486,18 @@ export default function App() {
         />
       } />
 
-      {/* Dedicated standalone Testimonials route (Cảm nhận học viên) */}
-      <Route path="/testimonials" element={<Navigate to="/#students" replace />} />
-      <Route path="/students" element={<Navigate to="/#students" replace />} />
-      <Route path="/community" element={<Navigate to="/#students" replace />} />
-      <Route path="/reviews" element={<Navigate to="/#students" replace />} />
-      <Route path="/student-stories" element={
+      {/* Dedicated standalone Students / Testimonials route (Trang học viên) */}
+      <Route path="/students" element={
         <TestimonialsPage
           onSignIn={() => navigate('/auth/login')}
           onSignUp={() => navigate('/auth/signup')}
           onStartSurvey={() => navigate('/auth/signup')}
         />
       } />
+      <Route path="/community" element={<Navigate to="/students" replace />} />
+      <Route path="/testimonials" element={<Navigate to="/students" replace />} />
+      <Route path="/reviews" element={<Navigate to="/students" replace />} />
+      <Route path="/student-stories" element={<Navigate to="/students" replace />} />
 
       {/* Dedicated standalone FAQ route (Hỏi đáp thường gặp) */}
       <Route path="/faq" element={

@@ -6,6 +6,8 @@ import {
   ShieldCheck,
   Zap,
   Award,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -128,42 +130,184 @@ export default function PremiumPricingPage({
         <p className="text-[#5F6368]">{tr("Học tiếng Trung trọn vẹn hơn qua mỗi câu chuyện.")}</p>
         <p className="text-sm text-[#5F6368]">{tr("Video được giới hạn theo HSK hiện tại trong hồ sơ, áp dụng cho cả Free và Premium.")}</p>
       </header>
+
+      {/* ── 2-COLUMN MAIN PRICING SECTION (RESTORED TO ORIGINAL LAYOUT) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: lg:col-span-4 - Benefits & Free Tier info */}
         <section className="lg:col-span-4 space-y-5">
           <h2 className="text-xl font-black">{tr("Quyền lợi HanFlix Premium")}</h2>
           <ul className="space-y-4">
-            {(plansQuery.data?.benefits ?? []).map(benefit => <li key={benefit} className="flex gap-3 text-sm">
-              <Check className="h-5 w-5 shrink-0 text-emerald-700" />{ui(benefit)}
-            </li>)}
+            {(plansQuery.data?.benefits ?? []).map(benefit => (
+              <li key={benefit} className="flex gap-3 text-sm">
+                <Check className="h-5 w-5 shrink-0 text-emerald-700" />
+                <span>{ui(benefit)}</span>
+              </li>
+            ))}
           </ul>
           <p className="rounded-2xl border border-[#E7E7EA] bg-white p-4 text-sm leading-relaxed text-[#5F6368]">
             {tr("Free: xem 5 video mẫu, phụ đề Chữ Hán – Pinyin – Tiếng Việt và tra cứu từ vựng cơ bản.")}
           </p>
         </section>
+
+        {/* Right Column: lg:col-span-8 - 3 Pricing Cards */}
         <section className="lg:col-span-8 space-y-6" aria-label={tr("Các gói Premium")}>
-          <p className="text-sm text-[#5F6368]">{tr("Cả 3 gói đều mở khóa toàn bộ quyền lợi Premium, chỉ khác nhau về giá và thời hạn.")}</p>
-          {!canPay && <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{tr("Thanh toán đang tạm ngưng. Vui lòng quay lại sau.")}</p>}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm text-[#5F6368]">{tr("Cả 3 gói đều mở khóa toàn bộ quyền lợi Premium, chỉ khác nhau về giá và thời hạn.")}</p>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs font-semibold text-emerald-800">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{tr("Thanh toán PayOS an toàn")}</span>
+            </div>
+          </div>
+
+          {!canPay && (
+            <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+              {tr("Thanh toán đang tạm ngưng. Vui lòng quay lại sau.")}
+            </p>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch pt-3">
             {[plan1Month, plan3Months, plan1Year].filter((plan): plan is PremiumPlan => Boolean(plan)).map(plan => {
-              const highlighted = plan.code === 'quarterly';
-              return <article key={plan.code} aria-label={ui(plan.name)} data-plan={plan.code}
-                className={`relative rounded-3xl border-2 p-5 flex flex-col gap-5 ${highlighted ? 'border-[#B91B1C] bg-[#FFF2EE] shadow-lg' : 'border-[#E7E7EA] bg-white'}`}>
-                {highlighted && <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#B91B1C] px-3 py-1 text-[11px] font-bold text-white">⭐ {tr("Được yêu thích nhất")}</span>}
-                <div className="pt-2 space-y-2">
-                  <h3 className="text-xl font-black">{tr(plan.code === 'monthly' ? '1 tháng' : plan.code === 'quarterly' ? '3 tháng' : '1 năm')}</h3>
-                  <p className="text-sm font-semibold text-[#5F6368]">{tr(plan.code === 'monthly' ? 'Cơ bản' : plan.code === 'quarterly' ? 'Được yêu thích nhất' : 'Tiết kiệm')}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-2xl font-black">{money(plan.price)} {tr("đ")}</p>
-                  <p className="text-sm text-[#5F6368]">{plan.code === 'monthly' ? <>{tr("Khoảng")} {money(plan.approximatePricePerDay)} {tr("đ/ngày")}</> : <>{money(plan.pricePerMonth)} {tr("đ/tháng")}</>}</p>
-                  {plan.savings > 0 && <p className="text-sm font-semibold text-emerald-700">{tr("Tiết kiệm")} {money(plan.savings)} {tr("đ")} (~{plan.savingsPercent}%)</p>}
-                </div>
-                <p className="text-sm flex gap-2"><Check className="w-4 h-4 shrink-0 text-emerald-700" />{tr("Toàn bộ quyền lợi Premium")}</p>
-                <button type="button" disabled={!canPay} onClick={() => handleSelectPlan(plan)}
-                  className={`mt-auto w-full rounded-xl px-3 py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed ${highlighted ? 'bg-[#B91B1C] text-white hover:bg-[#A3181A]' : 'bg-[#F7F7F9] text-[#18181B] hover:bg-[#FFE6DF]'}`}>
-                  {tr(isUserPremium ? "Gia hạn ngay" : "Nâng cấp ngay")}
-                </button>
-              </article>;
+              const isQuarterly = plan.code === 'quarterly';
+              const isYearly = plan.code === 'yearly';
+              const isMonthly = plan.code === 'monthly';
+
+              return (
+                <article
+                  key={plan.code}
+                  aria-label={ui(plan.name)}
+                  data-plan={plan.code}
+                  className={`relative rounded-3xl border-2 p-5 flex flex-col justify-between transition-all duration-200 ${
+                    isQuarterly
+                      ? 'border-[#B91B1C] bg-[#FFF2EE] shadow-lg ring-1 ring-[#B91B1C]/20 sm:-translate-y-1'
+                      : isYearly
+                      ? 'border-[#E7A92F]/60 bg-white hover:border-[#E7A92F] shadow-xs hover:shadow-md'
+                      : 'border-[#E7E7EA] bg-white hover:border-[#8FB9A7] shadow-xs'
+                  }`}
+                >
+                  {/* Floating Top Badges */}
+                  {isQuarterly && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#B91B1C] px-3.5 py-1 text-[11px] font-bold text-white shadow-md shadow-[#B91B1C]/25 flex items-center gap-1">
+                      <span>⭐</span>
+                      <span>{tr("Được yêu thích nhất")}</span>
+                    </span>
+                  )}
+                  {isYearly && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#FFF3DE] border border-[#E7A92F]/60 px-3 py-0.5 text-[10.5px] font-extrabold text-[#B7791F] shadow-2xs flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-[#E7A92F]" />
+                      <span>{tr("Tiết kiệm nhất")}</span>
+                    </span>
+                  )}
+
+                  <div className="space-y-4 pt-1">
+                    {/* Plan Title & Tag: Clean and spacious so NO words wrap */}
+                    <div>
+                      <div className="flex items-center justify-between gap-1">
+                        <h3 className={`text-xl sm:text-2xl font-black font-fraunces tracking-tight whitespace-nowrap ${
+                          isQuarterly ? 'text-[#B91B1C]' : 'text-[#18181B]'
+                        }`}>
+                          {tr(plan.code === 'monthly' ? '1 tháng' : plan.code === 'quarterly' ? '3 tháng' : '1 năm')}
+                        </h3>
+
+                        {isMonthly && (
+                          <span className="px-2 py-0.5 rounded-md bg-[#F2EFE9] text-[#5F6368] text-[10px] font-bold tracking-wide whitespace-nowrap">
+                            {tr("Cơ bản")}
+                          </span>
+                        )}
+                        {isYearly && (
+                          <span className="px-2 py-0.5 rounded-md bg-[#FFF3DE] text-[#B7791F] text-[10px] font-bold tracking-wide whitespace-nowrap">
+                            {tr("Tiết kiệm")}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-[11px] text-[#5F6368] font-medium mt-1 leading-snug min-h-[30px]">
+                        {isMonthly && tr("Linh hoạt trải nghiệm & dùng thử")}
+                        {isQuarterly && tr("Thời gian vàng hoàn thành 1 cấp HSK")}
+                        {isYearly && tr("Bứt phá dài hạn với chi phí tối ưu nhất")}
+                      </p>
+                    </div>
+
+                    {/* Price Block */}
+                    <div className="space-y-1.5 pt-1 border-t border-[#F2E4D8]/60">
+                      <p className={`text-2xl sm:text-3xl font-black font-fraunces tracking-tight whitespace-nowrap ${
+                        isQuarterly ? 'text-[#B91B1C]' : 'text-[#18181B]'
+                      }`}>
+                        {money(plan.price)} {tr("đ")}
+                      </p>
+
+                      <p className="text-xs text-[#5F6368] font-medium flex items-center gap-1.5 whitespace-nowrap">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isQuarterly ? 'bg-[#B91B1C]' : 'bg-[#8FB9A7]'}`} />
+                        <span>
+                          {plan.code === 'monthly' ? (
+                            <>{tr("Khoảng")} {money(plan.approximatePricePerDay)} {tr("đ/ngày")}</>
+                          ) : (
+                            <>{money(plan.pricePerMonth)} {tr("đ/tháng")}</>
+                          )}
+                        </span>
+                      </p>
+
+                      {plan.savings > 0 && (
+                        <div className="pt-0.5">
+                          <p className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-emerald-700 whitespace-nowrap">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>{tr("Tiết kiệm")} {money(plan.savings)} {tr("đ")} (~{plan.savingsPercent}%)</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Feature Micro-List */}
+                    <div className="space-y-1.5 pt-1 text-xs">
+                      <p className="text-xs font-bold text-[#18181B] flex items-center gap-1.5 whitespace-nowrap">
+                        <Check className="w-4 h-4 shrink-0 text-emerald-700" strokeWidth={2.5} />
+                        <span>{tr("Toàn bộ quyền lợi Premium")}</span>
+                      </p>
+                      {isMonthly && (
+                        <p className="text-[11px] text-[#5F6368] pl-5 whitespace-nowrap flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-[#8FB9A7]" />
+                          <span>Học thử 30 ngày linh hoạt</span>
+                        </p>
+                      )}
+                      {isQuarterly && (
+                        <p className="text-[11px] text-[#B91B1C] font-semibold pl-5 whitespace-nowrap flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-[#B91B1C]" />
+                          <span>AI Bảo Bảo sửa phát âm 24/7</span>
+                        </p>
+                      )}
+                      {isYearly && (
+                        <p className="text-[11px] text-[#B7791F] font-semibold pl-5 whitespace-nowrap flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-[#E7A92F]" />
+                          <span>Chi phí mỗi ngày chỉ ~1.900 đ</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Button & Payment Reassurance */}
+                  <div className="pt-5 mt-auto space-y-2">
+                    <button
+                      type="button"
+                      disabled={!canPay}
+                      onClick={() => handleSelectPlan(plan)}
+                      className={`w-full rounded-xl py-3 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group active:scale-[0.98] ${
+                        isQuarterly
+                          ? 'bg-[#B91B1C] text-white hover:bg-[#991515] shadow-md shadow-[#B91B1C]/25'
+                          : isYearly
+                          ? 'bg-[#18181B] text-white hover:bg-[#27272A]'
+                          : 'bg-white border-2 border-[#18181B] text-[#18181B] hover:bg-[#18181B] hover:text-white'
+                      }`}
+                    >
+                      <span className="whitespace-nowrap">{tr(isUserPremium ? "Gia hạn ngay" : "Nâng cấp ngay")}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+
+                    <div className="text-[10px] text-center text-[#8B9097] font-medium leading-tight">
+                      <span className="block whitespace-nowrap">{tr("Chuyển khoản 1 lần")}</span>
+                      <span className="block text-[9px] text-[#A1A1AA] whitespace-nowrap">{tr("Không tự động trừ tiền")}</span>
+                    </div>
+                  </div>
+                </article>
+              );
             })}
           </div>
         </section>

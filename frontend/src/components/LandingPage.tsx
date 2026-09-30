@@ -188,13 +188,7 @@ export default function LandingPage({
       onNavigateToTestimonials();
       return;
     }
-    const el = document.getElementById('students') || document.getElementById('testimonials');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      window.history.pushState(null, '', '/#students');
-    } else {
-      navigate('/#students');
-    }
+    navigate('/students');
   };
 
   const handleGoToTestimonials = handleGoToStudents;
@@ -215,36 +209,7 @@ export default function LandingPage({
     if (window.location.hash === '#method' || window.location.hash === '#') {
       window.history.replaceState(null, '', window.location.pathname);
       window.scrollTo({ top: 0, behavior: 'instant' });
-    } else if (
-      window.location.hash === '#students' ||
-      window.location.hash === '#community' ||
-      window.location.hash === '#testimonials'
-    ) {
-      const scrollTimer = setTimeout(() => {
-        const el = document.getElementById('students') || document.getElementById('testimonials');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 150);
-      return () => clearTimeout(scrollTimer);
     }
-  }, []);
-
-  useEffect(() => {
-    const handleHashChange = () => {
-      if (
-        window.location.hash === '#students' ||
-        window.location.hash === '#community' ||
-        window.location.hash === '#testimonials'
-      ) {
-        const el = document.getElementById('students') || document.getElementById('testimonials');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const activeCue = CUES[activeCueIndex];
@@ -963,7 +928,7 @@ export default function LandingPage({
 
           <div className="mt-10 sm:mt-12 text-center">
             <button
-              onClick={() => navigate('/student-stories')}
+              onClick={() => navigate('/students')}
               className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 rounded-full bg-white border border-[#E7A92F] text-[#B7791F] hover:bg-[#FFF3DE] font-bold text-sm transition-all shadow-xs cursor-pointer"
             >
               <span>Xem thêm câu chuyện học viên chi tiết</span>

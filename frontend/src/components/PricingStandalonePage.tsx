@@ -72,7 +72,7 @@ export default function PricingStandalonePage({
             Giới thiệu
           </button>
           <button
-            onClick={() => navigate('/#students')}
+            onClick={() => navigate('/students')}
             className="hover:text-[#B91B1C] transition-colors cursor-pointer"
           >
             Học viên
@@ -153,7 +153,7 @@ export default function PricingStandalonePage({
           <button
             onClick={() => {
               setIsMobileMenuOpen(false);
-              navigate('/#students');
+              navigate('/students');
             }}
             className="w-full text-left flex items-center gap-2 text-sm font-bold text-[#18181B] hover:text-[#B91B1C] p-2 rounded-xl hover:bg-white transition-colors cursor-pointer"
           >
@@ -258,7 +258,7 @@ export default function PricingStandalonePage({
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/#students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
+                  <button onClick={() => navigate('/students')} className="hover:text-[#B91B1C] transition-colors cursor-pointer text-left">
                     Cảm nhận học viên
                   </button>
                 </li>
