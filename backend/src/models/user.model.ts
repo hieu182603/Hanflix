@@ -38,6 +38,18 @@ const userSchema = new Schema({
   avatarConfig: { type: Schema.Types.Mixed, default: null },
   avatarPublicId: { type: String, trim: true, default: null },
   totalXP: { type: Number, min: 0, default: 0 },
+  premiumExpiresAt: { type: Date, default: null },
+  premiumReceipts: { type: [{
+      orderCode: { type: Number },
+      grantId: String,
+      grantedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      planCode: String,
+      durationMonths: Number,
+      reason: String,
+      grantedAt: Date,
+    expiresAt: { type: Date, required: true },
+    _id: false,
+  }], select: false, default: [] },
   learningProfile: { type: learningProfileSchema, default: () => ({ currentHskSource: 'unknown', subtitlePreference: 'all' }) },
 }, { timestamps: true, versionKey: false });
 
