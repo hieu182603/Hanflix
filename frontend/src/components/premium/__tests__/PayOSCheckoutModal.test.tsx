@@ -22,6 +22,8 @@ describe("PayOSCheckoutModal QR Code Resilience", () => {
     checkoutUrl: "https://pay.payos.vn/web/test",
     qrCode: "00020101021238570010A000000727012700069704220113VQRQAMNLQ91880208QRIBFTTA53037045405990005802VN62210817HF 6259567624246863041848",
     expiresAt: new Date(Date.now() + 600000).toISOString(),
+    paidAt: null,
+    premiumExpiresAt: null,
     createdAt: new Date().toISOString(),
   }
 
