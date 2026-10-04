@@ -90,11 +90,42 @@ jobs:
           path: backend/coverage
           retention-days: 7
 
+  subscription-integration:
+    name: Premium lifecycle (MongoDB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Verify trial, payment races and migration
+        run: npm test -- src/services/subscription.integration.test.ts src/services/billing.integration.test.ts --maxWorkers=2
+        env:
+          SUBSCRIPTION_TEST_MONGODB_URI: mongodb://127.0.0.1:27017
+          BILLING_TEST_MONGODB_URI: mongodb://127.0.0.1:27017
+
   build:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [typecheck, test]
+    needs: [typecheck, test, subscription-integration]
     defaults:
       run:
         working-directory: backend

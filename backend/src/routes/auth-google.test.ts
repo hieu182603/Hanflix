@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
@@ -23,6 +23,10 @@ beforeAll(async () => {
   ({ googleIdentityService } = await import('../services/google-identity.js'));
   ({ accountTokenService } = await import('../services/account-token.js'));
   ({ signAccessToken } = await import('../services/jwt.js'));
+});
+
+beforeEach(() => {
+  vi.spyOn(UserModel, 'updateOne').mockResolvedValue({ acknowledged: true, modifiedCount: 0, matchedCount: 1, upsertedCount: 0, upsertedId: null } as never);
 });
 
 describe('POST /api/v1/auth/google/link', () => {
@@ -145,6 +149,7 @@ describe('POST /api/v1/auth/google', () => {
       select: () => Promise.resolve('googleSub' in query ? null : user),
     } as never));
     vi.spyOn(UserModel, 'exists').mockResolvedValue({ _id: userId } as never);
+    vi.spyOn(UserModel, 'findById').mockReturnValue({ select: () => ({ lean: async () => user }) } as never);
     vi.spyOn(accountTokenService, 'invalidate').mockResolvedValue(undefined);
     vi.spyOn(RefreshSessionModel, 'create').mockResolvedValue({} as never);
 

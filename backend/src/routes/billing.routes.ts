@@ -12,8 +12,10 @@ import { PremiumPlanModel } from '../models/premium-plan.model.js';
 import { PaymentOrderModel } from '../models/payment-order.model.js';
 import { AppError } from '../errors/app-error.js';
 import { createCheckout, handlePayOSWebhook, ownedOrder, publicOrder, reconcileOrder } from '../services/billing.js';
-import { freeSampleIds, hasPremium, initializeBilling, PREMIUM_BENEFITS, presentPlan } from '../services/premium.js';
+import { freeSampleIds, initializeBilling, PREMIUM_BENEFITS, presentPlan } from '../services/premium.js';
 import { getPayOS, payosConfigured } from '../services/payos.js';
+import { getCurrentSubscription, subscribePremium } from '../services/subscription.js';
+import { markWelcomePopupSeen } from '../services/trial.service.js';
 
 export const billingRoutes = Router();
 export const adminBillingRoutes = Router();
@@ -50,11 +52,18 @@ billingRoutes.post('/webhook', asyncHandler(async (req, res) => {
 billingRoutes.use(requireAuth);
 billingRoutes.get('/subscription', asyncHandler(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ data: {
-    tier: hasPremium(req.auth) ? 'premium' : 'free',
-    premiumExpiresAt: req.auth!.premiumExpiresAt ?? null,
-    benefits: hasPremium(req.auth) ? PREMIUM_BENEFITS : ['5 video mẫu', 'Phụ đề Chữ Hán – Pinyin – Tiếng Việt', 'Tra cứu từ vựng cơ bản'],
-  } });
+  res.json({ data: await getCurrentSubscription(req.auth!.userId) });
+}));
+
+billingRoutes.post('/trial-welcome/seen', asyncHandler(async (req, res) => {
+  await markWelcomePopupSeen(req.auth!.userId);
+  res.json({ data: { success: true } });
+}));
+
+billingRoutes.post('/subscribe', checkoutLimiter, validate(z.object({ planCode: code, expectedPrice: price.optional() }).strict()), asyncHandler(async (req, res) => {
+  const idempotencyKey = z.string().uuid().parse(req.header('Idempotency-Key'));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ data: await subscribePremium(req.auth!.userId, { planCode: req.body.planCode, expectedPrice: req.body.expectedPrice, idempotencyKey }) });
 }));
 
 billingRoutes.post('/checkout', checkoutLimiter, validate(z.object({ planCode: code, expectedPrice: price }).strict()), asyncHandler(async (req, res) => {

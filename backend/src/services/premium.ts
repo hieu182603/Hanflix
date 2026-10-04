@@ -4,6 +4,9 @@ import { UserModel } from '../models/user.model.js';
 import { LessonModel } from '../models/lesson.model.js';
 import { PremiumPlanModel } from '../models/premium-plan.model.js';
 import { PaymentOrderModel } from '../models/payment-order.model.js';
+import { nextPremiumStart, paidPeriodStart } from './premium-access.js';
+import { logger } from './logger.js';
+export { hasPremium } from './premium-access.js';
 
 export const PREMIUM_BENEFITS = [
   'Xem video học không giới hạn',
@@ -46,12 +49,8 @@ export async function initializeBilling(forceReset = false) {
   }
 }
 
-export function hasPremium(user?: { role?: string; premiumExpiresAt?: Date | null } | null, now = new Date()) {
-  return user?.role === 'admin' || Boolean(user?.premiumExpiresAt && user.premiumExpiresAt > now);
-}
-
-export function premiumRequired() {
-  return new AppError(403, 'PREMIUM_REQUIRED', 'Nâng cấp HanFlix Premium để mở khóa nội dung này', { upgradePath: '/premium' });
+export function premiumRequired(code: 'PREMIUM_REQUIRED' | 'TRIAL_EXPIRED' = 'PREMIUM_REQUIRED') {
+  return new AppError(403, code, 'Nâng cấp HanFlix Premium để mở khóa nội dung này', { upgradePath: '/premium' });
 }
 
 export async function freeSampleIds(hsk?: number): Promise<string[]> {
@@ -71,25 +70,31 @@ export function addMonths(date: Date, months: number) {
   return result;
 }
 
-export async function grantPremium(userId: Types.ObjectId, orderCode: number, months: number, now = new Date()) {
+export async function grantPremium(userId: Types.ObjectId, orderCode: number, months: number, now = new Date(), planCode?: string) {
   // Receipt + entitlement are one atomic user-document update. A retry after
   // a crash between this write and marking the order PAID cannot double-grant.
   // Compare-and-swap also prevents two different orders losing an extension.
   for (let attempt = 0; attempt < 10; attempt++) {
-    const user = await UserModel.findById(userId).select('premiumExpiresAt +premiumReceipts').lean();
+    const user = await UserModel.findById(userId).select('premiumExpiresAt premiumStartedAt premiumTrial +premiumReceipts').lean();
     if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy tài khoản thanh toán');
     const receipt = user.premiumReceipts?.find(item => item.orderCode === orderCode);
     if (receipt) return receipt.expiresAt;
-    const expiresAt = addMonths(user.premiumExpiresAt && user.premiumExpiresAt > now ? user.premiumExpiresAt : now, months);
+    const startedAt = nextPremiumStart(user, now);
+    const expiresAt = addMonths(startedAt, months);
     const result = await UserModel.updateOne({
       _id: userId,
       premiumExpiresAt: user.premiumExpiresAt ?? null,
+      'premiumTrial.endsAt': user.premiumTrial?.endsAt ?? null,
       'premiumReceipts.orderCode': { $ne: orderCode },
     }, {
-      $set: { premiumExpiresAt: expiresAt },
-      $push: { premiumReceipts: { orderCode, expiresAt } },
+      $set: { premiumExpiresAt: expiresAt, premiumStartedAt: paidPeriodStart(user, startedAt, now), hasEverPurchasedPremium: true,
+        ...(planCode ? { premiumPlanCode: planCode } : {}) },
+      $push: { premiumReceipts: { orderCode, expiresAt, grantedAt: now, planCode, durationMonths: months } },
     });
-    if (result.modifiedCount === 1) return expiresAt;
+    if (result.modifiedCount === 1) {
+      logger.info({ userId: String(userId), orderCode }, 'PREMIUM_ACTIVATED');
+      return expiresAt;
+    }
   }
   throw new AppError(503, 'PAYMENT_RETRY_REQUIRED', 'Đang cập nhật gói. Vui lòng kiểm tra lại thanh toán.');
 }

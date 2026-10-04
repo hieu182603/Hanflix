@@ -1,5 +1,5 @@
-import { useI18n } from '../i18n';
-import React, { useState, useRef, useEffect } from 'react';
+import { useI18n } from "../i18n"
+import React, { useState, useRef, useEffect } from "react"
 import {
   Search,
   Globe,
@@ -14,43 +14,48 @@ import {
   Shield,
   Crown,
   ArrowLeft,
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import NotificationsDropdown from './notifications/NotificationsDropdown';
-import StreakDropdown from './streak/StreakDropdown';
-import { useLanguage, Language } from '../i18n';
-import { usePandaPet } from './panda-pet';
-import UserAvatar from './common/UserAvatar';
-import { dashboardQueryKeys } from '../api/queryKeys';
-import { getLearnerDashboard } from '../api/learning';
+} from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+import NotificationsDropdown from "./notifications/NotificationsDropdown"
+import StreakDropdown from "./streak/StreakDropdown"
+import { useLanguage, Language } from "../i18n"
+import { usePandaPet } from "./panda-pet"
+import UserAvatar from "./common/UserAvatar"
+import { dashboardQueryKeys } from "../api/queryKeys"
+import { getLearnerDashboard } from "../api/learning"
+import { getUserSubscription } from "../api/billing"
+import { getSubscriptionViewState } from "./premium/subscriptionState"
 
 interface HeaderProps {
-  onSearchSelect?: (query: string) => void;
-  currentLang?: Language;
-  onLanguageChange?: (lang: Language) => void;
-  onOpenPreferences?: () => void;
-  onOpenSettings?: () => void;
-  activeNav: string;
-  onOpenMenu?: () => void;
-  onToggleCollapse?: () => void;
-  isSidebarCollapsed?: boolean;
-  standaloneMode?: boolean;
-  onBack?: () => void;
+  onSearchSelect?: (query: string) => void
+  currentLang?: Language
+  onLanguageChange?: (lang: Language) => void
+  onOpenPreferences?: () => void
+  onOpenSettings?: () => void
+  activeNav: string
+  onOpenMenu?: () => void
+  onToggleCollapse?: () => void
+  isSidebarCollapsed?: boolean
+  standaloneMode?: boolean
+  onBack?: () => void
   currentUser?: {
-    name: string;
-    email: string;
-    role?: string;
-    totalXP?: number;
-    avatarAsset?: string | null;
-    learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null;
-    premiumExpiresAt?: Date | string | null;
-  };
-  onLogout?: () => void;
-  streakDays?: number;
-  onOpenPractice?: () => void;
-  onNavigateToLessons?: () => void;
-  onNotificationAction?: (actionUrl?: string) => void;
+    name: string
+    email: string
+    role?: string
+    totalXP?: number
+    avatarAsset?: string | null
+    learningProfile?: { hskLevel?: number; dailyMinutes?: number } | null
+    premiumExpiresAt?: Date | string | null
+    subscriptionStatus?: "FREE" | "TRIAL" | "ACTIVE" | "EXPIRED"
+    hasPremiumAccess?: boolean
+    trialEligible?: boolean
+  }
+  onLogout?: () => void
+  streakDays?: number
+  onOpenPractice?: () => void
+  onNavigateToLessons?: () => void
+  onNotificationAction?: (actionUrl?: string) => void
 }
 
 export default function Header({
@@ -72,38 +77,83 @@ export default function Header({
   onNavigateToLessons,
   onNotificationAction,
 }: HeaderProps) {
-  const { tr, ui, locale } = useI18n();
-  const { lang, setLang, t } = useLanguage();
-  const panda = usePandaPet();
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [showLangMenu, setShowLanguageMenu] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { tr, ui, locale } = useI18n()
+  const { lang, setLang, t } = useLanguage()
+  const panda = usePandaPet()
+  const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [showLangMenu, setShowLanguageMenu] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
-  const dashboardQuery = useQuery({
-    queryKey: [...dashboardQueryKeys.detail(), currentUser?.learningProfile?.hskLevel ?? null],
-    queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
+  const subscriptionQuery = useQuery({
+    queryKey: ["billing", "subscription"],
+    queryFn: ({ signal }) => getUserSubscription(signal),
     enabled: Boolean(currentUser),
     staleTime: 30000,
-  });
-  const liveXP = dashboardQuery.data?.metrics?.totalXP ?? currentUser?.totalXP ?? 0;
+  })
 
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const langRef = useRef<HTMLDivElement>(null);
-  const userRef = useRef<HTMLDivElement>(null);
+  const viewState = getSubscriptionViewState(
+    subscriptionQuery.data,
+    currentUser,
+  )
+  const isTrial = viewState === "TRIAL_ACTIVE"
+  const isActive = viewState === "PREMIUM_ACTIVE"
+  const isUserPremium = isTrial || isActive || currentUser?.role === "admin"
+  const trialRemainingDays =
+    subscriptionQuery.data?.trial?.remainingDays ??
+    (subscriptionQuery.data?.trial?.remainingSeconds != null
+      ? Math.max(
+          0,
+          Math.ceil(subscriptionQuery.data.trial.remainingSeconds / 86400),
+        )
+      : currentUser?.premiumExpiresAt
+        ? Math.max(
+            0,
+            Math.ceil(
+              (new Date(currentUser.premiumExpiresAt).getTime() - Date.now()) /
+                (1000 * 60 * 60 * 24),
+            ),
+          )
+        : null)
+  const vipRemainingDays = currentUser?.premiumExpiresAt
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(currentUser.premiumExpiresAt).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      )
+    : null
+
+  const dashboardQuery = useQuery({
+    queryKey: [
+      ...dashboardQueryKeys.detail(),
+      currentUser?.learningProfile?.hskLevel ?? null,
+    ],
+    queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
+    enabled: Boolean(currentUser && isUserPremium),
+    staleTime: 30000,
+    retry: false,
+  })
+  const liveXP =
+    dashboardQuery.data?.metrics?.totalXP ?? currentUser?.totalXP ?? 0
+
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const langRef = useRef<HTMLDivElement>(null)
+  const userRef = useRef<HTMLDivElement>(null)
 
   const sampleSearchSuggestions = [
-    { title: 'Gọi món ở nhà hàng', category: 'Ẩm thực · HSK 3' },
-    { title: 'Đặt phòng khách sạn', category: 'Du lịch · HSK 3' },
-    { title: 'Rủ bạn đi xem phim', category: 'Giải trí · HSK 3' },
-    { title: 'Mặc cả mua sắm', category: 'Mua sắm · HSK 3' },
-    { title: 'Phỏng vấn xin việc', category: 'Kinh doanh · HSK 3' },
+    { title: "Gọi món ở nhà hàng", category: "Ẩm thực · HSK 3" },
+    { title: "Đặt phòng khách sạn", category: "Du lịch · HSK 3" },
+    { title: "Rủ bạn đi xem phim", category: "Giải trí · HSK 3" },
+    { title: "Mặc cả mua sắm", category: "Mua sắm · HSK 3" },
+    { title: "Phỏng vấn xin việc", category: "Kinh doanh · HSK 3" },
   ].filter(
     (item) =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      item.category.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -111,42 +161,38 @@ export default function Header({
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target as Node)
       ) {
-        setIsSearchFocused(false);
+        setIsSearchFocused(false)
       }
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setShowLanguageMenu(false);
+        setShowLanguageMenu(false)
       }
       if (userRef.current && !userRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
+        setShowUserMenu(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const languages: { code: Language; label: string; flag: string }[] = [
-    { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-    { code: 'en', label: 'English', flag: '🇬🇧' },
-    { code: 'zh', label: '中文 (简体)', flag: '🇨🇳' },
-  ];
+    { code: "vi", label: "Tiếng Việt", flag: "🇻🇳" },
+    { code: "en", label: "English", flag: "🇬🇧" },
+    { code: "zh", label: "中文 (简体)", flag: "🇨🇳" },
+  ]
 
   const handleSearchChange = (val: string) => {
-    setSearchQuery(val);
+    setSearchQuery(val)
     if (val.trim()) {
-      panda?.triggerReaction('searching', 3500);
+      panda?.triggerReaction("searching", 3500)
     } else {
-      panda?.setPandaState('idle');
+      panda?.setPandaState("idle")
     }
-  };
+  }
 
   const handleClearSearch = () => {
-    setSearchQuery('');
-    panda?.setPandaState('idle');
-  };
-
-  const isUserPremium =
-    currentUser?.role === 'admin' ||
-    Boolean(currentUser?.premiumExpiresAt && new Date(currentUser.premiumExpiresAt) > new Date());
+    setSearchQuery("")
+    panda?.setPandaState("idle")
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E7E7EA] px-2 sm:px-4 md:pr-7 flex items-center justify-between shadow-xs safe-area-top min-h-[64px] sm:min-h-[68px]">
@@ -155,8 +201,8 @@ export default function Header({
         {standaloneMode ? (
           <button
             onClick={() => {
-              if (onBack) onBack();
-              else navigate(-1);
+              if (onBack) onBack()
+              else navigate(-1)
             }}
             aria-label={tr("Quay lại")}
             title={tr("Quay lại")}
@@ -170,13 +216,21 @@ export default function Header({
             <button
               onClick={() => {
                 if (window.innerWidth < 1024) {
-                  onOpenMenu?.();
+                  onOpenMenu?.()
                 } else {
-                  onToggleCollapse?.();
+                  onToggleCollapse?.()
                 }
               }}
-              aria-label={isSidebarCollapsed ? tr("Mở rộng thanh điều hướng") : tr("Thu gọn thanh điều hướng")}
-              title={isSidebarCollapsed ? tr("Mở rộng thanh điều hướng") : tr("Thu gọn thanh điều hướng")}
+              aria-label={
+                isSidebarCollapsed
+                  ? tr("Mở rộng thanh điều hướng")
+                  : tr("Thu gọn thanh điều hướng")
+              }
+              title={
+                isSidebarCollapsed
+                  ? tr("Mở rộng thanh điều hướng")
+                  : tr("Thu gọn thanh điều hướng")
+              }
               className="w-10 h-10 rounded-xl flex items-center justify-center text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] active:scale-95 transition-all cursor-pointer"
             >
               <Menu className="w-5 h-5" />
@@ -186,10 +240,10 @@ export default function Header({
         <div
           onClick={() => {
             if (currentUser) {
-              if (currentUser.role === 'admin') navigate('/admin');
-              else navigate('/feed');
+              if (currentUser.role === "admin") navigate("/admin")
+              else navigate("/feed")
             } else {
-              navigate('/');
+              navigate("/")
             }
           }}
           className="flex items-center gap-1.5 sm:gap-2.5 cursor-pointer select-none py-1"
@@ -200,18 +254,23 @@ export default function Header({
             className="h-7 sm:h-8 md:h-10 w-auto max-w-[110px] sm:max-w-[160px] md:max-w-[190px] object-contain hover:scale-105 transition-transform drop-shadow-xs"
           />
           <span className="hidden md:inline-block px-2.5 py-0.5 text-[10px] font-bold text-[#B91B1C] bg-[#FDF1F1] rounded-full border border-[#F0D4D4]">
-            {currentUser?.learningProfile?.hskLevel ? `HSK ${currentUser.learningProfile.hskLevel}` : tr("Chưa chọn HSK")}
+            {currentUser?.learningProfile?.hskLevel
+              ? `HSK ${currentUser.learningProfile.hskLevel}`
+              : tr("Chưa chọn HSK")}
           </span>
         </div>
       </div>
 
       {/* Middle: Search bar */}
-      <div className="relative flex-1 min-w-0 max-w-[500px] mx-1.5 sm:mx-4" ref={searchContainerRef}>
+      <div
+        className="relative flex-1 min-w-0 max-w-[500px] mx-1.5 sm:mx-4"
+        ref={searchContainerRef}
+      >
         <div
           className={`relative flex items-center h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F7F7F9] border transition-all ${
             isSearchFocused
-              ? 'border-[#B91B1C] bg-white ring-2 ring-[#B91B1C]/10 shadow-xs'
-              : 'border-[#E7E7EA] hover:border-[#D1D5DB]'
+              ? "border-[#B91B1C] bg-white ring-2 ring-[#B91B1C]/10 shadow-xs"
+              : "border-[#E7E7EA] hover:border-[#D1D5DB]"
           }`}
         >
           <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8B9097] mr-1.5 sm:mr-2.5 shrink-0" />
@@ -221,8 +280,8 @@ export default function Header({
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             onFocus={() => {
-              setIsSearchFocused(true);
-              if (searchQuery.trim()) panda?.triggerReaction('searching', 3500);
+              setIsSearchFocused(true)
+              if (searchQuery.trim()) panda?.triggerReaction("searching", 3500)
             }}
             className="w-full text-xs sm:text-sm text-[#18181B] bg-transparent outline-none placeholder:text-[#8B9097] truncate"
           />
@@ -247,10 +306,10 @@ export default function Header({
                 <button
                   key={idx}
                   onClick={() => {
-                    setSearchQuery(item.title);
-                    setIsSearchFocused(false);
-                    panda?.triggerReaction('success', 2000);
-                    if (onSearchSelect) onSearchSelect(item.title);
+                    setSearchQuery(item.title)
+                    setIsSearchFocused(false)
+                    panda?.triggerReaction("success", 2000)
+                    if (onSearchSelect) onSearchSelect(item.title)
                   }}
                   className="w-full text-left px-4 py-2.5 hover:bg-[#FDF1F1] flex items-center justify-between group transition-colors cursor-pointer"
                 >
@@ -273,21 +332,50 @@ export default function Header({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
-        {/* Nâng cấp Premium Button (Style chuẩn ảnh Hanzii với Sale badge góc trên) */}
+        {/* Nâng cấp / Trial / VIP Button */}
         <div className="relative shrink-0 mr-1 sm:mr-1.5">
           <button
             type="button"
-            onClick={() => navigate('/premium')}
-            className={`relative flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 ${
-              isUserPremium
-                ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white shadow-amber-500/20'
-                : 'bg-[#FFF2EE] hover:bg-[#FFE6DF] text-[#B91B1C] border border-[#F2D0C7]'
+            onClick={() => navigate("/premium")}
+            title={
+              isTrial
+                ? trialRemainingDays != null
+                  ? `${tr("Premium Trial")} · ${tr("Còn")} ${trialRemainingDays} ${tr("ngày")}`
+                  : tr("Premium Trial")
+                : isActive
+                  ? vipRemainingDays != null
+                    ? `${tr("Premium VIP")} · ${tr("Còn")} ${vipRemainingDays} ${tr("ngày")}`
+                    : tr("Premium VIP")
+                  : undefined
+            }
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap ${
+              isActive
+                ? "bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-white shadow-amber-500/20"
+                : isTrial
+                  ? "bg-gradient-to-r from-orange-400 via-amber-500 to-amber-600 text-white shadow-amber-500/20"
+                  : "bg-[#FFF2EE] hover:bg-[#FFE6DF] text-[#B91B1C] border border-[#F2D0C7]"
             }`}
           >
-            <Crown className={`w-3.5 h-3.5 ${isUserPremium ? 'fill-white text-white' : 'text-[#B91B1C] fill-[#B91B1C]/20'}`} />
-            <span>{isUserPremium ? 'VIP' : tr("Nâng cấp")}</span>
+            <Crown
+              className={`w-3.5 h-3.5 shrink-0 ${
+                isActive || isTrial
+                  ? "fill-white text-white"
+                  : "text-[#B91B1C] fill-[#B91B1C]/20"
+              }`}
+            />
+            <span>
+              {isActive
+                ? vipRemainingDays != null
+                  ? `VIP · ${vipRemainingDays} ${tr("ngày")}`
+                  : "VIP"
+                : isTrial
+                  ? trialRemainingDays != null
+                    ? `${tr("Trial")} · ${trialRemainingDays} ${tr("ngày")}`
+                    : tr("Trial")
+                  : tr("Nâng cấp")}
+            </span>
           </button>
-          {!isUserPremium && (
+          {!isActive && !isTrial && (
             <span className="absolute -top-2.5 -right-1 px-1.5 py-0.5 rounded-full bg-[#E53935] text-white text-[9px] font-black tracking-wider uppercase rotate-12 shadow-xs pointer-events-none select-none">
               {tr("Sale")}
             </span>
@@ -325,19 +413,24 @@ export default function Header({
                 <button
                   key={item.code}
                   onClick={() => {
-                    setLang(item.code);
-                    if (onLanguageChange !== setLang) onLanguageChange?.(item.code);
-                    setShowLanguageMenu(false);
+                    setLang(item.code)
+                    if (onLanguageChange !== setLang)
+                      onLanguageChange?.(item.code)
+                    setShowLanguageMenu(false)
                   }}
                   className={`w-full px-3.5 py-2.5 text-left text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
-                    lang === item.code ? 'bg-[#FFF5F5] text-[#B91B1C]' : 'hover:bg-[#F7F7F9] text-[#18181B]'
+                    lang === item.code
+                      ? "bg-[#FFF5F5] text-[#B91B1C]"
+                      : "hover:bg-[#F7F7F9] text-[#18181B]"
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
                     <span className="text-base">{item.flag}</span>
                     <span lang={item.code}>{ui(item.label)}</span>
                   </span>
-                  {lang === item.code && <Check className="w-4 h-4 text-[#B91B1C] stroke-[3]" />}
+                  {lang === item.code && (
+                    <Check className="w-4 h-4 text-[#B91B1C] stroke-[3]" />
+                  )}
                 </button>
               ))}
             </div>
@@ -364,22 +457,45 @@ export default function Header({
                   {currentUser?.name || t.header.learner}
                 </div>
                 <div className="text-xs text-[#8B9097] mt-0.5 truncate">
-                  {currentUser?.email || ''}
+                  {currentUser?.email || ""}
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                  {isTrial && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 text-[11px] font-bold border border-amber-500/20">
+                      <Crown className="w-3 h-3 text-amber-600 fill-amber-600" />
+                      <span>
+                        {tr("Premium Trial")}
+                        {trialRemainingDays != null
+                          ? ` · ${trialRemainingDays} ${tr("ngày")}`
+                          : ""}
+                      </span>
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 text-[11px] font-bold border border-amber-500/20">
+                      <Crown className="w-3 h-3 text-amber-600 fill-amber-600" />
+                      <span>{tr("Premium VIP")}</span>
+                    </span>
+                  )}
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold">
-                    <span>{currentUser?.learningProfile?.hskLevel ? `HSK ${currentUser.learningProfile.hskLevel}` : tr("Chưa chọn HSK")}</span>
+                    <span>
+                      {currentUser?.learningProfile?.hskLevel
+                        ? `HSK ${currentUser.learningProfile.hskLevel}`
+                        : tr("Chưa chọn HSK")}
+                    </span>
                     <span>·</span>
                     <span className="text-[#E7A92F]">Intermediate</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setShowUserMenu(false);
-                      navigate('/leaderboard');
+                      setShowUserMenu(false)
+                      navigate("/leaderboard")
                     }}
                     className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                    title={tr("Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng")}
+                    title={tr(
+                      "Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng",
+                    )}
                   >
                     <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
                     <span>{liveXP.toLocaleString(locale)} XP</span>
@@ -390,11 +506,11 @@ export default function Header({
               {/* Menu items */}
               <div className="py-1">
                 {/* Admin Dashboard */}
-                {currentUser?.role === 'admin' && (
+                {currentUser?.role === "admin" && (
                   <button
                     onClick={() => {
-                      setShowUserMenu(false);
-                      navigate('/admin');
+                      setShowUserMenu(false)
+                      navigate("/admin")
                     }}
                     className="w-full text-left px-4 py-2.5 text-sm font-bold text-[#B91B1C] hover:bg-[#FDF1F1] flex items-center gap-3 transition-colors cursor-pointer border-b border-[#E7E7EA]"
                   >
@@ -406,8 +522,8 @@ export default function Header({
                 {/* Account Settings */}
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
-                    onOpenSettings?.();
+                    setShowUserMenu(false)
+                    onOpenSettings?.()
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#18181B] hover:bg-[#F7F7F9] flex items-center gap-3 transition-colors cursor-pointer"
                 >
@@ -418,8 +534,8 @@ export default function Header({
                 {/* Survey */}
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
-                    onOpenPreferences?.();
+                    setShowUserMenu(false)
+                    onOpenPreferences?.()
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] flex items-center gap-3 transition-colors cursor-pointer"
                 >
@@ -430,14 +546,14 @@ export default function Header({
                 {/* Payment History */}
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
-                    navigate('/payment-history');
+                    setShowUserMenu(false)
+                    navigate("/payment-history")
                   }}
                   className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#5F6368] hover:text-[#18181B] hover:bg-[#F7F7F9] flex items-center gap-3 transition-colors cursor-pointer"
                 >
                   <span
                     className="material-symbols-outlined text-[#5F6368] select-none flex items-center justify-center shrink-0 leading-none"
-                    style={{ fontSize: '16px', width: '16px', height: '16px' }}
+                    style={{ fontSize: "16px", width: "16px", height: "16px" }}
                     aria-hidden="true"
                   >
                     receipt_long
@@ -450,8 +566,8 @@ export default function Header({
 
               <button
                 onClick={() => {
-                  setShowUserMenu(false);
-                  if (onLogout) onLogout();
+                  setShowUserMenu(false)
+                  if (onLogout) onLogout()
                 }}
                 className="w-full text-left px-4 py-2.5 text-sm text-[#B91B1C] font-semibold hover:bg-[#FDF1F1] flex items-center gap-3 transition-colors cursor-pointer"
               >
@@ -463,5 +579,5 @@ export default function Header({
         </div>
       </div>
     </header>
-  );
+  )
 }

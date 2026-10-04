@@ -1,8 +1,20 @@
-import { PremiumNotice, usePremiumAccess, useLearnerHsk } from './premium/PremiumAccess';
-import { useI18n } from '../i18n';
+import {
+  PremiumNotice,
+  usePremiumAccess,
+  useLearnerHsk,
+} from "./premium/PremiumAccess"
+import FreeFeedView from "./FreeFeedView"
+import { useI18n } from "../i18n"
 import { Suspense, lazy, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { BookOpen, ChevronLeft, ChevronRight, Clock3, GraduationCap, RotateCcw } from "lucide-react"
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  GraduationCap,
+  RotateCcw,
+} from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   getLearnerDashboard,
@@ -112,9 +124,9 @@ export default function ConnectedLearner({
   onOpenPreferences: () => void
   onNavigateSection?: (section: string) => void
 }) {
-  const { tr, ui } = useI18n();
-  const isPremium = usePremiumAccess();
-  const { hsk: currentHsk, isLearner } = useLearnerHsk();
+  const { tr, ui } = useI18n()
+  const isPremium = usePremiumAccess()
+  const { hsk: currentHsk, isLearner } = useLearnerHsk()
   // Synchronize lessons topic, HSK level, search, and pagination with URL search params
   const [searchParams, setSearchParams] = useSearchParams()
   // Validate URL params: silently drop invalid values so backend không bị spam với filter rác.
@@ -124,11 +136,15 @@ export default function ConnectedLearner({
   const rawPage = section === "lessons" ? searchParams.get("page") || "" : ""
   const topic = VALID_TOPIC_IDS.has(rawTopic) ? rawTopic : ""
   const effectiveHsk = isLearner
-    ? (currentHsk ? String(currentHsk) : "3")
-    : (VALID_HSK_IDS.has(rawHsk) ? rawHsk : "")
+    ? currentHsk
+      ? String(currentHsk)
+      : "3"
+    : VALID_HSK_IDS.has(rawHsk)
+      ? rawHsk
+      : ""
   const hsk = effectiveHsk
   const search = rawSearch.slice(0, 120) // giới hạn theo backend schema
-  const sampleOnly = searchParams.get("sample") === "true";
+  const sampleOnly = searchParams.get("sample") === "true"
   const page = /^\d+$/.test(rawPage) ? Math.max(1, Number(rawPage)) : 1
 
   const setTopic = (val: string) => {
@@ -186,7 +202,8 @@ export default function ConnectedLearner({
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
-        for (const key of ["q", "topic", "hsk", "sample", "page"]) next.delete(key)
+        for (const key of ["q", "topic", "hsk", "sample", "page"])
+          next.delete(key)
         return next
       },
       { replace: true },
@@ -221,7 +238,8 @@ export default function ConnectedLearner({
     queryFn: ({ signal }) =>
       getLearnerDashboard({ signal } as never).then((data) => data),
     enabled:
-      isPremium && (section === "feed" || section === "roadmap" || section === "history"),
+      isPremium &&
+      (section === "feed" || section === "roadmap" || section === "history"),
     staleTime: DASHBOARD_STALE,
   })
 
@@ -356,8 +374,8 @@ export default function ConnectedLearner({
           <button
             type="button"
             onClick={() => {
-              resetFilters();
-              onOpenPreferences();
+              resetFilters()
+              onOpenPreferences()
             }}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#FDF1F1] border border-[#E7E7EA] hover:border-red-200 text-xs font-bold text-[#B91B1C] transition-colors cursor-pointer shrink-0 shadow-2xs"
             title={tr("Đặt lại khảo sát để đổi cấp độ HSK")}
@@ -437,12 +455,21 @@ export default function ConnectedLearner({
   return (
     <div className="space-y-6">
       {renderError}
-      {section === "feed" && !isPremium && <><PremiumNotice /><button type="button" onClick={() => onNavigateSection?.("lessons?sample=true")} className="rounded-xl bg-[#B91B1C] px-5 py-3 text-white font-bold">{tr("Xem video mẫu")}</button></>}
+      {section === "feed" && !isPremium && (
+        <FreeFeedView
+          onSelectLesson={onSelectLesson}
+          onNavigateSection={onNavigateSection}
+        />
+      )}
       {section === "feed" && isPremium && (
         <>
           <div className="rounded-3xl bg-[#18181B] p-5 sm:p-6 md:p-8 text-white shadow-sm">
-            <p className="text-xs sm:text-sm text-red-300 font-semibold">{tr("Tiếp tục hành trình tiếng Trung")}</p>
-            <h1 className="mt-1 text-xl sm:text-2xl font-black">{tr("Bài học của bạn")}</h1>
+            <p className="text-xs sm:text-sm text-red-300 font-semibold">
+              {tr("Tiếp tục hành trình tiếng Trung")}
+            </p>
+            <h1 className="mt-1 text-xl sm:text-2xl font-black">
+              {tr("Bài học của bạn")}
+            </h1>
             {dashboardQuery.data?.continueLearning?.lessonId?._id ? (
               <button
                 type="button"
@@ -452,20 +479,27 @@ export default function ConnectedLearner({
                   )
                 }
                 className="mt-4 rounded-xl bg-[#B91B1C] hover:bg-[#A3181A] px-4 py-2.5 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
-              >{tr("Tiếp tục:")}{" "}
+              >
+                {tr("Tiếp tục:")}{" "}
                 {dashboardQuery.data.continueLearning!.lessonId!.titleVi}
               </button>
             ) : (
-              <p className="mt-3 text-xs sm:text-sm text-neutral-300">{tr("Chọn một bài học đã xuất bản để bắt đầu.")}</p>
+              <p className="mt-3 text-xs sm:text-sm text-neutral-300">
+                {tr("Chọn một bài học đã xuất bản để bắt đầu.")}
+              </p>
             )}
             {dashboardQuery.data && (
               <div className="mt-5 flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm text-neutral-300">
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.completedLessons} {tr("bài hoàn thành")}</span>
+                  {dashboardQuery.data.metrics.completedLessons}{" "}
+                  {tr("bài hoàn thành")}
+                </span>
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.savedWords} {tr("từ đã lưu")}</span>
+                  {dashboardQuery.data.metrics.savedWords} {tr("từ đã lưu")}
+                </span>
                 <span className="bg-white/10 px-3 py-1 rounded-full">
-                  {dashboardQuery.data.metrics.dueWords} {tr("từ cần ôn")}</span>
+                  {dashboardQuery.data.metrics.dueWords} {tr("từ cần ôn")}
+                </span>
               </div>
             )}
           </div>
@@ -480,7 +514,9 @@ export default function ConnectedLearner({
           {/* Header & Controls */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-[#18181B]">{tr("Kho bài học đã xuất bản")}</h2>
+              <h2 className="text-xl font-black text-[#18181B]">
+                {tr("Kho bài học đã xuất bản")}
+              </h2>
               <p className="text-sm text-[#5F6368]">
                 {lessonsQuery.data?.total ?? 0} {tr("bài học")}
                 {isLearner && (
@@ -498,11 +534,13 @@ export default function ConnectedLearner({
             {controls}
           </div>
 
-
           {/* Global Search Notice if searched from top header bar */}
           {search && (
             <div className="flex items-center gap-2 bg-[#FDF1F1] text-[#B91B1C] px-3.5 py-1.5 rounded-full border border-red-200/80 w-fit text-xs font-semibold">
-              <span>{tr("Đang tìm: “")}{search}&rdquo;</span>
+              <span>
+                {tr("Đang tìm: “")}
+                {search}&rdquo;
+              </span>
               <button
                 type="button"
                 onClick={clearSearch}
@@ -516,7 +554,6 @@ export default function ConnectedLearner({
               </button>
             </div>
           )}
-
 
           {/* Quick Topic Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -561,14 +598,22 @@ export default function ConnectedLearner({
                   className="w-6 h-6 text-[#B91B1C]"
                 />
               </div>
-              <h3 className="font-black text-[#18181B] text-base">{tr("Không tìm thấy bài học phù hợp")}</h3>
-              <p className="text-xs text-[#5F6368]">{tr("Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy thử chọn chủ đề khác nhé!")}</p>
+              <h3 className="font-black text-[#18181B] text-base">
+                {tr("Không tìm thấy bài học phù hợp")}
+              </h3>
+              <p className="text-xs text-[#5F6368]">
+                {tr(
+                  "Chưa có bài học nào thuộc chủ đề hoặc cấp HSK đã chọn. Bạn hãy thử chọn chủ đề khác nhé!",
+                )}
+              </p>
               {(topic || hsk || search) && (
                 <button
                   type="button"
                   onClick={resetFilters}
                   className="mt-2 inline-flex items-center px-4 py-2 rounded-xl bg-[#B91B1C] text-white text-xs font-bold hover:bg-[#A3181A] transition-colors cursor-pointer"
-                >{tr("Xem tất cả bài học")}</button>
+                >
+                  {tr("Xem tất cả bài học")}
+                </button>
               )}
             </div>
           ) : (

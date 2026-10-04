@@ -25,5 +25,6 @@ const schema = new Schema({
 
 schema.index({ userId: 1, idempotencyKey: 1 }, { unique: true });
 schema.index({ userId: 1, createdAt: -1 });
+schema.index({ userId: 1, status: 1 });
 schema.index({ status: 1, createdAt: -1 });
 export const PaymentOrderModel = model('PaymentOrder', schema);

@@ -13,6 +13,8 @@ import { UserModel } from '../models/user.model.js';
 import { accountTokenService } from '../services/account-token.js';
 import { googleIdentityService } from '../services/google-identity.js';
 import { logger } from '../services/logger.js';
+import { getCurrentSubscription } from '../services/subscription.js';
+import { ensureFirstLoginTrial, isTrialEligible, markWelcomePopupSeen } from '../services/trial.service.js';
 import { mailService } from '../services/mailer.js';
 import {
   hashToken,
@@ -150,7 +152,20 @@ router.post('/login', authLimiter, validate(credentialsSchema), asyncHandler(asy
     throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Hãy xác minh email trước khi đăng nhập');
   }
   const accessToken = await issueSession(user, req, res);
-  res.json({ data: { accessToken, user: publicUser(user) } });
+  const eligible = isTrialEligible(user);
+  if (eligible) await ensureFirstLoginTrial(user._id);
+  // Read the persisted winner even if another login started the trial.
+  const subscription = await getCurrentSubscription(user._id, new Date(), eligible ? undefined : user);
+  res.json({
+    data: {
+      accessToken,
+      user: { ...publicUser(user), tier: subscription.tier, premiumExpiresAt: subscription.premiumExpiresAt },
+      subscription,
+      ui: {
+        showWelcomeTrialPopup: subscription.showWelcomeTrialPopup,
+      },
+    },
+  });
 }));
 
 router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandler(async (req, res) => {
@@ -241,7 +256,20 @@ router.post('/google', authLimiter, validate(googleCredentialSchema), asyncHandl
     await user.save();
   }
   const accessToken = await issueSession(user, req, res);
-  res.status(created ? 201 : 200).json({ data: { accessToken, user: publicUser(user) } });
+  const eligible = isTrialEligible(user);
+  if (eligible) await ensureFirstLoginTrial(user._id);
+  // Read the persisted winner even if another login started the trial.
+  const subscription = await getCurrentSubscription(user._id, new Date(), eligible ? undefined : user);
+  res.status(created ? 201 : 200).json({
+    data: {
+      accessToken,
+      user: { ...publicUser(user), tier: subscription.tier, premiumExpiresAt: subscription.premiumExpiresAt },
+      subscription,
+      ui: {
+        showWelcomeTrialPopup: subscription.showWelcomeTrialPopup,
+      },
+    },
+  });
 }));
 
 router.post('/google/link', requireAuth, authLimiter, validate(googleCredentialSchema), asyncHandler(async (req, res) => {
@@ -518,7 +546,22 @@ router.post('/change-password', requireAuth, authLimiter, validate(changePasswor
 router.get('/me', requireAuth, asyncHandler(async (req, res) => {
   const user = await UserModel.findById(req.auth!.userId).lean();
   if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy tài khoản');
-  res.json({ data: { user: publicUser(user) } });
+  const subscription = await getCurrentSubscription(req.auth!.userId, new Date(), user);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    data: {
+      user: { ...publicUser(user), tier: subscription.tier, premiumExpiresAt: subscription.premiumExpiresAt },
+      subscription,
+      ui: {
+        showWelcomeTrialPopup: subscription.showWelcomeTrialPopup,
+      },
+    },
+  });
+}));
+
+router.post('/trial-welcome/seen', requireAuth, asyncHandler(async (req, res) => {
+  await markWelcomePopupSeen(req.auth!.userId);
+  res.json({ data: { success: true } });
 }));
 
 export default router;

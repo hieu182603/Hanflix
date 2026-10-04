@@ -1,4 +1,24 @@
 {
+  "Dùng thử HanFlix Premium": [
+    "Try HanFlix Premium",
+    "试用 HanFlix Premium"
+  ],
+  "Đã bắt đầu dùng thử Premium": [
+    "Your Premium trial has started",
+    "Premium 试用已开始"
+  ],
+  "Lượt dùng thử đã được ghi nhận": [
+    "Your trial has already been recorded",
+    "您的试用已记录"
+  ],
+  "Dùng thử đến:": [
+    "Trial ends:",
+    "试用截止："
+  ],
+  "Bạn đang dùng thử. Nếu mua gói ngay, thời hạn trả phí sẽ được nối tiếp sau ngày hết dùng thử.": [
+    "Your trial is active. If you buy now, the paid period starts after your trial ends.",
+    "您正在试用。现在购买，付费期限将从试用结束后开始。"
+  ],
   "đ": [
     "VND",
     "越南盾"
@@ -3628,8 +3648,8 @@
     "听AI标准发音"
   ],
   "Đang xử lý...": [
-    "Processing…",
-    "正在处理…"
+    "Processing...",
+    "处理中..."
   ],
   "Đã lưu sổ tay": [
     "Saved to notebook",
@@ -6114,5 +6134,661 @@
   "Vui lòng đợi trong giây lát.": [
     "Please wait a moment.",
     "请稍候。"
+  ],
+  "Trial": [
+    "Trial",
+    "试用"
+  ],
+  "Cấp độ HSK hiện tại của bạn": [
+    "Your current HSK level",
+    "您当前的HSK等级"
+  ],
+  "Đặt lại khảo sát để đổi cấp độ HSK": [
+    "Reset survey to change HSK level",
+    "重置问卷以更改HSK等级"
+  ],
+  "Xóa bộ lọc chủ đề/tìm kiếm": [
+    "Clear topic/search filters",
+    "清除主题/搜索筛选"
+  ],
+  "Xóa lọc": [
+    "Clear filter",
+    "清除筛选"
+  ],
+  "Lưu nhanh cấp độ HSK này và áp dụng ngay": [
+    "Quick save this HSK level and apply now",
+    "快速保存此HSK等级并立即应用"
+  ],
+  "Lưu cấp độ này": [
+    "Save this level",
+    "保存此等级"
+  ],
+  "Chi tiết chuyển khoản": [
+    "Transfer details",
+    "转账详情"
+  ],
+  "Chuyển khoản 24/7": [
+    "24/7 Bank transfer",
+    "全天候转账"
+  ],
+  "Ngân hàng:": [
+    "Bank:",
+    "银行："
+  ],
+  "Số tài khoản:": [
+    "Account number:",
+    "账号："
+  ],
+  "Sao chép số tài khoản": [
+    "Copy account number",
+    "复制账号"
+  ],
+  "Chủ tài khoản:": [
+    "Account name:",
+    "账户名："
+  ],
+  "Số tiền:": [
+    "Amount:",
+    "金额："
+  ],
+  "Sao chép số tiền": [
+    "Copy amount",
+    "复制金额"
+  ],
+  "Nội dung CK:": [
+    "Transfer note:",
+    "转账备注："
+  ],
+  "Sao chép nội dung": [
+    "Copy note",
+    "复制备注"
+  ],
+  "Vui lòng nhập chính xác nội dung chuyển khoản để đơn hàng được kích hoạt tự động tức thì.": [
+    "Please enter the exact transfer note for instant automatic order activation.",
+    "请输入准确的转账备注，以便订单即时自动激活。"
+  ],
+  "Bảo mật qua payOS": [
+    "Secured by payOS",
+    "通过 payOS 安全保障"
+  ],
+  "Quét mã VietQR": [
+    "Scan VietQR code",
+    "扫描 VietQR 二维码"
+  ],
+  "Mở app Ngân hàng hoặc Ví để quét mã": [
+    "Open banking app or wallet to scan",
+    "打开银行或电子钱包扫码"
+  ],
+  "Đã nhận 1 phần tiền...": [
+    "Partial payment received...",
+    "已收到部分款项..."
+  ],
+  "Chờ chuyển khoản...": [
+    "Waiting for transfer...",
+    "等待转账..."
+  ],
+  "Mở cổng payOS tab mới": [
+    "Open payOS in new tab",
+    "在新标签页中打开 payOS"
+  ],
+  "Thời gian dùng thử Premium đã kết thúc.": [
+    "Your Premium trial has ended.",
+    "Premium 试用期已结束。"
+  ],
+  "Bạn vẫn có thể tiếp tục sử dụng HanFlix Free. Nâng cấp Premium để tiếp tục sử dụng toàn bộ tính năng.": [
+    "You can continue using HanFlix Free. Upgrade to Premium to keep using all features.",
+    "您仍可以继续使用 HanFlix Free。升级至 Premium 以继续使用全部功能。"
+  ],
+  "Thanh toán PayOS an toàn": [
+    "Secure payOS payment",
+    "payOS 安全支付"
+  ],
+  "Chuyển khoản 1 lần": [
+    "One-time transfer",
+    "一次性转账"
+  ],
+  "Không tự động trừ tiền": [
+    "No auto-debit",
+    "不自动扣款"
+  ],
+  "Đang dùng thử": [
+    "Trial Active",
+    "试用中"
+  ],
+  "Đang trong thời gian dùng thử": [
+    "Currently in trial period",
+    "目前处于试用期"
+  ],
+  "Toàn bộ quyền lợi đang mở khóa": [
+    "All benefits unlocked",
+    "所有特权已解锁"
+  ],
+  "Đang kích hoạt...": [
+    "Activating...",
+    "正在激活..."
+  ],
+  "Bạn sẽ không bị tính phí trong thời gian dùng thử.": [
+    "You will not be charged during the trial period.",
+    "试用期内不会向您收费。"
+  ],
+  "Không cần thẻ. Không tự động gia hạn.": [
+    "No card required. No automatic renewal.",
+    "无需绑定银行卡。不自动续订。"
+  ],
+  "Thanh toán để tiếp tục": [
+    "Pay to continue",
+    "支付以继续"
+  ],
+  "Chuyển khoản 1 lần qua payOS": [
+    "One-time transfer via payOS",
+    "通过 payOS 一次性转账"
+  ],
+  "Không tự động gia hạn": [
+    "No auto-renewal.",
+    "不会自动续费。"
+  ],
+  "Cộng dồn vào thời hạn hiện tại": [
+    "Adds to your current period",
+    "叠加至当前有效期"
+  ],
+  "Tiết kiệm nhất": [
+    "Best value",
+    "最划算"
+  ],
+  "Linh hoạt trải nghiệm & dùng thử": [
+    "Flexible trial & experience",
+    "灵活试用与体验"
+  ],
+  "Thời gian vàng hoàn thành 1 cấp HSK": [
+    "Golden time to complete 1 HSK level",
+    "完成 1 个 HSK 等级的黄金时间"
+  ],
+  "Bứt phá dài hạn với chi phí tối ưu nhất": [
+    "Long-term breakthrough with optimal cost",
+    "以最优成本实现长期突破"
+  ],
+  "AI Bảo Bảo sửa phát âm 24/7": [
+    "AI Bao Bao fixes pronunciation 24/7",
+    "AI 保保 24/7 纠正发音"
+  ],
+  "Chi phí mỗi ngày chỉ ~1.900 đ": [
+    "Daily cost only ~1,900 VND",
+    "每日费用仅约 1,900 越南盾"
+  ],
+  "Thông tin dùng thử HanFlix Premium": [
+    "HanFlix Premium trial details",
+    "HanFlix Premium 试用信息"
+  ],
+  "PREMIUM TRIAL": [
+    "PREMIUM TRIAL",
+    "PREMIUM 试用"
+  ],
+  "Dùng thử": [
+    "Trial",
+    "试用"
+  ],
+  "Sắp hết thời gian dùng thử": [
+    "Trial expiring soon",
+    "试用期即将结束"
+  ],
+  "Bạn đang dùng thử HanFlix Premium": [
+    "You are trying HanFlix Premium",
+    "您正在试用 HanFlix Premium"
+  ],
+  "Gói đã chọn:": [
+    "Selected plan:",
+    "已选套餐："
+  ],
+  "Kết thúc:": [
+    "Ends on:",
+    "截止日期："
+  ],
+  "Bắt đầu học": [
+    "Start learning",
+    "开始学习"
+  ],
+  "Kích hoạt dùng thử thành công": [
+    "Trial activated successfully",
+    "试用激活成功"
+  ],
+  "Kích hoạt thành công": [
+    "Activated successfully",
+    "激活成功"
+  ],
+  "Premium Trial đã được kích hoạt": [
+    "Premium Trial has been activated",
+    "Premium 试用已激活"
+  ],
+  "Không cần thẻ ngân hàng. Không tự động gia hạn.": [
+    "No bank card required. No automatic renewal.",
+    "无需银行卡。不自动续订。"
+  ],
+  "Hết hạn dùng thử Premium": [
+    "Premium trial expired",
+    "Premium 试用已到期"
+  ],
+  "Thời gian dùng thử Premium đã kết thúc": [
+    "Premium trial period has ended",
+    "Premium 试用期已结束"
+  ],
+  "Xem các gói Premium": [
+    "View Premium plans",
+    "查看 Premium 套餐"
+  ],
+  "Gói dùng thử hiện tại": [
+    "Current trial plan",
+    "当前试用套餐"
+  ],
+  "Gia hạn trước": [
+    "Renew early",
+    "提前续订"
+  ],
+  "Bảo lưu trọn vẹn ngày dùng thử": [
+    "Preserve all your trial days",
+    "保留全部试用天数"
+  ],
+  "Thời hạn gói sẽ được cộng dồn tiếp sau khi hết dùng thử": [
+    "New period will be added after trial ends",
+    "新套餐时长将在试用期结束后叠加"
+  ],
+  "Chưa thể kết nối đến máy chủ. Vui lòng bấm thử lại.": [
+    "Could not connect to server. Please try again.",
+    "无法连接到服务器，请重试。"
+  ],
+  "Đặc quyền HanFlix Premium": [
+    "HanFlix Premium Privileges",
+    "HanFlix Premium 尊享特权"
+  ],
+  "Hết hạn dùng thử": [
+    "Trial Expired",
+    "试用已到期"
+  ],
+  "Bứt phá tiếng Trung qua video & phim ảnh thực tế": [
+    "Master Chinese through real-world videos & cinema",
+    "通过影视与真实视频突破中文"
+  ],
+  "Khám phá phương pháp học ngôn ngữ tự nhiên và hiệu quả nhất. Không học vẹt, nhớ từ vựng sâu qua ngữ cảnh phim sinh động.": [
+    "Discover the most natural and effective language learning method. No rote memorization, remember vocabulary deeply through vivid movie contexts.",
+    "探索最自然有效的语言学习方法。拒绝死记硬背，在生动的影视语境中深度记忆词汇。"
+  ],
+  "Hệ thống ôn tập từ vựng SRS thông minh": [
+    "Smart SRS vocabulary review system",
+    "智能 SRS 词汇复习系统"
+  ],
+  "Kích hoạt ngay lập tức": [
+    "Instant activation",
+    "即刻开通"
+  ],
+  "Hủy bất cứ lúc nào": [
+    "Cancel anytime",
+    "随时取消"
+  ],
+  "Video học thử miễn phí": [
+    "Free trial sample lessons",
+    "免费试学视频"
+  ],
+  "Trải nghiệm phương pháp học qua video có phụ đề tương tác và tra từ trực tiếp.": [
+    "Experience learning through videos with interactive subtitles and direct lookup.",
+    "体验通过互动字幕与直接查词的视频学习方法。"
+  ],
+  "Xem tất cả": [
+    "View all",
+    "查看全部"
+  ],
+  "Danh sách video mẫu đang được cập nhật": [
+    "Sample video list is being updated",
+    "示范视频列表正在更新中"
+  ],
+  "Bạn có thể khám phá danh mục bài học đầy đủ của HanFlix ngay bây giờ.": [
+    "You can explore HanFlix full lesson catalog right now.",
+    "您可以立即浏览 HanFlix 的完整课程目录。"
+  ],
+  "Xem danh mục bài học": [
+    "Explore lesson catalog",
+    "浏览课程目录"
+  ],
+  "Vì sao nên học cùng HanFlix?": [
+    "Why learn with HanFlix?",
+    "为什么选择 HanFlix？"
+  ],
+  "Công nghệ học ngoại ngữ hiện đại được thiết kế riêng cho người Việt học tiếng Trung.": [
+    "Modern language learning technology tailored for learning Chinese.",
+    "专为学习中文打造的现代语言学习技术。"
+  ],
+  "Tương tác tức thì": [
+    "Instant interaction",
+    "即时互动"
+  ],
+  "Phụ đề 3 dòng thông minh": [
+    "Smart 3-line subtitles",
+    "智能三行字幕"
+  ],
+  "Chạm vào bất kỳ chữ Hán nào trong phim để tra pinyin, âm Hán Việt, giải nghĩa và ngữ pháp mà không làm gián đoạn trải nghiệm xem.": [
+    "Tap any Chinese character in the video to view pinyin, Sino-Vietnamese reading, definition, and grammar without pausing your flow.",
+    "点击影视中的任意汉字即可查看拼音、释义与语法，完全不打断观看体验。"
+  ],
+  "Gia sư ảo AI 24/7": [
+    "24/7 Virtual AI Tutor",
+    "24/7 虚拟 AI 导师"
+  ],
+  "Học 1-1 cùng AI Bảo Bảo": [
+    "1-on-1 learning with AI Bao Bao",
+    "与 AI 宝宝进行 1 对 1 学习"
+  ],
+  "Luyện nói và nhận phản hồi phát âm thanh điệu tức thì. Đặt câu hỏi thắc mắc về phân cảnh phim bất cứ lúc nào.": [
+    "Practice speaking and get immediate feedback on tones. Ask questions about movie scenes at any time.",
+    "练习口语并获取实时声调发音反馈。随时提问关于影视片段的疑问。"
+  ],
+  "Khoa học não bộ": [
+    "Brain science",
+    "脑科学记忆"
+  ],
+  "Ghi nhớ từ vựng vĩnh viễn": [
+    "Remember vocabulary permanently",
+    "永久记住词汇"
+  ],
+  "Hệ thống SRS tự động lên lịch nhắc bạn ôn tập những từ vựng đã lưu vào đúng thời điểm não bộ chuẩn bị quên.": [
+    "The SRS system automatically schedules reminders to review saved vocabulary right before memory fades.",
+    "SRS 间隔重复系统会在记忆即将遗忘的临界点自动提醒您复习已保存词汇。"
+  ],
+  "So sánh quyền lợi": [
+    "Plan comparison",
+    "权益对比"
+  ],
+  "Lựa chọn gói học phù hợp với mục tiêu của bạn": [
+    "Choose the right plan for your learning goals",
+    "选择适合您学习目标的套餐"
+  ],
+  "Xem chi tiết các gói": [
+    "View all plans in detail",
+    "查看套餐详情"
+  ],
+  "Tính năng": [
+    "Feature",
+    "功能特性"
+  ],
+  "Tài khoản Free": [
+    "Free account",
+    "免费账户"
+  ],
+  "Kho video bài học": [
+    "Lesson video library",
+    "课程视频库"
+  ],
+  "Không giới hạn": [
+    "Unlimited",
+    "无限畅学"
+  ],
+  "Phụ đề & Tra từ": [
+    "Subtitles & Dictionary",
+    "字幕与查词"
+  ],
+  "Tra từ cơ bản": [
+    "Basic dictionary lookup",
+    "基础查词"
+  ],
+  "3 dòng Pinyin, dịch nghĩa, lưu từ": [
+    "3-line Pinyin, translations, word saving",
+    "三行拼音、释义及生词保存"
+  ],
+  "AI Bảo Bảo sửa phát âm": [
+    "AI Bao Bao pronunciation coach",
+    "AI 宝宝发音纠正"
+  ],
+  "Hỗ trợ 24/7": [
+    "24/7 Support",
+    "24/7 全天候支持"
+  ],
+  "Ôn tập SRS thông minh": [
+    "Smart SRS review",
+    "智能 SRS 间隔复习"
+  ],
+  "Thuật toán ngắt quãng": [
+    "Spaced repetition algorithm",
+    "科学间隔重复算法"
+  ],
+  "Đề thi thử HSK": [
+    "HSK mock exams",
+    "HSK 模拟考题"
+  ],
+  "Đầy đủ đề & chấm điểm": [
+    "Full tests & instant scoring",
+    "完整试卷与即时评分"
+  ],
+  "Sẵn sàng bứt phá tiếng Trung của bạn?": [
+    "Ready to master your Chinese?",
+    "准备好突破您的中文水平了吗？"
+  ],
+  "Nâng cấp ngay để mở khóa toàn bộ kho bài học và trợ lý AI Bảo Bảo.": [
+    "Upgrade now to unlock the complete video library and AI assistant.",
+    "立即升级解锁全部课程库与 AI 助手。"
+  ],
+  "Hệ thống ghi nhớ từ vựng SRS thông minh": [
+    "Intelligent SRS vocabulary retention system",
+    "智能 SRS 词汇记忆系统"
+  ],
+  "Lưu từ trực tiếp từ video, tự động lên lịch nhắc ôn ngắt quãng và luyện flashcard phát âm chuẩn bản xứ.": [
+    "Save words directly from videos, automatically schedule spaced reviews, and practice flashcards with native pronunciation.",
+    "直接从视频中收藏生词，自动安排间隔复习，练习原汁原味的母语发音闪卡。"
+  ],
+  "Lưu từ vựng không giới hạn từ mọi video": [
+    "Unlimited vocabulary saving from any video",
+    "不限次数从所有视频中收藏生词"
+  ],
+  "Thuật toán ngắt quãng Spaced Repetition (SRS)": [
+    "Spaced Repetition Algorithm (SRS)",
+    "间隔重复记忆算法（SRS）"
+  ],
+  "Flashcard phát âm chuẩn & ví dụ song ngữ": [
+    "Native pronunciation flashcards & bilingual examples",
+    "标准母语发音闪卡与双语例句"
+  ],
+  "Kho ngữ pháp thực chiến qua phim": [
+    "Practical grammar mastery through movies",
+    "影视实战语法库"
+  ],
+  "Làm chủ toàn bộ ngữ pháp HSK qua các đoạn hội thoại thực tế trong phim ảnh, có phân tích ngữ cảnh và ví dụ sinh động.": [
+    "Master all HSK grammar points through authentic dialogues in movies, featuring context analysis and vivid examples.",
+    "通过电影中的真实对话掌握所有 HSK 语法，提供语境剖析与生动例句。"
+  ],
+  "Đầy đủ điểm ngữ pháp HSK 1 đến HSK 6": [
+    "Comprehensive grammar points from HSK 1 to HSK 6",
+    "涵盖 HSK 1 至 HSK 6 完整语法点"
+  ],
+  "Ví dụ trích đoạn trực tiếp từ phim ảnh": [
+    "Examples excerpted directly from movies",
+    "例句直接选自影视原片"
+  ],
+  "Bài tập phân tích cấu trúc câu tương tác": [
+    "Interactive sentence structure analysis exercises",
+    "互动式句子结构分析练习"
+  ],
+  "Lộ trình học tập cá nhân hóa": [
+    "Personalized learning roadmap",
+    "个性化学习路线图"
+  ],
+  "Định hướng mục tiêu theo trình độ, đề xuất bài học tối ưu theo sở thích và theo dõi sát sao tiến độ mỗi ngày.": [
+    "Target goals aligned with your level, tailored lesson recommendations based on interests, and close daily progress tracking.",
+    "根据水平明确目标，按兴趣推荐最优课程，每日紧密跟踪学习进度。"
+  ],
+  "Lộ trình thiết kế riêng theo cấp độ HSK": [
+    "Custom roadmap designed for each HSK level",
+    "专为各 HSK 级别量身定制的路线图"
+  ],
+  "Đề xuất bài học thông minh theo sở thích": [
+    "Smart lesson recommendations based on interests",
+    "基于兴趣的智能课程推荐"
+  ],
+  "Theo dõi trực quan tiến độ chinh phục mục tiêu": [
+    "Visual tracking for target milestone completion",
+    "直观跟踪目标达成进度"
+  ],
+  "Báo cáo & Thống kê học tập chi tiết": [
+    "Detailed study reports & analytics",
+    "详细学习报告与统计"
+  ],
+  "Ghi nhận từng phút xem phim, số từ vựng tích lũy và hiệu quả ghi nhớ để duy trì động lực học bền bỉ.": [
+    "Track every minute watched, accumulated vocabulary, and memory retention to maintain strong study momentum.",
+    "记录观看的每一分钟、积累的词汇量和记忆效果，保持持久的学习动力。"
+  ],
+  "Thống kê chi tiết giờ học & từ vựng tích lũy": [
+    "Detailed study hours & accumulated vocabulary stats",
+    "学习时长与积累词汇详细统计"
+  ],
+  "Biểu đồ chuỗi ngày học liên tục (Streak)": [
+    "Daily study streak chart",
+    "每日连续学习图表（Streak）"
+  ],
+  "Phân tích điểm mạnh và kỹ năng cần cải thiện": [
+    "Analysis of strengths and areas for improvement",
+    "强项分析与待提升技能"
+  ],
+  "Trọn bộ đề thi thử HSK có chấm điểm": [
+    "Complete HSK mock exams with automated scoring",
+    "含自动评分的全套 HSK 模拟试卷"
+  ],
+  "Luyện thi với ngân hàng đề thi chuẩn cấu trúc HSK mới nhất, có đồng hồ bấm giờ và giải thích đáp án chi tiết.": [
+    "Practice with mock exams matching the latest HSK format, complete with timers and in-depth explanations.",
+    "使用符合最新 HSK 结构的题库进行模考，配有计时器和详细答案解析。"
+  ],
+  "Đề thi thử chuẩn cấu trúc HSK mới nhất": [
+    "Mock exams matching the latest HSK structure",
+    "符合最新 HSK 结构的模拟试题"
+  ],
+  "Chấm điểm tự động và xếp loại ngay lập tức": [
+    "Automated scoring and instant grade evaluation",
+    "自动评分与即时等级判定"
+  ],
+  "Giải thích chi tiết từng câu hỏi & ngữ pháp": [
+    "Detailed explanations for every question & grammar point",
+    "每道试题与语法点的详细解析"
+  ],
+  "Cần nâng cấp tài khoản để sử dụng tính năng này": [
+    "Please upgrade your account to use this feature",
+    "请升级您的账户以使用此功能"
+  ],
+  "Nâng cấp HanFlix Premium để lưu từ vựng không giới hạn, kích hoạt thuật toán ôn tập SRS ngắt quãng và luyện flashcard phát âm chuẩn bản xứ.": [
+    "Upgrade to HanFlix Premium to save unlimited vocabulary, activate spaced repetition (SRS), and practice flashcards with native pronunciation.",
+    "升级 HanFlix Premium 以无限收藏生词，启用间隔重复记忆算法（SRS），并练习纯正母语发音闪卡。"
+  ],
+  "Nâng cấp HanFlix Premium để làm chủ toàn bộ ngữ pháp HSK qua các đoạn hội thoại thực tế trong phim ảnh có phân tích ngữ cảnh chi tiết.": [
+    "Upgrade to HanFlix Premium to master all HSK grammar through authentic movie dialogues with detailed context analysis.",
+    "升级 HanFlix Premium 以通过电影真实对话掌握全部 HSK 语法，配有详细语境剖析。"
+  ],
+  "Nâng cấp HanFlix Premium để định hướng lộ trình học tập cá nhân hóa theo cấp độ HSK và theo dõi sát sao tiến độ mỗi ngày.": [
+    "Upgrade to HanFlix Premium to get a personalized learning roadmap for your HSK level and track daily progress closely.",
+    "升级 HanFlix Premium 以获取专属于您 HSK 级别的个性化学习路线图，紧密跟踪每日进度。"
+  ],
+  "Nâng cấp HanFlix Premium để theo dõi chi tiết báo cáo giờ học, biểu đồ chuỗi streak và mức độ nắm vững từ vựng.": [
+    "Upgrade to HanFlix Premium to track detailed study hours, streak charts, and vocabulary mastery levels.",
+    "升级 HanFlix Premium 以查看详细学习时长报告、连续打卡图表与词汇掌握度。"
+  ],
+  "Nâng cấp HanFlix Premium để mở khóa trọn bộ ngân hàng đề thi thử HSK chuẩn cấu trúc mới, có bấm giờ và chấm điểm tự động.": [
+    "Upgrade to HanFlix Premium to unlock full mock HSK exam bank with timers and automated grading.",
+    "升级 HanFlix Premium 以解锁符合最新结构的完整 HSK 模考题库，配有计时器和自动评分。"
+  ],
+  "Nâng cấp HanFlix Premium để mở khóa nội dung này, học qua video không giới hạn và nhận trợ giúp từ AI Bảo Bảo.": [
+    "Upgrade to HanFlix Premium to unlock this content, enjoy unlimited video learning, and get help from AI Bao Bao.",
+    "升级 HanFlix Premium 以解锁此内容，畅享无限视频学习，并获得 AI 宝助手的指导。"
+  ],
+  "Chọn bất kỳ gói Premium nào để bắt đầu trải nghiệm.": [
+    "Choose any Premium plan to start experiencing.",
+    "选择任意 Premium 套餐开启体验。"
+  ],
+  "Không tự động gia hạn.": [
+    "No auto-renewal.",
+    "不会自动续费。"
+  ],
+  "Trải nghiệm linh hoạt trọn vẹn": [
+    "Complete and flexible experience",
+    "灵活且完整的体验"
+  ],
+  "Premium đã được đăng ký": [
+    "Premium has been purchased",
+    "已购买 Premium"
+  ],
+  "Gói {0} sẽ bắt đầu từ {1}": [
+    "Your {0} plan starts on {1}",
+    "您的 {0} 套餐将于 {1} 开始"
+  ],
+  "Chưa thể lưu thay đổi. Vui lòng thử lại.": [
+    "Could not save changes. Please try again.",
+    "无法保存更改，请重试。"
+  ],
+  "Premium Trial": [
+    "Premium Trial",
+    "Premium 试用"
+  ],
+  "Còn": [
+    "Remaining",
+    "剩余"
+  ],
+  "Premium VIP": [
+    "Premium VIP",
+    "Premium VIP"
+  ],
+  "Dùng thử 15 ngày": [
+    "15-day trial",
+    "15 天试用"
+  ],
+  "Bạn đang trải nghiệm HanFlix Premium miễn phí.": [
+    "You are enjoying HanFlix Premium for free.",
+    "您正在免费体验 HanFlix Premium。"
+  ],
+  "Kết thúc vào": [
+    "Ends on",
+    "结束日期"
+  ],
+  "15 NGÀY PREMIUM MIỄN PHÍ": [
+    "15 DAYS OF FREE PREMIUM",
+    "15 天免费 PREMIUM"
+  ],
+  "Premium Trial của bạn có hiệu lực đến:": [
+    "Your Premium trial is valid until:",
+    "您的 Premium 试用有效期至："
+  ],
+  "Không cần thẻ • Không tự động gia hạn": [
+    "No card required • No automatic renewal",
+    "无需银行卡 • 不会自动续订"
+  ],
+  "Quà tặng thành viên mới": [
+    "New member gift",
+    "新会员礼物"
+  ],
+  "🎁 Chào mừng bạn đến với HanFlix!": [
+    "🎁 Welcome to HanFlix!",
+    "🎁 欢迎来到 HanFlix！"
+  ],
+  "Trải nghiệm toàn bộ tính năng Premium và học tiếng Trung qua phim cùng HanFlix.": [
+    "Enjoy all Premium features and learn Chinese through films with HanFlix.",
+    "体验所有 Premium 功能，与 HanFlix 一起通过电影学习中文。"
+  ],
+  "Toàn bộ tính năng Premium": [
+    "All Premium features",
+    "所有 Premium 功能"
+  ],
+  "Xem phim không giới hạn, song ngữ Pinyin, tra từ thông minh và AI phân tích ngữ pháp": [
+    "Unlimited films, bilingual Pinyin subtitles, smart dictionary and AI grammar analysis",
+    "无限观看电影、双语拼音字幕、智能查词和 AI 语法分析"
+  ],
+  "Trải nghiệm 100% không rủi ro": [
+    "Enjoy a risk-free trial",
+    "安心体验试用"
+  ],
+  "Tự động kết thúc sau 15 ngày • Không phát sinh phí": [
+    "Ends automatically after 15 days • No charges",
+    "15 天后自动结束 • 不产生费用"
+  ],
+  "Bắt đầu khám phá Premium": [
+    "Explore Premium",
+    "开始探索 Premium"
+  ],
+  "Để sau": [
+    "Maybe later",
+    "稍后再说"
+  ],
+  "Đã kích hoạt": [
+    "Activated",
+    "已激活"
   ]
 }

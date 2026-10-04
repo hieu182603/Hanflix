@@ -127,6 +127,7 @@ app.get(env.API_PREFIX, (_req, res) => {
 });
 
 app.use(`${env.API_PREFIX}/auth`, authRoutes);
+app.use(`${env.API_PREFIX}/user`, authRoutes);
 app.use(`${env.API_PREFIX}/billing`, billingRoutes);
 app.use(`${env.API_PREFIX}/admin/billing`, adminBillingRoutes);
 app.use(`${env.API_PREFIX}/practice`, practiceRoutes);

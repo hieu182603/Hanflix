@@ -49,7 +49,8 @@ describe('Premium entitlement', () => {
     const expiry = await grantPremium(userId, 123, 3, new Date('2026-01-01'));
     expect(expiry.toISOString()).toBe('2026-04-30T10:15:00.000Z');
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ premiumExpiresAt: now, 'premiumReceipts.orderCode': { $ne: 123 } }), {
-      $set: { premiumExpiresAt: expiry }, $push: { premiumReceipts: { orderCode: 123, expiresAt: expiry } },
+      $set: { premiumExpiresAt: expiry, premiumStartedAt: new Date('2026-01-01'), hasEverPurchasedPremium: true },
+      $push: { premiumReceipts: { orderCode: 123, expiresAt: expiry, durationMonths: 3, grantedAt: new Date('2026-01-01'), planCode: undefined } },
     });
   });
   it('never grants twice after a crash or a repeated notification', async () => {

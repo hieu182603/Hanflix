@@ -1,5 +1,5 @@
-import { useI18n } from '../i18n';
-import React from 'react';
+import { useI18n } from "../i18n"
+import React from "react"
 import {
   Home,
   PlaySquare,
@@ -15,22 +15,22 @@ import {
   Sparkles,
   Shield,
   BookOpenCheck,
-} from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { dashboardQueryKeys } from '../api/queryKeys';
-import { getLearnerDashboard } from '../api/learning';
-import { UserProfile } from '../data/hanflixData';
-import { useLanguage } from '../i18n';
-import UserAvatar from './common/UserAvatar';
+} from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { dashboardQueryKeys } from "../api/queryKeys"
+import { getLearnerDashboard } from "../api/learning"
+import { UserProfile } from "../data/hanflixData"
+import { useLanguage } from "../i18n"
+import UserAvatar from "./common/UserAvatar"
 
 interface SidebarProps {
-  activeNav: string;
-  onNavChange: (navId: string) => void;
-  userProfile: UserProfile;
-  onStartPractice?: () => void;
-  isDrawerOpen?: boolean;
-  onCloseDrawer?: () => void;
-  isCollapsed?: boolean;
+  activeNav: string
+  onNavChange: (navId: string) => void
+  userProfile: UserProfile
+  onStartPractice?: () => void
+  isDrawerOpen?: boolean
+  onCloseDrawer?: () => void
+  isCollapsed?: boolean
 }
 
 function NavButton({
@@ -39,28 +39,34 @@ function NavButton({
   onNavChange,
   isCollapsed,
 }: {
-  item: { id: string; label: string; icon: React.ElementType };
-  isActive: boolean;
-  onNavChange: (id: string) => void;
-  isCollapsed: boolean;
+  item: { id: string; label: string; icon: React.ElementType }
+  isActive: boolean
+  onNavChange: (id: string) => void
+  isCollapsed: boolean
 }) {
-  const { ui } = useI18n();
-  const Icon = item.icon;
+  const { ui } = useI18n()
+  const Icon = item.icon
   return (
     <div className="relative group">
       <button
         onClick={() => onNavChange(item.id)}
         aria-label={ui(item.label)}
-        aria-current={isActive ? 'page' : undefined}
+        aria-current={isActive ? "page" : undefined}
         className={`w-full h-[46px] rounded-xl flex items-center gap-3 text-sm font-semibold transition-all duration-150 cursor-pointer ${
-          isCollapsed ? 'justify-center px-2' : 'px-4'
+          isCollapsed ? "justify-center px-2" : "px-4"
         } ${
           isActive
-            ? 'bg-[#B91B1C] text-white shadow-sm'
-            : 'text-[#5F6368] hover:text-[#18181B] hover:bg-[#FDF1F1]'
+            ? "bg-[#B91B1C] text-white shadow-sm"
+            : "text-[#5F6368] hover:text-[#18181B] hover:bg-[#FDF1F1]"
         }`}
       >
-        <Icon className={`shrink-0 w-5 h-5 ${isActive ? 'text-white' : 'text-[#5F6368] group-hover:text-[#B91B1C]'}`} />
+        <Icon
+          className={`shrink-0 w-5 h-5 ${
+            isActive
+              ? "text-white"
+              : "text-[#5F6368] group-hover:text-[#B91B1C]"
+          }`}
+        />
         {!isCollapsed && <span className="truncate">{ui(item.label)}</span>}
       </button>
 
@@ -72,7 +78,7 @@ function NavButton({
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export default function Sidebar({
@@ -84,39 +90,44 @@ export default function Sidebar({
   onCloseDrawer,
   isCollapsed = false,
 }: SidebarProps) {
-  const { tr, locale } = useI18n();
-  const { t } = useLanguage();
+  const { tr, locale } = useI18n()
+  const { t } = useLanguage()
 
   // Lock background scroll when mobile drawer is active
   React.useEffect(() => {
     if (isDrawerOpen) {
-      const originalStyle = window.getComputedStyle(document.body).overflow;
-      document.body.style.overflow = 'hidden';
+      const originalStyle = window.getComputedStyle(document.body).overflow
+      document.body.style.overflow = "hidden"
       return () => {
-        document.body.style.overflow = originalStyle;
-      };
+        document.body.style.overflow = originalStyle
+      }
     }
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen])
 
+  const isPremium = Boolean(
+    userProfile?.role === "admin" || userProfile?.hasPremiumAccess,
+  )
   const dashboardQuery = useQuery({
     queryKey: dashboardQueryKeys.detail(),
     queryFn: ({ signal }) => getLearnerDashboard({ signal } as never),
-    enabled: Boolean(userProfile?.id),
+    enabled: Boolean(userProfile?.id && isPremium),
     staleTime: 30000,
-  });
-  const liveXP = dashboardQuery.data?.metrics?.totalXP ?? userProfile?.totalXP ?? 0;
+    retry: false,
+  })
+  const liveXP =
+    dashboardQuery.data?.metrics?.totalXP ?? userProfile?.totalXP ?? 0
 
   const navItems = [
-    { id: 'feed', label: t.nav.feed, icon: Home },
-    { id: 'lessons', label: t.nav.lessons, icon: PlaySquare },
-    { id: 'vocabulary', label: t.nav.vocabulary, icon: BookMarked },
-    { id: 'grammar', label: t.nav.grammar, icon: BookOpenCheck },
-    { id: 'roadmap', label: t.nav.roadmap, icon: Map },
-    { id: 'history', label: t.nav.history, icon: History },
-    { id: 'exam', label: t.nav.exam, icon: GraduationCap },
-    { id: 'leaderboard', label: t.nav.leaderboard, icon: Trophy },
+    { id: "feed", label: t.nav.feed, icon: Home },
+    { id: "lessons", label: t.nav.lessons, icon: PlaySquare },
+    { id: "vocabulary", label: t.nav.vocabulary, icon: BookMarked },
+    { id: "grammar", label: t.nav.grammar, icon: BookOpenCheck },
+    { id: "roadmap", label: t.nav.roadmap, icon: Map },
+    { id: "history", label: t.nav.history, icon: History },
+    { id: "exam", label: t.nav.exam, icon: GraduationCap },
+    { id: "leaderboard", label: t.nav.leaderboard, icon: Trophy },
     // { id: 'community', label: t.nav.community, icon: Users }, // TEMPORARILY HIDDEN
-  ];
+  ]
 
   const renderContent = (collapsed: boolean) => (
     <div className="flex flex-col h-full select-none">
@@ -144,22 +155,29 @@ export default function Sidebar({
         {!collapsed && (
           <div
             onClick={() => {
-              onNavChange('profile');
-              onCloseDrawer?.();
+              onNavChange("profile")
+              onCloseDrawer?.()
             }}
             className="bg-[#F7F7F9] hover:bg-[#F2E4D8]/30 cursor-pointer rounded-2xl p-4 border border-[#E7E7EA] flex flex-col items-center text-center transition-all duration-200 group"
             title={tr("Xem & Chỉnh sửa hồ sơ cá nhân")}
           >
             <div className="relative mb-2.5">
               <UserAvatar
-                user={{ id: userProfile.id, name: userProfile.name, avatarConfig: userProfile.avatarConfig, avatar: userProfile.avatar }}
+                user={{
+                  id: userProfile.id,
+                  name: userProfile.name,
+                  avatarConfig: userProfile.avatarConfig,
+                  avatar: userProfile.avatar,
+                }}
                 size={56}
                 className="border-2 border-white shadow-md group-hover:scale-105 transition-transform"
               />
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#188A5A] rounded-full border-2 border-white" />
             </div>
-            <h3 className="font-bold text-sm text-[#18181B] group-hover:text-[#B91B1C] transition-colors tracking-tight truncate max-w-full">{userProfile.name}</h3>
-            
+            <h3 className="font-bold text-sm text-[#18181B] group-hover:text-[#B91B1C] transition-colors tracking-tight truncate max-w-full">
+              {userProfile.name}
+            </h3>
+
             {/* Badges row: HSK Level + XP points */}
             <div className="mt-1.5 flex items-center justify-center gap-1.5 flex-wrap">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#34363A] text-white text-[11px] font-semibold shadow-2xs">
@@ -168,8 +186,8 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
-                  onNavChange('leaderboard');
-                  onCloseDrawer?.();
+                  onNavChange("leaderboard")
+                  onCloseDrawer?.()
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 hover:border-amber-300 text-amber-900 text-[11px] font-bold shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title={tr("Điểm kinh nghiệm (XP) · Nhấn để xem Bảng xếp hạng")}
@@ -179,18 +197,22 @@ export default function Sidebar({
               </button>
             </div>
 
-            {userProfile.hskProgress > 0 && <div className="w-full mt-3 text-left">
-              <div className="flex justify-between items-center text-[11px] font-semibold mb-1">
-                <span className="text-[#5F6368]">{userProfile.hskLevel}</span>
-                <span className="text-[#B91B1C] font-bold">{userProfile.hskProgress}%</span>
+            {userProfile.hskProgress > 0 && (
+              <div className="w-full mt-3 text-left">
+                <div className="flex justify-between items-center text-[11px] font-semibold mb-1">
+                  <span className="text-[#5F6368]">{userProfile.hskLevel}</span>
+                  <span className="text-[#B91B1C] font-bold">
+                    {userProfile.hskProgress}%
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-[#E7E7EA] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#E7A92F] to-[#B91B1C] rounded-full transition-all duration-500"
+                    style={{ width: `${userProfile.hskProgress}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-1.5 bg-[#E7E7EA] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#E7A92F] to-[#B91B1C] rounded-full transition-all duration-500"
-                  style={{ width: `${userProfile.hskProgress}%` }}
-                />
-              </div>
-            </div>}
+            )}
           </div>
         )}
 
@@ -199,7 +221,12 @@ export default function Sidebar({
           <div className="flex justify-center py-1 group relative">
             <div className="relative cursor-pointer" title={userProfile.name}>
               <UserAvatar
-                user={{ id: userProfile.id, name: userProfile.name, avatarConfig: userProfile.avatarConfig, avatar: userProfile.avatar }}
+                user={{
+                  id: userProfile.id,
+                  name: userProfile.name,
+                  avatarConfig: userProfile.avatarConfig,
+                  avatar: userProfile.avatar,
+                }}
                 size={40}
                 className="border-2 border-white shadow"
               />
@@ -207,7 +234,8 @@ export default function Sidebar({
             </div>
             {/* Tooltip on mini avatar */}
             <div className="hidden lg:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-xl bg-[#18181B] text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50">
-              {userProfile.name} ({userProfile.hskLevel}) · {liveXP.toLocaleString(locale)} XP
+              {userProfile.name} ({userProfile.hskLevel}) ·{" "}
+              {liveXP.toLocaleString(locale)} XP
               <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#18181B]" />
             </div>
           </div>
@@ -219,24 +247,27 @@ export default function Sidebar({
             <NavButton
               key={item.id}
               item={item}
-              isActive={activeNav === item.id || (item.id === 'vocabulary' && activeNav === 'saved')}
+              isActive={
+                activeNav === item.id ||
+                (item.id === "vocabulary" && activeNav === "saved")
+              }
               onNavChange={(id) => {
-                onNavChange(id);
-                onCloseDrawer?.();
+                onNavChange(id)
+                onCloseDrawer?.()
               }}
               isCollapsed={collapsed}
             />
           ))}
 
           {/* Admin Navigation Quick Link */}
-          {userProfile?.role === 'admin' && (
+          {userProfile?.role === "admin" && (
             <div className="pt-2 border-t border-[#E7E7EA]">
               <NavButton
-                item={{ id: 'admin', label: 'Trang Quản Trị', icon: Shield }}
-                isActive={activeNav === 'admin'}
+                item={{ id: "admin", label: "Trang Quản Trị", icon: Shield }}
+                isActive={activeNav === "admin"}
                 onNavChange={(id) => {
-                  onNavChange(id);
-                  onCloseDrawer?.();
+                  onNavChange(id)
+                  onCloseDrawer?.()
                 }}
                 isCollapsed={collapsed}
               />
@@ -244,16 +275,15 @@ export default function Sidebar({
           )}
         </nav>
       </div>
-
     </div>
-  );
+  )
 
   return (
     <>
       {/* Desktop Collapsible Sidebar (≥1024px) */}
       <aside
         className={`hidden lg:flex shrink-0 bg-white border-r border-[#E7E7EA] flex-col h-[calc(100vh-68px)] sticky top-[68px] overflow-hidden transition-[width] duration-300 ease-in-out z-30 ${
-          isCollapsed ? 'w-[72px]' : 'w-[260px]'
+          isCollapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
         {renderContent(isCollapsed)}
@@ -273,5 +303,5 @@ export default function Sidebar({
         </div>
       )}
     </>
-  );
+  )
 }

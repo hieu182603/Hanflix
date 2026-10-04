@@ -44,6 +44,12 @@ const envSchema = z.object({
   PAYOS_RETURN_URL: optionalUrl,
   PAYOS_CANCEL_URL: optionalUrl,
   PAYOS_LINK_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
+  PREMIUM_TRIAL_ENABLED: z.enum(['true', 'false']).default('false').transform(value => value === 'true'),
+  PREMIUM_TRIAL_DAYS: z.coerce.number().pipe(z.literal(15)).default(15),
+  PREMIUM_TRIAL_ROLLOUT_AT: z.preprocess(
+    value => value === '' ? undefined : value,
+    z.iso.datetime({ offset: true }).transform(value => new Date(value)).optional(),
+  ),
   SMTP_HOST: optionalString,
   SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
   SMTP_SECURE: booleanFromString.default(false),
@@ -177,6 +183,9 @@ const envSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().email().default('admin@hanflix.local'),
   SEED_ADMIN_PASSWORD: z.string().min(10).default('ChangeMe123!'),
 }).superRefine((value, context) => {
+  if (value.PREMIUM_TRIAL_ENABLED && !value.PREMIUM_TRIAL_ROLLOUT_AT) {
+    context.addIssue({ code: 'custom', path: ['PREMIUM_TRIAL_ROLLOUT_AT'], message: 'An explicit rollout timestamp is required when Premium Trial is enabled' });
+  }
   if (value.ASR_RETRY_THRESHOLD >= value.ASR_GOOD_THRESHOLD) context.addIssue({ code: 'custom', path: ['ASR_RETRY_THRESHOLD'], message: 'Retry threshold must be lower than good threshold' });
   if (value.VIDEO_HEARTBEAT_INTERVAL_SECONDS * 2 >= value.VIDEO_LEASE_TTL_SECONDS) context.addIssue({ code: 'custom', path: ['VIDEO_HEARTBEAT_INTERVAL_SECONDS'], message: 'Heartbeat interval must be less than half the lease TTL' });
   if (value.VIDEO_PROCESSING_PIPELINE_V2 && value.AZURE_SPEECH_LOCALE !== 'zh-CN') context.addIssue({ code: 'custom', path: ['AZURE_SPEECH_LOCALE'], message: 'Pipeline V2 requires zh-CN' });

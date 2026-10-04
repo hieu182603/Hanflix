@@ -7,6 +7,7 @@
  */
 
 import { hasPremium } from '../services/premium.js';
+import { premiumAccessEndsAt, type PremiumEntitlement } from '../services/premium-access.js';
 
 export interface PublicUserInput {
   _id: unknown;
@@ -24,6 +25,8 @@ export interface PublicUserInput {
   avatarPublicId?: string | null;
   totalXP?: number;
   premiumExpiresAt?: Date | null;
+  premiumStartedAt?: Date | null;
+  premiumTrial?: PremiumEntitlement['premiumTrial'];
 }
 
 export function publicUser(user: PublicUserInput) {
@@ -37,7 +40,7 @@ export function publicUser(user: PublicUserInput) {
     learningProfile: user.learningProfile,
     totalXP: user.totalXP ?? 0,
     tier: hasPremium(user) ? 'premium' : 'free',
-    premiumExpiresAt: user.premiumExpiresAt ?? null,
+    premiumExpiresAt: premiumAccessEndsAt(user),
     avatarType: user.avatarType ?? (user.avatarUrl ? 'custom' : 'generated'),
     avatarUrl: user.avatarUrl ?? user.googleAvatarUrl ?? null,
     googleAvatarUrl: user.googleAvatarUrl ?? null,

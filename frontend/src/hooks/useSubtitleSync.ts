@@ -101,6 +101,7 @@ export function useSubtitleSync<T extends SubtitleCueLike>({
         video.currentTime = clamped / 1000
       }
     },
+
     [videoRef],
   )
 
@@ -122,6 +123,7 @@ export function useSubtitleSync<T extends SubtitleCueLike>({
     (ms: number) => {
       setCurrentTimeMs(ms)
     },
+
     [setCurrentTimeMs],
   )
 

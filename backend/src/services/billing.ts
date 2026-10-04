@@ -7,6 +7,7 @@ import { PaymentOrderModel } from '../models/payment-order.model.js';
 import { PremiumPlanModel } from '../models/premium-plan.model.js';
 import { getPayOS } from './payos.js';
 import { grantPremium } from './premium.js';
+import { logger } from './logger.js';
 
 type Order = NonNullable<Awaited<ReturnType<typeof PaymentOrderModel.findOne>>>;
 
@@ -49,6 +50,7 @@ export async function createCheckout(userId: Types.ObjectId, input: { planCode: 
         durationMonths: plan.durationMonths, amount: plan.price,
         expiresAt: new Date(Date.now() + env.PAYOS_LINK_TTL_MINUTES * 60_000),
       });
+      logger.info({ userId: String(userId), orderCode: order.orderCode }, 'PREMIUM_PAYMENT_CREATED');
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
       order = await PaymentOrderModel.findOne({ userId, idempotencyKey: input.idempotencyKey });
@@ -123,7 +125,7 @@ export async function reconcileOrder(order: Order) {
   if (link.status === 'PAID') {
     if (!Number.isSafeInteger(link.amountPaid) || !Number.isSafeInteger(link.amountRemaining)
       || link.amountPaid < order.amount || link.amountRemaining > 0) throw new AppError(502, 'PAYMENT_MISMATCH', 'Thanh toán chưa đủ số tiền');
-    const premiumExpiresAt = await grantPremium(order.userId, order.orderCode, order.durationMonths);
+    const premiumExpiresAt = await grantPremium(order.userId, order.orderCode, order.durationMonths, new Date(), order.planCode);
     await PaymentOrderModel.updateOne({ _id: order._id, status: { $ne: 'PAID' } }, {
       $set: { status: 'PAID', paidAt: new Date(), premiumExpiresAt, paymentLinkId: link.id },
     });

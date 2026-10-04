@@ -39,6 +39,18 @@ const userSchema = new Schema({
   avatarPublicId: { type: String, trim: true, default: null },
   totalXP: { type: Number, min: 0, default: 0 },
   premiumExpiresAt: { type: Date, default: null },
+  premiumStartedAt: Date,
+  premiumPlanCode: String,
+  hasEverPurchasedPremium: { type: Boolean, default: false },
+  hasUsedTrial: { type: Boolean, default: false },
+  welcomeTrialPopupSeenAt: { type: Date, default: null },
+  // Lifetime record; never removed/reset on expiry, login or plan changes.
+  premiumTrial: { type: new Schema({
+    startedAt: { type: Date, required: true },
+    endsAt: { type: Date, required: true },
+    planCode: { type: String, default: 'trial_15d' },
+    requestKey: { type: String, default: 'first_login' },
+  }, { _id: false }), default: null },
   premiumReceipts: { type: [{
       orderCode: { type: Number },
       grantId: String,

@@ -1,5 +1,5 @@
-import { PremiumNotice, usePremiumAccess } from './premium/PremiumAccess';
-import { useI18n } from '../i18n';
+import { PremiumNotice, usePremiumAccess } from "./premium/PremiumAccess"
+import { useI18n } from "../i18n"
 import { useEffect, useRef, useState } from "react"
 import {
   BookOpen,
@@ -13,9 +13,20 @@ import {
   Send,
   X,
 } from "lucide-react"
-import { askPanda, getPandaHistory, clearPandaHistory, type LessonAiContext, type PandaReply, type AiCitation } from "../api/learning"
+import {
+  askPanda,
+  getPandaHistory,
+  clearPandaHistory,
+  type LessonAiContext,
+  type PandaReply,
+  type AiCitation,
+} from "../api/learning"
 import { ApiRequestError } from "../api/client"
-import { useLearningAI, formatAiTime, type LearningAISource } from "./ai/LearningAIContext"
+import {
+  useLearningAI,
+  formatAiTime,
+  type LearningAISource,
+} from "./ai/LearningAIContext"
 import { usePandaPet } from "./panda-pet"
 
 interface AIAssistantDrawerProps {
@@ -31,7 +42,6 @@ interface AIAssistantDrawerProps {
       topics?: string[]
     } | null
   } | null
-
 }
 
 interface ChatMessage {
@@ -91,9 +101,13 @@ function PandaAvatar({
 }
 
 function TypingIndicator({ label }: { label: string }) {
-  const { ui } = useI18n();
+  const { ui } = useI18n()
   return (
-    <div className="flex items-end gap-2.5" role="status" aria-label={ui(label)}>
+    <div
+      className="flex items-end gap-2.5"
+      role="status"
+      aria-label={ui(label)}
+    >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#F0D4D4] bg-[#FFF7F5]">
         <PandaAvatar size={32} className="h-full w-full object-cover" />
       </div>
@@ -116,40 +130,81 @@ function TypingIndicator({ label }: { label: string }) {
 }
 
 export default function AIAssistantDrawer(props: AIAssistantDrawerProps) {
-  const isPremium = usePremiumAccess();
-  const { tr } = useI18n();
+  const isPremium = usePremiumAccess()
+  const { tr } = useI18n()
   const { source } = useLearningAI()
   const [general, setGeneral] = useState(false)
   const useGeneral = general && !props.initialPrompt
   useEffect(() => {
     if (props.initialPrompt && source) setGeneral(false)
   }, [props.initialPrompt, source?.lessonId])
-  if (!isPremium) return props.isOpen ? <div className="fixed inset-0 z-50 bg-black/40 flex justify-end" role="dialog" aria-modal="true" aria-label="HanFlix Premium">
-    <div className="w-full max-w-md bg-white p-5 space-y-5"><button type="button" onClick={props.onClose} className="p-2 font-bold">{tr('Đóng')}</button><PremiumNotice /></div>
-  </div> : null;
-  return <PandaChat key={useGeneral ? 'general' : `${source?.lessonId ?? 'general'}:${source?.revision ?? 0}`}
-    {...props} source={useGeneral ? null : source} availableSource={source}
-    onToggleGeneral={() => setGeneral(value => !value)} />
+  if (!isPremium)
+    return props.isOpen ? (
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center sm:justify-end p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="HanFlix Premium"
+        onClick={props.onClose}
+      >
+        <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <PremiumNotice onClose={props.onClose} />
+        </div>
+      </div>
+    ) : null
+  return (
+    <PandaChat
+      key={
+        useGeneral
+          ? "general"
+          : `${source?.lessonId ?? "general"}:${source?.revision ?? 0}`
+      }
+      {...props}
+      source={useGeneral ? null : source}
+      availableSource={source}
+      onToggleGeneral={() => setGeneral((value) => !value)}
+    />
+  )
 }
 
 function PandaChat({
-  isOpen, onClose, initialPrompt, onPromptConsumed, currentUser, source, availableSource, onToggleGeneral,
+  isOpen,
+  onClose,
+  initialPrompt,
+  onPromptConsumed,
+  currentUser,
+  source,
+  availableSource,
+  onToggleGeneral,
 }: AIAssistantDrawerProps & {
-  source: LearningAISource | null; availableSource: LearningAISource | null; onToggleGeneral: () => void;
+  source: LearningAISource | null
+  availableSource: LearningAISource | null
+  onToggleGeneral: () => void
 }) {
-  const { tr, ui, locale } = useI18n();
+  const { tr, ui, locale } = useI18n()
   const panda = usePandaPet()
   const { selected } = useLearningAI()
   const sourceRef = useRef(source)
   sourceRef.current = source
   const learnerName = currentUser?.name?.split(" ").pop() || tr("bạn")
-  const greeting = tr('Chào {0}! Mình là Panda AI. {1}', { 0: learnerName, 1: tr(source ? 'Mình sẽ dựa trên phụ đề của bài này để giải thích.' : 'Hỏi mình về từ vựng, ngữ pháp hoặc cách dùng tiếng Trung nhé.') })
+  const greeting = tr("Chào {0}! Mình là Panda AI. {1}", {
+    0: learnerName,
+    1: tr(
+      source
+        ? "Mình sẽ dựa trên phụ đề của bài này để giải thích."
+        : "Hỏi mình về từ vựng, ngữ pháp hoặc cách dùng tiếng Trung nhé.",
+    ),
+  })
   const contextTitle = source?.title || "Hỏi tiếng Trung chung"
   const hskLevel = source?.hskLevel ?? currentUser?.learningProfile?.hskLevel
-  const [scope, setScope] = useState<LessonAiContext['scope']>('current_segment')
-  const [pinned, setPinned] = useState<{ context: LessonAiContext; cue?: AiCitation } | null>(null)
+  const [scope, setScope] =
+    useState<LessonAiContext["scope"]>("current_segment")
+  const [pinned, setPinned] = useState<{
+    context: LessonAiContext
+    cue?: AiCitation
+  } | null>(null)
   const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyError, setHistoryError] = useState('')
+  const [historyError, setHistoryError] = useState("")
   const [historyVersion, setHistoryVersion] = useState(0)
   const requestRef = useRef<AbortController | null>(null)
   const clearRef = useRef<AbortController | null>(null)
@@ -168,7 +223,6 @@ function PandaChat({
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
 
   useEffect(() => {
     if (!isOpen) return
@@ -212,10 +266,21 @@ function PandaChat({
 
   useEffect(() => {
     if (selected && selected.lessonId === source?.lessonId) {
-      if (!selected.cue) { setPinned(null); setScope('current_segment'); return }
-      setPinned({ context: { ...source.snapshot(), playbackMs: selected.cue.startMs,
-        cueId: selected.cue.cueId, scope: 'current_cue' }, cue: selected.cue })
-      setScope('current_cue')
+      if (!selected.cue) {
+        setPinned(null)
+        setScope("current_segment")
+        return
+      }
+      setPinned({
+        context: {
+          ...source.snapshot(),
+          playbackMs: selected.cue.startMs,
+          cueId: selected.cue.cueId,
+          scope: "current_cue",
+        },
+        cue: selected.cue,
+      })
+      setScope("current_cue")
     }
   }, [selected, source?.lessonId])
 
@@ -223,20 +288,47 @@ function PandaChat({
     if (!isOpen) return
     const controller = new AbortController()
     setHistoryLoading(true)
-    setHistoryError('')
-    getPandaHistory(sourceRef.current?.snapshot(), controller.signal).then(data => {
-      if (controller.signal.aborted) return
-      setMessages([{ id: 'welcome', sender: 'ai', text: greeting, time: 'Vừa xong' },
-        ...(data.messages ?? []).flatMap(turn => {
-          const time = new Date(turn.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-          return [
-            { id: `${turn.id}-user`, sender: 'user' as const, text: turn.question, time, snapshot: turn.response.context },
-            { id: `${turn.id}-ai`, sender: 'ai' as const, text: turn.response.answerVi, time, reply: turn.response },
-          ]
-        })])
-    }).catch(error => {
-      if (!controller.signal.aborted) setHistoryError(error instanceof ApiRequestError ? error.message : 'Chưa tải được lịch sử hội thoại.')
-    }).finally(() => { if (!controller.signal.aborted) setHistoryLoading(false) })
+    setHistoryError("")
+    getPandaHistory(sourceRef.current?.snapshot(), controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setMessages([
+          { id: "welcome", sender: "ai", text: greeting, time: "Vừa xong" },
+          ...(data.messages ?? []).flatMap((turn) => {
+            const time = new Date(turn.createdAt).toLocaleTimeString(locale, {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+            return [
+              {
+                id: `${turn.id}-user`,
+                sender: "user" as const,
+                text: turn.question,
+                time,
+                snapshot: turn.response.context,
+              },
+              {
+                id: `${turn.id}-ai`,
+                sender: "ai" as const,
+                text: turn.response.answerVi,
+                time,
+                reply: turn.response,
+              },
+            ]
+          }),
+        ])
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setHistoryError(
+            error instanceof ApiRequestError
+              ? error.message
+              : "Chưa tải được lịch sử hội thoại.",
+          )
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setHistoryLoading(false)
+      })
     return () => controller.abort()
   }, [isOpen, historyVersion])
 
@@ -262,40 +354,85 @@ function PandaChat({
     setHistoryLoading(true)
     try {
       await clearPandaHistory(sourceRef.current?.snapshot(), controller.signal)
-      if (!controller.signal.aborted) setHistoryVersion(value => value + 1)
+      if (!controller.signal.aborted) setHistoryVersion((value) => value + 1)
     } catch (error) {
-      if (!controller.signal.aborted) setHistoryError(error instanceof ApiRequestError ? error.message : 'Chưa xóa được hội thoại.')
+      if (!controller.signal.aborted)
+        setHistoryError(
+          error instanceof ApiRequestError
+            ? error.message
+            : "Chưa xóa được hội thoại.",
+        )
     } finally {
       if (!controller.signal.aborted) setHistoryLoading(false)
     }
   }
 
-  const handleSend = async (textToSend?: string, retrySnapshot?: LessonAiContext) => {
+  const handleSend = async (
+    textToSend?: string,
+    retrySnapshot?: LessonAiContext,
+  ) => {
     const query = (textToSend ?? inputText).trim()
-    if (!query || query.length > 500 || requestRef.current || historyLoading) return
+    if (!query || query.length > 500 || requestRef.current || historyLoading)
+      return
     const live = sourceRef.current
-    const snapshot = retrySnapshot ?? (live ? { ...(pinned?.context ?? live.snapshot()), scope } : undefined)
+    const snapshot =
+      retrySnapshot ??
+      (live ? { ...(pinned?.context ?? live.snapshot()), scope } : undefined)
     const id = crypto.randomUUID()
     const controller = new AbortController()
     requestRef.current = controller
-    setMessages(previous => [...previous, { id: `${id}-user`, sender: 'user', text: query,
-      time: 'Vừa xong', snapshot }])
-    setInputText('')
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `${id}-user`,
+        sender: "user",
+        text: query,
+        time: "Vừa xong",
+        snapshot,
+      },
+    ])
+    setInputText("")
     setIsTyping(true)
-    panda.handlePandaAIEvent({ type: 'thinking' })
-    workTimer.current = window.setTimeout(() => panda.setPandaState('working'), 1200)
+    panda.handlePandaAIEvent({ type: "thinking" })
+    workTimer.current = window.setTimeout(
+      () => panda.setPandaState("working"),
+      1200,
+    )
     try {
-      const reply = await askPanda({ question: query, lessonContext: snapshot, clientMessageId: id }, controller.signal)
+      const reply = await askPanda(
+        { question: query, lessonContext: snapshot, clientMessageId: id },
+        controller.signal,
+      )
       if (controller.signal.aborted || requestRef.current !== controller) return
-      setMessages(previous => [...previous, { id: `${id}-ai`, sender: 'ai', text: reply.answerVi,
-        time: 'Vừa xong', reply }])
-      panda.handlePandaAIEvent({ type: 'completed' })
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `${id}-ai`,
+          sender: "ai",
+          text: reply.answerVi,
+          time: "Vừa xong",
+          reply,
+        },
+      ])
+      panda.handlePandaAIEvent({ type: "completed" })
     } catch (error) {
       if (controller.signal.aborted || requestRef.current !== controller) return
-      setMessages(previous => [...previous, { id: `${id}-error`, sender: 'ai', isError: true,
-        text: error instanceof ApiRequestError ? error.message : 'Chưa thể kết nối với Panda. Hãy thử lại.',
-        time: 'Vừa xong', retryQuestion: query, snapshot }])
-      panda.handlePandaAIEvent({ type: 'error' })
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `${id}-error`,
+          sender: "ai",
+          isError: true,
+          text:
+            error instanceof ApiRequestError
+              ? error.message
+              : "Chưa thể kết nối với Panda. Hãy thử lại.",
+          time: "Vừa xong",
+          retryQuestion: query,
+          snapshot,
+        },
+      ])
+      panda.handlePandaAIEvent({ type: "error" })
     } finally {
       if (requestRef.current === controller) {
         window.clearTimeout(workTimer.current)
@@ -361,18 +498,29 @@ function PandaChat({
             <PandaAvatar size={48} className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[17px] font-extrabold tracking-[-0.02em] text-[#18181B]">{tr("Trợ lý Panda AI")}</h2>
+            <h2 className="truncate text-[17px] font-extrabold tracking-[-0.02em] text-[#18181B]">
+              {tr("Trợ lý Panda AI")}
+            </h2>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-medium text-[#6F6663]">
               <span>{tr("Trợ giảng tiếng Trung")}</span>
               <span className="flex items-center gap-1.5 text-[#2F6E62]">
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-[#4FA489]"
                   aria-hidden="true"
-                />{tr("Sẵn sàng")}</span>
+                />
+                {tr("Sẵn sàng")}
+              </span>
             </div>
           </div>
-          <button type="button" onClick={() => void clearHistory()} disabled={isTyping || historyLoading}
-            className="text-[11px] text-[#706764] underline disabled:opacity-40" title={tr("Xóa lịch sử hỏi đáp trong bài hoặc chế độ hiện tại")}>{tr("Xóa hội thoại")}</button>
+          <button
+            type="button"
+            onClick={() => void clearHistory()}
+            disabled={isTyping || historyLoading}
+            className="text-[11px] text-[#706764] underline disabled:opacity-40"
+            title={tr("Xóa lịch sử hỏi đáp trong bài hoặc chế độ hiện tại")}
+          >
+            {tr("Xóa hội thoại")}
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -391,8 +539,11 @@ function PandaChat({
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#B91B1C] shadow-[0_3px_12px_rgba(119,45,38,0.07)]">
               <BookOpen className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </div>
-            <p className="min-w-0 flex-1 truncate text-[12px] text-[#6B5E5A]">{tr("Đang học:")}{" "}
-              <span className="font-bold text-[#8F1719]">{source?.title || tr("Hỏi tiếng Trung chung")}</span>
+            <p className="min-w-0 flex-1 truncate text-[12px] text-[#6B5E5A]">
+              {tr("Đang học:")}{" "}
+              <span className="font-bold text-[#8F1719]">
+                {source?.title || tr("Hỏi tiếng Trung chung")}
+              </span>
             </p>
             {hskLevel && (
               <span className="shrink-0 rounded-lg border border-[#ECCBC7] bg-white px-2.5 py-1 text-[11px] font-bold text-[#A3181A]">
@@ -400,32 +551,80 @@ function PandaChat({
               </span>
             )}
           </div>
-          {availableSource && <div className="mt-2 flex items-center gap-2 text-xs">
-            {source && <select aria-label={tr("Phạm vi câu hỏi")} value={scope}
-              onChange={event => { setScope(event.target.value as LessonAiContext['scope']); setPinned(null) }}
-              className="rounded-lg border border-[#E9DEDA] bg-white px-2 py-1.5">
-              <option value="current_segment">{tr("Đoạn đang xem")}</option>
-              <option value="current_cue">{tr("Câu đang xem")}</option>
-              <option value="whole_lesson">{tr("Toàn bài")}</option>
-            </select>}
-            <button type="button" onClick={onToggleGeneral} className="text-[#8F1719] underline">
-              {source ? tr("Hỏi tiếng Trung chung") : tr("Quay lại bài đang xem")}
-            </button>
-          </div>}
-          {source && <div className="mt-2 text-xs text-[#6B5E5A]">
-            {source.status === 'loading' ? tr("Đang tải phụ đề…") : source.status === 'missing'
-              ? tr("Chưa có phụ đề khả dụng. Panda sẽ kiểm tra lại khi bạn gửi câu hỏi.")
-              : <>
-                <p>{tr("Dựa trên phụ đề ·")} {scope === 'whole_lesson' ? tr("Toàn bộ bài học") : `${pinned ? tr('Đã ghim') : tr('Đang xem')} ${formatAiTime(pinned?.context.playbackMs ?? source.activeCue?.startMs ?? 0)}`}</p>
-                {scope !== 'whole_lesson' && <>
-                  <p className="mt-1 line-clamp-2 text-[#262120]">{(pinned?.cue ?? source.activeCue)?.zh ?? tr("Chọn câu trong bản chép lời để hỏi cụ thể.")}</p>
-                  <button type="button" className="mt-1 underline text-[#8F1719]" onClick={() => {
-                    if (pinned) setPinned(null)
-                    else setPinned({ context: { ...source.snapshot(), scope }, cue: source.activeCue })
-                  }}>{pinned ? tr("Theo dõi video tiếp") : tr("Ghim đoạn này để hỏi tiếp")}</button>
-                </>}
-              </>}
-          </div>}
+          {availableSource && (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              {source && (
+                <select
+                  aria-label={tr("Phạm vi câu hỏi")}
+                  value={scope}
+                  onChange={(event) => {
+                    setScope(event.target.value as LessonAiContext["scope"])
+                    setPinned(null)
+                  }}
+                  className="rounded-lg border border-[#E9DEDA] bg-white px-2 py-1.5"
+                >
+                  <option value="current_segment">{tr("Đoạn đang xem")}</option>
+                  <option value="current_cue">{tr("Câu đang xem")}</option>
+                  <option value="whole_lesson">{tr("Toàn bài")}</option>
+                </select>
+              )}
+              <button
+                type="button"
+                onClick={onToggleGeneral}
+                className="text-[#8F1719] underline"
+              >
+                {source
+                  ? tr("Hỏi tiếng Trung chung")
+                  : tr("Quay lại bài đang xem")}
+              </button>
+            </div>
+          )}
+          {source && (
+            <div className="mt-2 text-xs text-[#6B5E5A]">
+              {source.status === "loading" ? (
+                tr("Đang tải phụ đề…")
+              ) : source.status === "missing" ? (
+                tr(
+                  "Chưa có phụ đề khả dụng. Panda sẽ kiểm tra lại khi bạn gửi câu hỏi.",
+                )
+              ) : (
+                <>
+                  <p>
+                    {tr("Dựa trên phụ đề ·")}{" "}
+                    {scope === "whole_lesson"
+                      ? tr("Toàn bộ bài học")
+                      : `${
+                          pinned ? tr("Đã ghim") : tr("Đang xem")
+                        } ${formatAiTime(pinned?.context.playbackMs ?? source.activeCue?.startMs ?? 0)}`}
+                  </p>
+                  {scope !== "whole_lesson" && (
+                    <>
+                      <p className="mt-1 line-clamp-2 text-[#262120]">
+                        {(pinned?.cue ?? source.activeCue)?.zh ??
+                          tr("Chọn câu trong bản chép lời để hỏi cụ thể.")}
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-1 underline text-[#8F1719]"
+                        onClick={() => {
+                          if (pinned) setPinned(null)
+                          else
+                            setPinned({
+                              context: { ...source.snapshot(), scope },
+                              cue: source.activeCue,
+                            })
+                        }}
+                      >
+                        {pinned
+                          ? tr("Theo dõi video tiếp")
+                          : tr("Ghim đoạn này để hỏi tiếp")}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </section>
 
         <section
@@ -435,14 +634,38 @@ function PandaChat({
           <h3
             id="quick-actions-title"
             className="mb-2.5 text-[12px] font-bold text-[#4E4542]"
-          >{tr("Gợi ý nhanh")}</h3>
+          >
+            {tr("Gợi ý nhanh")}
+          </h3>
           <div className="grid grid-cols-2 gap-2">
             {QUICK_ACTIONS.map(({ label, prompt, icon: Icon }) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => void handleSend(source ? prompt.replace('bài học này', scope === 'whole_lesson' ? 'bài học này' : 'đoạn phụ đề đang chọn') : prompt.replace('trong bài học này', 'tiếng Trung').replace('dựa trên nội dung bài học này', 'bằng tiếng Trung').replace('theo chủ đề bài học này', 'về sinh hoạt hằng ngày'))}
-                disabled={isTyping || historyLoading || source?.status === 'loading'}
+                onClick={() =>
+                  void handleSend(
+                    source
+                      ? prompt.replace(
+                          "bài học này",
+                          scope === "whole_lesson"
+                            ? "bài học này"
+                            : "đoạn phụ đề đang chọn",
+                        )
+                      : prompt
+                          .replace("trong bài học này", "tiếng Trung")
+                          .replace(
+                            "dựa trên nội dung bài học này",
+                            "bằng tiếng Trung",
+                          )
+                          .replace(
+                            "theo chủ đề bài học này",
+                            "về sinh hoạt hằng ngày",
+                          ),
+                  )
+                }
+                disabled={
+                  isTyping || historyLoading || source?.status === "loading"
+                }
                 className="group flex min-h-11 items-center gap-2.5 rounded-xl border border-[#E9DEDA] bg-white px-3 py-2 text-left text-[12px] font-semibold text-[#433B39] shadow-[0_4px_14px_rgba(89,48,42,0.04)] transition-[border-color,background-color,color,transform] hover:border-[#DDA7A4] hover:bg-[#FFF7F5] hover:text-[#A3181A] active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
               >
                 <Icon
@@ -463,10 +686,24 @@ function PandaChat({
             aria-live="polite"
           >
             <div className="space-y-5">
-              {historyLoading && <p className="text-xs text-[#6F6663]" role="status">{tr("Đang tải hội thoại…")}</p>}
-              {historyError && <p className="text-xs text-[#7E2728]" role="alert">{ui(historyError)}{' '}
-                <button type="button" disabled={isTyping} onClick={() => setHistoryVersion(value => value + 1)} className="underline">{tr("Tải lại hội thoại")}</button>
-              </p>}
+              {historyLoading && (
+                <p className="text-xs text-[#6F6663]" role="status">
+                  {tr("Đang tải hội thoại…")}
+                </p>
+              )}
+              {historyError && (
+                <p className="text-xs text-[#7E2728]" role="alert">
+                  {ui(historyError)}{" "}
+                  <button
+                    type="button"
+                    disabled={isTyping}
+                    onClick={() => setHistoryVersion((value) => value + 1)}
+                    className="underline"
+                  >
+                    {tr("Tải lại hội thoại")}
+                  </button>
+                </p>
+              )}
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -476,7 +713,10 @@ function PandaChat({
                 >
                   {message.sender === "ai" && (
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#F0D4D4] bg-[#FFF7F5]">
-                      <PandaAvatar size={32} className="h-full w-full object-cover" />
+                      <PandaAvatar
+                        size={32}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                   )}
 
@@ -494,24 +734,74 @@ function PandaChat({
                             : "rounded-2xl rounded-bl-md border border-[#E7DEDA] bg-white text-[#262120]"
                       }`}
                     >
-                      <span>{message.id === 'welcome' ? greeting : message.isError ? ui(message.text) : message.text}</span>
-                      {message.snapshot && message.sender === 'user' && <p className="mt-2 text-[10px] opacity-80">
-                        {message.snapshot.scope === 'whole_lesson' ? tr("Toàn bài") : tr("Đoạn hỏi: {0}", { 0: formatAiTime(message.snapshot.playbackMs) })}
-                      </p>}
-                      {!!message.reply?.citations?.length && <div className="mt-3 space-y-2 border-t border-[#E9DEDA] pt-2">
-                        <p className="text-[11px] font-semibold text-[#6B5E5A]">{tr("Nguồn phụ đề")}</p>
-                        {message.reply.citations.map(citation => <button type="button" key={citation.cueId}
-                          className="block w-full rounded-lg bg-[#FFF4F2] p-2 text-left hover:bg-[#FBE3DF]"
-                          disabled={!source || message.reply?.context?.lessonId !== source.lessonId || message.reply?.context?.subtitleRevision !== source.revision}
-                          onClick={() => { source?.seek(citation.startMs); onClose() }}>
-                          <span className="text-[11px] font-bold text-[#8F1719]">{tr("Xem lại")} {formatAiTime(citation.startMs)}–{formatAiTime(citation.endMs)}</span>
-                          <span className="mt-1 block">{citation.zh}</span>
-                          <span className="block text-[11px] text-[#6B5E5A]">{citation.pinyin}</span>
-                          <span className="block text-[11px]">{citation.vi}</span>
-                        </button>)}
-                      </div>}
-                      {message.retryQuestion && <button type="button" disabled={isTyping || historyLoading}
-                        onClick={() => void handleSend(message.retryQuestion, message.snapshot)} className="mt-2 block text-xs underline">{tr("Thử lại câu hỏi")}</button>}
+                      <span>
+                        {message.id === "welcome"
+                          ? greeting
+                          : message.isError
+                            ? ui(message.text)
+                            : message.text}
+                      </span>
+                      {message.snapshot && message.sender === "user" && (
+                        <p className="mt-2 text-[10px] opacity-80">
+                          {message.snapshot.scope === "whole_lesson"
+                            ? tr("Toàn bài")
+                            : tr("Đoạn hỏi: {0}", {
+                                0: formatAiTime(message.snapshot.playbackMs),
+                              })}
+                        </p>
+                      )}
+                      {!!message.reply?.citations?.length && (
+                        <div className="mt-3 space-y-2 border-t border-[#E9DEDA] pt-2">
+                          <p className="text-[11px] font-semibold text-[#6B5E5A]">
+                            {tr("Nguồn phụ đề")}
+                          </p>
+                          {message.reply.citations.map((citation) => (
+                            <button
+                              type="button"
+                              key={citation.cueId}
+                              className="block w-full rounded-lg bg-[#FFF4F2] p-2 text-left hover:bg-[#FBE3DF]"
+                              disabled={
+                                !source ||
+                                message.reply?.context?.lessonId !==
+                                  source.lessonId ||
+                                message.reply?.context?.subtitleRevision !==
+                                  source.revision
+                              }
+                              onClick={() => {
+                                source?.seek(citation.startMs)
+                                onClose()
+                              }}
+                            >
+                              <span className="text-[11px] font-bold text-[#8F1719]">
+                                {tr("Xem lại")} {formatAiTime(citation.startMs)}
+                                –{formatAiTime(citation.endMs)}
+                              </span>
+                              <span className="mt-1 block">{citation.zh}</span>
+                              <span className="block text-[11px] text-[#6B5E5A]">
+                                {citation.pinyin}
+                              </span>
+                              <span className="block text-[11px]">
+                                {citation.vi}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {message.retryQuestion && (
+                        <button
+                          type="button"
+                          disabled={isTyping || historyLoading}
+                          onClick={() =>
+                            void handleSend(
+                              message.retryQuestion,
+                              message.snapshot,
+                            )
+                          }
+                          className="mt-2 block text-xs underline"
+                        >
+                          {tr("Thử lại câu hỏi")}
+                        </button>
+                      )}
                     </div>
                     <span className="mt-1 px-1 text-[10px] font-medium text-[#6F6663]">
                       {ui(message.time)}
@@ -531,7 +821,9 @@ function PandaChat({
               onClick={scrollToBottom}
               className="absolute bottom-3 left-1/2 flex h-8 -translate-x-1/2 items-center gap-1.5 rounded-xl border border-[#E3D7D2] bg-white px-3 text-[11px] font-bold text-[#5C524F] shadow-[0_8px_22px_rgba(76,42,37,0.12)] transition-colors hover:bg-[#FFF7F5] active:scale-[0.98]"
             >
-              <ChevronDown className="h-3.5 w-3.5" />{tr("Tin nhắn mới")}</button>
+              <ChevronDown className="h-3.5 w-3.5" />
+              {tr("Tin nhắn mới")}
+            </button>
           )}
         </div>
 
@@ -552,7 +844,9 @@ function PandaChat({
             >
               <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </button>
-            <label htmlFor="panda-ai-input" className="sr-only">{tr("Nhập câu hỏi cho Panda AI")}</label>
+            <label htmlFor="panda-ai-input" className="sr-only">
+              {tr("Nhập câu hỏi cho Panda AI")}
+            </label>
             <input
               id="panda-ai-input"
               ref={inputRef}
@@ -574,14 +868,21 @@ function PandaChat({
             </button>
             <button
               type="submit"
-              disabled={!inputText.trim() || isTyping || historyLoading || source?.status === 'loading'}
+              disabled={
+                !inputText.trim() ||
+                isTyping ||
+                historyLoading ||
+                source?.status === "loading"
+              }
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B91B1C] text-white shadow-[0_7px_16px_rgba(185,27,28,0.24)] transition-[background-color,transform,opacity] hover:bg-[#A3181A] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none"
               aria-label={tr("Gửi câu hỏi")}
             >
               <Send className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </button>
           </form>
-          <p className="mt-2 text-center text-[10px] font-medium text-[#6F6663]">{tr("Panda có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.")}</p>
+          <p className="mt-2 text-center text-[10px] font-medium text-[#6F6663]">
+            {tr("Panda có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.")}
+          </p>
         </footer>
       </aside>
     </>

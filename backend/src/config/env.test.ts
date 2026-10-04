@@ -101,3 +101,25 @@ describe('environment configuration', () => {
     expect(result.VIDEO_WORKER_MODE).toBe('embedded');
   });
 });
+
+describe('Premium Trial rollout configuration', () => {
+  it('defaults to disabled with no implicit historical rollout', () => {
+    const result = parseEnvironment(base);
+    expect(result.PREMIUM_TRIAL_ENABLED).toBe(false);
+    expect(result.PREMIUM_TRIAL_ROLLOUT_AT).toBeUndefined();
+    expect(result.PREMIUM_TRIAL_DAYS).toBe(15);
+  });
+  it.each([
+    { PREMIUM_TRIAL_ENABLED: 'true' },
+    { PREMIUM_TRIAL_ENABLED: 'yes' },
+    { PREMIUM_TRIAL_ROLLOUT_AT: 'invalid' },
+    { PREMIUM_TRIAL_ROLLOUT_AT: '2026-10-04' },
+    { PREMIUM_TRIAL_DAYS: '30' },
+  ])('rejects unsafe configuration %j', input => {
+    expect(() => parseEnvironment({ ...base, ...input })).toThrow();
+  });
+  it('accepts an explicit UTC rollout and exact 15-day duration', () => {
+    expect(parseEnvironment({ ...base, PREMIUM_TRIAL_ENABLED: 'true', PREMIUM_TRIAL_DAYS: '15',
+      PREMIUM_TRIAL_ROLLOUT_AT: '2026-10-04T00:00:00Z' }).PREMIUM_TRIAL_ENABLED).toBe(true);
+  });
+});

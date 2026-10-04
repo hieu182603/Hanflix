@@ -10,14 +10,20 @@ export const optionalAuth: RequestHandler = (req, res, next) => {
 };
 
 export const requirePremium: RequestHandler = (req, _res, next) => {
-  if (!hasPremium(req.auth)) return next(premiumRequired());
+  if (!hasPremium(req.auth)) {
+    const isExpiredTrial = Boolean(req.auth?.premiumTrial && new Date(req.auth.premiumTrial.endsAt) <= new Date());
+    return next(premiumRequired(isExpiredTrial ? 'TRIAL_EXPIRED' : 'PREMIUM_REQUIRED'));
+  }
   next();
 };
 
 export const requireLessonAccess: RequestHandler = asyncHandler(async (req, _res, next) => {
   const hsk = learnerHsk(req.auth);
   await assertLessonHsk(req.auth, String(req.params.lessonId));
-  if (!hasPremium(req.auth) && !(await freeSampleIds(hsk)).includes(String(req.params.lessonId))) throw premiumRequired();
+  if (!hasPremium(req.auth) && !(await freeSampleIds(hsk)).includes(String(req.params.lessonId))) {
+    const isExpiredTrial = Boolean(req.auth?.premiumTrial && new Date(req.auth.premiumTrial.endsAt) <= new Date());
+    throw premiumRequired(isExpiredTrial ? 'TRIAL_EXPIRED' : 'PREMIUM_REQUIRED');
+  }
   next();
 });
 

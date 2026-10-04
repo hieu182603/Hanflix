@@ -297,6 +297,19 @@ describe('customer Premium entitlement matrix', () => {
     expect((await request(app).get('/grammar').set('Authorization', token)).status).toBe(200);
     expect((await request(app).post('/vocabulary').set('Authorization', token).send({})).status).toBe(422);
   });
+  it('grants the same Premium guard access during trial and denies every protected read after expiry', async () => {
+    const startedAt = new Date(Date.now() - 86400000);
+    const token = auth({ premiumTrial: { startedAt, endsAt: new Date(Date.now() + 86400000), planCode: 'trial_15d' } });
+    vi.spyOn(grammarService, 'searchGrammar').mockResolvedValue({ items: [], pagination: { total: 0 } } as never);
+    expect((await request(app).get('/grammar').set('Authorization', token)).status).toBe(200);
+    expect((await request(app).post('/vocabulary').set('Authorization', token).send({})).status).toBe(422);
+    auth({ premiumTrial: { startedAt, endsAt: new Date(Date.now() - 1), planCode: 'trial_15d' } });
+    for (const path of protectedReads) {
+      const response = await request(app).get(path).set('Authorization', token);
+      expect(response.status, path).toBe(403);
+      expect(response.body.error.code, path).toBe('TRIAL_EXPIRED');
+    }
+  });
   it('downgrades immediately when the database expiry changes, without issuing a new access token', async () => {
     const token = auth({ premiumExpiresAt: new Date(Date.now() + 86400000) });
     vi.spyOn(grammarService, 'searchGrammar').mockResolvedValue({ items: [] } as never);
