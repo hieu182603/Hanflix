@@ -310,9 +310,62 @@ export default function App() {
   // 15-Day Premium Trial Welcome Modal
   const [isWelcomeTrialOpen, setIsWelcomeTrialOpen] = useState<boolean>(false)
 
+  // Only survey eligibility changes may reset this modal. Subscription refreshes
+  // must preserve an explicitly opened survey and the learner's in-progress input.
+  const surveyUserId = currentUser?.id
+  const surveyUserRole = currentUser?.role
+  const surveyVersion = currentUser?.learningProfile?.surveyVersion
+  const surveyHsk = currentUser?.learningProfile?.hskLevel
+
+  const isSurveyCompleted = Boolean(
+    (surveyHsk && surveyHsk >= 1 && surveyHsk <= 9) ||
+      surveyVersion != null ||
+      (surveyUserId &&
+        typeof window !== "undefined" &&
+        localStorage.getItem(`hanflix_survey_completed_${surveyUserId}`)),
+  )
+
+  const needsSurvey = Boolean(
+    surveyUserId && surveyUserRole === "user" && !isSurveyCompleted,
+  )
+
   useEffect(() => {
-    setIsWelcomeTrialOpen(Boolean(currentUser?.showWelcomeTrialPopup))
-  }, [currentUser?.id, currentUser?.showWelcomeTrialPopup])
+    if (isRestoringSession) return
+    if (!currentUser?.showWelcomeTrialPopup) {
+      setIsWelcomeTrialOpen(false)
+      return
+    }
+
+    // New users complete survey first; show welcome trial popup after survey finishes
+    if (isSurveyOpen || needsSurvey) {
+      setIsWelcomeTrialOpen(false)
+    } else {
+      setIsWelcomeTrialOpen(true)
+    }
+  }, [
+    currentUser?.id,
+    currentUser?.showWelcomeTrialPopup,
+    isSurveyOpen,
+    needsSurvey,
+    isRestoringSession,
+  ])
+
+  const handleCloseSurvey = () => {
+    setIsSurveyOpen(false)
+    if (currentUser?.id) {
+      try {
+        localStorage.setItem(
+          `hanflix_survey_completed_${currentUser.id}`,
+          "true",
+        )
+      } catch {
+        // ignore
+      }
+    }
+    if (currentUser?.showWelcomeTrialPopup) {
+      setIsWelcomeTrialOpen(true)
+    }
+  }
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -369,12 +422,6 @@ export default function App() {
       })
   }, [])
 
-  // Only survey eligibility changes may reset this modal. Subscription refreshes
-  // must preserve an explicitly opened survey and the learner's in-progress input.
-  const surveyUserId = currentUser?.id
-  const surveyUserRole = currentUser?.role
-  const surveyVersion = currentUser?.learningProfile?.surveyVersion
-  const surveyHsk = currentUser?.learningProfile?.hskLevel
   useEffect(() => {
     if (isRestoringSession) return
     try {
@@ -389,7 +436,7 @@ export default function App() {
         `hanflix_survey_completed_${surveyUserId}`,
       )
       const hasHsk = Boolean(surveyHsk && surveyHsk >= 1 && surveyHsk <= 9)
-      setIsSurveyOpen(!hasHsk || (!serverSideCompleted && !localCompleted))
+      setIsSurveyOpen(!hasHsk && !serverSideCompleted && !localCompleted)
     }
   }, [
     surveyUserId,
@@ -665,6 +712,7 @@ export default function App() {
                     setIsSettingsOpen={setIsSettingsOpen}
                     isSurveyOpen={isSurveyOpen}
                     setIsSurveyOpen={setIsSurveyOpen}
+                    onCloseSurvey={handleCloseSurvey}
                     handleOpenAI={handleOpenAI}
                     handleSavePreferences={handleSavePreferences}
                     handleLogout={handleLogout}
@@ -697,6 +745,7 @@ export default function App() {
                     setIsSettingsOpen={setIsSettingsOpen}
                     isSurveyOpen={isSurveyOpen}
                     setIsSurveyOpen={setIsSurveyOpen}
+                    onCloseSurvey={handleCloseSurvey}
                     handleOpenAI={handleOpenAI}
                     handleSavePreferences={handleSavePreferences}
                     handleLogout={handleLogout}
@@ -925,6 +974,7 @@ export default function App() {
                     setIsSettingsOpen={setIsSettingsOpen}
                     isSurveyOpen={isSurveyOpen}
                     setIsSurveyOpen={setIsSurveyOpen}
+                    onCloseSurvey={handleCloseSurvey}
                     handleOpenAI={handleOpenAI}
                     handleSavePreferences={handleSavePreferences}
                     handleLogout={handleLogout}
@@ -990,6 +1040,7 @@ interface ShellProps {
   setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>
   isSurveyOpen: boolean
   setIsSurveyOpen: React.Dispatch<React.SetStateAction<boolean>>
+  onCloseSurvey?: () => void
   handleOpenAI: (prompt?: string) => void
   handleSavePreferences: (updated: Partial<UserProfile>) => void
   handleLogout: () => void
@@ -1016,6 +1067,7 @@ function LearnerRouteShell({
   setIsSettingsOpen,
   isSurveyOpen,
   setIsSurveyOpen,
+  onCloseSurvey,
   handleOpenAI,
   handleSavePreferences,
   handleLogout,
@@ -1190,7 +1242,7 @@ function LearnerRouteShell({
 
       <LearningSurveyModal
         isOpen={isSurveyOpen}
-        onClose={() => setIsSurveyOpen(false)}
+        onClose={onCloseSurvey ?? (() => setIsSurveyOpen(false))}
         userProfile={userProfile}
         onSavePreferences={handleSavePreferences}
         currentUser={currentUser}

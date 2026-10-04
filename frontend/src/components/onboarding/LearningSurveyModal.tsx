@@ -257,7 +257,16 @@ export default function LearningSurveyModal({
     }
   };
 
-  const handleSkip = () => onClose();
+  const handleSkip = () => {
+    if (currentUser?.id) {
+      try {
+        localStorage.setItem(`hanflix_survey_completed_${currentUser.id}`, 'true');
+      } catch {
+        // ignore
+      }
+    }
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-5 animate-in fade-in duration-200">

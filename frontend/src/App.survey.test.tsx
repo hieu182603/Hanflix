@@ -28,6 +28,7 @@ beforeEach(() => {
   localStorage.clear();
   vi.useFakeTimers();
   vi.resetAllMocks();
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null as any);
   vi.mocked(auth.getCachedUser).mockReturnValue(user);
   vi.mocked(auth.restoreSession).mockResolvedValue(user);
   vi.mocked(getUserSubscription).mockResolvedValue({ tier: 'free', premiumExpiresAt: null, benefits: [] });
@@ -58,3 +59,28 @@ it('still opens onboarding for an incomplete profile without reopening it after 
   await act(async () => { window.dispatchEvent(new Event('focus')); });
   expect(screen.queryByRole('dialog')).toBeNull();
 });
+
+it('sequences onboarding survey before welcome trial popup and opens trial modal after survey is closed', async () => {
+  const newUser = {
+    ...user,
+    learningProfile: undefined,
+    showWelcomeTrialPopup: true,
+    trialEndsAt: '2026-10-19T00:00:00.000Z',
+  };
+  vi.mocked(auth.getCachedUser).mockReturnValue(newUser);
+  vi.mocked(auth.restoreSession).mockResolvedValue(newUser);
+  await show();
+
+  // 1. Survey dialog is open, Welcome Trial Modal is not yet open
+  expect(screen.getByRole('dialog')).toBeTruthy();
+  expect(screen.getByLabelText('Survey draft')).toBeTruthy();
+  expect(screen.queryByText('15 NGÀY PREMIUM MIỄN PHÍ')).toBeNull();
+
+  // 2. User completes or closes the survey
+  fireEvent.click(screen.getByRole('button', { name: 'Close survey' }));
+
+  // 3. Survey dialog closes, and Welcome Trial Modal opens!
+  expect(screen.queryByLabelText('Survey draft')).toBeNull();
+  expect(screen.getByText('15 NGÀY PREMIUM MIỄN PHÍ')).toBeTruthy();
+});
+

@@ -335,14 +335,14 @@ export default function WelcomeTrialModal({
             />
           )}
 
-          {/* Backdrop */}
+          {/* Backdrop: transparent without dark blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={() => void handleDismiss()}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md"
+            className="fixed inset-0 bg-transparent"
             aria-hidden="true"
           />
 

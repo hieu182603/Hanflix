@@ -220,6 +220,11 @@ describe("Premium Trial Flow Frontend Integration", () => {
       expect(
         screen.getByText(/Premium Trial của bạn có hiệu lực đến:/i),
       ).toBeTruthy()
+
+      const backdrop = document.querySelector('div[aria-hidden="true"].bg-transparent')
+      expect(backdrop).toBeTruthy()
+      expect(backdrop?.className).not.toContain('bg-black')
+      expect(backdrop?.className).not.toContain('backdrop-blur')
     })
 
     it("CASE 3: clicking CTA or close calls markTrialWelcomeSeen idempotently", async () => {
