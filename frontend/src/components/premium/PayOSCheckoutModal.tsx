@@ -2,6 +2,8 @@ import { useI18n } from "../../i18n"
 
 import React from "react"
 
+import QRCode from "qrcode"
+
 import { usePaymentOrder } from "../../hooks/usePaymentOrder"
 
 import {
@@ -58,6 +60,38 @@ export default function PayOSCheckoutModal({
   } = usePaymentOrder(isOpen, plan, orderCode, onSuccess)
 
   const [copiedField, setCopiedField] = React.useState<string | null>(null)
+  const [localQrDataUrl, setLocalQrDataUrl] = React.useState<string | null>(null)
+  const [useFallbackQr, setUseFallbackQr] = React.useState<boolean>(false)
+
+  // Asynchronously generate client-side QR data URL from official payOS EMVCo qrCode string
+  React.useEffect(() => {
+    let active = true
+    setUseFallbackQr(false)
+
+    if (order?.qrCode) {
+      QRCode.toDataURL(order.qrCode, {
+        margin: 1,
+        width: 320,
+        errorCorrectionLevel: "M",
+        color: {
+          dark: "#18181B",
+          light: "#FFFFFF",
+        },
+      })
+        .then((url) => {
+          if (active) setLocalQrDataUrl(url)
+        })
+        .catch(() => {
+          if (active) setLocalQrDataUrl(null)
+        })
+    } else {
+      setLocalQrDataUrl(null)
+    }
+
+    return () => {
+      active = false
+    }
+  }, [order?.qrCode])
 
   const handleCopy = (text: string, field: string) => {
     try {
@@ -69,19 +103,30 @@ export default function PayOSCheckoutModal({
     } catch {}
   }
 
-  const qrImageUrl = React.useMemo(() => {
+  const primaryVietQrUrl = React.useMemo(() => {
     if (!order) return null
 
     if (order.bin && order.accountNumber) {
       return `https://img.vietqr.io/image/${order.bin}-${order.accountNumber}-compact2.png?amount=${order.amount}&addInfo=${encodeURIComponent(order.description || `HF ${order.orderCode}`)}&accountName=${encodeURIComponent(order.accountName || "")}`
     }
 
-    if (order.qrCode) {
-      return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(order.qrCode)}`
-    }
-
     return null
   }, [order])
+
+  const qrImageUrl = React.useMemo(() => {
+    if (!order) return null
+
+    if (useFallbackQr || !primaryVietQrUrl) {
+      return (
+        localQrDataUrl ||
+        (order.qrCode
+          ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=${encodeURIComponent(order.qrCode)}`
+          : null)
+      )
+    }
+
+    return primaryVietQrUrl
+  }, [order, useFallbackQr, primaryVietQrUrl, localQrDataUrl])
 
   const formatMmSs = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -404,14 +449,27 @@ export default function PayOSCheckoutModal({
                   </div>
 
                   {/* Khung ảnh QR Code */}
-                  <div className="p-2 bg-white border border-neutral-200/80 rounded-2xl shadow-sm flex items-center justify-center">
+                  <div className="p-2 bg-white border border-neutral-200/80 rounded-2xl shadow-sm flex items-center justify-center min-h-[212px]">
                     {qrImageUrl ? (
-                      <img
-                        src={qrImageUrl}
-                        alt="Mã VietQR thanh toán"
-                        className="w-48 sm:w-52 h-auto object-contain rounded-xl"
-                        loading="eager"
-                      />
+                      <div className="relative flex flex-col items-center">
+                        <img
+                          src={qrImageUrl}
+                          alt="Mã VietQR thanh toán"
+                          className="w-48 sm:w-52 h-auto object-contain rounded-xl"
+                          loading="eager"
+                          onError={() => {
+                            if (!useFallbackQr) {
+                              setUseFallbackQr(true)
+                            }
+                          }}
+                        />
+                        {useFallbackQr && (
+                          <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/60">
+                            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                            <span>{tr("Mã VietQR chính thức")}</span>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="w-48 h-48 flex items-center justify-center bg-neutral-50 rounded-lg text-neutral-400">
                         <QrCode className="w-10 h-10 animate-pulse" />
