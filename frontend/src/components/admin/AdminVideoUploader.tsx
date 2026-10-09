@@ -27,6 +27,7 @@ import type {
   UploadProgressEvent,
 } from "../../api/admin"
 import { validateMediaFile } from "./media-file-validation"
+import { processingErrorMessage, processingStageIndex } from "./processing-stage"
 
 const HSK_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
@@ -383,7 +384,8 @@ export default function AdminVideoUploader({
       label: "4. Phân Đoạn & Dịch",
       desc: "Cue Segmentation",
     },
-    { key: "review", label: "5. Sẵn Sàng Duyệt", desc: "Ready for Review" },
+    { key: "playback", label: "5. Tạo Video Phát Lại", desc: "Tối ưu hình và âm thanh" },
+    { key: "review", label: "6. Sẵn Sàng Duyệt", desc: "Ready for Review" },
   ]
 
   // Cleanup any lingering legacy portal element from document body
@@ -1302,7 +1304,7 @@ export default function AdminVideoUploader({
                 </div>
               </div>
 
-              {/* 5-Stage Stepper Tracker */}
+              {/* Pipeline Stepper Tracker */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs font-bold text-[#2B2826]">
                   <span>Quy trình xử lý AI tự động:</span>
@@ -1315,7 +1317,7 @@ export default function AdminVideoUploader({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                   {PIPELINE_STAGES.map((st, i) => {
                     const isUploadingR2 =
                       uploadStage !== "idle" &&
@@ -1339,13 +1341,7 @@ export default function AdminVideoUploader({
                       processingStatus?.status === "queued"
                     const stageIndex = isUploadingR2
                       ? 0
-                      : currentProgress < 10
-                        ? 0
-                        : currentProgress < 35
-                          ? 1
-                          : currentProgress < 60
-                            ? 2
-                            : 3
+                      : processingStageIndex(processingStatus?.currentStep, currentProgress)
                     const isPassed =
                       !isUploadingR2 &&
                       (completed ||
@@ -1459,10 +1455,10 @@ export default function AdminVideoUploader({
                     <AlertCircle className="h-5 w-5 shrink-0" />
                     <div>
                       <p className="font-black">
-                        Lỗi trong quá trình xử lý AI:
+                        Lỗi trong quá trình xử lý video:
                       </p>
                       <p className="mt-0.5 font-normal">
-                        {selectedLesson.processingError}
+                        {processingErrorMessage(processingStatus?.currentStep, processingStatus?.errorCode, processingStatus?.errorMessage ?? selectedLesson.processingError)}
                       </p>
                     </div>
                   </div>

@@ -53,6 +53,11 @@ import { uploadR2File, deleteR2Object } from './r2.js';
 
 export const PLAYBACK_DERIVATIVE_VERSION = 1;
 
+export function playbackDeadlineMs(durationSeconds: number): number {
+  const duration = Number.isFinite(durationSeconds) ? Math.max(0, durationSeconds) : 0;
+  return Math.min(3_600_000, Math.max(env.VIDEO_STAGE_DEADLINE_PLAYBACK_MS, Math.ceil(duration * 4_000) + 60_000));
+}
+
 /**
  * Resolve the path to the bundled ffmpeg/ffprobe binaries. On Windows,
  * `spawn('ffprobe')` fails with ENOENT because `spawn` does NOT append
@@ -83,6 +88,7 @@ export interface ProbeSummary {
   width: number;
   height: number;
   videoCodec: string | null;
+  pixelFormat?: string;
   audioCodec: string | null;
   hasAudio: boolean;
   hasFaststart: boolean;
@@ -104,9 +110,10 @@ export async function probeForDerivative(localPath: string, signal?: AbortSignal
     ], signal);
     const parsed = JSON.parse(json) as {
       format?: { format_name?: string; duration?: string };
-      streams?: Array<{ codec_type?: string; codec_name?: string; width?: number; height?: number; tags?: { major_brand?: string } }>;
+      streams?: Array<{ codec_type?: string; codec_name?: string; pix_fmt?: string; width?: number; height?: number; tags?: { major_brand?: string } }>;
     };
-    const formatName = (parsed.format?.format_name ?? '').split(',')[0] ?? 'other';
+    const formats = (parsed.format?.format_name ?? '').split(',');
+    const formatName = formats.includes('mp4') ? 'mp4' : formats.includes('webm') ? 'webm' : formats[0] ?? 'other';
     const format = (['mp4', 'webm', 'mov', 'mkv', 'avi'] as const).includes(formatName as 'mp4' | 'webm' | 'mov' | 'mkv' | 'avi')
       ? formatName
       : 'other';
@@ -119,6 +126,7 @@ export async function probeForDerivative(localPath: string, signal?: AbortSignal
       width: video.width ?? 0,
       height: video.height ?? 0,
       videoCodec: video.codec_name ?? null,
+      pixelFormat: video.pix_fmt,
       audioCodec: audio?.codec_name ?? null,
       hasAudio: Boolean(audio),
       // ffprobe doesn't expose the `moov` atom position; callers decide
@@ -126,6 +134,7 @@ export async function probeForDerivative(localPath: string, signal?: AbortSignal
       hasFaststart: false,
     };
   } catch (error) {
+    signal?.throwIfAborted();
     logger.warn({ error: error instanceof Error ? error.message : String(error) }, '[PlaybackDerivative] ffprobe failed');
     return null;
   }
@@ -135,9 +144,17 @@ export async function probeForDerivative(localPath: string, signal?: AbortSignal
 export function canRemuxFaststart(probe: ProbeSummary): boolean {
   return (
     probe.format === 'mp4'
-    && (probe.videoCodec === 'h264' || probe.videoCodec === 'avc1' || probe.videoCodec === 'avc')
+    && canCopyVideo(probe)
     && (probe.audioCodec === null || probe.audioCodec === 'aac' || probe.audioCodec === 'mp4a-latm')
   );
+}
+
+/** Preserve compatible H.264 video; Opus audio alone must not trigger a video encode. */
+export function canCopyVideo(probe: ProbeSummary): boolean {
+  return ['mp4', 'mov', 'mkv'].includes(probe.format)
+    && ['h264', 'avc1', 'avc'].includes(probe.videoCodec ?? '')
+    && (!probe.pixelFormat || ['yuv420p', 'yuvj420p'].includes(probe.pixelFormat))
+    && probe.height > 0 && probe.height <= env.PLAYBACK_DERIVATIVE_MAX_HEIGHT;
 }
 
 export interface GenerateOptions {
@@ -251,6 +268,7 @@ async function remuxFaststart(source: string, output: string, signal?: AbortSign
     ], signal);
     return true;
   } catch (error) {
+    signal?.throwIfAborted();
     logger.warn({ error: error instanceof Error ? error.message : String(error) }, '[PlaybackDerivative] remux failed');
     return false;
   }
@@ -264,15 +282,22 @@ async function transcodeFaststart(source: string, output: string, probe: ProbeSu
   const args: string[] = [
     '-y',
     '-i', source,
-    '-vf', `scale='min(${probe.width},iw)':'min(${env.PLAYBACK_DERIVATIVE_MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease,format=yuv420p`,
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '22',
-    '-maxrate', `${env.PLAYBACK_DERIVATIVE_VIDEO_BITRATE_KBPS}k`,
-    '-bufsize', `${env.PLAYBACK_DERIVATIVE_VIDEO_BITRATE_KBPS * 2}k`,
-    '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart',
+    '-map', '0:v:0', '-map', '0:a:0?',
   ];
+  if (canCopyVideo(probe)) {
+    args.push('-c:v', 'copy');
+  } else {
+    args.push(
+      '-vf', `scale='min(${probe.width},iw)':'min(${env.PLAYBACK_DERIVATIVE_MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease,format=yuv420p`,
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', '22',
+      '-maxrate', `${env.PLAYBACK_DERIVATIVE_VIDEO_BITRATE_KBPS}k`,
+      '-bufsize', `${env.PLAYBACK_DERIVATIVE_VIDEO_BITRATE_KBPS * 2}k`,
+      '-pix_fmt', 'yuv420p',
+    );
+  }
+  args.push('-movflags', '+faststart');
   if (probe.hasAudio) {
     args.push('-c:a', 'aac', '-b:a', '128k');
   } else {
@@ -284,6 +309,7 @@ async function transcodeFaststart(source: string, output: string, probe: ProbeSu
     await runProcess(FFMPEG_BIN, args, signal);
     return true;
   } catch (error) {
+    signal?.throwIfAborted();
     logger.warn({ error: error instanceof Error ? error.message : String(error) }, '[PlaybackDerivative] transcode failed');
     return false;
   }

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import AdminVideoUploader, { type AdminVideoUploaderProps } from './AdminVideoUploader';
 
-function Harness() {
+function Harness({ overrides = {} }: { overrides?: Partial<AdminVideoUploaderProps> }) {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState(120);
   const noop = () => {};
@@ -17,7 +17,7 @@ function Harness() {
     onSelectLesson: noop, onRetryProcessing: async () => {}, onCancelVideoUpload: async () => {},
     lyricsRaw: '', setLyricsRaw: noop, contentMode: 'song', setContentMode: noop,
   };
-  return <AdminVideoUploader {...props} />;
+  return <AdminVideoUploader {...props} {...overrides} />;
 }
 
 let media: HTMLVideoElement[];
@@ -37,6 +37,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const mp4 = () => new File([new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109])], 'video.mp4', { type: 'video/mp4' });
+
+it('marks playback as failed and translation as completed for the saved 73 percent incident', () => {
+  const { getByText, queryByText } = render(<Harness overrides={{
+    activeTab: 'processing',
+    selectedLesson: { _id: 'lesson', titleVi: 'Video lỗi', status: 'failed', hsk: 3, durationSeconds: 197, processingProgress: 73, processingError: 'Stage "inspect_media" vượt quá deadline cho phép' } as AdminVideoUploaderProps['selectedLesson'],
+    processingStatus: { status: 'failed', currentStep: 'BUILD_SUBTITLES', stage: 'finalize', stageProgress: 73, attempts: 1, errorCode: 'STAGE_DEADLINE_EXCEEDED' },
+  }} />);
+  const playback = getByText('5. Tạo Video Phát Lại').parentElement!;
+  const translation = getByText('4. Phân Đoạn & Dịch').parentElement!;
+  expect(playback.querySelector('.lucide-circle-alert')).not.toBeNull();
+  expect(translation.querySelector('.lucide-circle-check')).not.toBeNull();
+  expect(queryByText('Stage "inspect_media" vượt quá deadline cho phép')).toBeNull();
+  expect(getByText('Tạo video phát lại / hoàn thiện phụ đề vượt quá thời gian xử lý cho phép.')).toBeTruthy();
+});
 
 it('clears stale duration and allows a manual value after metadata failure', async () => {
   const { container, getByLabelText } = render(<Harness />);

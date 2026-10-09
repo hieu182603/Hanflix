@@ -103,7 +103,7 @@ async function processNextJob(): Promise<boolean> {
           // Distinguish "user/system cancelled" from "real error".
           const reason = signal.reason instanceof Error ? signal.reason.message : 'aborted';
           if (reason === 'STAGE_DEADLINE_EXCEEDED') {
-            await expireProcessingJob(lease, 'inspect_media');
+            await expireProcessingJob(lease);
           } else if (reason === 'LEASE_REVOKED') {
             await abortProcessingJob(lease, 'Lease bị thu hồi bởi worker khác');
           } else {
@@ -158,7 +158,7 @@ async function processNextJob(): Promise<boolean> {
         if (reason === 'STAGE_DEADLINE_EXCEEDED') {
           // Already handled by the timer path above. If we reach here, the
           // pipeline raised its own abort error after the timer fired.
-          await expireProcessingJob(lease, 'inspect_media');
+          await expireProcessingJob(lease);
         } else if (reason === 'LEASE_REVOKED') {
           await abortProcessingJob(lease, 'Lease bị thu hồi bởi worker khác');
         } else {
