@@ -136,6 +136,8 @@ const envSchema = z.object({
   VIDEO_STAGE_DEADLINE_VOCABULARY_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
   VIDEO_STAGE_DEADLINE_QUIZ_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
   VIDEO_STAGE_DEADLINE_FINALIZE_MS: z.coerce.number().int().min(10_000).max(300_000).default(60_000),
+  // Playback encoding has its own budget, independent of database finalization.
+  VIDEO_STAGE_DEADLINE_PLAYBACK_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(900_000),
   // F04: lease TTL (seconds). Worker must heartbeat within this window or its
   // lease is considered abandoned and another worker may claim the job.
   VIDEO_LEASE_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(120),

@@ -299,16 +299,30 @@ export async function abortProcessingJob(lease: VideoProcessingJobLease, reason:
  * F04: deadline exceeded — same as abort but with a different error code so
  * admins can distinguish "user cancelled" from "FFmpeg hung for 30 minutes".
  */
-export async function expireProcessingJob(lease: VideoProcessingJobLease, stage: string): Promise<void> {
-  const message = `Stage "${stage}" vượt quá deadline cho phép`;
+export async function expireProcessingJob(lease: VideoProcessingJobLease): Promise<void> {
+  const filter = { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' as const };
+  const job = await ProcessingJobModel.findOne(filter).lean();
+  if (!job) return;
+  const step = String(job.currentStep ?? job.stage ?? 'UNKNOWN');
+  const label = step === 'BUILD_SUBTITLES' ? 'Tạo video phát lại / hoàn thiện phụ đề' : step;
+  const message = `Bước "${label}" vượt quá thời gian xử lý cho phép`;
+  const completedAt = new Date();
+  const previous = job.steps?.[step];
   const result = await ProcessingJobModel.updateOne(
-    { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running' },
+    filter,
     {
       $set: {
         status: 'failed',
-        completedAt: new Date(),
+        completedAt,
         errorCode: 'STAGE_DEADLINE_EXCEEDED',
         errorMessage: message,
+        failure: { step, code: 'STAGE_DEADLINE_EXCEEDED', message },
+        ...(previous?.status === 'RUNNING' ? {
+          [`steps.${step}.status`]: 'FAILED',
+          [`steps.${step}.completedAt`]: completedAt,
+          [`steps.${step}.errorCode`]: 'STAGE_DEADLINE_EXCEEDED',
+          [`steps.${step}.errorMessage`]: message,
+        } : {}),
       },
       $unset: { activeKey: 1, lockedAt: 1, lockedBy: 1, heartbeatAt: 1, leaseToken: 1, leaseExpiresAt: 1, stageDeadlineAt: 1, stageStartedAt: 1 },
     },
@@ -320,7 +334,7 @@ export async function expireProcessingJob(lease: VideoProcessingJobLease, stage:
       $set: {
         status: 'failed',
         processingStatus: 'FAILED',
-        processingStep: 'DEADLINE_EXCEEDED',
+        processingStep: 'FAILED',
         processingError: message,
       },
     },
@@ -337,8 +351,9 @@ export async function transitionStage(
   lease: VideoProcessingJobLease,
   stage: keyof StageDeadlineMap,
   stageProgress: number,
+  deadlineMs: number = STAGE_DEADLINES_MS[stage],
 ): Promise<boolean> {
-  const deadlineAt = new Date(Date.now() + STAGE_DEADLINES_MS[stage]);
+  const deadlineAt = new Date(Date.now() + deadlineMs);
   const result = await ProcessingJobModel.updateOne(
     { _id: lease.jobId, leaseToken: lease.leaseToken, status: 'running', leaseExpiresAt: { $gt: new Date() } },
     {

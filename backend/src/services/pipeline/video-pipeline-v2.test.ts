@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   extract: vi.fn(),
   update: vi.fn(),
   failLease: false,
+  transition: vi.fn(),
+  rearm: vi.fn(),
 }))
 vi.mock("../../models/lesson.model.js", () => ({
   LessonModel: { findById: async () => mocks.lesson, updateOne: vi.fn() },
@@ -34,7 +36,7 @@ vi.mock("../../models/processing-job.model.js", () => ({
   },
 }))
 vi.mock("../../queue/video.queue.js", () => ({
-  transitionStage: async () => !mocks.failLease,
+  transitionStage: (...args: unknown[]) => mocks.transition(...args),
   STAGE_DEADLINES_MS: {
     inspect_media: 60000,
     transcribe_zh: 900000,
@@ -111,13 +113,31 @@ const run = () =>
   processPipelineV2("lesson", "job", "/tmp/source.mp4", {
     lease,
     signal: new AbortController().signal,
-    rearmDeadline: vi.fn(),
+    rearmDeadline: mocks.rearm,
   })
 const good = [{ text: "你好世界我们学习中文", startMs: 0, endMs: 9500 }]
+it("gives playback a separate deadline, then restores finalization's short budget on resume", async () => {
+  // Seed all completed paid steps, then resume only the previously interrupted build.
+  await run()
+  delete mocks.job.steps.BUILD_SUBTITLES
+  delete mocks.job.steps.VALIDATE_RESULT
+  delete mocks.job.steps.CLEANUP
+  env.PLAYBACK_DERIVATIVE_ENABLED = true
+  mocks.lesson.playbackKey = "existing-playback"
+  mocks.lesson.playbackVersion = 1
+  vi.clearAllMocks()
+  await run()
+  expect(mocks.asr).not.toHaveBeenCalled()
+  expect(mocks.translate).not.toHaveBeenCalled()
+  expect(mocks.transition).toHaveBeenCalledWith(lease, "finalize", 73, 900000)
+  expect(mocks.rearm.mock.calls.map(call => call[0])).toEqual([900000, 60000, 60000])
+  expect(mocks.commit).toHaveBeenCalledOnce()
+})
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.objects.clear()
   mocks.failLease = false
+  mocks.transition.mockImplementation(async () => !mocks.failLease)
   mocks.job = {
     pipelineVersion: 2,
     status: "running",
@@ -136,6 +156,7 @@ beforeEach(() => {
   env.MEDIA_COMPUTE_PROVIDER = "local"
   env.MUSIC_PRESEPARATE_VOCALS = false
   env.PLAYBACK_DERIVATIVE_ENABLED = false
+  env.VIDEO_STAGE_DEADLINE_PLAYBACK_MS = 900000
   mocks.update.mockImplementation(async (filter, update) => {
     if (mocks.failLease) return { matchedCount: 0 }
     for (const [key, value] of Object.entries(filter))

@@ -51,6 +51,7 @@ import { migrateLegacyCheckpoints } from "./checkpoint-migration.js"
 import {
   generatePlaybackDerivative,
   PLAYBACK_DERIVATIVE_VERSION,
+  playbackDeadlineMs,
 } from "../playback-derivative.js"
 
 const stageFor = (step: ProcessingStepName): PipelineStage =>
@@ -116,9 +117,12 @@ export async function processPipelineV2(
       const progress = Math.round(
         (PROCESSING_STEPS.indexOf(step) / PROCESSING_STEPS.length) * 95,
       )
-      if (!(await transitionStage(lease, stage, progress)))
+      const deadlineMs = step === "BUILD_SUBTITLES" && env.PLAYBACK_DERIVATIVE_ENABLED
+        ? playbackDeadlineMs(metadata.durationSeconds)
+        : STAGE_DEADLINES_MS[stage]
+      if (!(await transitionStage(lease, stage, progress, deadlineMs)))
         throw new AppError(409, "LEASE_REVOKED", "Lease đã bị thu hồi")
-      options.rearmDeadline(STAGE_DEADLINES_MS[stage])
+      options.rearmDeadline(deadlineMs)
       await LessonModel.updateOne({ _id: lessonId }, {
         $set: {
           status: "processing",
