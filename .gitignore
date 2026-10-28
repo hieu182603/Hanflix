@@ -63,3 +63,7 @@ skills-lock.json
 # Local Docker overrides (per-developer; must never be committed)
 docker-compose.override.yml
 **/docker-compose.override.yml
+
+# Local scratch & simulation scripts
+simulate_ga4_traffic.py
+

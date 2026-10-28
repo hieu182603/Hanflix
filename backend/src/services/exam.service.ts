@@ -4,6 +4,9 @@ import { ExamModel, type Exam } from '../models/exam.model.js';
 import { ExamAttemptModel } from '../models/exam-attempt.model.js';
 import { type ExamInput, type GradedQuestion, importExamSchema } from './exam-validation.js';
 
+// Answer keys and explanations are hidden by default; graders and admin editors opt in.
+export const gradedFieldsSelect = '+sections.questions.correctAnswer +sections.questions.acceptedAnswers +sections.questions.explanationVi +sections.questions.translationVi +sections.questions.grammarPoint +sections.questions.recommendedLessonTitle +sections.questions.recommendedLessonId';
+
 export function examMetadata(exam: Omit<Exam, 'sections'> & { _id: Types.ObjectId }) {
   return {
     id: String(exam._id), code: exam.code, title: exam.title, level: exam.level,
@@ -84,9 +87,7 @@ export async function importExams(exams: ExamInput[]) {
 }
 
 export async function submitExam(id: string, userId: Types.ObjectId, answers: Record<string, string>, timeSpentSeconds: number, submissionKey: string) {
-  const exam = await ExamModel.findOne(examFilter(id)).select(
-    '+sections.questions.correctAnswer +sections.questions.acceptedAnswers +sections.questions.explanationVi +sections.questions.translationVi +sections.questions.grammarPoint +sections.questions.recommendedLessonTitle +sections.questions.recommendedLessonId',
-  ).lean();
+  const exam = await ExamModel.findOne(examFilter(id)).select(gradedFieldsSelect).lean();
   if (!exam) throw new AppError(404, 'EXAM_NOT_FOUND', 'Không tìm thấy đề thi');
   const previous = await ExamAttemptModel.findOne({ userId, submissionKey }).select('+resultJson').lean();
   if (previous && String(previous.examId) !== String(exam._id)) throw new AppError(409, 'SUBMISSION_CONFLICT', 'Mã nộp bài đã dùng cho đề khác');

@@ -51,6 +51,9 @@ const AdminVocabularyManager = lazy(
 const AdminGrammarManager = lazy(
   () => import("./components/admin/AdminGrammarManager"),
 )
+const AdminExamManager = lazy(
+  () => import("./components/admin/AdminExamManager"),
+)
 const AdminQuizManager = lazy(
   () => import("./components/admin/AdminQuizManager"),
 )
@@ -1537,7 +1540,7 @@ function AdminShellRoute({
   const pathAfterAdmin = location.pathname.replace(/^\/admin\/?/, "")
   const parts = pathAfterAdmin.split("/").filter(Boolean)
 
-  let tab: "overview" | "videos" | "upload" | "processing" | "editor" | "quiz" | "users" | "vocabulary" | "grammar" | "billing" | "not_found" =
+  let tab: "overview" | "videos" | "upload" | "processing" | "editor" | "quiz" | "users" | "vocabulary" | "grammar" | "exams" | "billing" | "not_found" =
     "overview"
   let editingId: string | null = null
   let processingId: string | null = null
@@ -1583,13 +1586,15 @@ function AdminShellRoute({
     tab = "vocabulary"
   } else if (parts[0] === "grammar") {
     tab = "grammar"
+  } else if (parts[0] === "exams") {
+    tab = "exams"
   } else if (parts[0] === "billing") {
     tab = "billing"
   } else {
     tab = "not_found"
   }
 
-  type ShellTab = "overview" | "videos" | "upload" | "users" | "vocabulary" | "grammar" | "quiz" | "billing"
+  type ShellTab = "overview" | "videos" | "upload" | "users" | "vocabulary" | "grammar" | "exams" | "quiz" | "billing"
   const shellTab: ShellTab =
     tab === "editor" || tab === "processing" || tab === "videos"
       ? "videos"
@@ -1605,6 +1610,8 @@ function AdminShellRoute({
                 ? "vocabulary"
                 : tab === "grammar"
                   ? "grammar"
+                  : tab === "exams"
+                    ? "exams"
                   : tab === "billing"
                     ? "billing"
                     : "overview"
@@ -1646,6 +1653,7 @@ function AdminShellRoute({
     >
       {tab === "vocabulary" && <AdminVocabularyManager />}
       {tab === "grammar" && <AdminGrammarManager />}
+      {tab === "exams" && <AdminExamManager />}
       {tab === "quiz" && (
         <AdminQuizManager lessonId={quizLessonId || undefined} />
       )}
