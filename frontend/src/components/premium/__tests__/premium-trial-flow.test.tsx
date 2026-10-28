@@ -310,6 +310,15 @@ describe("Premium Trial Flow Frontend Integration", () => {
   })
 
   describe("Premium Pricing Page in new Trial Architecture", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2026-10-05T10:00:00.000Z"))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it('CASE 8: Plan cards do NOT have "Bắt đầu dùng thử 30 ngày" CTA, all 3 show "Nâng cấp ngay"', async () => {
       renderPricing({
         status: "FREE",

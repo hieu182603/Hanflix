@@ -30,7 +30,7 @@ export const answerSchema = z.object({
 
 let client: GoogleGenAI | undefined;
 
-function getClient(): GoogleGenAI {
+export function getClient(): GoogleGenAI {
   if (!env.GEMINI_API_KEY) {
     throw new AppError(503, 'GEMINI_NOT_CONFIGURED', 'Gemini API chưa được cấu hình');
   }

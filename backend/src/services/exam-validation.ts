@@ -3,7 +3,7 @@ import { examCategories, examSkills, questionTypes } from '../models/exam.model.
 
 const text = z.string().max(20000);
 const mediaUrl = z.url().refine(value => /^https?:\/\//.test(value), 'Only HTTP(S) media URLs are supported');
-const questionSchema = z.object({
+export const questionSchema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/).refine(value => !['__proto__', 'constructor', 'prototype'].includes(value)),
   order: z.number().int().positive(), type: z.enum(questionTypes), skill: z.enum(examSkills),
   part: z.number().int().positive(), instruction: text.min(1), promptText: text.optional(),
