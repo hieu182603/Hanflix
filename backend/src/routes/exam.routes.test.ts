@@ -38,7 +38,7 @@ describe('exam API', () => {
     expect(res.status).toBe(200);
     expect(find).toHaveBeenCalledWith({ isPublished: true, level: 1, category: 'mini_test' });
     expect(res.body.data[0]).not.toHaveProperty('sections');
-    expect((await request(app).get('/exams?level=7')).status).toBe(422);
+    expect((await request(app).get('/exams?level=10')).status).toBe(422);
   });
   it('returns safe details and rejects missing exams', async () => {
     vi.spyOn(ExamModel, 'findOne').mockReturnValue({ lean: async () => exam } as never);
@@ -136,7 +136,7 @@ describe('exam API', () => {
       expect(res.status).toBe(200);
       expect(generator.generateExamDraft).toHaveBeenCalledWith({ level: 3, category: 'full_mock', questionsPerSection: 4 });
       expect(create).not.toHaveBeenCalled();
-      expect((await request(app).post('/admin/exams/generate').auth(token, { type: 'bearer' }).send({ level: 9, category: 'mini_test' })).status).toBe(422);
+      expect((await request(app).post('/admin/exams/generate').auth(token, { type: 'bearer' }).send({ level: 10, category: 'mini_test' })).status).toBe(422);
       generator.generateExamDraft.mockRejectedValueOnce(new AppError(503, 'GEMINI_NOT_CONFIGURED', 'Gemini API chưa được cấu hình'));
       const failed = await request(app).post('/admin/exams/generate').auth(token, { type: 'bearer' }).send({ level: 1, category: 'mini_test' });
       expect(failed.status).toBe(503);

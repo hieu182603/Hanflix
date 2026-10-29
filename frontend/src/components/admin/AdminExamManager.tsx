@@ -20,7 +20,7 @@ import {
   type GenerateAdminExamResponse,
 } from '../../api/exams';
 
-const HSK_LEVELS = ['1', '2', '3', '4', '5', '6'] as const;
+const HSK_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
 const HSK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   '1': { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
@@ -28,7 +28,10 @@ const HSK_COLORS: Record<string, { bg: string; text: string; border: string }> =
   '3': { bg: 'bg-[#EAF5F1]', text: 'text-[#188A5A]', border: 'border-[#C6E7DA]' },
   '4': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
   '5': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
-  '6': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  '6': { bg: 'bg-[#FFF8EC]', text: 'text-[#B45309]', border: 'border-[#FDE6BA]' },
+  '7': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  '8': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
+  '9': { bg: 'bg-[#FDF1F1]', text: 'text-[#B91B1C]', border: 'border-[#F9D2D2]' },
 };
 
 type EditorState =
@@ -213,7 +216,7 @@ export default function AdminExamManager() {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-black tracking-tight text-[#2B2826]">Quản Lý Kho Đề Thi</h1>
                 <span className="rounded-full border border-[#F9D2D2] bg-[#FDF1F1] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-[#B91B1C]">
-                  HSK 1 - 6
+                  HSK 1 - 9
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-[#8C827A]">
@@ -249,8 +252,8 @@ export default function AdminExamManager() {
         </div>
       </div>
 
-      {/* Stats Bento Strip (Total + HSK 1 to 6) */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
+      {/* Stats Bento Strip (Total + HSK 1 to 9) */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-10">
         <button
           onClick={() => setLevelFilter('')}
           className={`rounded-2xl border p-3 text-left transition-all active:scale-[0.98] ${
@@ -289,12 +292,12 @@ export default function AdminExamManager() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs md:flex-row">
-        <form onSubmit={(e) => { e.preventDefault(); fetchList(1); }} className="relative w-full md:max-w-md">
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#F2E4D8] bg-white p-4 shadow-2xs xl:flex-row xl:items-center xl:justify-between">
+        <form onSubmit={(e) => { e.preventDefault(); fetchList(1); }} className="relative w-full xl:max-w-md">
           <AdminSearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Tìm theo mã đề hoặc tên đề thi..." />
         </form>
 
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 md:w-auto md:justify-end">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto shrink-0 flex-nowrap py-0.5">
           <div className="flex shrink-0 items-center gap-1.5">
             <BookOpen className="h-3.5 w-3.5 text-[#8C827A]" />
             <select
@@ -308,7 +311,7 @@ export default function AdminExamManager() {
             </select>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-2 sm:pl-3">
             <Layers className="h-3.5 w-3.5 text-[#8C827A]" />
             <select
               value={categoryFilter}
@@ -321,7 +324,7 @@ export default function AdminExamManager() {
             </select>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-3">
+          <div className="flex shrink-0 items-center gap-1.5 border-l border-[#F2E4D8] pl-2 sm:pl-3">
             <Filter className="h-3.5 w-3.5 text-[#8C827A]" />
             <select
               value={statusFilter}

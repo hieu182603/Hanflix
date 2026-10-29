@@ -120,6 +120,16 @@ describe('AI exam generation', () => {
     expect(within(editor).getByText(/chỉ tạo được 1\/2 câu/)).toBeTruthy();
     expect(api.createAdminExam).not.toHaveBeenCalled();
   });
+
+  it('renders all HSK levels from 1 to 9 in the level filter and bento cards', async () => {
+    renderManager();
+    const select = await screen.findByLabelText('Lọc theo cấp độ HSK');
+    const options = within(select).getAllByRole('option').map(o => o.textContent);
+    expect(options).toEqual([
+      'Tất cả cấp độ',
+      'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9',
+    ]);
+  });
 });
 
 describe('retypeQuestion', () => {

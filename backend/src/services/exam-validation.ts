@@ -36,7 +36,7 @@ export const questionSchema = z.object({
 
 export const importExamSchema = z.object({
   code: z.string().trim().regex(/^[A-Za-z0-9_-]{1,80}$/), title: z.string().trim().min(1).max(500),
-  level: z.number().int().min(1).max(6), category: z.enum(examCategories),
+  level: z.number().int().min(1).max(9), category: z.enum(examCategories),
   durationMinutes: z.number().int().min(1).max(300), totalQuestions: z.number().int().min(1).max(500),
   totalScore: z.number().int().positive(), passingScore: z.number().int().nonnegative(),
   description: text.default(''), isPublished: z.boolean().default(true),

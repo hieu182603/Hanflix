@@ -168,7 +168,7 @@ export default function AdminExamAiModal({ defaultLevel, onClose, onGenerated }:
               <div>
                 <label className={labelClass} htmlFor="ai-exam-level">Cấp độ HSK</label>
                 <select id="ai-exam-level" value={level} onChange={(e) => changeLevel(Number(e.target.value))} className={`${inputClass} font-bold`}>
-                  {[1, 2, 3, 4, 5, 6].map(l => <option key={l} value={l}>HSK {l}</option>)}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => <option key={l} value={l}>HSK {l}</option>)}
                 </select>
               </div>
               <div>

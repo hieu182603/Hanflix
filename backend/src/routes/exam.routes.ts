@@ -18,7 +18,7 @@ export const adminExamRoutes = Router();
 examRoutes.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 
 examRoutes.get('/', asyncHandler(async (req, res) => {
-  const query = z.object({ level: z.coerce.number().int().min(1).max(6).optional(), category: z.enum(examCategories).optional() }).parse(req.query);
+  const query = z.object({ level: z.coerce.number().int().min(1).max(9).optional(), category: z.enum(examCategories).optional() }).parse(req.query);
   const exams = await ExamModel.find({ isPublished: true, ...query }).select('-sections').sort({ level: 1, code: 1 }).lean();
   res.json({ data: exams.map(examMetadata) });
 }));
@@ -65,7 +65,7 @@ adminExamRoutes.post('/import', asyncHandler(async (req, res) => {
 const adminListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  level: z.coerce.number().int().min(1).max(6).optional(),
+  level: z.coerce.number().int().min(1).max(9).optional(),
   category: z.enum(examCategories).optional(),
   status: z.enum(['published', 'draft', 'all']).default('all'),
   search: z.string().trim().max(200).optional(),

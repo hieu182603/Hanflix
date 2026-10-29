@@ -495,7 +495,7 @@ export default function AdminExamEditorModal({ mode, initial, attemptCount = 0, 
                     }}
                     className={`${inputClass} font-bold`}
                   >
-                    {[1, 2, 3, 4, 5, 6].map(l => <option key={l} value={l}>HSK {l}</option>)}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => <option key={l} value={l}>HSK {l}</option>)}
                   </select>
                 </div>
               </div>

@@ -40,7 +40,7 @@ const examSectionSchema = new Schema({
 export const examSchema = new Schema({
   code: { type: String, required: true, unique: true, index: true },
   title: { type: String, required: true },
-  level: { type: Number, required: true, min: 1, max: 6, index: true },
+  level: { type: Number, required: true, min: 1, max: 9, index: true },
   category: { type: String, enum: examCategories, required: true },
   durationMinutes: { type: Number, required: true, min: 1 },
   totalQuestions: { type: Number, required: true, min: 1 },

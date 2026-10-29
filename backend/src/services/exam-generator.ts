@@ -12,7 +12,7 @@ import { logger } from './logger.js';
 type Skill = (typeof examSkills)[number];
 
 export const generateExamInputSchema = z.object({
-  level: z.number().int().min(1).max(6),
+  level: z.number().int().min(1).max(9),
   category: z.enum(examCategories),
   skills: z.array(z.enum(examSkills)).min(1).max(3).optional(),
   questionsPerSection: z.number().int().min(1).max(15).default(5),
