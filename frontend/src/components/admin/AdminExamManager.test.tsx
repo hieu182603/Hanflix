@@ -130,6 +130,29 @@ describe('AI exam generation', () => {
       'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9',
     ]);
   });
+
+  it('renders all HSK levels from 1 to 9 in the Create Exam modal dropdown', async () => {
+    renderManager();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo Đề Thi Mới' }));
+    const dialog = await screen.findByRole('dialog');
+    const levelSelect = within(dialog).getByText('Cấp độ').nextElementSibling as HTMLSelectElement;
+    expect(levelSelect).toBeTruthy();
+    const options = within(levelSelect).getAllByRole('option').map(o => o.textContent);
+    expect(options).toEqual([
+      'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9',
+    ]);
+  });
+
+  it('renders all HSK levels from 1 to 9 in the AI Generator modal dropdown', async () => {
+    renderManager();
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo Đề Bằng AI' }));
+    const dialog = await screen.findByRole('dialog');
+    const levelSelect = within(dialog).getByLabelText('Cấp độ HSK');
+    const options = within(levelSelect).getAllByRole('option').map(o => o.textContent);
+    expect(options).toEqual([
+      'HSK 1', 'HSK 2', 'HSK 3', 'HSK 4', 'HSK 5', 'HSK 6', 'HSK 7', 'HSK 8', 'HSK 9',
+    ]);
+  });
 });
 
 describe('retypeQuestion', () => {
